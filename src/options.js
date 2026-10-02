@@ -2,6 +2,10 @@
 // User options are deep-merged over DEFAULTS. `sculpt` sections are fine-tuning; most users never touch them.
 
 export const DEFAULTS = {
+  "colors": {
+    "skin": "#ffe0c8",
+    "hair": "#6a4a30"
+  },
   "body": {
     "joints": {
       "footX": 0.116,
@@ -161,6 +165,7 @@ export const DEFAULTS = {
   },
   "outfit": {
     "shirt": {
+      "color": "#7fb6e8",
       "collar": {
         "y": 0.764,
         "bowl": 2.2,
@@ -177,12 +182,15 @@ export const DEFAULTS = {
       }
     },
     "pants": {
+      "color": "#5a4f7a",
       "hem": 0.3,
       "offset": 0.016,
       "top": 0.505,
       "tilt": 0.25
     },
     "shoes": {
+      "color": "#c8564b",
+      "soleColor": "#f4f1ea",
       "offset": 0.012,
       "top": 0.095,
       "tilt": 0.25,
@@ -190,6 +198,7 @@ export const DEFAULTS = {
       "rim": 0.008
     },
     "socks": {
+      "color": "#f7f3ea",
       "top": 0.15
     }
   },
@@ -207,16 +216,19 @@ export const DEFAULTS = {
     },
     "images": {
       "eye": {
+        "src": null,
         "width": 0,
         "dx": 0.004,
         "dy": 0.004
       },
       "brow": {
+        "src": null,
         "width": 0,
         "dx": 0.004,
         "dy": 0
       },
       "mouth": {
+        "src": null,
         "width": 0,
         "dy": 0
       }

@@ -84,60 +84,16 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { createAvatar, POSES } from "./src/index.js";
+import { clayMat, toon } from "./src/materials.js";
+import { fromQuery } from "./src/options.js";
 
+// 素体の確認ページ: createAvatar で作ったキャラを、ボタンで着せ替え・ポーズ・見本との比較をして確かめる
 const $ = (id) => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
 const low = matchMedia("(pointer: coarse)").matches || innerWidth < 820;
 
-// ============================================================
-//  形(符号つき距離)。身長 1.4、正面は +z、キャラの左手が +x
-// ============================================================
-import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep } from "./src/sdf/prim.js";   // 形の部品・溶け合わせ
-import { grad, grad4, surfaceNets, gridSampler } from "./src/sdf/mesh.js";   // 網目にする
-import { ramp, toon, outlineMat, CLAY, clayMat } from "./src/materials.js";   // アニメ塗り・輪郭線・ねんど色
-import { resolveOptions, fromQuery } from "./src/options.js";   // 設定(初期値はいまのキャラ)
-const OPT = resolveOptions(fromQuery(location.search));   // ?o=<JSON> や、調整用の短い名前(?nz=0.27 など)でも変えられる
-
-const WRAP = { zc: -0.02, r: 0.24 }; let FACE_WRAP = /[?&]wrap/.test(location.search) ? WRAP : null;   // 顔の絵の貼り方: null=正面からまっすぐ / { zc, r }=頭のまわりに巻きつける
-import { buildBody } from "./src/body/index.js";   // 体(関節と部品)
-const { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow } = buildBody(OPT, { slow: new URLSearchParams(location.search).has("slow"), oldSock: /[?&]oldsock/.test(location.search) });
-const PROF = [];   // 確認用: 部品ごとの生成時間と頂点数
-globalThis.sotai = { bodySdf, bodySdfSlow, P, CUT, blend, PROF, OPT };   // 確認用
-import { buildClothes } from "./src/clothes/index.js";   // 服・靴・靴下
-const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
-const FAST = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };   // 格子で測るとき用
-import { buildHair } from "./src/hair/index.js";   // 髪(前髪・後ろ髪・アホ毛)
-import { makeSkeleton, makeWeights } from "./src/rig.js";   // 骨と重み
-const weightsAt = makeWeights({ BODY, BONES, BI });
-const { BANGS, BACKS, hairSdfOf: hairOf } = buildHair(OPT, { P, bodySdf });
-const HAIR_PICK = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };   // いま選んでいる髪型
-const hairSdfOf = () => hairOf(HAIR_PICK);
-let hairSdf = hairSdfOf();
-
-
-// ============================================================
-//  網目にする(サーフェスネッツ)
-// ============================================================
-const PROJ = OPT.quality.project;   // 表面へ寄せる回数
-const BAND = OPT.quality.band;   // 粗い格子で表面からこれだけ(×網目)離れていたら、細かく測らない
-// 体の距離は一度だけ測って取っておき、服を作るときは格子から読む(体の計算をやり直さない)
-let bodyAt = (x, y, z) => bodySdf(x, y, z);
-function mesh(sdf, lo, hi, h, bone1, only, fast = sdf) {   // fast: 格子で測るときに使う速い版(なければ sdf)   // bone1: 指定すると全部その骨だけに付ける(髪は頭の骨) / only: 重みを付けてよい骨(正規表現)
-  const T0 = performance.now(), { pos, nor, idx, grid, time } = surfaceNets(sdf, lo, hi, h, { fast, band: BAND, proj: PROJ });
-  mesh.last = grid;   // 体の格子は服が使い回す
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setIndex(idx);
-  const w0 = performance.now();
-  const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
-  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
-    for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } }
-  g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4));
-  PROF.push({ verts: nv, ms: Math.round(performance.now() - T0), sample: Math.round(time.sample), project: Math.round(time.project), weights: Math.round(performance.now() - w0) });
-  return g;
-}
-
-// ============================================================
-//  見た目
-// ============================================================
+// ── 見た目(カメラ・ライト・床) ──
 const canvas = $("gl");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, low ? 1.5 : 2)); renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -150,25 +106,36 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 
 const floor = new THREE.Mesh(new THREE.CircleGeometry(1.6, 48), new THREE.MeshToonMaterial({ color: 0xe2d8c8 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
 function size() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 44 : 32; camera.updateProjectionMatrix(); }
 addEventListener("resize", size); size();
+// 小道具(いす: 座面の上が 0.2)
+const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.26), wood); seat.position.set(0, 0.18, -0.03); chair.add(seat); const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.36, 0.035), wood); back.position.set(0, 0.36, -0.16); chair.add(back); for (const [x, z] of [[-0.17, 0.08], [0.17, 0.08], [-0.17, -0.14], [0.17, -0.14]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.18, 0.035), wood); l.position.set(x, 0.09, z); chair.add(l); } chair.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); chair.visible = false; scene.add(chair); }
 
+// ── 素体を作る ──
+const WRAP = { zc: -0.02, r: 0.24 };   // 顔の絵の貼り方: 頭のまわりに巻きつける(?wrap)
+const t0 = performance.now();
+const avatar = await createAvatar(fromQuery(location.search), { quality: low ? "low" : "high", debug: { slow: Q.has("slow"), oldSock: Q.has("oldsock"), faceWrap: Q.has("wrap") ? WRAP : null } });
+scene.add(avatar.object);
+const { parts, internals: I } = avatar, face = I.face;
+globalThis.sotai = { avatar, bodySdf: I.bodySdf, bodySdfSlow: I.bodySdfSlow, P: I.P, CUT: I.CUT, PROF: avatar.PROF, OPT: avatar.options };   // 確認用
+globalThis.sotaiChecksum = () => avatar.checksum();
+const nv = Object.values(parts).reduce((s, x) => s + x.m.geometry.attributes.position.count, 0);
+$("stat").textContent = `頂点 ${nv.toLocaleString()} / 骨 ${I.BONES.length} / 生成 ${Math.round(performance.now() - t0)}ms`;
+$("msg").hidden = true;
 
-// 骨
-const { root: avatar, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES }); scene.add(avatar);
-
+// ── 表示の切りかえ(ねんど色・網目・見本と比べる) ──
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
-const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)   // ねんど色: なめらかな陰影(見本と同じ見え方)
-function skinned(geo, color, ow = 0.005) {
-  const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; avatar.add(m); m.bind(skeleton);
-  const o = new THREE.SkinnedMesh(geo, outlineMat(ow)); o.frustumCulled = false; o.userData.outline = true; avatar.add(o); o.bind(skeleton);
-  return { m, o, on: true };
+const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
+let clay = false, wire = false, compare = false;
+const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair];
+function refreshLook() {
+  const body = parts.body;
+  body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
+  for (const x of all()) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
+  avatar.faceLayer.visible = !clay; floor.visible = !compare;
 }
 
-// ============================================================
-//  顔(テクスチャ): 頭の前の網目を写した「顔レイヤー」に、パーツを重ねて描いた絵を正面から貼る
-//  パーツは差し替え式。いまは仮の絵をコードで描いているが、あとで透過PNGに置き換えられる
-// ============================================================
-import { createFace } from "./src/face/index.js";   // 顔(パーツの絵と顔レイヤー)
-const { FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry } = createFace(OPT, { FACE_DY, onImage: () => { if (typeof drawFace === "function") drawFace(); } });
+// ── 顔 ──
+const FACES = Object.keys(face.PRESETS); let faceI = 0;
+function faceLabels() { const s = avatar.faceSel; $("tFace").textContent = `表情: ${FACES[faceI]}`; $("tEyes").textContent = `目: ${s.eyes}`; $("tBrow").textContent = `眉: ${s.brows}`; $("tMouth").textContent = `口: ${s.mouth}`; }
 // 顔全体を1枚に描いた絵(PNG)を貼る(古いやり方)。顔の絵と同じ座標(1024×768)で置く
 //   置き方: 絵の基準点(ax, ay)を、下絵の(512 + x, 586 + y)に、大きさ s 倍で合わせる(基準点=鼻の点の左右・口の高さ)
 const FACE_IMG = { on: false, img: null, ax: 445, ay: 596, x: 0, y: 200, s: 1 };
@@ -182,47 +149,27 @@ function whiteToAlpha(im) {   // 白い背景(ふちから続く真っ白)だけ
     const x = i % W; if ((x > 0 && A[i - 1]) || (x < W - 1 && A[i + 1]) || (i >= W && A[i - W]) || (i < W * (H - 1) && A[i + W])) { const m = Math.min(D[i * 4], D[i * 4 + 1], D[i * 4 + 2]); if (m > 180) D[i * 4 + 3] = Math.round(255 * Math.min(1, (255 - m) / 75)); } }
   g.putImageData(d, 0, 0); return c;
 }
-function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { FACE_IMG.img = whiteToAlpha(im); if (anchor) Object.assign(FACE_IMG, anchor); else Object.assign(FACE_IMG, { ax: im.width / 2, ay: im.height * 0.95 }); drawFace(); }; im.src = src; }
+const drawFaceImg = (f) => { if (!FACE_IMG.img) return false; const F = FACE_IMG, w = F.img.width * F.s, h = F.img.height * F.s;
+  f.fctx.clearRect(0, 0, f.faceCanvas.width, f.faceCanvas.height); f.fctx.drawImage(F.img, 512 + F.x - F.ax * F.s, 586 + F.y - F.ay * F.s, w, h); f.faceTex.needsUpdate = true;
+  $("fiVal").textContent = `上下 ${F.y} / 左右 ${F.x} / 大きさ ${F.s.toFixed(2)}`; return true; };
+function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { FACE_IMG.img = whiteToAlpha(im); if (anchor) Object.assign(FACE_IMG, anchor); else Object.assign(FACE_IMG, { ax: im.width / 2, ay: im.height * 0.95 }); avatar.drawFace(); }; im.src = src; }
 loadFaceImg("img/face-test.png", { ax: 445, ay: 596 });
-const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" };   // 標準はコードで描く顔(画像ファイルなしで動く)
-const FACES = Object.keys(PRESETS); let faceI = 0, blinking = false;
-function drawFace() {
-  fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-  if (FACE_IMG.on && FACE_IMG.img) { const F = FACE_IMG, w = F.img.width * F.s, h = F.img.height * F.s;
-    fctx.drawImage(F.img, 512 + F.x - F.ax * F.s, 586 + F.y - F.ay * F.s, w, h); faceTex.needsUpdate = true;
-    $("fiVal").textContent = `上下 ${F.y} / 左右 ${F.x} / 大きさ ${F.s.toFixed(2)}`; return; }
-  drawParts(faceSel, blinking);
-  $("tFace").textContent = `表情: ${FACES[faceI]}`; $("tEyes").textContent = `目: ${faceSel.eyes}`; $("tBrow").textContent = `眉: ${faceSel.brows}`; $("tMouth").textContent = `口: ${faceSel.mouth}`;
-}
-// 顔レイヤー: 体の網目のうち、顔の前面だけを写して、ほんの少し浮かせる。骨の重みは体と同じなので、首を動かしてもずれない
-let faceLayer = null;
-function buildFaceLayer(src) {
-  const g = faceLayerGeometry(src.geometry ?? src, FACE_WRAP);
-  if (faceLayer) { avatar.remove(faceLayer); faceLayer.geometry.dispose(); }
-  faceLayer = new THREE.SkinnedMesh(g, faceMat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; avatar.add(faceLayer); faceLayer.bind(skeleton);
-}
-// まばたき(絵を描き直すだけ)
-let blinkAt = 2.5;
-function blinkTick(T) { if (FACE_IMG.on) return; if (T > blinkAt && !blinking) { blinking = true; drawFace(); } if (T > blinkAt + 0.12 && blinking) { blinking = false; drawFace(); blinkAt = T + 2.5 + Math.random() * 3; } }
 
-// 小道具(いす: 座面の上が 0.2)
-const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.26), wood); seat.position.set(0, 0.18, -0.03); chair.add(seat); const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.36, 0.035), wood); back.position.set(0, 0.36, -0.16); chair.add(back); for (const [x, z] of [[-0.17, 0.08], [0.17, 0.08], [-0.17, -0.14], [0.17, -0.14]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.18, 0.035), wood); l.position.set(x, 0.09, z); chair.add(l); } chair.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); chair.visible = false; scene.add(chair); }
+// 顔の下絵づくり用: 顔の絵と同じ座標(1024×768)で、正面からまっすぐ撮った頭の画像と、パーツの基準点を返す(facekit が使う)
+globalThis.sotaiFaceSheet = (mode = "skin") => {
+  const { FACE, faceCanvas, px, py, PART_IMG, EYE, BROW, MOUTHP } = face;
+  const W = faceCanvas.width, Hc = faceCanvas.height, yc = (FACE.y0 + FACE.y1) / 2;
+  const cam = new THREE.OrthographicCamera(FACE.x0, FACE.x1, FACE.y1 - yc, FACE.y0 - yc, 0.1, 10); cam.position.set(0, yc, 3); cam.lookAt(0, yc, 0);
+  avatar.skeleton.pose(); for (const x of all()) { x.m.visible = x === parts.body; x.o.visible = x === parts.body && mode !== "clay"; } avatar.faceLayer.visible = false; floor.visible = false; helper.visible = false;
+  parts.body.m.material = mode === "clay" ? clayMat : parts.body.toonMat;
+  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(W, Hc, false); renderer.render(scene, cam);
+  const url = renderer.domElement.toDataURL("image/png");
+  renderer.setPixelRatio(pr); size(); refreshLook();
+  const at = (k, a) => [px(a.x + PART_IMG[k].dx), py(a.y + PART_IMG[k].dy)];   // パーツの絵の真ん中が来る点(絵のピクセル)
+  return { url, size: [W, Hc], anchors: { eye: at("eye", EYE), brow: at("brow", BROW), mouth: at("mouth", MOUTHP) } };
+};
 
-// ============================================================
-//  ポーズ(初期の形=見本と同じAポーズ)
-// ============================================================
-import { POSES, createPosePlayer } from "./src/motion/index.js";   // 動き
-const POSE_LABEL = { aPose: "Aポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitFloor: "床に座る", hugKnees: "体育座り" };   // ボタンの表示名
-let poseName = "aPose", compare = false;
-const playPose = createPosePlayer({ bone, BONES, HIPS0 });
-function applyPose(t, dt) {
-  const P0 = playPose(compare ? "aPose" : poseName, t, dt, compare);
-  chair.visible = !!P0.chair && !compare;
-}
-
-// ============================================================
-//  三面図(見本の画像と同じ縮尺・同じ位置に、正面/横/後ろを描く)
-// ============================================================
+// ── 三面図(見本の画像と同じ縮尺・同じ位置に、正面/横/後ろを描く) ──
 const REF = { W: 1376, H: 768, floor: 732, hpx: 519, fx: [271, 699, 1128] };
 const ortho = [0, 1, 2].map(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 30));
 ortho[0].position.set(0, 0, 10); ortho[1].position.set(10, 0, 0); ortho[2].position.set(0, 0, -10); ortho.forEach((c) => c.lookAt(0, 0, 0));
@@ -237,107 +184,50 @@ function renderCompare() {
   renderer.autoClear = true; renderer.setViewport(0, 0, innerWidth, innerHeight); scene.background = bg;
 }
 
-// ============================================================
-//  組み立て
-// ============================================================
-let hair, shirt, pants, shoes, soles, socks, body, clay = false, wire = false;
-const all = () => [body, shirt, pants, socks, shoes, soles, hair];
-function refreshLook() {
-  body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
-  for (const x of all()) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
-  faceLayer.visible = !clay; floor.visible = !compare;
-}
-const hairMesh = (H) => skinned(mesh(hairSdf, [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], H * OPT.quality.hairCell, "head"), "#6a4a30", 0.004);
-function makeHair(H) { const h = hairMesh(H); $("tBangs").textContent = `前髪: ${HAIR_PICK.bangs}`; $("tBack").textContent = `後ろ髪: ${HAIR_PICK.back}`; return h; }
-function rebuildHair() {   // 髪だけ作り直す
-  const on = hair.on; for (const m of [hair.m, hair.o]) { avatar.remove(m); m.geometry.dispose(); }
-  hairSdf = hairSdfOf(); hair = makeHair(low ? 0.0095 : 0.0068); hair.on = on; refreshLook();
-}
-// 顔の陰: 陰を計算するときの面の向きだけを、なめらかな楕円(頭と顔の丸み)から借りる。形はそのままで、アニメ塗りの境目がガタつかない(ねんど色は本当の向きのまま)
-const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };   // 借りる強さ / 楕円の中心 / 半径
-function addShadeNormals(geo) {
-  const P = geo.attributes.position.array, N = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
-  for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2];
-    let w = F.w * sstep(0.86, 0.93, y); for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // 首から上だけ。耳は自分の陰のまま
-    const ex = (x - F.c[0]) / F.r[0] ** 2, ey = (y - F.c[1]) / F.r[1] ** 2, ez = (z - F.c[2]) / F.r[2] ** 2, el = Math.hypot(ex, ey, ez) || 1;
-    const sx = N[i] + (ex / el - N[i]) * w, sy = N[i + 1] + (ey / el - N[i + 1]) * w, sz = N[i + 2] + (ez / el - N[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
-    S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
-  geo.setAttribute("shadeN", new THREE.BufferAttribute(S, 3));
-}
-function shadeToon(c) { const m = toon(c); m.onBeforeCompile = (sh) => { sh.vertexShader = "attribute vec3 shadeN;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;"); }; return m; }
-// 顔の下絵づくり用: 顔の絵と同じ座標(1024×768)で、正面からまっすぐ撮った頭の画像と、パーツの基準点を返す(tools/facekit が使う)
-globalThis.sotaiFaceSheet = (mode = "skin") => {
-  const W = faceCanvas.width, Hc = faceCanvas.height, yc = (FACE.y0 + FACE.y1) / 2;
-  const cam = new THREE.OrthographicCamera(FACE.x0, FACE.x1, FACE.y1 - yc, FACE.y0 - yc, 0.1, 10); cam.position.set(0, yc, 3); cam.lookAt(0, yc, 0);
-  skeleton.pose(); for (const x of all()) { x.m.visible = x === body; x.o.visible = x === body && mode !== "clay"; } faceLayer.visible = false; floor.visible = false; helper.visible = false;
-  body.m.material = mode === "clay" ? clayMat : body.toonMat;
-  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(W, Hc, false); renderer.render(scene, cam);
-  const url = renderer.domElement.toDataURL("image/png");
-  renderer.setPixelRatio(pr); size(); refreshLook();
-  const at = (k, a) => [px(a.x + PART_IMG[k].dx), py(a.y + PART_IMG[k].dy)];   // パーツの絵の真ん中が来る点(絵のピクセル)
-  return { url, size: [W, Hc], anchors: { eye: at("eye", EYE), brow: at("brow", BROW), mouth: at("mouth", MOUTHP) } };
-};
-globalThis.sotaiChecksum = () => all().map((x) => { const g = x.m.geometry, a = g.attributes; let h = 0; for (const k of ["position", "skinIndex", "skinWeight"]) { const v = a[k].array; for (let i = 0; i < v.length; i++) h = (h * 31 + Math.round(v[i] * 1e5)) % 1000000007; } return h; });   // 確認用: 網目と重みの指紋
-function build() {
-  const t0 = performance.now(), H = low ? 0.0095 : 0.0068;
-  bodyAt = (x, y, z) => bodySdf(x, y, z); body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); bodyAt = gridSampler(mesh.last, bodySdf);   // 体の格子を服に使い回す
-  addShadeNormals(body.m.geometry); body.m.material.dispose(); body.m.material = body.toonMat = shadeToon(SKINS[skinI]);
-  shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * OPT.quality.shirtCell, null, /^(hips|spine|chest|upperChest|neck|upperArm)/, FAST.shirt), "#7fb6e8");
-  pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, FAST.pants), "#5a4f7a");
-  shoes = skinned(mesh(shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), "#c8564b");
-  soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), "#f4f1ea");
-  socks = skinned(mesh(sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, FAST.sock), "#f7f3ea", 0.003);
-  hair = makeHair(H);
-  buildFaceLayer(body.m.geometry); drawFace(); refreshLook();
-  const nv = all().reduce((s, x) => s + x.m.geometry.attributes.position.count, 0);
-  $("stat").textContent = `頂点 ${nv.toLocaleString()} / 骨 ${BONES.length} / 生成 ${Math.round(performance.now() - t0)}ms`;
-}
-
-// ── UI ──
+// ── ボタン ──
+const POSE_LABEL = { aPose: "Aポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitFloor: "床に座る", hugKnees: "体育座り" };   // ボタンの表示名
 const toggle = (id, fn) => { const b = $(id); b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on)); fn(on); }); };
-toggle("tCloth", (on) => { shirt.on = pants.on = on; refreshLook(); });
-toggle("tShoe", (on) => { shoes.on = soles.on = on; refreshLook(); });
-toggle("tSock", (on) => { socks.on = on; refreshLook(); });
-toggle("tHair", (on) => { hair.on = on; refreshLook(); });
+toggle("tCloth", (on) => { parts.shirt.on = parts.pants.on = on; refreshLook(); });
+toggle("tShoe", (on) => { parts.shoes.on = parts.soles.on = on; refreshLook(); });
+toggle("tSock", (on) => { parts.socks.on = on; refreshLook(); });
+toggle("tHair", (on) => { parts.hair.on = on; refreshLook(); });
 toggle("tClay", (on) => { clay = on; refreshLook(); });
 toggle("tCmp", (on) => { compare = on; $("tRef").hidden = !on; $("ref").hidden = !on || $("tRef").getAttribute("aria-pressed") !== "true"; $("poses").hidden = on; if (on && !clay) $("tClay").click(); refreshLook(); });
 toggle("tRef", (on) => { $("ref").hidden = !on; refreshLook(); });
-const helper = new THREE.SkeletonHelper(avatar); helper.visible = false; helper.material.depthTest = false; scene.add(helper);
-toggle("tBone", (on) => { helper.visible = on; for (const m of [clayMat, body.toonMat, shirt.m.material, pants.m.material, shoes.m.material, soles.m.material, socks.m.material, hair.m.material]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } });
+const helper = new THREE.SkeletonHelper(avatar.object); helper.visible = false; helper.material.depthTest = false; scene.add(helper);
+toggle("tBone", (on) => { helper.visible = on; for (const m of [clayMat, parts.body.toonMat, ...["shirt", "pants", "shoes", "soles", "socks", "hair"].map((k) => parts[k].m.material)]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } });
 toggle("tWire", (on) => { wire = on; refreshLook(); });
-$("tFace").addEventListener("click", () => { faceI = (faceI + 1) % FACES.length; Object.assign(faceSel, PRESETS[FACES[faceI]]); drawFace(); });
-const cyc = (id, slot) => $(id).addEventListener("click", () => { const k = Object.keys(PARTS[slot]); faceSel[slot] = k[(k.indexOf(faceSel[slot]) + 1) % k.length]; drawFace(); });
-for (const [id, key, list] of [["tBangs", "bangs", BANGS], ["tBack", "back", BACKS]]) $(id).addEventListener("click", () => { const k = Object.keys(list); HAIR_PICK[key] = k[(k.indexOf(HAIR_PICK[key]) + 1) % k.length]; rebuildHair(); });
-for (const [id, k] of [["fiY", "y"], ["fiX", "x"], ["fiS", "s"]]) { $(id).value = FACE_IMG[k]; $(id).addEventListener("input", () => { FACE_IMG[k] = +$(id).value; drawFace(); }); }
-toggle("tWrap", (on) => { FACE_WRAP = on ? WRAP : null; $("tWrap").textContent = on ? "貼り方: 巻きつけ" : "貼り方: 正面から"; buildFaceLayer(body.m.geometry); refreshLook(); });
-toggle("tFaceImg", (on) => { FACE_IMG.on = on; $("fimgPanel").hidden = !on; $("tFaceImg").textContent = on ? "顔: 絵(PNG)" : "顔: コードの絵"; drawFace(); });
-$("fiFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadFaceImg(URL.createObjectURL(f)); });
+$("tFace").addEventListener("click", () => { faceI = (faceI + 1) % FACES.length; avatar.setFace(face.PRESETS[FACES[faceI]]); faceLabels(); });
+const cyc = (id, slot) => $(id).addEventListener("click", () => { const k = Object.keys(face.PARTS[slot]); avatar.setFace({ [slot]: k[(k.indexOf(avatar.faceSel[slot]) + 1) % k.length] }); faceLabels(); });
 cyc("tEyes", "eyes"); cyc("tBrow", "brows"); cyc("tMouth", "mouth");
+const hairLabels = () => { $("tBangs").textContent = `前髪: ${I.hairPick.bangs}`; $("tBack").textContent = `後ろ髪: ${I.hairPick.back}`; };
+for (const [id, key, list] of [["tBangs", "bangs", I.hairKit.BANGS], ["tBack", "back", I.hairKit.BACKS]]) $(id).addEventListener("click", () => { const k = Object.keys(list); avatar.setHair({ [key]: k[(k.indexOf(I.hairPick[key]) + 1) % k.length] }); hairLabels(); refreshLook(); });
+for (const [id, k] of [["fiY", "y"], ["fiX", "x"], ["fiS", "s"]]) { $(id).value = FACE_IMG[k]; $(id).addEventListener("input", () => { FACE_IMG[k] = +$(id).value; avatar.drawFace(); }); }
+toggle("tWrap", (on) => { avatar.setFaceWrap(on ? WRAP : null); $("tWrap").textContent = on ? "貼り方: 巻きつけ" : "貼り方: 正面から"; refreshLook(); });
+toggle("tFaceImg", (on) => { FACE_IMG.on = on; $("fimgPanel").hidden = !on; $("tFaceImg").textContent = on ? "顔: 絵(PNG)" : "顔: コードの絵"; avatar.setFaceDrawHook(on ? drawFaceImg : null); });
+$("fiFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadFaceImg(URL.createObjectURL(f)); });
 $("tSkin").addEventListener("click", () => { skinI = (skinI + 1) % SKINS.length; if (clay) $("tClay").click(); else refreshLook(); });
 $("tExport").addEventListener("click", async () => {
-  const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
-  const outs = []; avatar.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
-  const saved = BONES.map((b) => bone[b].quaternion.clone()), hy = bone.hips.position.y;
-  BONES.forEach((b) => bone[b].quaternion.identity()); bone.hips.position.copy(HIPS0);   // Aポーズで書き出す
-  new GLTFExporter().parse(avatar, (buf) => {
-    outs.forEach((o) => { o.visible = true; }); BONES.forEach((b, i) => bone[b].quaternion.copy(saved[i])); bone.hips.position.y = hy;
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  }, (e) => { console.error(e); outs.forEach((o) => { o.visible = true; }); }, { binary: true });
+  const buf = await avatar.exportGLB();
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });
-for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === poseName)); b.addEventListener("click", () => { poseName = name; [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
+for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { avatar.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
+faceLabels(); hairLabels(); refreshLook();
 
-setTimeout(() => {
-  build(); $("msg").hidden = true;
-  if (/[?&]cmp/.test(location.search)) $("tCmp").click();
-  const Q = new URLSearchParams(location.search), HT = [0.35, 0.5, 0.01];   // 確認用: ?view=front&pose=歩く など
-  const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
-    nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
-  if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
-  const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
-  let last = performance.now(), T = 0;   // ?t=0.25 のように時刻を止めて確認できる
-  (function frame(now) { requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now; T = Q.has("t") ? +Q.get("t") : T + dt; applyPose(T, dt); blinkTick(T);
-    if (compare) renderCompare(); else { controls.update(); renderer.render(scene, camera); } })(last);
-}, 30);
+// ── 確認用: ?view=front&pose=歩く&t=0.25 など ──
+if (/[?&]cmp/.test(location.search)) $("tCmp").click();
+const HT = [0.35, 0.5, 0.01];
+const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
+  nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
+if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
+const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
+
+// ── 毎フレーム ──
+let last = performance.now();
+(function frame(now) { requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  avatar.update(dt, { t: Q.has("t") ? +Q.get("t") : undefined, instant: compare, pose: compare ? "aPose" : undefined });   // ?t=0.25 のように時刻を止めて確認できる
+  chair.visible = !!avatar.lastPose.chair && !compare;
+  if (compare) renderCompare(); else { controls.update(); renderer.render(scene, camera); } })(last);
 </script>
 </body>
 </html>

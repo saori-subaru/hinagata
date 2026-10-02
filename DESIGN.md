@@ -165,6 +165,8 @@ Should feel like a dependable developer tool, not a toy: neutral palette, one ac
 
 ## Migration plan (each step keeps the character pixel-identical)
 
+Status: steps 1-3 done (pixel-identical, checked with screenshots and a mesh/skin-weight checksum). `examples/minimal.html` uses `createAvatar` on its own. Sliders wait until the model, hair and motion are polished (relative placement makes sculpting slower).
+
 1. Move pure code (sdf, mesh, rig, materials) into modules; `body.html` imports them.
 2. Move body / clothes / hair / face / motion into modules that read an options object instead of URL parameters. Write `defaults` from today's values. Joints moved by the proportion sliders come from proportion values, and their parts are placed relative to them (see "Scope").
 3. Wrap it in `createAvatar` and the `Avatar` object.
