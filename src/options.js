@@ -164,7 +164,7 @@ export const DEFAULTS = {
       "nose": {
         "tipZ": 0.28,
         "under": {
-          "dent": 0.012,
+          "dent": 0,
           "dentY": 0.915,
           "y": -0.002,
           "slope": 0.5
