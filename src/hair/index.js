@@ -19,11 +19,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
     const c = C(a, b, ra, rb, "head", 0.004), mid = a.map((v, i) => (v + b[i]) / 2), n = grad(bodySdf, ...mid);
     return Object.assign(c, { t: 4, n, flat });
   }
-  function strand({ th0, ph0, th1, ph1, w, off0 = 0.012, off1 = 0.024, flat = 0.55, bend = 0, N = 7 }) {
+  function strand({ th0, ph0, th1, ph1, w, off0 = 0.012, off1 = 0.024, flat = 0.55, bend = 0, N = 7, tipPow = 2.2 }) {
     const segs = []; let prev = null, prevR = 0;
     for (let i = 0; i <= N; i++) {
       const t = i / N, th = (th0 + (th1 - th0) * t + bend * Math.sin(Math.PI * t)) * deg, ph = (ph0 + (ph1 - ph0) * t) * deg;
-      const p = onScalp(th, ph, off0 + (off1 - off0) * t * t), r = Math.max(0.0042, w * (1 - Math.pow(t, 2.2)) * (0.85 + 0.15 * Math.sin(Math.PI * Math.min(1, t * 1.6))));
+      const p = onScalp(th, ph, off0 + (off1 - off0) * t * t), r = Math.max(0.0042, w * (1 - Math.pow(t, tipPow)) * (0.85 + 0.15 * Math.sin(Math.PI * Math.min(1, t * 1.6))));
       if (prev) segs.push(strandSeg(prev, p, prevR, r, flat)); prev = p; prevR = r;
     }
     return G(segs, 0.006);
@@ -38,6 +38,20 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     "side": () => [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
       .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
+    // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
+    // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
+    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y]) => [a * deg, y]);
+      const notches = T.slice(1).map(([a], i) => (a + T[i][0]) / 2);
+      return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
+        const th = Math.atan2(x, z), rr = Math.hypot(x, z);
+        let hem = 9; for (const [a, ty] of T) hem = Math.min(hem, ty + B.slope * Math.abs(th - a));   // V points: lines rising from each tip meet at the notches
+        let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
+        const thick = B.thick + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y);
+        const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
+        return smax(smax(shell, hem - y, 0.006), side, 0.01); } }]; },
+    // nendoStrands: the same idea made of separate strands (thin tips break up on a coarse mesh)
+    "nendoStrands": () => { const B = OPT.hair.sculpt.nendo;   // wide, flat clumps that overlap, tips at the brows, longer locks at the sides
+      return B.clumps.map(([th0, th1, ph1, w, bend, layer = 1]) => strand({ th0, ph0: B.root, th1, ph1, w: w * B.width, bend, off0: 0.014 * layer, off1: B.lift * layer, flat: B.flat, N: 8, tipPow: B.tipPow })); },   // layer: clumps in front / behind, so their edges show
     "none": () => [],
     "blunt": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
   };
