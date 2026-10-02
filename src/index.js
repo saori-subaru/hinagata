@@ -12,15 +12,15 @@ import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, SHADINGS, outlineMat } from "./materials.js";
-import { DEFAULTS, resolveOptions } from "./options.js";
+import { DEFAULTS, resolveOptions, diff } from "./options.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
-import { createFace } from "./face/index.js";
+import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 
-export { DEFAULTS, POSES, SHADINGS, resolveOptions };
+export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS };
 export { BODY_TYPES } from "./body/types.js";
 
 /**
@@ -37,10 +37,10 @@ export { BODY_TYPES } from "./body/types.js";
  *                      the same mesh as on the main thread. Falls back to the main thread when workers can't start,
  *             debug: { slow, oldSock, faceWrap } — checking aids, normally unused }
  */
-// options without the parts that only change colors, the outline, the shading, the blush or the hair paint (the geometry is the same, so the cache can reuse it)
+// options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, ...rest } = OPT, { blush, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|on)$/.test(k)) r[k] = strip(v); return r; };
+  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
 }
 
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, workers = true, debug = {} } = {}) {
@@ -196,6 +196,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
   parts.hair = makeHair(H);
   lap("hair");
+  // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
+  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles"] };
+  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; } };
+  for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
   if (EL.on) { earLine = new THREE.Group(); earLine.name = "earLine"; const mat = new THREE.MeshBasicMaterial({ color: EL.color }), deg = Math.PI / 180;
@@ -212,7 +216,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // face: parts drawn into a texture on a thin copy of the front of the head
   let faceDrawHook = null, faceWrap = debug.faceWrap ?? null, blinking = false, blinkAt = 2.5;
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
-  const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし", nose: OPT.face.noseShadow.on ? "影" : "なし" };   // default: code-drawn face (no image files needed)
+  const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   let faceLayer = null;
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HT.identity ? null : HT.toHead);
@@ -267,19 +271,34 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     play(name) { if (!POSES[name]) throw new Error(`Unknown motion "${name}". Available: ${Object.keys(POSES).join(", ")}`); poseName = name; },
 
-    /** Face: sel = { eyes, brows, mouth, cheeks } part names (see face.PARTS / face.PRESETS). */
-    setFace(sel) { Object.assign(faceSel, sel); avatar.drawFace(); },
-    /** Move the face parts on the face picture (instant): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. */
-    setFaceLayout(l) { face.setLayout(l); avatar.drawFace(); },
+    /** Face (instant): an expression id ("happy", see EXPRESSIONS), or parts by slot { eyes, brows, mouth, cheeks, nose } (ids in PART_LABELS). Kept in options.face.parts. */
+    setFace(sel) {
+      if (typeof sel === "string") { const e = EXPRESSIONS[expressionId(sel)]; if (!e) throw new Error(`Unknown expression "${sel}". Available: ${Object.keys(EXPRESSIONS).join(", ")}`); sel = e.parts; }
+      sel = partIds(sel); Object.assign(faceSel, sel); Object.assign(OPT.face.parts, sel); avatar.drawFace();
+    },
+    /** Move the face parts on the face picture (instant): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. Kept in options.face.
+     *  eyeX / eyeY also place the eye sockets in the head's shape, which follows on the next build. */
+    setFaceLayout(l) {
+      face.setLayout(l);
+      for (const k of ["eyeX", "eyeY", "browX", "browY", "mouthY"]) if (l[k] != null) OPT.face.layout[k] = l[k];
+      if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
+      avatar.drawFace();
+    },
     drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
-    setColors({ skin, hair, shirt, pants, shoes, soles, socks } = {}) {
-      if (skin) parts.body.toonMat.color.set(skin);
-      for (const [k, c] of Object.entries({ hair, shirt, pants, shoes, soles, socks })) if (c) parts[k].m.material.color.set(c);
+    /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks } = {}) {
+      if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
+      if (hair) { OPT.colors.hair = hair; const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
+      for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { parts[k].m.material.color.set(c); OPT.outfit[k].color = c; }
+      if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
     },
+    /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
+    setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
     /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
     setOutline({ on, width, color } = {}) {
       Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
@@ -296,9 +315,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
-    /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). */
+    /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). Kept in options.hair. */
     setHair(pick) {
-      Object.assign(hairPick, pick);
+      Object.assign(hairPick, pick); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k];
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
     },

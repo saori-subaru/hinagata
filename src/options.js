@@ -1,10 +1,12 @@
 // Options: every value that defines a character, with defaults (today's character).
 // User options are deep-merged over DEFAULTS. `sculpt` sections are fine-tuning; most users never touch them.
+import { partIds } from "./face/names.js";
 
 export const DEFAULTS = {
   "colors": {
     "skin": "#ffe0c8",
-    "hair": "#6a4a30"
+    "hair": "#6a4a30",
+    "eyes": "#4f6a9a"
   },
   "outline": {
     "on": true,
@@ -304,6 +306,7 @@ export const DEFAULTS = {
   },
   "outfit": {
     "shirt": {
+      "on": true,
       "color": "#7fb6e8",
       "sleeve": "short",
       "length": "tuck",
@@ -323,6 +326,7 @@ export const DEFAULTS = {
       }
     },
     "pants": {
+      "on": true,
       "color": "#5a4f7a",
       "length": "shorts",
       "hem": 0.3,
@@ -331,6 +335,7 @@ export const DEFAULTS = {
       "tilt": 0.25
     },
     "shoes": {
+      "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
       "offset": 0.012,
@@ -340,6 +345,7 @@ export const DEFAULTS = {
       "rim": 0.008
     },
     "socks": {
+      "on": true,
       "color": "#f7f3ea",
       "top": 0.15
     }
@@ -515,6 +521,13 @@ export const DEFAULTS = {
       "width": 0.02,
       "height": 0.0075,
       "color": "#a8786290"
+    },
+    "parts": {
+      "eyes": "round",
+      "brows": "normal",
+      "mouth": "smile",
+      "cheeks": "none",
+      "nose": null
     },
     "eyeSize": 1.25,
     "layout": {
@@ -706,4 +719,17 @@ export function fromQuery(search) {
   return out;
 }
 
-export const resolveOptions = (user) => merge(DEFAULTS, user);
+// A fresh copy every time (the avatar writes instant changes back into it, so it must never share objects with DEFAULTS or the caller).
+// Face parts given with the old Japanese names become ids.
+export const resolveOptions = (user) => { const o = structuredClone(merge(DEFAULTS, user)); Object.assign(o.face.parts, partIds(user?.face?.parts)); return o; };
+
+/** Only what differs from base (e.g. a recipe without its defaults, for "copy as code"). Arrays and values compare as a whole. */
+export function diff(base, opt) {
+  const out = {};
+  for (const [k, v] of Object.entries(opt || {})) {
+    const b = base?.[k];
+    if (isObj(v) && isObj(b)) { const d = diff(b, v); if (Object.keys(d).length) out[k] = d; }
+    else if (JSON.stringify(v) !== JSON.stringify(b)) out[k] = v;
+  }
+  return out;
+}
