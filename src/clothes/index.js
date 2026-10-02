@@ -2,11 +2,15 @@
 // Functions taking B (the body distance) can be given a faster lookup of the same body while meshing.
 import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
 
-export function buildClothes(OPT, { P, CROTCH, bodySdf }) {
+export function buildClothes(OPT, { P, CROTCH, bodySdf, ARMPIT = [] }) {
   const pick = (...names) => names.flatMap((n) => [P[n]?.cloth ?? P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);   // .cloth: a part's own shape for clothes (the bust: joined across the middle)
   // shirt.sleeve: "short" (to the middle of the upper arm) | "none" (cut off at the armhole) | "long" (to the wrist)
   // shirt.length: "tuck" (hem inside the pants) | "out" (hem over the pants) | "crop" (above the navel)
   const SH = OPT.outfit.shirt, SLEEVE = SH.sleeve ?? "short", LEN = SH.length ?? "tuck";
+  // shirt.underarm: "fit" = the cloth follows the body's armpit hollow (ARMPIT, body/index.js) / "loose" = it bridges it (poncho-like: hangs from the sleeve down the side)
+  //   Why: the shirt is the body's parts melted and puffed up 1.4 cm, so where a chibi arm hangs close to the side the sleeve and the side melted into one
+  //   sheet; raising the arms (T-pose) stretched it into a web (2026-10-02 Saori: 「袖下の付け根の位置が下すぎて水かきみたい」)
+  const PIT = (SH.underarm ?? "fit") === "loose" || !SLEEVE || SLEEVE === "none" ? [] : ARMPIT;
   const armParts = SLEEVE === "long" ? ["sleeve", "upperArm", "foreArm"] : SLEEVE === "short" ? ["sleeve"] : [];
   const shirtCore = blendFast(pick("chest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", ...armParts, ...(LEN === "out" ? ["butt"] : [])), [-0.4, 0.4, -0.25], [0.4, 0.95, 0.27]);   // out: over the bottom too (else the pants show through at the back)
   const arm = (s) => { const a = P[`upperArm.${s}`], f = P[`foreArm.${s}`], L = Math.hypot(a.bx, a.by), Lf = Math.hypot(f.bx, f.by, f.bz);   // armhole and cuff: planes across the arm
@@ -20,7 +24,10 @@ export function buildClothes(OPT, { P, CROTCH, bodySdf }) {
     const neck = y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (nx * nx + rz * rz));   // えりぐり: 首から離れるほど高くなるおわん形の面で切る(首に沿う布と平行にならないので、ふちがガタつかない)
     const sm = (a, b) => -smin(-a, -b, 0.012);   // 角を丸めて切る
     const fit = y > SHOULDER_FIT.y0 ? B(x, y, z) - SHOULDER_FIT.off - 0.3 * (1 - sstep(SHOULDER_FIT.y0, SHOULDER_FIT.y1, y) * sstep(SHOULDER_FIT.x0, SHOULDER_FIT.x0 + SHOULDER_FIT.xw, Math.abs(x))) : -1;   // 肩の上は体から離れすぎないように(怒り肩にしない)。首のまわりは効かせない
-    let d = shirtCore(x, y, z) - 0.014 - (LEN === "out" ? 0.01 * sstep(0.56, 0.5, y) : 0);   // out: a little looser at the bottom, so it lies over the pants
+    // the armpit hollow: near it the cloth is thin (0.4 cm instead of 1.4: two 1.4 cm layers would fill the hollow again), and it follows the hollow 0.4 cm off the body
+    let pit = 1e9; for (const c of PIT) if (Math.abs(x - c.bx0) < c.br) pit = Math.min(pit, c.f(x, y, z));
+    let d = shirtCore(x, y, z) - (0.014 - 0.01 * (1 - sstep(0, 0.025, pit))) - (LEN === "out" ? 0.01 * sstep(0.56, 0.5, y) : 0);   // out: a little looser at the bottom, so it lies over the pants
+    if (pit < 0.03) d = -smin(-d, pit + 0.004, 0.006);
     for (const A of ARMS) { if (x * A.side <= 0) continue;
       if (SLEEVE === "none") { const t = (x - A.ax) * A.ux + (y - A.ay) * A.uy, px = x - A.ax - t * A.ux, py = y - A.ay - t * A.uy;   // sleeveless: cut off the arm just inside the shoulder joint
         d = sm(d, -Math.max(t + 0.012, Math.hypot(px, py, z - A.az) - 0.063)); }   // 0.063: around the sleeve only, not the back or chest beside it   // (only around the arm: a plane alone would cut through the body too)
