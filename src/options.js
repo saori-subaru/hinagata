@@ -142,6 +142,8 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
+        "lobe": 1.3,
+        "lobeIn": 0.004,
         "scale": 1.15,
         "x": null,
         "y": 0.958,
