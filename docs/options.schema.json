@@ -4347,17 +4347,35 @@
   },
   "outfit.pants.kind": {
    "path": "outfit.pants.kind",
-   "type": "json",
+   "type": "enum",
    "default": "pants",
    "label": {
-    "en": "pants › kind"
+    "ja": "ズボン / スカート",
+    "en": "Pants or skirt"
    },
    "group": "outfit",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "clothes",
    "apply": null,
+   "options": [
+    {
+     "value": "pants",
+     "label": {
+      "ja": "ズボン",
+      "en": "Pants"
+     }
+    },
+    {
+     "value": "skirt",
+     "label": {
+      "ja": "スカート",
+      "en": "Skirt"
+     }
+    }
+   ],
    "section": {
-    "en": "pants"
+    "ja": "ズボン",
+    "en": "Pants"
    }
   },
   "outfit.pants.length": {
@@ -4405,18 +4423,23 @@
    "type": "number",
    "default": 0.3,
    "label": {
-    "en": "pants › skirt › hem"
+    "ja": "スカートの裾の高さ",
+    "en": "Skirt hem height"
    },
    "group": "outfit",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.15,
-   "max": 0.45,
-   "step": 0.01,
-   "soft": true,
+   "min": 0.2,
+   "max": 0.4,
+   "step": 0.005,
    "section": {
-    "en": "pants › skirt"
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "スカートのときだけ",
+    "en": "Only for the skirt"
    }
   },
   "outfit.pants.skirt.flare": {
@@ -4424,18 +4447,23 @@
    "type": "number",
    "default": 0.4,
    "label": {
-    "en": "pants › skirt › flare"
+    "ja": "スカートの広がり",
+    "en": "Skirt flare"
    },
    "group": "outfit",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.2,
-   "max": 0.6,
+   "min": 0,
+   "max": 0.8,
    "step": 0.01,
-   "soft": true,
    "section": {
-    "en": "pants › skirt"
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "スカートのときだけ",
+    "en": "Only for the skirt"
    }
   },
   "outfit.pants.skirt.pleats": {
@@ -4443,18 +4471,23 @@
    "type": "number",
    "default": 16,
    "label": {
-    "en": "pants › skirt › pleats"
+    "ja": "プリーツの数",
+    "en": "Pleats"
    },
    "group": "outfit",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "clothes",
    "apply": null,
    "min": 0,
    "max": 32,
    "step": 1,
-   "soft": true,
    "section": {
-    "en": "pants › skirt"
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "スカートのときだけ",
+    "en": "Only for the skirt"
    }
   },
   "outfit.pants.skirt.pleatDepth": {
