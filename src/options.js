@@ -146,7 +146,7 @@ export const DEFAULTS = {
         "baseY": 0.905
       },
       "nose": {
-        "tipZ": 0.267,
+        "tipZ": 0.28,
         "under": {
           "dent": 0.012,
           "dentY": 0.915,
@@ -155,7 +155,7 @@ export const DEFAULTS = {
         },
         "tipRadius": 0.0035,
         "blend": 0.02,
-        "lift": 0.012
+        "lift": 0.02
       },
       "mouth": {
         "curve": 45,
