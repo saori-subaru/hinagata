@@ -175,7 +175,7 @@ export const DEFAULTS = {
       "crown": {
         "y": 1.32,
         "blend": 0.05,
-        "tilt": 0.25,
+        "tilt": 0,
         "pivotZ": -0.12
       },
       "forearm": {
@@ -300,6 +300,7 @@ export const DEFAULTS = {
       "shortBack": 0.86,
       "shell": 0.028,
       "taper": 0.09,
+      "backVolume": 0.025,
       "square": 1,
       "hairline": 1.203,
       "peak": {
