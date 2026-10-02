@@ -54,8 +54,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; };
     P.bust = Object.assign(part(0.01), { cloth: part(0.04) }); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
-  P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.072, 0.1], "hips", 0.09);
-  if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.215 - TO.waist), 0.575, 0], [0.05, 0.1, 0.14], "spine", 0.05));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
+  // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
+  // (a short pelvis and a short cut made the hips jut out suddenly with a corner, like a clay figurine)
+  P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.115, 0.1], "hips", 0.12);
+  if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.235 - TO.waist), 0.6, 0], [0.08, 0.16, 0.14], "spine", 0.08));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
