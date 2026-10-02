@@ -18,6 +18,7 @@ import { createFace } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 
 export { DEFAULTS, POSES, resolveOptions };
+export { BODY_TYPES } from "./body/types.js";
 
 /**
  * Build an avatar.

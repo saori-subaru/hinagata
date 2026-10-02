@@ -43,7 +43,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .fimg { display: grid; gap: 4px; justify-items: end; background: #ffffffd8; border-radius: 12px; padding: 8px 10px; font-size: 11px; font-weight: 800; }
 .fimg label { display: flex; gap: 6px; align-items: center; } .fimg input[type=range] { width: 110px; }
 .lay { position: fixed; left: 12px; top: 64px; z-index: 3; width: 236px; max-height: calc(100vh - 140px); overflow-y: auto; display: grid; gap: 6px; background: #ffffffe6; border-radius: 14px; padding: 10px 12px; font-size: 11px; box-shadow: 0 4px 14px #0000001a; }
-.lay b { font-size: 12px; } .lay .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center; } .lay .row input { grid-column: 1 / -1; width: 100%; }
+.lay b { font-size: 12px; } .types { display: flex; flex-wrap: wrap; gap: 4px; } .types .btn { padding: 4px 10px; font-size: 11px; } .lay .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center; } .lay .row input { grid-column: 1 / -1; width: 100%; }
 .lay .val { font: 500 10px var(--mono); color: var(--muted); } .lay textarea { width: 100%; font: 500 10px var(--mono); resize: none; border-radius: 8px; border: 1px solid #0002; padding: 4px; }
 @media (max-width: 720px) {   /* 狭い画面: 顔が隠れないように下に寄せて、スライダーは2列 */
   .lay { top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); width: auto; max-height: 46vh; padding: 8px 10px; gap: 4px; }
@@ -59,7 +59,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
     <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
-    <button class="btn" id="tLimb" type="button" aria-pressed="false">手足の太さスライダー</button>
+    <button class="btn" id="tLimb" type="button" aria-pressed="false">体型スライダー</button>
     <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
     <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
@@ -98,7 +98,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <label>設定(これを教えてくれれば反映する)<textarea id="layOut" rows="3" readonly></textarea></label>
 </div>
 <div class="lay" id="limbPanel" hidden>
-  <b>手足の太さ(離すと作り直す・数秒)</b>
+  <b>体型(離すと作り直す・数秒)</b>
+  <div class="types" id="bodyTypes"></div>
   <div id="limbSliders"></div>
   <button class="btn" id="limbReset" type="button">はじめに戻す</button>
   <label>設定(これを教えてくれれば反映する)<textarea id="limbOut" rows="2" readonly></textarea></label>
@@ -113,6 +114,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createAvatar, POSES } from "./src/index.js";
 import { clayMat, toon } from "./src/materials.js";
 import { fromQuery, merge } from "./src/options.js";
+import { BODY_TYPES } from "./src/body/types.js";
 
 // 素体の確認ページ: createAvatar で作ったキャラを、ボタンで着せ替え・ポーズ・見本との比較をして確かめる
 const $ = (id) => document.getElementById(id);
@@ -297,11 +299,18 @@ $("layReset").addEventListener("click", () => { avatar.setFaceLayout(layDefault(
 // 開いている間は顔に寄る(狭い画面では、下のパネルに隠れないよう顔を上半分に出す)
 let layCam = null;
 // 手足の太さスライダー(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
-const LIMB_SLIDERS = [["upperArm", "二の腕"], ["forearm", "前腕"], ["thigh", "太もも"], ["calf", "ふくらはぎ"]];
-const TH = { ...avatar.options.body.thickness };
-function curOpts() { return merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), { body: { thickness: TH } }); }
-function limbSync() { const d = {}; for (const [k] of LIMB_SLIDERS) { $("tv-" + k).textContent = TH[k].toFixed(2); $("ts-" + k).value = TH[k]; if (TH[k] !== 1) d[k] = TH[k]; }
-  $("limbOut").value = Object.keys(d).length ? JSON.stringify({ body: { thickness: d } }) : "(はじめのまま)"; }
+// [グループ, キー, 名前, 最小, 最大, 刻み]
+const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.85, 1.2, 0.01],
+  ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
+const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }, SHAPE0 = structuredClone(SHAPE);
+function curOpts() { return merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), { body: structuredClone(SHAPE) }); }
+const TYPE_LABEL = { toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
+function limbSync() { const d = {};
+  for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
+  for (const b of $("bodyTypes").children) b.setAttribute("aria-pressed", String(LIMB_SLIDERS.every(([g, k]) => BODY_TYPES[b.dataset.t].body[g][k] === SHAPE[g][k])));
+  $("limbOut").value = Object.keys(d).length ? JSON.stringify({ body: d }) : "(はじめのまま)"; }
+for (const [t, o] of Object.entries(BODY_TYPES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.dataset.t = t; b.textContent = TYPE_LABEL[t] ?? t;
+  b.addEventListener("click", () => { Object.assign(SHAPE.torso, o.body.torso); Object.assign(SHAPE.thickness, o.body.thickness); limbSync(); rebuildBody(); }); $("bodyTypes").append(b); }
 let building = false, again = false;
 async function rebuildBody() {
   if (building) { again = true; return; } building = true;
@@ -316,20 +325,20 @@ async function rebuildBody() {
   } while (again);
   building = false;
 }
-for (const [k, label] of LIMB_SLIDERS) {
+for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
   const row = document.createElement("div"); row.className = "row";
-  row.innerHTML = `<span>${label}</span><span class="val" id="tv-${k}"></span><input type="range" id="ts-${k}" min="0.6" max="1.15" step="0.01">`;
+  row.innerHTML = `<span>${label}</span><span class="val" id="tv-${k}"></span><input type="range" id="ts-${k}" min="${min}" max="${max}" step="${step}">`;
   $("limbSliders").append(row);
-  $("ts-" + k).addEventListener("input", (e) => { TH[k] = +e.target.value; limbSync(); });
+  $("ts-" + k).addEventListener("input", (e) => { SHAPE[g][k] = +e.target.value; limbSync(); });
   $("ts-" + k).addEventListener("change", rebuildBody);
 }
-$("limbReset").addEventListener("click", () => { for (const [k] of LIMB_SLIDERS) TH[k] = 1; limbSync(); rebuildBody(); });
+$("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
 let limbCam = null;
 toggle("tLimb", (on) => {
   if (on && $("tLay").getAttribute("aria-pressed") === "true") $("tLay").click();
   $("limbPanel").hidden = !on; $("poses").hidden = on || compare; limbSync();
-  if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.6, twin ? 5.6 : 4.4); controls.target.set(x, 0.2, 0); }
+  if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.55, twin ? 6.2 : 5.2); controls.target.set(x, 0.0, 0); }
   else if (!on && limbCam) { camera.position.copy(limbCam[0]); controls.target.copy(limbCam[1]); limbCam = null; }
 });
 toggle("tLay", (on) => {
