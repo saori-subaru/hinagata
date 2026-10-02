@@ -54,6 +54,13 @@ export const DEFAULTS = {
         "open": 1.5,
         "k": 0.03
       },
+      "faceShift": {
+        "z": 0.03,
+        "y0": 0.88,
+        "y1": 0.98,
+        "z0": -0.05,
+        "z1": 0.05
+      },
       "jaw": {
         "width": 0.112
       },

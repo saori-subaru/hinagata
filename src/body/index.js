@@ -156,6 +156,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     return d * Math.min(1, Math.max(0, (z - TEMPLE_Z0) / 0.06)) - trim; };   // 前を向いた面だけ前へ出す(横には広げない)
   if (!slow) HEAD.f = blendFast(HEAD.list, [-0.32, 0.7, -0.34], [0.32, 1.44, 0.4], OPT.quality.headCell);   // 頭の部品も速い版で
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y) - temple(x, y, z); }
+  // move the lower face (chin, mouth, under the jaw) straight back by faceShift.z, fading out between y0 and y1 (eyes and forehead stay) and toward the back (z0..z1)
+  const FS = OPT.body.sculpt.faceShift;
+  if (FS.z) { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z + FS.z * (1 - sstep(FS.y0, FS.y1, y)) * sstep(FS.z0, FS.z1, z)); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform(OPT.body.head), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
