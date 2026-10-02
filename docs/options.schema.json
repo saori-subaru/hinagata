@@ -4345,6 +4345,21 @@
     "en": "Pants"
    }
   },
+  "outfit.pants.kind": {
+   "path": "outfit.pants.kind",
+   "type": "json",
+   "default": "pants",
+   "label": {
+    "en": "pants › kind"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "section": {
+    "en": "pants"
+   }
+  },
   "outfit.pants.length": {
    "path": "outfit.pants.length",
    "type": "enum",
@@ -4383,6 +4398,120 @@
    "section": {
     "ja": "ズボン",
     "en": "Pants"
+   }
+  },
+  "outfit.pants.skirt.hem": {
+   "path": "outfit.pants.skirt.hem",
+   "type": "number",
+   "default": 0.3,
+   "label": {
+    "en": "pants › skirt › hem"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.15,
+   "max": 0.45,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
+   }
+  },
+  "outfit.pants.skirt.flare": {
+   "path": "outfit.pants.skirt.flare",
+   "type": "number",
+   "default": 0.4,
+   "label": {
+    "en": "pants › skirt › flare"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.2,
+   "max": 0.6,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
+   }
+  },
+  "outfit.pants.skirt.pleats": {
+   "path": "outfit.pants.skirt.pleats",
+   "type": "number",
+   "default": 16,
+   "label": {
+    "en": "pants › skirt › pleats"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 32,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
+   }
+  },
+  "outfit.pants.skirt.pleatDepth": {
+   "path": "outfit.pants.skirt.pleatDepth",
+   "type": "number",
+   "default": 0.008,
+   "label": {
+    "en": "pants › skirt › pleat depth"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.004,
+   "max": 0.012,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
+   }
+  },
+  "outfit.pants.skirt.thick": {
+   "path": "outfit.pants.skirt.thick",
+   "type": "number",
+   "default": 0.018,
+   "label": {
+    "en": "pants › skirt › thick"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.009,
+   "max": 0.027,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
+   }
+  },
+  "outfit.pants.skirt.follow": {
+   "path": "outfit.pants.skirt.follow",
+   "type": "number",
+   "default": 0.85,
+   "label": {
+    "en": "pants › skirt › follow"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.425,
+   "max": 1.275,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "pants › skirt"
    }
   },
   "outfit.pants.hem": {
