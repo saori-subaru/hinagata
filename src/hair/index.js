@@ -58,8 +58,12 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
       const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - 0.01;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
-      const tp = c > -0.2 ? TAPER : TAPER_BACK;   // front and sides / back (toward the nape)
-      const thick = SHELL ? SHELL * (tp ? TMIN + (1 - TMIN) * sstep(0, tp, y - hem) : 1)
+      // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
+      // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
+      let tf = 1; if (TAPER || TAPER_BACK) { const s2x = Math.min(1, (x / 0.21) ** 2), front = o.top - o.arch * (SQ ? (1 - SQ) * s2x + SQ * s2x ** 3 : s2x), back = o.back + (o.side - o.back) * s2x;
+        const ff = TAPER ? sstep(0, TAPER, y - Math.max(front, o.side - 0.05)) : 1, fb = TAPER_BACK ? sstep(0, TAPER_BACK, y - back) : 1;
+        tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
+      const thick = SHELL ? SHELL * tf
         + BACKV * sstep(0.12, -0.12, z) * sstep(1.08, 1.3, y) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
       return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, 0.006);
     } };
