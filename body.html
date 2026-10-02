@@ -74,6 +74,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tSkin" type="button">肌の色</button>
     <button class="btn" id="tBone" type="button" aria-pressed="false">骨を見る</button>
     <button class="btn" id="tWire" type="button" aria-pressed="false">網目を見る</button>
+    <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tExport" type="button">glTFを書き出す</button>
     <div class="stat" id="stat"></div>
   </div>
@@ -212,6 +213,10 @@ $("tExport").addEventListener("click", async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { avatar.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
+// 頭の試作: 押すとその設定でページを作り直す(?o= に入れる)
+const HEAD_VARIANTS = [["いまの", null], ["案2", { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1 } } } }]];
+{ const cur = Q.get("o"), i = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === cur)); $("tHeadV").textContent = `頭: ${HEAD_VARIANTS[i][0]}`;
+  $("tHeadV").addEventListener("click", () => { const [, v] = HEAD_VARIANTS[(i + 1) % HEAD_VARIANTS.length], q = new URLSearchParams(location.search); if (v) q.set("o", JSON.stringify(v)); else q.delete("o"); location.search = q.toString(); }); }
 faceLabels(); hairLabels(); refreshLook();
 
 // ── 確認用: ?view=front&pose=歩く&t=0.25 など ──
