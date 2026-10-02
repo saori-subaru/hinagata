@@ -152,6 +152,17 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
+        "hollow": {
+          "on": false,
+          "cu": 0.008,
+          "cv": 0,
+          "ru": 0.036,
+          "rv": 0.048,
+          "depth": 0.008,
+          "shift": 0.022,
+          "inner": 0.9,
+          "soft": 0.25
+        },
         "turn": 0.3,
         "blend": 0.035,
         "lobe": 0,
@@ -342,7 +353,7 @@ export const DEFAULTS = {
   },
   "face": {
     "earShade": {
-      "on": true,
+      "on": false,
       "color": "#ccab9f",
       "strength": 1,
       "cu": 0.006,

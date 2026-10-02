@@ -262,8 +262,9 @@ const V2 = merge(NOSE0, { face: { layout: { eyeX: 0.112, browX: 0.112, browY: 1.
 const OLD = merge(V2, { body: { head: { scale: 1 }, sculpt: { skull: { width: 0.249 }, faceBox: { on: 0 } } } });   // 案2にする前のモデル
 const V3 = merge(V2, { body: { sculpt: { faceBox: { cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } });   // 顔の正面と横を平らな面に
 const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
-const PREV = { face: { earShade: { on: false }, earLine: { on: true } } };   // ひとつ前(耳の中を線で描いていた版)
-const NECK0 = merge(PREV, { face: { earLine: { on: false } } });   // 耳の線を描く前
+const PREV = { face: { earShade: { on: true } } };   // ひとつ前(耳の中をぼかした面で塗っていた版)
+const LINE1 = { face: { earShade: { on: false }, earLine: { on: true } } };   // 耳の中を線で描いていた版
+const NECK0 = { face: { earLine: { on: false } } };   // 耳の線を描く前
 const NECK0b = merge(NECK0, { body: { sculpt: { neck: { width: 1 } } } });   // 首を細くする前
 const ARCH = merge(NECK0b, { hair: { sculpt: { corner: { a0: 0, a1: 95 } } }, body: { sculpt: { skullTop: { extra: 0.01 } } } });   // 生え際を丸いアーチ・頭の上を広げていた版
 const CORN0 = merge(NECK0b, { hair: { sculpt: { corner: { a0: 35, a1: 92 }, backVolumeTop: null } } });   // 生え際を耳の上へ丸く下ろしていた版
@@ -288,7 +289,7 @@ const WIDE = merge(SHIFT0, { body: { sculpt: { skull: { width: 0.21 }, cheeks: {
 const STEP1 = merge(WIDE, { hair: { sculpt: { hairline: null, peak: { depth: 0 } } }, body: { sculpt: { skull: { height: 0.26, y: 1.128 }, crown: { y: 1.345 } } } });   // 案5+四角い生え際
 const V5 = merge(STEP1, { hair: { sculpt: { square: 0, corner: null } } });   // 案5(生え際がアーチのまま)
 const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   // 案7: 前後を詰める(後頭部が出すぎないように)
-const HEAD_VARIANTS = [["いまの", null], ["ひとつ前(耳の線)", PREV], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
+const HEAD_VARIANTS = [["いまの", null], ["ひとつ前(耳の面)", PREV], ["耳の線", LINE1], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
