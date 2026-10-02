@@ -202,6 +202,34 @@ The trap: motions tuned in the prototype (swing height, speed, hit moment) are w
 - Decide this before the sword presets: retrofitting it after the motions exist means rewriting them.
 - Pitch that follows from it: "the feel you tune in the prototype carries over to the final characters" — stronger than "placeholder characters for prototypes".
 
+### Shoulder bones and a rounder back (2026-10-02, decided)
+
+Saori wants shoulder (clavicle) bones. Do this **before the sword presets**: once motions exist, changing the skeleton means rewriting them.
+
+Why: arms raised above the head (sword wind-up, two-handed overhead chop, a tennis serve) need the shoulder itself to lift, or the shoulder line breaks (the same root as the "corner by the neck when the arms go up", today softened only by skin weights in `weights.js`). A hunched back (the hug-knees pose, which isn't rounded today) needs the shoulders to roll forward and a third bend point in the back. VRM and Mixamo both have shoulder bones.
+
+History: before 2026-10-01 the arms hung from `chest` (0.62). Saori added `upperChest` at shoulder height (0.732) so both shoulders turn around a level point. That was the right aim, but it left only two bend points in the back (`spine` 0.50, `chest` 0.62): `upperChest` sits 8 mm under `neck` (0.740), so bending it tilts the neck and arms instead of rounding the back.
+
+Plan:
+1. Add `shoulder.L` / `shoulder.R` as children of `upperChest`, rooted near the base of the neck at shoulder height (about x ±0.02, y 0.732), each reaching to its `upperArm` joint. `upperArm.*` becomes a child of `shoulder.*`. The level shoulder pivot Saori wanted moves to these bones.
+2. Move `upperChest` back down to the upper back (about y 0.68, near VRM's placement) so the back has three bend points (`spine`, `chest`, `upperChest`) and curves instead of folding.
+3. Skin weights: the shoulder bones take the top of the shoulder (between the neck and the arm joint); revisit the shoulder band in `weights.js` (35668c9) — some of what it fakes may now come from the bone.
+4. Hug-knees: bend spine + chest + upperChest a little each, roll the shoulders forward, drop the neck and head.
+
+Done when:
+- In the rest pose (and any pose not using the new bones) the character looks the same as before: screenshots from the fixed views match.
+- Arms raised (T-pose and above the head): no corner by the neck, the shoulder line stays smooth.
+- Hug-knees reads as a rounded back from the side.
+
+Name tables for retargeting: `shoulder.L` ↔ VRM `leftShoulder` ↔ Mixamo `LeftShoulder` (and `.R`).
+
+### Loading Mixamo / VRM motions (2026-10-02, noted)
+
+With the standard humanoid names (see "Motions written for any humanoid skeleton"), motions made for other characters can be loaded:
+- Mixamo (FBX/GLB clips) and VRM motions (`.vrma`) go through a bone-name table, a rest-pose correction (their rest is a T-pose, this engine binds in an A-pose), and a proportion correction (hip height and travel scaled by leg length, or the feet slide and float).
+- Expect trouble where the chibi proportions matter: hands near the face sink into the big head; arms folded in front sink into the thick torso. Big-limbed motions (walk, run, swing) transfer well.
+- License: Mixamo motions may be used in games, but the files may not be redistributed. The engine can't ship Mixamo clips; users load the ones they downloaded themselves.
+
 ## Scope: chibi only, but wide within it
 
 Low head-to-body ratio only (about 2 to 3 heads). Tall anime characters are well served by VRoid and game engines, and are heavy for browser games built with three.js — the target users here. Within chibi proportions, the goal is range: with effort the same system can make a cute anime girl or a knight in fantasy armor. What that takes:
