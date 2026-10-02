@@ -50,7 +50,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     // tips[i][6] (thickness): this clump is that much thicker (m, minus = thinner), fading out toward its neighbours (a bell over the angle, B.thickSpread degrees)
     "nendo": (pick = {}) => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl, sk, g, sw, tk]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null, (sw ?? 0) * deg, tk ?? 0]), CV = B.curve ?? 1;
       const TK = T.filter((t) => t[6]), TKS = (B.thickSpread ?? 9) * deg, tipThick = (th) => { let s = 0; for (const t of TK) s += t[6] * Math.exp(-(((th - t[0]) / TKS) ** 2)); return s; };
-      const BK = BACKS[pick.back], backExtra = BK ? BK.r[0] - 0.282 * KX : 0;   // match the back hair's thickness (the bob is a little thicker), so there's no step where they meet
+      const BK = BACKS[pick.back], backExtra = (y) => BK ? backOff(BK, y) : 0;   // match the back hair's thickness (the bob is a little thicker below), so there's no step where they meet
       const backFlare = (y) => BK?.flare ? BK.flare * sstep(1.05, BK.side, y) : 0;   // and its outward flick at the bottom (the bob's): else the side locks sat inside the bob, a step like a helmet's edge
       const notches = T.slice(1).map(([a, , , , g], i) => g != null && g === T[i][4] ? null : (a + T[i][0]) / 2).filter((a) => a != null);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
@@ -58,7 +58,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         // sweep: near its tip the clump shifts sideways (the whole clump bends to one side, both edges together)
         let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
-        const thick = B.thick + backExtra + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);
+        const thick = B.thick + backExtra(y) + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);
         const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
         const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // keep off the ears
         return smax(smax(smax(shell, hem - y, 0.006), side, 0.01), -ear, EAR_GAP.k); } }]; },
@@ -73,6 +73,9 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
+  // how far the back hair stands off the skull: the short hair's, plus (the bob) a little more below the top of the head only,
+  // so every kind of bangs meets it without a step on top (the bob used to be thicker everywhere: other bangs sat inside it like a helmet's rim)
+  const backOff = (o, y) => (BACKS.short.r[0] - 0.282 * KX) + (o.r[0] - BACKS.short.r[0]) * sstep(1.12, 1.0, y);
   { const BT = OPT.hair.sculpt.bob; if (BT) Object.assign(BACKS.bob, BT); }   // bob overrides: tips (depth of the hem's points), teeth (how many), flare (outward flick)   // height of the hairline at the forehead
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
   const CORNER = OPT.hair.sculpt.corner ?? null, TAPER_SIDES = OPT.hair.sculpt.taperSides ?? null;
@@ -98,7 +101,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     return LU.amp * (Math.pow(Math.abs(Math.sin(Math.PI * s)), LU.sharp) - 0.6) * sstep(LU.from, LU.from + 0.35, th); };   // fades out toward the crown, where the bundles meet
   function backBlock(o) { const b = backBlock0(o); return o.long ? longCurtain(o, b) : b; }
   function backBlock0(o) {
-    const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
+    const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - backOff(o, y) } : e0;   // bob: a little thicker (below the top only)
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
       const th = Math.atan2(x, z), c = Math.cos(th);
       const s2 = Math.sin(th) ** 2, arch = CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(th) / deg) : o.arch * (SQ ? (1 - SQ) * s2 + SQ * s2 ** 3 : s2);   // corner: the hairline turns down between these angles (degrees from the front), so it reaches the ear without receding at the temples   // square: the hairline stays level across the forehead and turns down at the corners
