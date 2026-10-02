@@ -221,6 +221,7 @@ Two places, two kinds of people, one engine underneath.
 - The first parts are made by the owner.
 - Automatic checks on part pull requests (does it fit the art style, is it light enough).
 - A treasure hunt in the plaza (`site/lab/plaza.html`): walk, find, wear. If it happens, the gacha prototype (`gacha.html`) is not used — the gacha was only a test. What the prizes are is open: this engine focuses on the base body and template presets, so it may not grow enough parts to hand out as prizes.
+- **The old-growth forest** (Moruri's scrapped `ref/jungle/`, 1 unit = 1 m, 128 m square) as the site's minigame place (2026-10-02): a treasure hunt (one-off finds) plus an idle side (set traps, close the site, come back later to collect). Traps run on timestamps in the browser, no server. Maybe also the stage for the "arcade idol" idea. Decided: the idle prototype `lab/idle.html` (放置の森) is dropped.
 - The maker's look: see "Playground look" — the GitHub playground and the site's maker may want different looks.
 
 ## Decisions
