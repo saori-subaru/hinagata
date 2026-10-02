@@ -6,7 +6,8 @@ import { grad } from "../sdf/mesh.js";
 export function buildHair(OPT, { P, bodySdf }) {
   //  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
   //  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
-  const HC = { c: [0, 1.137, -0.005], r: [0.255, 0.26, 0.262] };   // 毛束の通り道に使う頭の丸(頭の部品と同じ)
+  const KX = OPT.body.sculpt.skull.width / 0.249;   // hair follows the skull width
+  const HC = { c: [0, 1.137, -0.005], r: [0.255 * KX, 0.26, 0.262] };   // 毛束の通り道に使う頭の丸(頭の部品と同じ)
   const deg = Math.PI / 180;
   function onScalp(th, ph, off) {   // th: 頭のまわりの角度(0=正面, +=キャラの左) / ph: 高さの角度 / off: 頭の表面からの浮き
     let p = [HC.c[0] + HC.r[0] * Math.cos(ph) * Math.sin(th), HC.c[1] + HC.r[1] * Math.sin(ph), HC.c[2] + HC.r[2] * Math.cos(ph) * Math.cos(th)];
@@ -41,6 +42,7 @@ export function buildHair(OPT, { P, bodySdf }) {
   };
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
   const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
+  if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   function backBlock(o) {
     const e = E([0, 1.125, -0.02], o.r, "head");
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {

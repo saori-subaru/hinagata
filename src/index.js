@@ -31,9 +31,9 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const H = quality === "low" ? 0.0095 : 0.0068;   // mesh cell size
 
   // shapes
-  const { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
-  const hairKit = buildHair(OPT, { P, bodySdf });
+  const hairKit = buildHair(OPT, { P, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI });
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
 
@@ -60,12 +60,12 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   }
 
   // face shading: shade the head with normals borrowed from a smooth ellipsoid, so toon bands don't follow small bumps (clay view keeps the real normals)
-  const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };
+  const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25 * OPT.body.sculpt.skull.width / 0.249, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };
   function addShadeNormals(geo) {
     const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
-    for (let i = 0; i < Pa.length; i += 3) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2];
+    for (let i = 0; i < Pa.length; i += 3) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]);   // in head space
       let w = F.w * sstep(0.86, 0.93, y); for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
-      const ex = (x - F.c[0]) / F.r[0] ** 2, ey = (y - F.c[1]) / F.r[1] ** 2, ez = (z - F.c[2]) / F.r[2] ** 2, el = Math.hypot(ex, ey, ez) || 1;
+      const ex = (x - F.c[0]) / F.r[0] ** 2 / HT.sx, ey = (y - F.c[1]) / F.r[1] ** 2 / HT.sy, ez = (z - F.c[2]) / F.r[2] ** 2 / HT.sz, el = Math.hypot(ex, ey, ez) || 1;   // normal back to world space
       const sx = N[i] + (ex / el - N[i]) * w, sy = N[i + 1] + (ey / el - N[i + 1]) * w, sz = N[i + 2] + (ez / el - N[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
     geo.setAttribute("shadeN", new THREE.BufferAttribute(S, 3));
@@ -83,7 +83,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   parts.soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(mesh(sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, fast.sock), OPT.outfit.socks.color, 0.003);
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
-  const makeHair = (h) => skinned(mesh(hairKit.hairSdfOf(hairPick), [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);
+  const makeHair = (h) => skinned(mesh(HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);
   parts.hair = makeHair(H);
 
   // face: parts drawn into a texture on a thin copy of the front of the head
@@ -92,7 +92,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" };   // default: code-drawn face (no image files needed)
   let faceLayer = null;
   function buildFaceLayer() {
-    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap);
+    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HT.identity ? null : HT.toHead);
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, face.faceMat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
   }
@@ -105,7 +105,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, bodySdf, bodySdfSlow, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },

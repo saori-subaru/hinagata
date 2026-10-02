@@ -107,12 +107,13 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       else draw(1); }
     faceTex.needsUpdate = true;
   }
-  function faceLayerGeometry(src, FACE_WRAP) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it
+  function faceLayerGeometry(src, FACE_WRAP, toHead = null) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled)
     const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
-    const ok = (v) => { const x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2]; return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.05 && N0[v * 3 + 2] > 0.3; };
+    const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
+    const ok = (v) => { const [x, y, z] = H(v); return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.05 && N0[v * 3 + 2] > 0.3; };
     const map = new Map(), pos = [], nor = [], uv = [], si = [], sw = [], idx = [];
-    const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2];
-      pos.push(x + N0[v * 3] * 0.0012, y + N0[v * 3 + 1] * 0.0012, z + N0[v * 3 + 2] * 0.0012); nor.push(N0[v * 3], N0[v * 3 + 1], N0[v * 3 + 2]);
+    const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
+      pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(N0[v * 3], N0[v * 3 + 1], N0[v * 3 + 2]);
       const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
       uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - FACE.y0) / (FACE.y1 - FACE.y0));
       for (let q = 0; q < 4; q++) { si.push(SI[v * 4 + q]); sw.push(SW[v * 4 + q]); } map.set(v, n); return n; };

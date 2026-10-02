@@ -7,11 +7,31 @@ export const DEFAULTS = {
     "hair": "#6a4a30"
   },
   "body": {
+    "head": {
+      "scale": 1,
+      "width": 1,
+      "depth": 1,
+      "pivotY": 0.845,
+      "pivotZ": 0.006
+    },
     "joints": {
       "footX": 0.116,
       "kneeX": 0.108
     },
     "sculpt": {
+      "skull": {
+        "width": 0.249
+      },
+      "faceBox": {
+        "on": 0,
+        "y": 1.02,
+        "height": 0.12,
+        "width": 0.17,
+        "front": 0.21,
+        "depth": 0.12,
+        "round": 0.05,
+        "blend": 0.04
+      },
       "foot": {
         "thickness": 0.029
       },
