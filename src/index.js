@@ -105,7 +105,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, bodySdfRaw, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },

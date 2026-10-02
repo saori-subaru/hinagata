@@ -49,7 +49,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <div class="top">
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
-    <button class="btn" id="tPair" type="button" aria-pressed="false">案2を横に並べる</button>
+    <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
     <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
     <button class="btn" id="tRef" type="button" aria-pressed="true" hidden>見本を重ねる</button>
@@ -226,29 +226,33 @@ $("tExport").addEventListener("click", async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
-// 頭の試作: 押すとその設定でキャラを作り直す(ページは読み込み直さない)
-const HEAD_VARIANTS = [["いまの", null], ["案2", { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1 } } } }]];
-let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o")));
-$("tHeadV").textContent = `頭: ${HEAD_VARIANTS[headI][0]}`;
+// 頭の試作: 押すと次の案でキャラを作り直す(ページは読み込み直さない)。並べているときは右のキャラを切りかえる
+const V2 = { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1 } } } };
+const V3 = { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1, cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } };   // 顔の正面と横を平らな面に
+const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
+const HEAD_VARIANTS = [["いまの", null], ["案2", V2], ["案3", V3], ["案4", V4]];
+let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = HEAD_VARIANTS.length - 1;
+const headLabel = () => { $("tHeadV").textContent = twin ? `右: ${HEAD_VARIANTS[pairI][0]}` : `頭: ${HEAD_VARIANTS[headI][0]}`; $("tPair").textContent = twin ? "並べるのをやめる" : "案を横に並べる"; };
+const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed") === "true"; av.parts.shirt.on = av.parts.pants.on = on("tCloth"); av.parts.shoes.on = av.parts.soles.on = on("tShoe"); av.parts.socks.on = on("tSock"); av.parts.hair.on = on("tHair"); };
+async function makeTwin() {
+  $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
+  twin?.dispose();
+  twin = await createAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), { quality: low ? "low" : "high" });
+  scene.add(twin.object); twin.play(curPose); twin.setFace(avatar.faceSel); twin.object.position.x = 0.48;
+  $("msg").hidden = true;
+}
+headLabel();
 $("tHeadV").addEventListener("click", async () => {
-  headI = (headI + 1) % HEAD_VARIANTS.length; const [name, v] = HEAD_VARIANTS[headI];
-  $("tHeadV").textContent = `頭: ${name}`;
-  await makeAvatar(merge(fromQuery(location.search), v ?? {}));
-  const on = (id) => $(id).getAttribute("aria-pressed") === "true";   // ボタンの状態を新しいキャラにも
-  parts.shirt.on = parts.pants.on = on("tCloth"); parts.shoes.on = parts.soles.on = on("tShoe"); parts.socks.on = on("tSock"); parts.hair.on = on("tHair");
-  faceI = 0; faceLabels(); hairLabels(); refreshLook();
+  if (twin) { pairI = (pairI + 1) % HEAD_VARIANTS.length; headLabel(); await makeTwin(); refreshLook(); return; }
+  headI = (headI + 1) % HEAD_VARIANTS.length; headLabel();
+  await makeAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}));
+  keepLook(avatar); faceI = 0; faceLabels(); hairLabels(); refreshLook();
 });
-// 案2を横に並べる: 左がいまの、右が案2
+// 案を横に並べる: 左がいまの(または「頭」で選んだ案)、右が「右」で選んだ案
 toggle("tPair", async (on) => {
-  if (on) {
-    $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
-    twin = await createAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[1][1]), { quality: low ? "low" : "high" });
-    scene.add(twin.object); twin.play(curPose); twin.setFace(avatar.faceSel);
-    avatar.object.position.x = -0.48; twin.object.position.x = 0.48;
-    camera.position.set(0, 0.95, 4.2); controls.target.set(0, 0.62, 0);
-    $("msg").hidden = true;
-  } else { twin?.dispose(); twin = null; avatar.object.position.x = 0; camera.position.set(0.9, 0.95, 3.0); controls.target.set(0, 0.62, 0); }
-  refreshLook();
+  if (on) { await makeTwin(); avatar.object.position.x = -0.48; camera.position.set(0, 0.95, 4.2); controls.target.set(0, 0.62, 0); }
+  else { twin?.dispose(); twin = null; avatar.object.position.x = 0; camera.position.set(0.9, 0.95, 3.0); controls.target.set(0, 0.62, 0); }
+  headLabel(); refreshLook();
 });
 faceLabels(); hairLabels(); refreshLook();
 

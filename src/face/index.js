@@ -14,7 +14,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const faceMat = new THREE.MeshBasicMaterial({ map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";
-  const EYE_SIZE = 1.25;   // 目の大きさ
+  const EYE_SIZE = OPT.face.eyeSize;   // 目の大きさ(コードで描く目)
   const EYE_COL = ["#2c3858", "#4f6a9a", "#8aa3cc", "#cfdcef"];   // 虹彩の色(上の暗い色 → 下の明るい色)
   // 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
   const EYE = { x: 0.112, y: 0.998 }, BROW = { x: 0.112, y: OPT.face.layout.browY }, MOUTHP = { x: 0, y: 0.896 }, CHEEK = { x: 0.152, y: 0.955 };

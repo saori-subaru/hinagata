@@ -30,7 +30,16 @@ export const DEFAULTS = {
         "front": 0.21,
         "depth": 0.12,
         "round": 0.05,
-        "blend": 0.04
+        "blend": 0.04,
+        "cutFront": 0,
+        "cutY0": 0.95,
+        "cutY1": 1.3,
+        "cutK": 0.02,
+        "cutSlope": 2,
+        "sideX": 0,
+        "sideZ": 0.06,
+        "sideK": 0.03,
+        "sideSlope": 1.5
       },
       "foot": {
         "thickness": 0.029
@@ -231,6 +240,7 @@ export const DEFAULTS = {
     }
   },
   "face": {
+    "eyeSize": 1.25,
     "layout": {
       "browY": 1.09
     },

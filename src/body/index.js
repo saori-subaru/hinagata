@@ -110,7 +110,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const BODY = Object.entries(P).filter(([k]) => !/^(sleeve|leghole)/.test(k)).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
   // experimental: a rounded box in front of the face, so the face front (forehead to under the eyes) is a flat plane and the eyes don't wrap around a sphere
   const FB = OPT.body.sculpt.faceBox, faceBox = FB.on ? roundBox([0, FB.y, FB.front - FB.depth], [FB.width, FB.height, FB.depth], FB.round, FB.blend) : null;
-  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+  // flat planes: cut the face front at z = cutFront (between cutY0 and cutY1), and the face sides at |x| = sideX (in front of z = sideZ, ahead of the ears)
+  const ramp = (s) => 0.5 * (s + Math.sqrt(s * s + 0.0004)), ramp1 = (s) => 0.5 * (1 + s / Math.sqrt(s * s + 0.0004));   // a ramp with a rounded knee (no crease), and its slope
+  const planeCuts = [];
+  // the planes fade out instead of stopping: below cutY0 the front plane moves forward, behind sideZ the side planes move outward (no steps at their edges)
+  if (FB.cutFront) planeCuts.push(cut({ t: 3, k: FB.cutK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max(FB.cutFront + FB.cutSlope * ramp(FB.cutY0 - y) - z, y - FB.cutY1) / Math.hypot(1, FB.cutSlope * ramp1(FB.cutY0 - y)) }));
+  if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
+  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), ...planeCuts, BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * 0.128, dy = y - 0.995 - FACE_DY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
