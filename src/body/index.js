@@ -156,9 +156,6 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     return d * Math.min(1, Math.max(0, (z - TEMPLE_Z0) / 0.06)) - trim; };   // 前を向いた面だけ前へ出す(横には広げない)
   if (!slow) HEAD.f = blendFast(HEAD.list, [-0.32, 0.7, -0.34], [0.32, 1.44, 0.4], OPT.quality.headCell);   // 頭の部品も速い版で
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y) - temple(x, y, z); }
-  // move the lower face (chin, mouth, under the jaw) straight back by faceShift.z, fading out between y0 and y1 (eyes and forehead stay) and toward the back (z0..z1)
-  const FS = OPT.body.sculpt.faceShift;
-  if (FS.z) { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z + FS.z * (1 - sstep(FS.y0, FS.y1, y)) * sstep(FS.z0, FS.z1, z)); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform(OPT.body.head), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
@@ -172,17 +169,21 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
 }
 
 /**
- * Scale the head around a pivot at the top of the neck. h = { scale, width (x), depth (z), pivotY, pivotZ }.
+ * Scale the head around a pivot at the top of the neck. h = { scale, width (x), depth (z), pivotY, pivotZ, shift: { z, z0, z1 } }.
+ * shift: everything in front of z1 (head space) moves back by z, fading in between z0 and z1, so the head gets shorter front to back
+ * while the side silhouette keeps its shape (skin, hair and face picture move together).
  * toHead: world point → head-space point. fromHead: the reverse. wrap(sdf): a head-space distance function seen in world space.
  */
 export function headTransform(h) {
-  const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ;
-  const identity = sx === 1 && sy === 1 && sz === 1, k = Math.min(sx, sy, sz);
+  const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 };
+  const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
+  const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z, k = Math.min(sx, sy, sz) / stretch;
   return {
     identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
-    toHead: (x, y, z) => [x / sx, py + (y - py) / sy, pz + (z - pz) / sz],
-    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy, pz + (z - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - py) / sy, pz + (z - pz) / sz) * k,
+    toHead: (x, y, z) => [x / sx, py + (y - py) / sy, warp(pz + (z - pz) / sz)],
+    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - py) / sy, warp(pz + (z - pz) / sz)) * k,
   };
 }
 

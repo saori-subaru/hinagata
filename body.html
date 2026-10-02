@@ -254,13 +254,13 @@ $("tExport").addEventListener("click", async () => {
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
 // 頭の試作: 押すと次の案でキャラを作り直す(ページは読み込み直さない)。並べているときは右のキャラを切りかえる
 const V6 = { hair: { sculpt: { square: 1, hairline: 1.165, peak: { depth: 0 } } },   // 案6: 低い頭蓋・平らな側面・四角い生え際(サイコロ寄り。いったん保留)
-  body: { sculpt: { skull: { width: 0.21, height: 0.2, y: 1.09 }, cheeks: { width: 0.185 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, crown: { y: 1.235 }, faceBox: { sideX: 0.175, sideZ: -0.25, sideK: 0.04, round: 0.07 }, jaw: { width: 0.13 }, ears: { x: 0.188 }, faceShift: { z: 0 } } } };
+  body: { sculpt: { skull: { width: 0.21, height: 0.2, y: 1.09 }, cheeks: { width: 0.185 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, crown: { y: 1.235 }, faceBox: { sideX: 0.175, sideZ: -0.25, sideK: 0.04, round: 0.07 }, jaw: { width: 0.13 }, ears: { x: 0.188 } }, head: { shift: { z: 0 } } } };
 const V2 = { face: { layout: { eyeX: 0.112, browX: 0.112, browY: 1.09 } }, hair: { sculpt: { shell: 0, square: 0, hairline: null, peak: { depth: 0 } } },   // 案2
-  body: { sculpt: { skull: { width: 0.225, height: 0.26, y: 1.137 }, cheeks: { width: 0.2 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, faceBox: { width: 0.17 }, crown: { y: 1.39, blend: 0.02 }, ears: { y: 0.983 }, backPlane: { z: 0 }, faceShift: { z: 0 } } } };
+  body: { sculpt: { skull: { width: 0.225, height: 0.26, y: 1.137 }, cheeks: { width: 0.2 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, faceBox: { width: 0.17 }, crown: { y: 1.39, blend: 0.02 }, ears: { y: 0.983 }, backPlane: { z: 0 } }, head: { shift: { z: 0 } } } };
 const OLD = merge(V2, { body: { head: { scale: 1 }, sculpt: { skull: { width: 0.249 }, faceBox: { on: 0 } } } });   // 案2にする前のモデル
 const V3 = merge(V2, { body: { sculpt: { faceBox: { cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } });   // 顔の正面と横を平らな面に
 const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
-const PREV = { body: { sculpt: { faceShift: { z: 0 } } } };   // ひとつ前(下の顔を後ろへずらす前)
+const PREV = { body: { head: { shift: { z: 0 } } } };   // ひとつ前(中心から前を後ろへずらす前)
 const WIDE = merge(PREV, { body: { sculpt: { skull: { width: 0.21 }, cheeks: { width: 0.185 } } } });   // 顔の幅を縮める前
 const STEP1 = merge(WIDE, { hair: { sculpt: { hairline: null, peak: { depth: 0 } } }, body: { sculpt: { skull: { height: 0.26, y: 1.128 }, crown: { y: 1.345 } } } });   // 案5+四角い生え際
 const V5 = merge(STEP1, { hair: { sculpt: { square: 0 } } });   // 案5(生え際がアーチのまま)

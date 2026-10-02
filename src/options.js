@@ -12,7 +12,12 @@ export const DEFAULTS = {
       "width": 1,
       "depth": 1,
       "pivotY": 0.845,
-      "pivotZ": 0.006
+      "pivotZ": 0.006,
+      "shift": {
+        "z": 0.03,
+        "z0": -0.08,
+        "z1": 0.06
+      }
     },
     "torso": {
       "chest": 1,
@@ -53,13 +58,6 @@ export const DEFAULTS = {
         "z0": 0.02,
         "open": 1.5,
         "k": 0.03
-      },
-      "faceShift": {
-        "z": 0.03,
-        "y0": 0.88,
-        "y1": 0.98,
-        "z0": -0.05,
-        "z1": 0.05
       },
       "jaw": {
         "width": 0.112
