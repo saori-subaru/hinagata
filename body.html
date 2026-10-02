@@ -32,7 +32,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .top h1 { margin: 0; font-size: 18px; font-weight: 800; }
 .top small { display: block; font: 500 10px var(--mono); color: var(--muted); letter-spacing: .06em; }
 .top a { pointer-events: auto; color: var(--muted); font-size: 12px; }
-.side { display: grid; gap: 6px; justify-items: end; pointer-events: auto; }
+.side { display: grid; gap: 6px; justify-items: end; pointer-events: auto; max-height: calc(100vh - 130px); overflow-y: auto; padding: 0 2px 4px; }   /* ボタンが多いので、画面が低いときはスクロール */
 .btn { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: #ffffffd8; border: 2px solid #00000014; border-radius: 99px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .poses { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 10px; z-index: 2; }
@@ -49,6 +49,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <div class="top">
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
+    <button class="btn" id="tPair" type="button" aria-pressed="false">案2を横に並べる</button>
+    <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
     <button class="btn" id="tRef" type="button" aria-pressed="true" hidden>見本を重ねる</button>
     <button class="btn" id="tClay" type="button" aria-pressed="false">ねんど色</button>
@@ -74,7 +76,6 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tSkin" type="button">肌の色</button>
     <button class="btn" id="tBone" type="button" aria-pressed="false">骨を見る</button>
     <button class="btn" id="tWire" type="button" aria-pressed="false">網目を見る</button>
-    <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tExport" type="button">glTFを書き出す</button>
     <div class="stat" id="stat"></div>
   </div>
@@ -134,13 +135,17 @@ globalThis.sotaiChecksum = () => avatar.checksum();
 // ── 表示の切りかえ(ねんど色・網目・見本と比べる) ──
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
-let clay = false, wire = false, compare = false;
+let clay = false, wire = false, compare = false, twin = null;   // twin: 横に並べる案2
 const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair];
 function refreshLook() {
-  const body = parts.body;
-  body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
-  for (const x of all()) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
-  avatar.faceLayer.visible = !clay; floor.visible = !compare;
+  for (const av of [avatar, twin].filter(Boolean)) {
+    const P = av.parts, body = P.body;
+    body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
+    if (av === twin) for (const k of ["shirt", "pants", "socks", "shoes", "soles", "hair"]) P[k].on = parts[k].on;   // 並べたほうも同じ着せ方
+    for (const x of [P.body, P.shirt, P.pants, P.socks, P.shoes, P.soles, P.hair]) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
+    av.faceLayer.visible = !clay;
+  }
+  floor.visible = !compare;
 }
 
 // ── 顔 ──
@@ -220,7 +225,7 @@ $("tExport").addEventListener("click", async () => {
   const buf = await avatar.exportGLB();
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 });
-for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
+for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
 // 頭の試作: 押すとその設定でキャラを作り直す(ページは読み込み直さない)
 const HEAD_VARIANTS = [["いまの", null], ["案2", { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1 } } } }]];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o")));
@@ -232,6 +237,18 @@ $("tHeadV").addEventListener("click", async () => {
   const on = (id) => $(id).getAttribute("aria-pressed") === "true";   // ボタンの状態を新しいキャラにも
   parts.shirt.on = parts.pants.on = on("tCloth"); parts.shoes.on = parts.soles.on = on("tShoe"); parts.socks.on = on("tSock"); parts.hair.on = on("tHair");
   faceI = 0; faceLabels(); hairLabels(); refreshLook();
+});
+// 案2を横に並べる: 左がいまの、右が案2
+toggle("tPair", async (on) => {
+  if (on) {
+    $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
+    twin = await createAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[1][1]), { quality: low ? "low" : "high" });
+    scene.add(twin.object); twin.play(curPose); twin.setFace(avatar.faceSel);
+    avatar.object.position.x = -0.48; twin.object.position.x = 0.48;
+    camera.position.set(0, 0.95, 4.2); controls.target.set(0, 0.62, 0);
+    $("msg").hidden = true;
+  } else { twin?.dispose(); twin = null; avatar.object.position.x = 0; camera.position.set(0.9, 0.95, 3.0); controls.target.set(0, 0.62, 0); }
+  refreshLook();
 });
 faceLabels(); hairLabels(); refreshLook();
 
@@ -247,6 +264,7 @@ const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose"))
 let last = performance.now();
 (function frame(now) { requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now;
   avatar.update(dt, { t: Q.has("t") ? +Q.get("t") : undefined, instant: compare, pose: compare ? "aPose" : undefined });   // ?t=0.25 のように時刻を止めて確認できる
+  twin?.update(dt, { t: Q.has("t") ? +Q.get("t") : undefined, instant: compare, pose: compare ? "aPose" : undefined });
   chair.visible = !!avatar.lastPose.chair && !compare;
   if (compare) renderCompare(); else { controls.update(); renderer.render(scene, camera); } })(last);
 </script>
