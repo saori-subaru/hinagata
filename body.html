@@ -528,7 +528,7 @@ for (const [id, g, k, label, names] of OUTFIT_KINDS) {
 }
 // 目のまわりの彫り: 深い = 縦長の大きな目(コードの目)向けの標準 / なだらか = 横長でまっすぐな線の目(上から見ても線が曲がりにくい) / 平ら = くぼみなし
 const EYE_AREA = [["深い", { socketScale: 1, underEye: { depth: 0.01 }, socketLow: { depth: 0.014, width: 0.085, height: 0.06, heightUp: 0.11 } }],
-  ["なだらか", { socketScale: 1, underEye: { depth: 0 }, socketLow: { depth: 0.01, width: 0.15, height: 0.1, heightUp: 0.14 } }], ["平ら", { socketScale: 0 }]];
+  ["なだらか", { socketScale: 1, underEye: { depth: 0 }, socketLow: { depth: 0.014, width: 0.16, height: 0.1, heightUp: 0.14 } }], ["平ら", { socketScale: 0 }]];
 let eyeAreaI = 0;
 $("tSocket").addEventListener("click", () => { eyeAreaI = (eyeAreaI + 1) % EYE_AREA.length; const [n, v] = EYE_AREA[eyeAreaI]; SOCKET_OPT.body.sculpt = structuredClone(v); $("tSocket").textContent = `目のまわり: ${n}`; rebuildBody(); });
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
