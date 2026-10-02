@@ -299,8 +299,9 @@ export const DEFAULTS = {
     "sculpt": {
       "shortBack": 0.86,
       "shell": 0.028,
-      "taper": 0.09,
-      "backVolume": 0.025,
+      "taper": 0.22,
+      "taperBack": 0.18,
+      "backVolume": 0,
       "square": 1,
       "hairline": 1.203,
       "peak": {

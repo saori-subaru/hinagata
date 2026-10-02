@@ -46,7 +46,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;   // height of the hairline at the forehead
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
-  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
+  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
   function backBlock(o) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
@@ -58,7 +58,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
       const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - 0.01;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
-      const thick = SHELL ? SHELL * (TAPER && c > -0.2 ? TMIN + (1 - TMIN) * sstep(0, TAPER, y - hem) : 1)
+      const tp = c > -0.2 ? TAPER : TAPER_BACK;   // front and sides / back (toward the nape)
+      const thick = SHELL ? SHELL * (tp ? TMIN + (1 - TMIN) * sstep(0, tp, y - hem) : 1)
         + BACKV * sstep(0.12, -0.12, z) * sstep(1.08, 1.3, y) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
       return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, 0.006);
     } };
