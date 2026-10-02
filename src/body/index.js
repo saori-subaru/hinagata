@@ -11,13 +11,15 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const FOOT_X = OPT.body.joints.footX;   // 足首の横位置(小さいほど内側に着く。がに股に見えないように)
   const KNEE_X = OPT.body.joints.kneeX;   // 膝の横位置(足首を内側に寄せたのに合わせる)
   const J = {
-    hips: [0, 0.42, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.732, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
-    "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
+    hips: [0, 0.42, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.68, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
+    "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
     "upperLeg.L": [0.11, 0.4, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
   };
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
-  const PARENT = { hips: null, spine: "hips", chest: "spine", upperChest: "chest", neck: "upperChest", head: "neck" };   // upperChest: 両肩をつなぐ点(肩の高さ)
-  for (const s of ["L", "R"]) Object.assign(PARENT, { [`upperArm.${s}`]: "upperChest", [`lowerArm.${s}`]: `upperArm.${s}`, [`hand.${s}`]: `lowerArm.${s}`, [`upperLeg.${s}`]: "hips", [`lowerLeg.${s}`]: `upperLeg.${s}`, [`foot.${s}`]: `lowerLeg.${s}` });
+  // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
+  // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
+  const PARENT = { hips: null, spine: "hips", chest: "spine", upperChest: "chest", neck: "upperChest", head: "neck" };
+  for (const s of ["L", "R"]) Object.assign(PARENT, { [`shoulder.${s}`]: "upperChest", [`upperArm.${s}`]: `shoulder.${s}`, [`lowerArm.${s}`]: `upperArm.${s}`, [`hand.${s}`]: `lowerArm.${s}`, [`upperLeg.${s}`]: "hips", [`lowerLeg.${s}`]: `upperLeg.${s}`, [`foot.${s}`]: `lowerLeg.${s}` });
   const BONES = Object.keys(PARENT);
   const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
 
@@ -39,7 +41,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: OPT.body.sculpt.socketLow.y ?? 0.035, w: OPT.body.sculpt.socketLow.width ?? 0.085, h: OPT.body.sculpt.socketLow.height ?? 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
   const EAR = { flare: 0.7, tilt: 0.3, x: OPT.body.sculpt.ears.x ?? 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
   P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057 * OPT.body.sculpt.neck.width, 0.056 * OPT.body.sculpt.neck.width, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
-  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)

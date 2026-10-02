@@ -219,7 +219,10 @@ A light list, made now to find what the skeleton and the motion layer are missin
 
 Check after building the shoulder bones: every row's "what it needs" is covered by the skeleton or the motion layer.
 
-### Shoulder bones and a rounder back (2026-10-02, decided)
+### Shoulder bones and a rounder back (2026-10-02, decided; done the same day)
+
+Status: done. `shoulder.L/R` (20 bones now), `upperChest` at y 0.68, the trap part bound to `upperChest`, the shoulder bones take the top of the shoulder along the clavicle (`weights.js`). Poses that don't use the new bones look the same (screenshot diff: only outline pixels move). Hug-knees has a rounded back with the shoulders rolled forward and the face up; cheer lifts the shoulders with the arms (Saori to judge both looks).
+
 
 Saori wants shoulder (clavicle) bones. Do this **before the sword presets**: once motions exist, changing the skeleton means rewriting them.
 
