@@ -32,12 +32,15 @@ export const DEFAULTS = {
       "belly": 1,
       "waist": 0,
       "hips": 1,
-      "bust": 0
+      "bust": 0,
+      "butt": 1,
+      "back": 1
     },
     "thickness": {
       "upperArm": 1,
       "forearm": 1,
       "thigh": 1,
+      "thighTop": null,
       "calf": 1
     },
     "joints": {

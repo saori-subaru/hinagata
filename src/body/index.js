@@ -39,10 +39,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: 0.035, w: 0.085, h: 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
   const EAR = { flare: 0.7, tilt: 0.3, x: OPT.body.sculpt.ears.x ?? 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
   P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057 * OPT.body.sculpt.neck.width, 0.056 * OPT.body.sculpt.neck.width, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
-  P.trap = E([0, 0.77, -0.016], [0.12, 0.03, 0.056], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
-  P.chest = E([0, 0.68, 0.015], [0.13 * TO.chest, 0.1, 0.1 * TO.chest], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+  const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
+  P.chest = E([0, 0.68, 0.015 + BD / 2], [0.13 * TO.chest, 0.1, 0.1 * TO.chest - BD / 2], "chest", 0.05);       // 胸は細め(脇の下を高くする)
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
@@ -53,7 +54,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const part = (e) => { const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
       return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; };
     P.bust = Object.assign(part(0.01), { cloth: part(0.04) }); }
-  P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
+  P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly + BD / 2], [0.165 * TO.belly, 0.14, 0.115 * TO.belly - BD / 2], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
   // (a short pelvis and a short cut made the hips jut out suddenly with a corner, like a clay figurine)
   P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.115, 0.1], "hips", 0.12);
@@ -117,8 +118,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       if (LF) { const tip = ec.map((v, i) => v + (eu[i] * LF.out + ev[i] * LF.up) * ES); P[`earFill.${s}`] = C(lc, tip, 0.011 * ES, 0.009 * ES, "head", 0.01); } }
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
-    P[`butt.${s}`] = E([m * 0.07 * TO.hips, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
-    P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩
+    { const B = TO.butt ?? 1; P[`butt.${s}`] = E([m * 0.07 * TO.hips, 0.452, -0.05 + 0.03 * (1 - B)], [0.08, 0.066, 0.075 * B], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet)
+    { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
     P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
     { const a = j("lowerArm"), b = j("hand"), t = OPT.body.sculpt.forearm.bulge.start, L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;   // ひじの下の前腕のふくらみ: 下寄りにふくらませ(上側は控えめ)、手首へ細くなりながらなめらかにつなぐ
@@ -153,7 +154,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const TH = OPT.body.thickness;
     for (const n of ["upperArm", "sleeve"]) thicken(P[`${n}.${s}`], j("upperArm"), j("lowerArm"), TH.upperArm);
     for (const n of ["foreArm", "foreBulge"]) thicken(P[`${n}.${s}`], j("lowerArm"), j("hand"), TH.forearm);
-    for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thigh);
+    for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thighTop ?? TH.thigh, TH.thigh);   // thighTop: at the hip joint (slimmer = the hips don't bulge out at the top of the legs)
     for (const n of ["calf", "calfO", "calfB"]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|muzzle|nose|ear)/.test(k);
