@@ -15,6 +15,13 @@ The avatar's face is made by placing eye, brow and mouth images on the head. Thi
 | `build_face_template.py` | Rebuilds the template (after changing frames or the 3D shots) |
 | `3d-skin.png` / `3d-clay.png` | The head shot used as the bottom layers |
 
+## In the browser (no Python)
+
+The check page (`body.html`) does the same without any tools:
+
+- **顔パーツの枠テンプレ** makes this template for the face as it is now: frames centered where the parts sit with the current layout (the face-layout.json frames are from an older layout, so the eye frame there sits about 40 px further out).
+- **枠つきPNGを読む** reads a drawing on that template (transparent PNG, or a solid background that gets removed), cuts eye / brow / mouth out of the frames and puts them on the face right away (blinking, expressions and the layout sliders still work).
+
 ## Rules
 
 - 1 px on the template = 1 px on the face. Don't scale.

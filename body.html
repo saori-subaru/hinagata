@@ -87,6 +87,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
     <button class="btn" id="tBangs" type="button">前髪</button>
     <button class="btn" id="tBack" type="button">後ろ髪</button>
+    <button class="btn" id="tPartTpl" type="button">顔パーツの枠テンプレ</button>
+    <label class="btn">枠つきPNGを読む<input type="file" id="partFile" accept="image/*" hidden></label>
     <button class="btn" id="tFaceImg" type="button" aria-pressed="false">顔: コードの絵</button>
     <button class="btn" id="tWrap" type="button" aria-pressed="false">貼り方: 正面から</button>
     <div class="fimg" id="fimgPanel" hidden>
@@ -137,8 +139,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 </div>
 <div class="tpl" id="tplPanel" hidden>
   <div class="tplIn">
-    <b>顔のテンプレ(1024×768)</b>
-    <p>これを下に敷いて、別の透明レイヤーに目・眉・口・鼻を描く。そのレイヤーだけを同じ大きさ(1024×768)のPNGで書き出して「PNGを読む」で読むと、描いた位置のままぴったり貼られる(大きさが違っても縦横の比が4:3なら合わせる)。薄く描いてある顔と十字は、いまの目・眉・口・鼻の位置の目安。</p>
+    <b id="tplTitle"></b>
+    <p id="tplText"></p>
     <img id="tplImg" alt="顔のテンプレ">
     <div class="types"><a class="btn" id="tplSave" download="hinagata-face-template.png">保存する</a><button class="btn" id="tplClose" type="button">閉じる</button></div>
     <small>保存できないときは、画像を長押し(右クリック)して保存</small>
@@ -244,9 +246,12 @@ function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { 
     else if (Math.abs(im.width / im.height - 4 / 3) < 0.01) { const k = 1024 / im.width; Object.assign(FACE_IMG, { ax: 512 / k, ay: 586 / k, x: 0, y: 0, s: k }); for (const [id, key] of [["fiY", "y"], ["fiX", "x"], ["fiS", "s"]]) $(id).value = FACE_IMG[key]; }
     else Object.assign(FACE_IMG, { ax: im.width / 2, ay: im.height * 0.95 });
     avatar.drawFace(); }; im.src = src; }
-// 顔のテンプレ: 顔の絵(1024×768)とぴったり同じ範囲で、正面から撮った頭 + いまの顔(薄く) + 目・眉・口・鼻の位置の十字
-async function faceTemplate() {
-  const { FACE, faceCanvas, px, py } = face, W = faceCanvas.width, Hc = faceCanvas.height, HT = I.HT;
+// 顔のテンプレ: 顔の絵(1024×768)とぴったり同じ範囲で、正面から撮った頭 + いまの顔(薄く) + 位置の目印
+//   kind "whole": 1枚絵用(目・眉・口・鼻の位置に十字) / "frames": パーツ用(目・眉・口の枠。facekit と同じ大きさの枠を、いまの位置に置く)
+const PART_FRAMES = { eye: { size: [340, 290], mirror: true, at: () => face.EYE, label: "目" }, brow: { size: [330, 110], mirror: true, at: () => face.BROW, label: "眉" }, mouth: { size: [260, 90], mirror: false, at: () => face.MOUTHP, label: "口" } };
+const frameRect = (k) => { const F = PART_FRAMES[k], P = face.PART_IMG[k], A = F.at(), [w, h] = F.size; return [Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2), Math.round(face.py(A.y + (P.dy ?? 0)) - h / 2), w, h]; };   // 枠の真ん中 = パーツの絵の真ん中が来る点
+function headShot() {   // 顔の絵と同じ範囲で、正面から頭(肌だけ)を撮る
+  const { FACE, faceCanvas } = face, W = faceCanvas.width, Hc = faceCanvas.height, HT = I.HT;
   const [l, b] = HT.fromHead(FACE.x0, FACE.y0, 0.2), [r, t] = HT.fromHead(FACE.x1, FACE.y1, 0.2);   // 顔の絵は頭の座標で貼られるので、頭の大きさに合わせて撮る範囲を決める
   const cam = new THREE.OrthographicCamera(l, r, t, b, 0.1, 10); cam.position.set(0, 0, 3); cam.lookAt(0, 0, 0);
   const pose = curPose; avatar.skeleton.pose(); const vis = all().map((x) => [x, x.m.visible, x.o.visible]); for (const x of all()) { x.m.visible = x === parts.body; x.o.visible = x === parts.body; }
@@ -254,17 +259,58 @@ async function faceTemplate() {
   const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(W, Hc, false); renderer.render(scene, cam);
   const shot = document.createElement("canvas"); shot.width = W; shot.height = Hc; shot.getContext("2d").drawImage(renderer.domElement, 0, 0);
   renderer.setPixelRatio(pr); size(); scene.background = bg; floor.visible = fv; helper.visible = hv; avatar.faceLayer.visible = fl; for (const [x, m, o] of vis) { x.m.visible = m; x.o.visible = o; } avatar.play(pose); refreshLook();
+  return shot;
+}
+function faceTemplate(kind) {
+  const { FACE, faceCanvas, px, py } = face, W = faceCanvas.width, Hc = faceCanvas.height;
   const hook = FACE_IMG.on ? drawFaceImg : null; if (hook) avatar.setFaceDrawHook(null); const code = document.createElement("canvas"); code.width = W; code.height = Hc; code.getContext("2d").drawImage(faceCanvas, 0, 0); if (hook) avatar.setFaceDrawHook(hook);   // いまのコードの顔(目安)
   const c = document.createElement("canvas"); c.width = W; c.height = Hc; const g = c.getContext("2d");
-  g.drawImage(shot, 0, 0); g.globalAlpha = 0.35; g.drawImage(code, 0, 0); g.globalAlpha = 1;
-  const L = face.getLayout(), mark = (x, y, col, rr = 14) => { g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(px(x) - rr, py(y)); g.lineTo(px(x) + rr, py(y)); g.moveTo(px(x), py(y) - rr); g.lineTo(px(x), py(y) + rr); g.stroke(); };
-  for (const m of [1, -1]) { mark(m * L.eyeX, L.eyeY, "#2b78ff"); mark(m * L.browX, L.browY, "#2bb673"); }
-  mark(0, L.mouthY, "#ff5a7a"); mark(0, 0.929 + avatar.options.body.sculpt.nose.lift - FACE.dy, "#ff9a2b", 8);
-  g.strokeStyle = "#0003"; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, Hc); g.stroke();   // 顔のまんなか
+  g.drawImage(headShot(), 0, 0); g.globalAlpha = 0.35; g.drawImage(code, 0, 0); g.globalAlpha = 1;
+  if (kind === "frames") {
+    g.font = "bold 18px sans-serif"; g.textBaseline = "bottom";
+    for (const k of Object.keys(PART_FRAMES)) { const [x, y, w, h] = frameRect(k), F = PART_FRAMES[k];
+      g.setLineDash([]); g.lineWidth = 3; g.strokeStyle = "#ff3b6b"; g.strokeRect(x, y, w, h); g.fillStyle = "#ff3b6b"; g.fillText(`${F.label}をここに描く`, x + 4, y - 3);
+      if (F.mirror) { const mx = W - x - w; g.setLineDash([8, 8]); g.lineWidth = 2; g.strokeStyle = "#0006"; g.strokeRect(mx, y, w, h); g.fillStyle = "#0008"; g.fillText("(描かない: 自動で左右反転)", mx + 4, y - 3); } }
+  } else {
+    const L = face.getLayout(), mark = (x, y, col, rr = 14) => { g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(px(x) - rr, py(y)); g.lineTo(px(x) + rr, py(y)); g.moveTo(px(x), py(y) - rr); g.lineTo(px(x), py(y) + rr); g.stroke(); };
+    for (const m of [1, -1]) { mark(m * L.eyeX, L.eyeY, "#2b78ff"); mark(m * L.browX, L.browY, "#2bb673"); }
+    mark(0, L.mouthY, "#ff5a7a"); mark(0, 0.929 + avatar.options.body.sculpt.nose.lift - FACE.dy, "#ff9a2b", 8);
+  }
+  g.strokeStyle = "#0003"; g.setLineDash([6, 6]); g.lineWidth = 1; g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, Hc); g.stroke();   // 顔のまんなか
   return c.toDataURL("image/png");
 }
-$("fiTpl").addEventListener("click", async () => { const url = await faceTemplate(); $("tplImg").src = url; $("tplSave").href = url; $("tplPanel").hidden = false; });
+const TPL_TEXT = {
+  whole: ["顔のテンプレ(1枚絵用・1024×768)", "これを下に敷いて、別の透明レイヤーに目・眉・口・鼻を描く。そのレイヤーだけを同じ大きさ(1024×768)のPNGで書き出して「PNGを読む」で読むと、描いた位置のままぴったり貼られる(大きさが違っても縦横の比が4:3なら合わせる)。薄く描いてある顔と十字は、いまの目・眉・口・鼻の位置の目安。1枚絵なので、まばたきや表情の切りかえはしない。"],
+  frames: ["顔パーツのテンプレ(枠つき・1024×768)", "赤い枠の中に、目・眉・口を1つずつ描く(目と眉は右側の枠だけ。反対側は自動で左右反転)。枠の真ん中が、顔の上でパーツの真ん中になる。透明な背景のPNG(1024×768、または4:3)で書き出して「枠つきPNGを読む」で読むと、目・眉・口に切り分けて顔に付ける。まばたき・表情・位置スライダーもそのまま効く。背景を透明にできないときは、緑など1色のべた塗りで(自動で抜く)。"],
+};
+const showTpl = (kind) => { const url = faceTemplate(kind); $("tplTitle").textContent = TPL_TEXT[kind][0]; $("tplText").textContent = TPL_TEXT[kind][1]; $("tplImg").src = url; $("tplSave").href = url; $("tplSave").download = kind === "frames" ? "hinagata-face-parts-template.png" : "hinagata-face-template.png"; $("tplPanel").hidden = false; };
+$("fiTpl").addEventListener("click", () => showTpl("whole"));
+$("tPartTpl").addEventListener("click", () => showTpl("frames"));
 $("tplClose").addEventListener("click", () => { $("tplPanel").hidden = true; });
+// 枠つきの絵を読む: 枠ごとに切り出して、目・眉・口の絵にする(facekit/cut_face_parts.py と同じ。背景が透明でなければ、枠のふちの色を抜く)
+function cutBackground(c, tol = 48) {   // 枠のふちから続く「ふちの色に近い色」を透明にする(緑のべた塗りがいちばんきれいに抜ける)
+  const w = c.width, h = c.height, g = c.getContext("2d"), d = g.getImageData(0, 0, w, h), D = d.data, seen = new Uint8Array(w * h);
+  const border = []; for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x); for (let y = 0; y < h; y++) border.push(y * w, y * w + w - 1);
+  const bg = [0, 1, 2].map((k) => border.map((i) => D[i * 4 + k]).sort((a, b) => a - b)[border.length >> 1]);   // ふちの色の真ん中の値 = 背景
+  const dist = (i) => Math.max(Math.abs(D[i * 4] - bg[0]), Math.abs(D[i * 4 + 1] - bg[1]), Math.abs(D[i * 4 + 2] - bg[2])), green = bg[1] > 150 && bg[1] - Math.max(bg[0], bg[2]) > 80;
+  const q = [...border]; while (q.length) { const i = q.pop(); if (seen[i] || dist(i) > tol) continue; seen[i] = 1; D[i * 4 + 3] = 0; const x = i % w; if (x > 0) q.push(i - 1); if (x < w - 1) q.push(i + 1); if (i >= w) q.push(i - w); if (i < w * (h - 1)) q.push(i + w); }
+  for (let i = 0; i < w * h; i++) { if (seen[i]) continue; const x = i % w; if ((x > 0 && seen[i - 1]) || (x < w - 1 && seen[i + 1]) || (i >= w && seen[i - w]) || (i < w * (h - 1) && seen[i + w])) { if (green) D[i * 4 + 1] = Math.min(D[i * 4 + 1], Math.max(D[i * 4], D[i * 4 + 2])); D[i * 4 + 3] = Math.min(D[i * 4 + 3], Math.round(255 * Math.min(1, dist(i) / (tol * 2.5)))); } }
+  g.putImageData(d, 0, 0); return c;
+}
+const PARTS_OPT = { face: { images: {} } };   // 読んだパーツの絵(作り直したときもこれを使う)
+function loadPartsImg(src) {
+  const im = new Image(); im.onload = () => {
+    const W = face.faceCanvas.width, Hc = face.faceCanvas.height, full = document.createElement("canvas"); full.width = W; full.height = Hc;
+    const fg = full.getContext("2d"); fg.drawImage(im, 0, 0, W, Hc);   // 4:3 ならテンプレの大きさにそろえる
+    const A = fg.getImageData(0, 0, W, Hc).data; let alpha = false; for (let i = 3; i < A.length; i += 4) if (A[i] < 255) { alpha = true; break; }
+    for (const k of Object.keys(PART_FRAMES)) { const [x, y, w, h] = frameRect(k), c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(full, x, y, w, h, 0, 0, w, h);
+      const part = alpha ? c : cutBackground(c); face.PART_IMG[k].img = part; face.PART_IMG[k].w = 0;   // 原寸(テンプレの1px = 顔の1px)
+      PARTS_OPT.face.images[k] = { src: part.toDataURL("image/png"), width: 0 }; }   // 作り直しても同じ絵を使う
+    if (FACE_IMG.on) $("tFaceImg").click();   // 1枚絵を貼っていたら外す
+    avatar.setFace({ eyes: "絵の目", brows: "絵の眉", mouth: "絵の口" }); faceI = FACES.indexOf("絵"); faceLabels();
+  }; im.src = src;
+}
+$("partFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadPartsImg(URL.createObjectURL(f)); e.target.value = ""; });
 loadFaceImg("img/face-test.png", { ax: 445, ay: 596 });
 
 // 顔の下絵づくり用: 顔の絵と同じ座標(1024×768)で、正面からまっすぐ撮った頭の画像と、パーツの基準点を返す(facekit が使う)
@@ -401,7 +447,7 @@ const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed")
 async function makeTwin() {
   $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   twin?.dispose();
-  twin = await createAvatar(merge(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), OUTFIT), { quality: low ? "low" : "high" });
+  twin = await createAvatar(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), OUTFIT), PARTS_OPT), { quality: low ? "low" : "high" });
   scene.add(twin.object); keepStyle(twin); twin.play(curPose); twin.setFace({ ...avatar.faceSel, nose: twin.faceSel.nose }); twin.object.position.x = 0.48;
   twin.setFaceLayout(face.getLayout());
   $("msg").hidden = true;
@@ -440,7 +486,7 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸板", 0.8, 1.4, 0.01], ["torso", "bust", "胸(ふくらみ)", 0, 1, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01], ["torso", "butt", "おしり", 0.4, 1.2, 0.01], ["torso", "back", "背中の厚み", 0.3, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "thighTop", "太ももの付け根", 0.5, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }; SHAPE.thickness.thighTop ??= SHAPE.thickness.thigh; const SHAPE0 = structuredClone(SHAPE);   // thighTop: null = same as the thigh
-function curOpts() { const o = merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
+function curOpts() { const o = merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT), PARTS_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
 const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
