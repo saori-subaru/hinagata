@@ -44,7 +44,7 @@ site/avatar/
     materials.js        toon ramp, outline, clay
     export.js           GLB export (A-pose, outlines off)
   presets/              JSON files: bodies, hairstyles, faces, outfits (templates for agents)
-  playground/           index.html + playground.js (the UI; imports src/)
+  editor/               the full editor (a): index.html + src/ (app, store, viewport, panel, i18n; imports ../src/)
   tools/
     shoot.mjs           render front / side / 3-4 / back PNGs from options (for agents to check their work)
   facekit/              (as now)
@@ -151,6 +151,13 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - `avatar.TIMES` shows where a build spent its time (ms per step).
 
 ## Playground
+
+**Status (2026-10-02): the full editor (a) v0.1 is `editor/index.html`** (plain modules in `editor/src/`: `app.js` wiring, `store.js` recipe + undo + saved characters, `viewport.js` 3D view, `panel.js` panels from the schema, `i18n.js` en / ja). What it does:
+- Panels per tab (body / face / hair / outfit / look) generated from `src/schema.js`: main values in order, values that only matter in some cases hidden until then (`when`), the rest under a folded "Advanced" with a filter. Each value shows a reset dot when it differs from the default; sections say what a change rebuilds.
+- Changes with an `apply` method happen at once; others rebuild the avatar when the slider is released (the cache makes repeats fast). Undo / redo for every change (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z).
+- Characters saved in the browser (new, duplicate, delete, rename); share link (`?o=`), recipe JSON save / open, copy as code (only what differs), PNG (transparent), GLB.
+- View: camera buttons, clay / wireframe / bones / floor, background, motions with play / pause / speed, mesh quality (game / high).
+- Not yet: face part templates and reading framed drawings (still in `body.html`), dragging bang tufts, comparing two characters, `avatar.rebuild()` for partial rebuilds, a dark theme.
 
 - 3D view on the left, panel on the right: Body / Face / Hair / Outfit / Motion.
 - Panel generated from `options.schema.json` (public tier). An "Advanced" section shows sculpt values.
