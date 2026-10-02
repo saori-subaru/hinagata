@@ -6,7 +6,7 @@
 
 const DB = "hinagata-mesh", MESH = "mesh", META = "meta", KEEP = 12;
 // modules whose code changes the generated geometry or its skin weights
-const SOURCES = ["index.js", "options.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "clothes/index.js", "hair/index.js", "rig.js"];
+const SOURCES = ["index.js", "options.js", "parts.js", "build.js", "worker.js", "weights.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "clothes/index.js", "hair/index.js", "rig.js"];
 
 function fnv(s, h) { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 /** A short key from any mix of strings and JSON-able values. */
@@ -16,6 +16,7 @@ export function hashKey(...parts) {
 }
 
 let srcHash = null;
+setTimeout(() => { try { sourceHash(); } catch { /* no fetch: fine */ } }, 0);   // start fetching the sources as soon as the library loads (the first avatar doesn't wait for it)
 /** Hash of the generator's source files (fetched once per page; the browser usually has them cached already). */
 export function sourceHash() {
   srcHash ??= Promise.all(SOURCES.map((p) => fetch(new URL("./" + p, import.meta.url)).then((r) => (r.ok ? r.text() : "")).catch(() => "")))
