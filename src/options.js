@@ -42,10 +42,11 @@ export const DEFAULTS = {
       "upperArm": 1,
       "forearm": 1,
       "thigh": 1,
-      "thighTop": null,
+      "thighTop": 0.9,
       "calf": 1
     },
     "joints": {
+      "hipY": 0.44,
       "footX": 0.116,
       "kneeX": 0.108
     },
@@ -128,6 +129,19 @@ export const DEFAULTS = {
       },
       "shoulders": {
         "drop": 0.008
+      },
+      "pelvis": {
+        "squash": 1,
+        "blend": 0.12
+      },
+      "buttY": 0.44,
+      "armpit": {
+        "x": 0.105,
+        "y": 0.67,
+        "margin": 0.006,
+        "round": 0.03,
+        "blend": 0.025,
+        "depth": 0.07
       },
       "temple": {
         "minZ": 0.09,
@@ -242,10 +256,11 @@ export const DEFAULTS = {
         }
       },
       "thigh": {
+        "topDrop": 0.03,
         "back": {
-          "y": 0.335,
+          "y": 0.31,
           "z": -0.045,
-          "height": 0.055,
+          "height": 0.085,
           "depth": 0.046
         },
         "front": {
@@ -258,9 +273,9 @@ export const DEFAULTS = {
         },
         "inner": {
           "x": 0.062,
-          "y": 0.34,
+          "y": 0.31,
           "width": 0.042,
-          "height": 0.06
+          "height": 0.09
         }
       },
       "calf": {
@@ -310,6 +325,7 @@ export const DEFAULTS = {
       "color": "#7fb6e8",
       "sleeve": "short",
       "length": "tuck",
+      "underarm": "fit",
       "collar": {
         "y": 0.764,
         "bowl": 2.2,
@@ -573,6 +589,7 @@ export const DEFAULTS = {
 
 // Old short URL names used while sculpting (e.g. ?nz=0.27) → option paths. Handy for quick tuning in the browser.
 export const SHORT = {
+  "hy": "body.joints.hipY",
   "fx": "body.joints.footX",
   "kx": "body.joints.kneeX",
   "fh": "body.sculpt.foot.thickness",
@@ -629,6 +646,8 @@ export const SHORT = {
   "fbe": "body.sculpt.forearm.bulge.radiusEnd",
   "fbk": "body.sculpt.forearm.bulge.blend",
   "ffl": "body.sculpt.forearm.bulge.flat",
+  "tdr": "body.sculpt.thigh.topDrop",
+  "bty": "body.sculpt.buttY",
   "tby": "body.sculpt.thigh.back.y",
   "tbz": "body.sculpt.thigh.back.z",
   "tbh": "body.sculpt.thigh.back.height",

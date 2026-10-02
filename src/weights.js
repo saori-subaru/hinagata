@@ -9,12 +9,23 @@ import { dPrim, sstep } from "./sdf/prim.js";
  * the arm (T-pose) made a corner by the neck and a wavy shoulder line. Kept mild so arms-down poses look as before.
  * Shoulder bones (clavicles, J["shoulder.L"] → J["upperArm.L"]): of the torso's share on top of the shoulder, the part along the clavicle
  * goes to the shoulder bone, more toward the arm. Lifting or rolling the shoulder then carries the top of the shoulder with the arm's root.
+ * Bottom (J["upperLeg.L"]): behind the hip joint and above the fold under the bottom, the thigh's share goes to the hips. Before, the lower
+ * half of the bottom followed the thigh, so sitting (thigh forward ~90°) pulled it forward and the back of the bottom became a slanted flat cut.
+ * Torso side under the arm: below the armpit, a point nearer the torso than the arm keeps (almost) no arm weight. The chibi arm hangs only
+ * 2-4 cm from the side, closer than the sharing band, so the side of the chest followed the arm (up to ~50%, even the forearm) and raising
+ * the arms (T-pose) flared it out like gills into a drum-shaped body. The same the other way: a point on the arm (its inner side, facing the
+ * waist) keeps no torso weight, else it stayed at the waist when the arm went up and stretched into a web from the waist to the arm.
  */
 export function makeWeights({ BODY, BONES, BI, J }) {
   const SH = J ? ["L", "R"].map((s) => { const a = J[`upperArm.${s}`], b = J[`lowerArm.${s}`], L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;
     const c = J[`shoulder.${s}`] ?? null, v = c ? [a[0] - c[0], a[1] - c[1], a[2] - c[2]] : null;
     return { bone: `upperArm.${s}`, ia: BI[`upperArm.${s}`], a, u: [ux, uy], is: c ? BI[`shoulder.${s}`] : -1, c, v, v2: v ? v[0] * v[0] + v[1] * v[1] + v[2] * v[2] : 1 }; }) : [];   // u: along the arm (rest pose) / c→a: the clavicle
-  const IU = BI.upperChest, IC = BI.chest;
+  const IU = BI.upperChest, IC = BI.chest, IH = BI.hips;
+  const TORSO = new Set(["hips", "spine", "chest", "upperChest"].map((b) => BI[b]));
+  const ARM = J ? ["L", "R"].map((s) => { const a = J[`upperArm.${s}`], b = J[`lowerArm.${s}`], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L);
+    const ra = BODY.find((p) => p.bone === `upperArm.${s}` && p.t === 1)?.ra ?? 0.047;   // the upper arm's radius (the capsule)
+    return { m: s === "L" ? 1 : -1, y: a[1], a, u, L, near: ra + 0.012, bones: [`upperArm.${s}`, `lowerArm.${s}`, `hand.${s}`].map((bn) => BI[bn]) }; }) : [];
+  const HP = J ? ["L", "R"].map((s) => ({ bone: `upperLeg.${s}`, ia: BI[`upperLeg.${s}`], a: J[`upperLeg.${s}`] })) : [];   // hip joints
   const SIG = 0.013;
   const WL = new Map(), WACC = new Float32Array(64), WD = new Float64Array(512), WF = new Float64Array(512);
   function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(ズボンが腕に引っぱられないように)
@@ -42,6 +53,23 @@ export function makeWeights({ BODY, BONES, BI, J }) {
       }
       if (tor > 0) { acc[IU] = rest * acc[IU] / tor; acc[IC] = rest * acc[IC] / tor; } else acc[IU] = rest;
       acc[S.ia] = arm;
+    }
+    for (const S of HP) {   // the bottom stays with the hips: behind the hip joint (dz) and above the fold under it (dy)
+      if (only && !only.test(S.bone)) continue;
+      const dx = x - S.a[0], dy = y - S.a[1], dz = z - S.a[2]; if (dx * dx + dy * dy + dz * dz > 0.04 || acc[S.ia] <= 0) continue;
+      const f = sstep(-0.01, -0.05, dz) * sstep(-0.075, -0.02, dy); if (f <= 0) continue;
+      const m = acc[S.ia] * f; acc[S.ia] -= m; acc[IH] += m;
+    }
+    if (ARM.length) {   // torso side under the arm: nearer the torso than the arm → the arm's share fades out (sharply, over ~1 cm)
+      let dT = Infinity, dA = Infinity; const A = ARM[x >= 0 ? 0 : 1];
+      for (let n = 0; n < L.length; n++) { const bi = BI[L[n].bone]; if (TORSO.has(bi)) dT = Math.min(dT, WD[n]); else if (A.bones.includes(bi)) dA = Math.min(dA, WD[n]); }
+      // within ~1 cm of the upper arm's surface it stays the arm's (the thin flesh just under the arm, above the armpit hollow, else it stayed behind as a fin)
+      const qx = x - A.a[0], qy = y - A.a[1], qz = z - A.a[2], tt = Math.min(A.L, Math.max(0, qx * A.u[0] + qy * A.u[1] + qz * A.u[2])), perp = Math.hypot(qx - A.u[0] * tt, qy - A.u[1] * tt, qz - A.u[2] * tt);
+      const low = sstep(A.y - 0.04, A.y - 0.09, y), r = low * sstep(0, 0.012, dA - dT) * sstep(A.near, A.near + 0.008, perp), ra = low * sstep(0, 0.012, dT - dA);
+      if (r > 0) { let moved = 0; for (const b of A.bones) { moved += acc[b] * r; acc[b] *= 1 - r; }
+        let tb = IC, tv = -1; for (const b of TORSO) if (acc[b] > tv) { tv = acc[b]; tb = b; } acc[tb] += moved; }
+      if (ra > 0) { let moved = 0; for (const b of TORSO) { moved += acc[b] * ra; acc[b] *= 1 - ra; }   // on the arm: the torso's share goes to the arm
+        let ab = A.bones[0], av = -1; for (const b of A.bones) if (acc[b] > av) { av = acc[b]; ab = b; } acc[ab] += moved; }
     }
     let sum = 0; for (let k = 0; k < 4; k++) { let bi = 0, bv = -1; for (let b = 0; b < BONES.length; b++) if (acc[b] > bv) { bv = acc[b]; bi = b; } out.idx[k] = bi; out.w[k] = bv; sum += bv; acc[bi] = -1; }   // 重い順に4本
     for (let k = 0; k < 4; k++) out.w[k] /= sum;
