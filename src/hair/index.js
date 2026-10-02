@@ -44,11 +44,13 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
     // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
-    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl]) => [a * deg, y, sl ?? B.slope]);
-      const notches = T.slice(1).map(([a], i) => (a + T[i][0]) / 2);
+    // tips: [angle, height, slope?, skew?, group?]. skew: the left/right edges get different slopes (the clump sweeps sideways);
+    // tips with the same group form one big clump whose end splits into small points (no groove between them). curve: edges bow (<1) or bulge (>1)
+    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl, sk, g]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null]), CV = B.curve ?? 1;
+      const notches = T.slice(1).map(([a, , , , g], i) => g != null && g === T[i][4] ? null : (a + T[i][0]) / 2).filter((a) => a != null);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
         const th = Math.atan2(x, z), rr = Math.hypot(x, z);
-        let hem = 9; for (const [a, ty, sl] of T) hem = -smax(-hem, -(ty + sl * Math.abs(th - a)), B.round);   // V points: lines rising from each tip meet at the (slightly rounded) notches
+        let hem = 9; for (const [a, ty, sl, sk] of T) { const d = th - a, ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y);
         const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
