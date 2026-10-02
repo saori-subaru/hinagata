@@ -51,12 +51,13 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     "nendo": (pick = {}, B = OPT.hair.sculpt.nendo) => { const T = B.tips.map(([a, y, sl, sk, g, sw, tk]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null, (sw ?? 0) * deg, tk ?? 0]), CV = B.curve ?? 1;
       const TK = T.filter((t) => t[6]), TKS = (B.thickSpread ?? 9) * deg, tipThick = (th) => { let s = 0; for (const t of TK) s += t[6] * Math.exp(-(((th - t[0]) / TKS) ** 2)); return s; };
       const BK = BACKS[pick.back], backExtra = (y) => BK ? backOff(BK, y) : 0;   // match the back hair's thickness (the bob is a little thicker below), so there's no step where they meet
-      const backFlare = (y) => BK?.flare ? BK.flare * sstep(1.05, BK.side, y) : 0;   // and its outward flick at the bottom (the bob's): else the side locks sat inside the bob, a step like a helmet's edge
+      const backFlare = (y) => (BK?.flare ? BK.flare * sstep(1.05, BK.side, y) : 0) + (BK?.flick ? BK.flick * sstep(BK.side + BK.flickH, BK.side - 0.01, y) : 0);   // and its outward flick at the bottom (the bob's): else the side locks sat inside the bob, a step like a helmet's edge
       const notches = T.slice(1).map(([a, , , , g], i) => g != null && g === T[i][4] ? null : (a + T[i][0]) / 2).filter((a) => a != null);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
         const th = Math.atan2(x, z), rr = Math.hypot(x, z);
         // sweep: near its tip the clump shifts sideways (the whole clump bends to one side, both edges together)
         let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
+        if (B.slits) for (const [a, len, w] of B.slits) { const v = 1 - Math.abs(th - a * deg) * rr / w; if (v > 0) hem += len * v * v * (3 - 2 * v); }   // slits: a narrow gap running up between two clumps here and there (len up from the hem, w half-width in m)
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + backExtra(y) + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);
         const shell = (B.smooth ? skullSmooth : skullOnly)(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;   // smooth: follow the head without the face's cut planes (a layer hugging the cheeks folded at their edges)
@@ -68,11 +69,16 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     "none": () => [],
     // hime: a princess cut. The same layer as nendo, but square-ended clumps: a straight fringe across the forehead and straight side locks
     // down to the cheeks (a steep curve keeps each clump's end flat; the grooves between them show the clumps)
-    "hime": (pick = {}) => BANGS.nendo(pick, { ...OPT.hair.sculpt.nendo, ...OPT.hair.sculpt.hime }),
+    // curl: the side locks bend forward toward their ends (seen from the side the lock curves toward the chin): below curlY0 the lock is
+    // shifted forward, more and more toward curlY1 (curl m there), only at the sides (|x| beyond curlX)
+    "hime": (pick = {}) => { const H = { ...OPT.hair.sculpt.nendo, ...OPT.hair.sculpt.hime }, parts = BANGS.nendo(pick, H);
+      if (!H.curl) return parts;
+      return parts.map((p) => ({ ...p, f: (x, y, z) => { const t = sstep(H.curlY0, H.curlY1, y) * sstep(H.curlX, H.curlX + 0.05, Math.abs(x)); return p.f(x, y, z - H.curl * t * t); } })); },
   };
   Object.defineProperty(BANGS, "blunt", { value: BANGS.hime, enumerable: false });   // the old helmet-shaped "blunt" was replaced by hime
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
   const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03, coverEars: true },
+    "flip": { r: [0.3, 0.3, 0.305], side: 0.9, back: 0.875, top: 1.215, arch: 0.3, tips: 0.04, teeth: 7, sharp: 2, flare: 0.01, flick: 0.06, flickH: 0.07, flickLift: 0.075, coverEars: true },   // 外はね: a bob whose ends flip out and up
     "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
@@ -123,7 +129,9 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
       const thick = SHELL ? SHELL * tf
         + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
-      const d = smax(dPrim(e, x, y, z) - thick - flare - lumpOf(x, y, z), hem - y, 0.012);
+      // flick (the flip): near the hem the hair bends out sideways, and the further out, the higher its bottom edge, so the ends curl up and out
+      const base = dPrim(e, x, y, z), fk = o.flick ? o.flick * sstep(o.side + o.flickH, o.side - 0.01, y) : 0, hemF = o.flick ? hem + o.flickLift * Math.min(1, Math.max(0, (base - thick) / o.flick)) : hem;
+      const d = smax(base - thick - flare - fk - lumpOf(x, y, z), hemF - y, 0.012);
       return o.coverEars ? smin(d, Math.max(ear - 0.012, hem - y), 0.02) : smax(d, -ear, EAR_GAP.k);   // coverEars (the bob): the hair goes over the ears instead of around them (carving them out left little holes at the hem)
     } };
   }
