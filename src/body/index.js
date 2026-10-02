@@ -1,5 +1,5 @@
 // The body: joints (bones) and the signed-distance parts that make the naked body, head and face sculpt.
-import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep } from "../sdf/prim.js";
+import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
 
 /**
  * Build the body from options.
@@ -104,6 +104,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);
     const ul = j("upperLeg"), ll = j("lowerLeg"), mk = ul.map((v, i) => v + (ll[i] - v) * 0.45);
     P[`leghole.${s}`] = C(ul, mk, 0.078, 0.072, `upperLeg.${s}`, 0.05);
+    // 手足の太さ(1 = そのまま)。袖とズボンの範囲も一緒に太らせる
+    const TH = OPT.body.thickness;
+    for (const n of ["upperArm", "sleeve"]) thicken(P[`${n}.${s}`], j("upperArm"), j("lowerArm"), TH.upperArm);
+    for (const n of ["foreArm", "foreBulge"]) thicken(P[`${n}.${s}`], j("lowerArm"), j("hand"), TH.forearm);
+    for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thigh);
+    for (const n of ["calf", "calfO", "calfB"]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)

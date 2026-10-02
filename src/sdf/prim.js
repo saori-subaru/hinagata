@@ -18,7 +18,24 @@ export function G(list, k) {   // まとめて溶かした部品を、ひとか�
   return { t: 2, f: blend(list), list, k, bx0: cx, by0: cy, bz0: cz, br: Math.max(...a.map((p) => Math.hypot(p.bx0 - cx, p.by0 - cy, p.bz0 - cz) + p.br)) };
 }
 export function C(a, b, ra, rb, bone, k = 0.045, sx = 1) { const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], L = Math.hypot(bx, by, bz); return { t: 1, ax: a[0], ay: a[1], az: a[2], bx, by, bz, il: 1 / (L * L), ra, rb, sx, bone, k, bx0: a[0] + bx / 2, by0: a[1] + by / 2, bz0: a[2] + bz / 2, br: L / 2 + Math.max(ra, rb) }; }
+// 太さを変える: 骨の軸(a→b の直線)からの横方向だけ k 倍にする。長さと付け根の位置は変わらない
+export function thicken(p, a, b, k) {
+  if (k === 1) return p;
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, (b[2] - a[2]) / L];
+  const q = [p.bx0 - a[0], p.by0 - a[1], p.bz0 - a[2]], s = q[0] * u[0] + q[1] * u[1] + q[2] * u[2];
+  [p.bx0, p.by0, p.bz0] = [0, 1, 2].map((i) => a[i] + s * u[i] + (q[i] - s * u[i]) * k);   // 外接球も同じように動かす
+  p.br *= Math.max(1, k);
+  p.th = { a, u, k };
+  return p;
+}
 export function dPrim(p, x, y, z) {
+  if (p.th) {   // 軸から見て横方向を 1/k に縮めた点で測り、距離を k 倍に戻す
+    const { a, u, k } = p.th, qx = x - a[0], qy = y - a[1], qz = z - a[2], s = qx * u[0] + qy * u[1] + qz * u[2];
+    return k * dBase(p, a[0] + s * u[0] + (qx - s * u[0]) / k, a[1] + s * u[1] + (qy - s * u[1]) / k, a[2] + s * u[2] + (qz - s * u[2]) / k);
+  }
+  return dBase(p, x, y, z);
+}
+function dBase(p, x, y, z) {
   if (p.t === 2) return p.f(x, y, z);
   if (p.t === 3) return p.f(x, y, z);   // 平面・曲面で削る用
   if (p.t === 0) {   // 楕円体(近似。z軸まわりに回せる)

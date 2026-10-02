@@ -37,6 +37,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .poses { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 10px; z-index: 2; }
 .poses .btn { font-size: 14px; padding: 9px 16px; box-shadow: 0 3px 0 #0000001a; }
+.busy { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 4; background: var(--ink, #2a2333); color: #fff; border-radius: 99px; padding: 6px 14px; font-weight: 800; font-size: 12px; }
 .msg { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); font-weight: 800; z-index: 5; }
 .stat { font: 500 10px var(--mono); color: var(--muted); text-align: right; }
 .fimg { display: grid; gap: 4px; justify-items: end; background: #ffffffd8; border-radius: 12px; padding: 8px 10px; font-size: 11px; font-weight: 800; }
@@ -46,7 +47,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .lay .val { font: 500 10px var(--mono); color: var(--muted); } .lay textarea { width: 100%; font: 500 10px var(--mono); resize: none; border-radius: 8px; border: 1px solid #0002; padding: 4px; }
 @media (max-width: 720px) {   /* 狭い画面: 顔が隠れないように下に寄せて、スライダーは2列 */
   .lay { top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); width: auto; max-height: 46vh; padding: 8px 10px; gap: 4px; }
-  #laySliders { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+  #laySliders, #limbSliders { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
   .lay textarea { height: 2.6em; }
 }
 </style>
@@ -58,6 +59,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
     <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
+    <button class="btn" id="tLimb" type="button" aria-pressed="false">手足の太さスライダー</button>
     <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
     <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
@@ -95,6 +97,13 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <button class="btn" id="layReset" type="button">はじめに戻す</button>
   <label>設定(これを教えてくれれば反映する)<textarea id="layOut" rows="3" readonly></textarea></label>
 </div>
+<div class="lay" id="limbPanel" hidden>
+  <b>手足の太さ(離すと作り直す・数秒)</b>
+  <div id="limbSliders"></div>
+  <button class="btn" id="limbReset" type="button">はじめに戻す</button>
+  <label>設定(これを教えてくれれば反映する)<textarea id="limbOut" rows="2" readonly></textarea></label>
+</div>
+<div class="busy" id="busy" hidden>作り直し中…</div>
 <div class="poses" id="poses"></div>
 <div class="msg" id="msg">素体を組み立て中…</div>
 
@@ -129,8 +138,8 @@ const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new
 // ── 素体を作る ──
 const WRAP = { zc: -0.02, r: 0.24 };   // 顔の絵の貼り方: 頭のまわりに巻きつける(?wrap)
 let avatar, parts, I, face, helper = null, curPose = "aPose";
-async function makeAvatar(opts) {   // 作る(作り直すときは古いのを捨てる)
-  $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
+async function makeAvatar(opts, quiet = false) {   // 作る(作り直すときは古いのを捨てる)。quiet: 画面を隠さず、上に小さく「作り直し中」
+  $(quiet ? "busy" : "msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   if (avatar) avatar.dispose();
   const t0 = performance.now();
   avatar = await createAvatar(opts, { quality: low ? "low" : "high", debug: { slow: Q.has("slow"), oldSock: Q.has("oldsock"), faceWrap: Q.has("wrap") ? WRAP : null } });
@@ -142,7 +151,7 @@ async function makeAvatar(opts) {   // 作る(作り直すときは古いのを�
   if (helper) scene.remove(helper);
   helper = new THREE.SkeletonHelper(avatar.object); helper.visible = $("tBone").getAttribute("aria-pressed") === "true"; helper.material.depthTest = false; scene.add(helper);
   avatar.play(curPose);
-  $("msg").hidden = true;
+  $("msg").hidden = $("busy").hidden = true;
 }
 await makeAvatar(fromQuery(location.search));
 globalThis.sotaiChecksum = () => avatar.checksum();
@@ -261,7 +270,7 @@ headLabel();
 $("tHeadV").addEventListener("click", async () => {
   if (twin) { pairI = (pairI + 1) % HEAD_VARIANTS.length; headLabel(); await makeTwin(); refreshLook(); return; }
   headI = (headI + 1) % HEAD_VARIANTS.length; headLabel();
-  await makeAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}));
+  await makeAvatar(curOpts());
   keepLook(avatar); faceI = 0; faceLabels(); hairLabels(); refreshLook();
 });
 // 案を横に並べる: 左がいまの(または「頭」で選んだ案)、右が「右」で選んだ案
@@ -285,7 +294,44 @@ for (const [k, label, min, max, step] of LAY_SLIDERS) {
 $("layReset").addEventListener("click", () => { avatar.setFaceLayout(layDefault()); twin?.setFaceLayout(layDefault()); laySync(); });
 // 開いている間は顔に寄る(狭い画面では、下のパネルに隠れないよう顔を上半分に出す)
 let layCam = null;
+// 手足の太さスライダー(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
+const LIMB_SLIDERS = [["upperArm", "二の腕"], ["forearm", "前腕"], ["thigh", "太もも"], ["calf", "ふくらはぎ"]];
+const TH = { ...avatar.options.body.thickness };
+function curOpts() { return merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), { body: { thickness: TH } }); }
+function limbSync() { const d = {}; for (const [k] of LIMB_SLIDERS) { $("tv-" + k).textContent = TH[k].toFixed(2); $("ts-" + k).value = TH[k]; if (TH[k] !== 1) d[k] = TH[k]; }
+  $("limbOut").value = Object.keys(d).length ? JSON.stringify({ body: { thickness: d } }) : "(はじめのまま)"; }
+let building = false, again = false;
+async function rebuildBody() {
+  if (building) { again = true; return; } building = true;
+  do { again = false;
+    const sel = { ...avatar.faceSel }, lay = face.getLayout(), hair = { ...I.hairPick }, x = avatar.object.position.x;
+    await makeAvatar(curOpts(), true);
+    avatar.object.position.x = x; avatar.setFace(sel); avatar.setFaceLayout(lay);
+    if (JSON.stringify(hair) !== JSON.stringify(I.hairPick)) avatar.setHair(hair);
+    if ($("tWrap").getAttribute("aria-pressed") === "true") avatar.setFaceWrap(WRAP);
+    if (FACE_IMG.on) avatar.setFaceDrawHook(drawFaceImg);
+    keepLook(avatar); faceLabels(); hairLabels(); refreshLook();
+  } while (again);
+  building = false;
+}
+for (const [k, label] of LIMB_SLIDERS) {
+  const row = document.createElement("div"); row.className = "row";
+  row.innerHTML = `<span>${label}</span><span class="val" id="tv-${k}"></span><input type="range" id="ts-${k}" min="0.6" max="1.15" step="0.01">`;
+  $("limbSliders").append(row);
+  $("ts-" + k).addEventListener("input", (e) => { TH[k] = +e.target.value; limbSync(); });
+  $("ts-" + k).addEventListener("change", rebuildBody);
+}
+$("limbReset").addEventListener("click", () => { for (const [k] of LIMB_SLIDERS) TH[k] = 1; limbSync(); rebuildBody(); });
+// 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
+let limbCam = null;
+toggle("tLimb", (on) => {
+  if (on && $("tLay").getAttribute("aria-pressed") === "true") $("tLay").click();
+  $("limbPanel").hidden = !on; $("poses").hidden = on || compare; limbSync();
+  if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.6, twin ? 5.6 : 4.4); controls.target.set(x, 0.2, 0); }
+  else if (!on && limbCam) { camera.position.copy(limbCam[0]); controls.target.copy(limbCam[1]); limbCam = null; }
+});
 toggle("tLay", (on) => {
+  if (on && $("tLimb").getAttribute("aria-pressed") === "true") $("tLimb").click();
   $("layPanel").hidden = !on; $("poses").hidden = on || compare; laySync();
   if (on) { layCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
     camera.position.set(x, 0.98 - low, (twin ? 2.4 : 1.75) * (low ? 1.25 : 1)); controls.target.set(x, 0.95 - low, 0); }

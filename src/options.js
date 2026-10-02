@@ -14,6 +14,12 @@ export const DEFAULTS = {
       "pivotY": 0.845,
       "pivotZ": 0.006
     },
+    "thickness": {
+      "upperArm": 1,
+      "forearm": 1,
+      "thigh": 1,
+      "calf": 1
+    },
     "joints": {
       "footX": 0.116,
       "kneeX": 0.108
