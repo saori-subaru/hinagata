@@ -48,7 +48,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     // tips: [angle, height, slope?, skew?, group?]. skew: the left/right edges get different slopes (the clump sweeps sideways);
     // tips with the same group form one big clump whose end splits into small points (no groove between them). curve: edges bow (<1) or bulge (>1)
     // tips[i][6] (thickness): this clump is that much thicker (m, minus = thinner), fading out toward its neighbours (a bell over the angle, B.thickSpread degrees)
-    "nendo": (pick = {}) => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl, sk, g, sw, tk]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null, (sw ?? 0) * deg, tk ?? 0]), CV = B.curve ?? 1;
+    "nendo": (pick = {}, B = OPT.hair.sculpt.nendo) => { const T = B.tips.map(([a, y, sl, sk, g, sw, tk]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null, (sw ?? 0) * deg, tk ?? 0]), CV = B.curve ?? 1;
       const TK = T.filter((t) => t[6]), TKS = (B.thickSpread ?? 9) * deg, tipThick = (th) => { let s = 0; for (const t of TK) s += t[6] * Math.exp(-(((th - t[0]) / TKS) ** 2)); return s; };
       const BK = BACKS[pick.back], backExtra = (y) => BK ? backOff(BK, y) : 0;   // match the back hair's thickness (the bob is a little thicker below), so there's no step where they meet
       const backFlare = (y) => BK?.flare ? BK.flare * sstep(1.05, BK.side, y) : 0;   // and its outward flick at the bottom (the bob's): else the side locks sat inside the bob, a step like a helmet's edge
@@ -59,17 +59,20 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + backExtra(y) + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);
-        const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
+        const shell = (B.smooth ? skullSmooth : skullOnly)(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;   // smooth: follow the head without the face's cut planes (a layer hugging the cheeks folded at their edges)
         const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // keep off the ears
-        return smax(smax(smax(shell, hem - y, 0.006), side, 0.01), -ear, EAR_GAP.k); } }]; },
+        const d = smax(smax(shell, hem - y, 0.006), side, 0.01); return B.overEars ? d : smax(d, -ear, EAR_GAP.k); } }]; },   // overEars: no cut around the ears (the hime's side locks: the cut left folds in them)
     // nendoStrands: the same idea made of separate strands (thin tips break up on a coarse mesh)
     "nendoStrands": () => { const B = OPT.hair.sculpt.nendo;   // wide, flat clumps that overlap, tips at the brows, longer locks at the sides
       return B.clumps.map(([th0, th1, ph1, w, bend, layer = 1]) => strand({ th0, ph0: B.root, th1, ph1, w: w * B.width, bend, off0: 0.014 * layer, off1: B.lift * layer, flat: B.flat, N: 8, tipPow: B.tipPow })); },   // layer: clumps in front / behind, so their edges show
     "none": () => [],
-    "blunt": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
+    // hime: a princess cut. The same layer as nendo, but square-ended clumps: a straight fringe across the forehead and straight side locks
+    // down to the cheeks (a steep curve keeps each clump's end flat; the grooves between them show the clumps)
+    "hime": (pick = {}) => BANGS.nendo(pick, { ...OPT.hair.sculpt.nendo, ...OPT.hair.sculpt.hime }),
   };
+  Object.defineProperty(BANGS, "blunt", { value: BANGS.hime, enumerable: false });   // the old helmet-shaped "blunt" was replaced by hime
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
-  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 },
+  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03, coverEars: true },
     "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
@@ -83,6 +86,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const BACKV_TOP = OPT.hair.sculpt.backVolumeTop ?? null;   // fades out again toward the top (the sides get fuller, the top doesn't rise, no groove down the middle)
   const BACKV_Z = OPT.hair.sculpt.backVolumeZ ?? [0.12, -0.12], BACKV_Y = OPT.hair.sculpt.backVolumeY ?? [1.08, 1.3];   // where the extra volume fades in: front→back (z) and bottom→top (y)
   const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean))) : null;   // the head without ears and face details
+  const skullSmooth = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape].filter(Boolean))) : null;   // the same without the face's cut planes
   // long: the hair's cross-section at height yc, carried straight down (a curtain behind the head and shoulders), behind z = zc,
   // widening a little toward the bottom (spread), with pointed tips along its lower edge
   function longCurtain(o, base) {
@@ -119,7 +123,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
       const thick = SHELL ? SHELL * tf
         + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
-      return smax(smax(dPrim(e, x, y, z) - thick - flare - lumpOf(x, y, z), hem - y, 0.012), -ear, EAR_GAP.k);
+      const d = smax(dPrim(e, x, y, z) - thick - flare - lumpOf(x, y, z), hem - y, 0.012);
+      return o.coverEars ? smin(d, Math.max(ear - 0.012, hem - y), 0.02) : smax(d, -ear, EAR_GAP.k);   // coverEars (the bob): the hair goes over the ears instead of around them (carving them out left little holes at the hem)
     } };
   }
   const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](pick), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
