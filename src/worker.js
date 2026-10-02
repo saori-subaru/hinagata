@@ -16,7 +16,7 @@ onmessage = ({ data: m }) => {
   try {
     if (kitKey !== m.key) {
       const B = buildBody(m.opt, m.debug);
-      kit = { bodySdf: B.bodySdf, HT: B.HT, BI: B.BI, weightsAt: makeWeights({ BODY: B.BODY, BONES: B.BONES, BI: B.BI }),
+      kit = { bodySdf: B.bodySdf, HT: B.HT, BI: B.BI, weightsAt: makeWeights({ BODY: B.BODY, BONES: B.BONES, BI: B.BI, J: B.J }),
         clothes: buildClothes(m.opt, { P: B.P, CROTCH: B.CROTCH, bodySdf: B.bodySdf }),
         hairKit: buildHair(m.opt, { P: B.P, CUT: B.CUT, PLANES: B.PLANES, faceWarp: B.faceWarp, bodySdf: B.bodySdfRaw }) };
       kitKey = m.key;
