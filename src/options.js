@@ -14,7 +14,7 @@ export const DEFAULTS = {
       "pivotY": 0.845,
       "pivotZ": 0.006,
       "shift": {
-        "z": 0.03,
+        "z": 0,
         "z0": -0.08,
         "z1": 0.06
       }
@@ -37,13 +37,13 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "skull": {
-        "width": 0.198,
+        "width": 0.21,
         "height": 0.24,
         "depth": 0.262,
         "y": 1.108
       },
       "neck": {
-        "width": 0.85
+        "width": 1
       },
       "skullTop": {
         "extra": 0,
@@ -53,7 +53,7 @@ export const DEFAULTS = {
         "rz": 0.2
       },
       "cheeks": {
-        "width": 0.175
+        "width": 0.185
       },
       "chin": {
         "y": 0.835,
@@ -163,19 +163,19 @@ export const DEFAULTS = {
           "inner": 0.9,
           "soft": 0.25
         },
-        "turn": 0.3,
-        "blend": 0.035,
+        "turn": 0,
+        "blend": 0.02,
         "lobe": 0,
         "lobeIn": 0.004,
         "lobeFill": {
           "out": 0.035,
           "up": -0.025
         },
-        "scale": 1.15,
+        "scale": 1,
         "x": null,
         "y": 0.958,
         "trimAngle": 0.35,
-        "trimDepth": 0.2
+        "trimDepth": 0.04
       },
       "muzzle": {
         "width": 0.075,
@@ -183,21 +183,21 @@ export const DEFAULTS = {
         "baseY": 0.905
       },
       "nose": {
-        "tipZ": 0.28,
+        "tipZ": 0.267,
         "under": {
           "dent": 0,
           "dentY": 0.915,
           "y": -0.002,
           "slope": 0.5
         },
-        "tipRadius": 0.0035,
+        "tipRadius": 0.0045,
         "blend": 0.02,
-        "lift": 0.02
+        "lift": 0
       },
       "mouth": {
         "curve": 45,
         "free": 0.95,
-        "cheekBack": 0.03,
+        "cheekBack": 0,
         "cheekBackWidth": 0.06,
         "back": 0
       },
@@ -328,21 +328,18 @@ export const DEFAULTS = {
     "sculpt": {
       "shortBack": 0.86,
       "shell": 0.028,
-      "taper": 0.22,
-      "taperBack": 0.18,
-      "backVolume": 0.02,
+      "taper": 0,
+      "taperBack": 0,
+      "backVolume": 0,
       "backVolumeZ": [0.1, -0.06],
       "backVolumeY": [0.98, 1.15],
-      "backVolumeTop": [1.18, 1.32],
+      "backVolumeTop": null,
       "earGap": {
-        "gap": 0.012,
-        "k": 0.02
+        "gap": 0.01,
+        "k": 0.006
       },
       "corner": null,
-      "taperSides": {
-        "a0": 45,
-        "a1": 75
-      },
+      "taperSides": null,
       "square": 1,
       "hairline": 1.203,
       "peak": {
@@ -385,10 +382,10 @@ export const DEFAULTS = {
       "neckX": [0.03, 0.07]
     },
     "noseShadow": {
-      "on": true,
-      "y": 0.938,
-      "width": 0.013,
-      "height": 0.009,
+      "on": false,
+      "y": 0.927,
+      "width": 0.02,
+      "height": 0.0075,
       "color": "#a8786290"
     },
     "eyeSize": 1.25,

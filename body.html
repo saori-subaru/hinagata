@@ -109,7 +109,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <label>設定(これを教えてくれれば反映する)<textarea id="limbOut" rows="2" readonly></textarea></label>
 </div>
 <div class="lay" id="chgPanel" hidden>
-  <b>「幅を縮める前」からの変更(チェックを外すと戻す)</b>
+  <b>あとで試した変更(チェックすると足す)</b>
   <div id="chgList" class="chg"></div>
   <div class="types"><button class="btn" id="chgApply" type="button" aria-pressed="true">反映(数秒)</button><button class="btn" id="chgAll" type="button">全部オン</button><button class="btn" id="chgNone" type="button">全部オフ</button></div>
   <label>選んだ組み合わせ(これを教えてくれれば標準にする)<textarea id="chgOut" rows="2" readonly></textarea></label>
@@ -298,7 +298,25 @@ const WIDE = merge(SHIFT0, { body: { sculpt: { skull: { width: 0.21 }, cheeks: {
 const STEP1 = merge(WIDE, { hair: { sculpt: { hairline: null, peak: { depth: 0 } } }, body: { sculpt: { skull: { height: 0.26, y: 1.128 }, crown: { y: 1.345 } } } });   // 案5+四角い生え際
 const V5 = merge(STEP1, { hair: { sculpt: { square: 0, corner: null } } });   // 案5(生え際がアーチのまま)
 const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   // 案7: 前後を詰める(後頭部が出すぎないように)
-const HEAD_VARIANTS = [["いまの", null], ["ひとつ前(耳の面)", PREV], ["耳の線", LINE1], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
+// 「幅を縮める前」(いまの標準)のあとに試した変更: チェックすると足す
+const CHANGES = [
+  ["顔の幅を縮める", { body: { sculpt: { skull: { width: 0.198 }, cheeks: { width: 0.175 } } } }],
+  ["頭の前半分を後ろへ(前後を詰める)", { body: { head: { shift: { z: 0.03 } } } }],
+  ["鼻先を上向き・前へ", { body: { sculpt: { nose: { tipZ: 0.28, tipRadius: 0.0035, lift: 0.02 } } } }],
+  ["鼻の下を引っこめる(斜めの輪郭)", { body: { sculpt: { mouth: { cheekBack: 0.03 } } } }],
+  ["鼻の下の影", { face: { noseShadow: { on: true, y: 0.938, width: 0.013, height: 0.009 } } }],
+  ["髪を生え際へ薄く(前・うなじ)", { hair: { sculpt: { taper: 0.22, taperBack: 0.18, taperSides: { a0: 45, a1: 75 } } } }],
+  ["後ろ頭の髪のボリューム", { hair: { sculpt: { backVolume: 0.02, backVolumeTop: [1.18, 1.32] } } }],
+  ["耳を大きく", { body: { sculpt: { ears: { scale: 1.15 } } } }],
+  ["耳の形(下を前へ・丸く)", { body: { sculpt: { ears: { turn: 0.3, trimDepth: 0.2, blend: 0.035 } } }, hair: { sculpt: { earGap: { gap: 0.012, k: 0.02 } } } }],
+  ["首を細く", { body: { sculpt: { neck: { width: 0.85 } } } }],
+];
+const CHG_ON = CHANGES.map(() => false);
+const chgOff = () => CHANGES.reduce((o, [, on], i) => CHG_ON[i] ? merge(o, on) : o, {});
+const ALL = CHANGES.reduce((o, [, on]) => merge(o, on), {});   // 10個の変更を全部入れた版(幅を縮める前に戻す直前の標準)
+const HEAD_VARIANTS0 = [ ["ひとつ前(耳の面)", PREV], ["耳の線", LINE1], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
+// それより前の案は前の標準(全部入り)からの差分なので、全部入りの上に重ねる
+const HEAD_VARIANTS = [["いまの(幅を縮める前)", null], ["全部入り(前の標準)", ALL], ...HEAD_VARIANTS0.map(([n, v]) => [n, merge(ALL, v ?? {})])];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
@@ -346,21 +364,6 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }, SHAPE0 = structuredClone(SHAPE);
-// 「幅を縮める前」からの変更: チェックを外したものは、その前の値に戻す(off がその値)
-const CHANGES = [
-  ["顔の幅を縮める", { body: { sculpt: { skull: { width: 0.21 }, cheeks: { width: 0.185 } } } }],
-  ["頭の前半分を後ろへ(前後を詰める)", { body: { head: { shift: { z: 0 } } } }],
-  ["鼻先を上向き・前へ", { body: { sculpt: { nose: { tipZ: 0.267, tipRadius: 0.0045, lift: 0 } } } }],
-  ["鼻の下を引っこめる(斜めの輪郭)", { body: { sculpt: { mouth: { cheekBack: 0 } } } }],
-  ["鼻の下の影", { face: { noseShadow: { on: false } } }],
-  ["髪を生え際へ薄く(前・うなじ)", { hair: { sculpt: { taper: 0, taperBack: 0, taperSides: null } } }],
-  ["後ろ頭の髪のボリューム", { hair: { sculpt: { backVolume: 0, backVolumeTop: null } } }],
-  ["耳を大きく", { body: { sculpt: { ears: { scale: 1 } } } }],
-  ["耳の形(下を前へ・丸く)", { body: { sculpt: { ears: { turn: 0, trimDepth: 0.04, blend: 0.02 } } }, hair: { sculpt: { earGap: { gap: 0.01, k: 0.006 } } } }],
-  ["首を細く", { body: { sculpt: { neck: { width: 1 } } } }],
-];
-const CHG_ON = CHANGES.map(() => true);
-const chgOff = () => CHANGES.reduce((o, [, off], i) => CHG_ON[i] ? o : merge(o, off), {});
 function curOpts() { return merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }); }
 const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
@@ -394,16 +397,16 @@ $("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAP
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
 let limbCam = null;
 // 変更を選ぶパネル: チェックしてから「反映」で1回だけ作り直す。開くと右に「幅を縮める前」を並べる
-for (const [i, [name]] of CHANGES.entries()) { const l = document.createElement("label"); l.innerHTML = `<input type="checkbox" checked> ${name}`; l.firstChild.addEventListener("change", (e) => { CHG_ON[i] = e.target.checked; chgSync(); }); $("chgList").append(l); }
+for (const [i, [name]] of CHANGES.entries()) { const l = document.createElement("label"); l.innerHTML = `<input type="checkbox"> ${name}`; l.firstChild.addEventListener("change", (e) => { CHG_ON[i] = e.target.checked; chgSync(); }); $("chgList").append(l); }
 function chgSync() { [...$("chgList").querySelectorAll("input")].forEach((c, i) => { c.checked = CHG_ON[i]; });
-  const off = CHANGES.filter((_, i) => !CHG_ON[i]).map(([n]) => n); $("chgOut").value = off.length ? "外す: " + off.join(" / ") : "(全部入り = いまの標準)"; }
+  const on = CHANGES.filter((_, i) => CHG_ON[i]).map(([n]) => n); $("chgOut").value = on.length ? "足す: " + on.join(" / ") : "(なにも足さない = いまの標準)"; }
 $("chgAll").addEventListener("click", () => { CHG_ON.fill(true); chgSync(); });
 $("chgNone").addEventListener("click", () => { CHG_ON.fill(false); chgSync(); });
 $("chgApply").addEventListener("click", () => rebuildBody());
 toggle("tChg", async (on) => {
   for (const id of ["tLimb", "tLay"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("chgPanel").hidden = !on; document.body.classList.toggle("chgOpen", on); chgSync();
-  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "幅を縮める前"); $("tPair").click(); }
+  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "全部入り(前の標準)"); $("tPair").click(); }
   if (on) { while (!twin) await new Promise((r) => setTimeout(r, 200));   // 並べ終わってから、2人の顔に寄る(狭い画面では下のパネルに隠れないよう上に)
     const narrow = innerWidth <= 720; camera.position.set(0, narrow ? 0.75 : 1.0, narrow ? 3.6 : 2.7); controls.target.set(0, narrow ? 0.62 : 0.92, 0); }
 });
