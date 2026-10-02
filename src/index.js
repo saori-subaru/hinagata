@@ -32,7 +32,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const H = quality === "low" ? 0.0095 : 0.0068;   // mesh cell size
 
   // shapes
-  const { J, PARENT, BONES, BI, P, CUT, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, P, CUT, EARS, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI });
@@ -99,6 +99,17 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
   const makeHair = (h) => skinned(mesh(HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);
   parts.hair = makeHair(H);
+  // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
+  const EL = OPT.face.earLine; let earLine = null;
+  if (EL.on) { earLine = new THREE.Group(); earLine.name = "earLine"; const mat = new THREE.MeshBasicMaterial({ color: EL.color }), deg = Math.PI / 180;
+    root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
+    for (const E of EARS) { const pts = [], N = 24;
+      for (let i = 0; i <= N; i++) { const a = (EL.a0 + (EL.a1 - EL.a0) * i / N) * deg, ph = [0, 1, 2].map((k) => E.c[k] + (E.eu[k] * (EL.cu + Math.cos(a) * EL.ru) + E.ev[k] * (EL.cv + Math.sin(a) * EL.rv) + E.ew[k] * 0.05) * E.ES);
+        let p = HT.fromHead(...ph); const d = E.ew;
+        for (let t = 0; t < 60; t++) { const f = bodySdf(...p); if (f < 0.0004) break; p = p.map((v, k) => v - d[k] * Math.min(f, 0.01)); }   // slide back onto the ear's front
+        pts.push(new THREE.Vector3(p[0] + d[0] * EL.lift, p[1] + d[1] * EL.lift, p[2] + d[2] * EL.lift)); }
+      const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, EL.width, 6, false); g.applyMatrix4(inv); earLine.add(new THREE.Mesh(g, mat)); }
+    bone.head.add(earLine); }
 
   // face: parts drawn into a texture on a thin copy of the front of the head
   let faceDrawHook = null, faceWrap = debug.faceWrap ?? null, blinking = false, blinkAt = 2.5;
@@ -117,7 +128,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   let poseName = "aPose", time = 0, lastPose = { b: {} };
 
   const avatar = {
-    object: root, bones: bone, skeleton, options: OPT, parts, PROF,
+    object: root, bones: bone, skeleton, options: OPT, parts, PROF, earLine,
     /** internals for tools and checking (shapes, face texture, joints) */
     internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, bodySdfRaw, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },

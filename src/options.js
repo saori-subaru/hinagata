@@ -341,8 +341,20 @@ export const DEFAULTS = {
     }
   },
   "face": {
-    "jawShadow": {
+    "earLine": {
       "on": true,
+      "color": "#74463f",
+      "width": 0.0024,
+      "lift": 0.001,
+      "a0": 110,
+      "a1": -55,
+      "cu": 0.008,
+      "cv": 0,
+      "ru": 0.032,
+      "rv": 0.044
+    },
+    "jawShadow": {
+      "on": false,
       "color": "#cfa294",
       "jawNy": [0.75, 0.95],
       "jawY": [0.8, 0.84, 0.9, 0.95],

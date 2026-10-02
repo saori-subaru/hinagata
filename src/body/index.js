@@ -24,7 +24,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 体の部品(見本の正面・横のシルエットに合わせた)
   const FOOT_H = OPT.body.sculpt.foot.thickness;   // 足の厚み(平たく)
   const SHOULDER_DROP = OPT.body.sculpt.shoulders.drop;   // 肩の頂点を下げる量(なで肩に)
-  const P = {}, CUT = {};
+  const P = {}, CUT = {}, EARS = [];
   const FACE_DY = -0.015;   // 顔の絵と眼窩をまとめて上下にずらす量
   const SOCKET_OUT = 0.065;
   // the eye sockets and the sculpt around the eyes follow the eye position of the face picture (defaults: eyeX 0.112, eyeY 0.998)
@@ -99,6 +99,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // lobeFill: a straight piece from the lobe up to the ear's widest point, so the edge between them has no dip (without it: a big "lucky" earlobe)
       const LF = OPT.body.sculpt.ears.lobeFill;
       if (LF) { const tip = ec.map((v, i) => v + (eu[i] * LF.out + ev[i] * LF.up) * ES); P[`earFill.${s}`] = C(lc, tip, 0.011 * ES, 0.009 * ES, "head", 0.01); } }
+    EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     P[`butt.${s}`] = E([m * 0.07 * TO.hips, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
     P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩
@@ -186,7 +187,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, HEAD];
   const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, P, CUT, PLANES: planeCuts, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  return { J, PARENT, BONES, BI, P, CUT, EARS, PLANES: planeCuts, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
 /**
