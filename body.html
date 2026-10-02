@@ -330,7 +330,8 @@ const V5 = merge(STEP1, { hair: { sculpt: { square: 0, corner: null } } });   //
 const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   // 案7: 前後を詰める(後頭部が出すぎないように)
 // 「幅を縮める前」(いまの標準)のあとに試した変更: チェックすると足す
 const CHANGES = [
-  ["顔の幅を縮める", { body: { sculpt: { skull: { width: 0.198 }, cheeks: { width: 0.175 } } } }],
+  ["顔の幅を縮める(頭はそのまま)", { body: { sculpt: { faceNarrow: { k: 0.943 } } } }],
+  ["頭ごと幅を縮める", { body: { sculpt: { skull: { width: 0.198 }, cheeks: { width: 0.175 } } } }],
   ["頭の前半分を後ろへ(前後を詰める)", { body: { head: { shift: { z: 0.03 } } } }],
   ["鼻先を上向き・前へ", { body: { sculpt: { nose: { tipZ: 0.28, tipRadius: 0.0035, lift: 0.02 } } } }],
   ["鼻の下を引っこめる(斜めの輪郭)", { body: { sculpt: { mouth: { cheekBack: 0.03 } } } }],

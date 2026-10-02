@@ -181,6 +181,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // a groove around where the nose meets the face (a thin ring around the nose base, front of the face only), so the nose stands out from the face
   const NG = OPT.body.sculpt.noseGroove;
   const groove = (x, y, z) => { if (!NG.depth || z < 0.1) return 0; const r = Math.hypot(x / NG.rx, (y - NG.y) / NG.ry), t = (r - 1) * Math.min(NG.rx, NG.ry) / NG.width; return NG.depth * Math.exp(-t * t) * sstep(0.1, 0.16, z); };
+  // faceNarrow: squeeze the head sideways only below the brows (k at y0 and below, none from y1 up), so the face gets narrower while the
+  // skull above stays as wide; the eye sockets aren't squeezed, so they stay under the eyes of the face picture
+  const FN = OPT.body.sculpt.faceNarrow, faceWarp = (y) => FN.k === 1 ? 1 : 1 - (1 - FN.k) * (1 - sstep(FN.y0, FN.y1, y));
+  if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform(OPT.body.head), HEAD_RAW = { ...HEAD };
@@ -191,7 +195,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, HEAD];
   const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, P, CUT, EARS, PLANES: planeCuts, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  return { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
 /**
