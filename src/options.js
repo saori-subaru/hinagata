@@ -314,6 +314,14 @@ export const DEFAULTS = {
         "gap": 0.012,
         "k": 0.02
       },
+      "corner": {
+        "a0": 35,
+        "a1": 60
+      },
+      "taperSides": {
+        "a0": 45,
+        "a1": 75
+      },
       "square": 1,
       "hairline": 1.203,
       "peak": {
