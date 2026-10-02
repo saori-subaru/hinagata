@@ -87,7 +87,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
     <button class="btn" id="tBangs" type="button">前髪</button>
     <button class="btn" id="tBack" type="button">後ろ髪</button>
-    <button class="btn" id="tSocket" type="button" aria-pressed="true">目のくぼみ</button>
+    <button class="btn" id="tSocket" type="button">目のまわり: 深い</button>
     <button class="btn" id="tPartTpl" type="button">顔パーツの枠テンプレ</button>
     <label class="btn">枠つきPNGを読む<input type="file" id="partFile" accept="image/*" hidden></label>
     <button class="btn" id="tFaceImg" type="button" aria-pressed="false">顔: コードの絵</button>
@@ -298,7 +298,6 @@ function cutBackground(c, tol = 48) {   // 枠のふちから続く「ふちの�
   for (let i = 0; i < w * h; i++) { if (seen[i]) continue; const x = i % w; if ((x > 0 && seen[i - 1]) || (x < w - 1 && seen[i + 1]) || (i >= w && seen[i - w]) || (i < w * (h - 1) && seen[i + w])) { if (green) D[i * 4 + 1] = Math.min(D[i * 4 + 1], Math.max(D[i * 4], D[i * 4 + 2])); D[i * 4 + 3] = Math.min(D[i * 4 + 3], Math.round(255 * Math.min(1, dist(i) / (tol * 2.5)))); } }
   g.putImageData(d, 0, 0); return c;
 }
-// 目のくぼみ(眼窩)をなくす: 描いた目(とくに横長でまっすぐな線)が、上や斜めから見て曲がらないように(作り直す)
 const SOCKET_OPT = { body: { sculpt: {} } };
 const PARTS_OPT = { face: { images: {} } };   // 読んだパーツの絵(作り直したときもこれを使う)
 function loadPartsImg(src) {
@@ -441,8 +440,8 @@ const HEAD_VARIANTS0 = [ ["ひとつ前(耳の面)", PREV], ["耳の線", LINE1]
 const HEAD_VARIANTS1 = [["髪の筋・天使の輪なし", { hair: { paint: { strands: { on: false }, ring: { on: false } } } }], ["ひとつ前(カーブ)", { hair: { sculpt: { nendo: { tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.045], [-26, 1.045], [-9, 0.975, 1.4, 0, "c", -6], [3, 0.965, 1.4, 0, "c", -6], [22, 1.04], [41, 1.045], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["うねり", { hair: { sculpt: { nendo: { tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.045], [-26, 1.045], [-9, 0.975, 1.4, 0.4, "c"], [3, 0.965, 1.4, 0.4, "c"], [22, 1.04], [41, 1.045], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["薄い前髪", { hair: { sculpt: { nendo: { extra: -0.014 } } } }], ["大きな房の前", { hair: { sculpt: { nendo: { round: 0.012, tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.035], [-22, 0.995], [-5, 1.045], [9, 0.975], [26, 1.03], [44, 1.04], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["ロング", { hair: { back: "long" } }], ["ボブ", { hair: { back: "bob" } }], ["アホ毛が前向き", { hair: { sculpt: { ahogeDir: 0 } } }], ["ジャイアン(前の前髪)", { hair: { ahoge: false, sculpt: { shell: 0.028, nendo: { tips: [[-62, 0.98], [-44, 1.05], [-27, 1.075], [-9, 1.065], [9, 1.07], [26, 1.06], [43, 1.05], [62, 0.98]], round: 0.004, span: 72, thick: 0.034 } } } }], ["前髪なし", { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } }], ["全部入り(前の標準)", merge(ALL, { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } })], ...HEAD_VARIANTS0.map(([n, v]) => [n, merge(merge(ALL, { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } }), v ?? {})])];
 // 髪を凸凹させる・天使の輪を髪の色にする前(白い輪)。それより前の案もみんなこの上に重ねる
 const LUMP0 = { hair: { sculpt: { lumps: { amp: 0 } }, paint: { ring: { color: "#ffffff", strength: 0.35 } } } };
-const EYEH0 = { body: { sculpt: { underEye: { depth: 0.01 }, socketLow: { depth: 0.014, width: 0.085, height: 0.06, heightUp: 0.11 } } } };   // 目の下の穴(眼窩の下の2つの凹み)を、広くなだらかな凹み1つにする前
-const HEAD_VARIANTS = [["いまの", null], ["目の下の穴の前", EYEH0], ["4つを標準にする前", merge(EYEH0, STD4_0)], ["凸凹の前(白い輪)", merge(merge(EYEH0, STD4_0), LUMP0)], ...HEAD_VARIANTS1.map(([n, v]) => [n, merge(merge(merge(EYEH0, STD4_0), LUMP0), v ?? {})])];
+const EYEH0 = {};   // (目のまわりは「目のまわり」ボタンで切りかえる)
+const HEAD_VARIANTS = [["いまの", null], ["4つを標準にする前", merge(EYEH0, STD4_0)], ["凸凹の前(白い輪)", merge(merge(EYEH0, STD4_0), LUMP0)], ...HEAD_VARIANTS1.map(([n, v]) => [n, merge(merge(merge(EYEH0, STD4_0), LUMP0), v ?? {})])];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
@@ -527,7 +526,11 @@ for (const [id, g, k, label, names] of OUTFIT_KINDS) {
   const cur = () => OUTFIT.outfit[g][k] ?? avatar.options.outfit[g][k], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit[g][k] = ks[(ks.indexOf(cur()) + 1) % ks.length]; show(); rebuildBody(); });
 }
-toggle("tSocket", (on) => { SOCKET_OPT.body.sculpt.socketScale = on ? 1 : 0; rebuildBody(); });
+// 目のまわりの彫り: 深い = 縦長の大きな目(コードの目)向けの標準 / なだらか = 横長でまっすぐな線の目(上から見ても線が曲がりにくい) / 平ら = くぼみなし
+const EYE_AREA = [["深い", { socketScale: 1, underEye: { depth: 0.01 }, socketLow: { depth: 0.014, width: 0.085, height: 0.06, heightUp: 0.11 } }],
+  ["なだらか", { socketScale: 1, underEye: { depth: 0 }, socketLow: { depth: 0.01, width: 0.15, height: 0.1, heightUp: 0.14 } }], ["平ら", { socketScale: 0 }]];
+let eyeAreaI = 0;
+$("tSocket").addEventListener("click", () => { eyeAreaI = (eyeAreaI + 1) % EYE_AREA.length; const [n, v] = EYE_AREA[eyeAreaI]; SOCKET_OPT.body.sculpt = structuredClone(v); $("tSocket").textContent = `目のまわり: ${n}`; rebuildBody(); });
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
 let limbCam = null;
 // 変更を選ぶパネル: チェックしてから「反映」で1回だけ作り直す。開くと右に「幅を縮める前」を並べる
@@ -540,7 +543,7 @@ $("chgApply").addEventListener("click", () => rebuildBody());
 toggle("tChg", async (on) => {
   for (const id of ["tLimb", "tLay", "tBang"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("chgPanel").hidden = !on; document.body.classList.toggle("chgOpen", on); chgSync();
-  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "目の下の穴の前"); $("tPair").click(); }
+  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "4つを標準にする前"); $("tPair").click(); }
   if (on) { while (!twin) await new Promise((r) => setTimeout(r, 200));   // 並べ終わってから、2人の顔に寄る(狭い画面では下のパネルに隠れないよう上に)
     const narrow = innerWidth <= 720; camera.position.set(0, narrow ? 0.75 : 1.0, narrow ? 3.6 : 2.7); controls.target.set(0, narrow ? 0.62 : 0.92, 0); }
 });
