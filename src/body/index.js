@@ -59,14 +59,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   P.muzzle2 = E([0, OPT.body.sculpt.muzzle.baseY, 0.243], [0.035, 0.045, 0.04], "head", 0.03);   // その弧の下地(前を削る面で形が決まる)
   const NOSE_UNDER = { dent: OPT.body.sculpt.nose.under.dent, dy: OPT.body.sculpt.nose.under.dentY, y: OPT.body.sculpt.nose.under.y, slope: OPT.body.sculpt.nose.under.slope };   // 鼻の下側を切る線: 先端からの下がり / 傾き(奥へ)
   const MOUTH_FREE = OPT.body.sculpt.mouth.free;   // 鼻の下を削る面を、この高さより上では前へ逃がす   // 鼻(鼻筋・付け根の凹みごと)を顔の絵の鼻の点に合わせて下げる量
-  { const c = C([0, 0.976 + NOSE_DY, 0.238], [0, 0.964 + NOSE_DY, NOSE_Z], 0.012, OPT.body.sculpt.nose.tipRadius, "head"), yt = 0.964 + NOSE_DY - NOSE_UNDER.y, zt = NOSE_Z + 0.007, sl = NOSE_UNDER.slope, L = Math.hypot(1, sl);
+  const NOSE_LIFT = OPT.body.sculpt.nose.lift;   // raise the tip (an upturned nose)
+  { const c = C([0, 0.976 + NOSE_DY, 0.238], [0, 0.964 + NOSE_DY + NOSE_LIFT, NOSE_Z], 0.012, OPT.body.sculpt.nose.tipRadius, "head"), yt = 0.964 + NOSE_DY + NOSE_LIFT - NOSE_UNDER.y, zt = NOSE_Z + 0.007, sl = NOSE_UNDER.slope, L = Math.hypot(1, sl);
     P.nose = { t: 3, k: OPT.body.sculpt.nose.blend, bone: "head", bx0: c.bx0, by0: c.by0, bz0: c.bz0, br: c.br,   // 鼻: 付け根から急に立ち上がって、先が尖る。下側は先端からまっすぐ奥へ切る(先端をひとつに)
       f: (x, y, z) => Math.max(dPrim(c, x, y, z), ((z - zt) - (y - yt) * sl) / L) }; }
   CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
   CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
   const CH = OPT.body.sculpt.chin;   // under the chin: height at the middle, how fast it rises toward the sides (rounder U), softness of the corner
   CUT.chin = plane((x, y) => (y - CH.y + 0.014 * Math.exp(-x * x / 0.0032) - CH.curve * x * x) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
-  CUT.mouth = plane((x, y, z) => (0.222 + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
+  const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack;   // seen from above, the cut curves back toward the sides below the eyes, so the cheeks sit behind the nose-mouth-chin line
+  CUT.mouth = plane((x, y, z) => (0.222 - OPT.body.sculpt.mouth.back - CHEEK_BACK * x * x * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   CUT.crown = plane((x, y) => OPT.body.sculpt.crown.y - y, OPT.body.sculpt.crown.blend);   // 頭のてっぺんを少しだけ平たく
   // flat back of the head: cut behind z = -backPlane.z, tilted so the plane leans forward at the top (0 = off)
   { const BP = OPT.body.sculpt.backPlane; if (BP.z) CUT.back = cut({ t: 3, k: BP.k, bone: "head", bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => (z + BP.z - BP.tilt * (y - 1.1)) / Math.hypot(1, BP.tilt) }); }
