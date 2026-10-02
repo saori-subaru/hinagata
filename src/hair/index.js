@@ -31,7 +31,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   const AY = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) - 1.39;   // the ahoge sits on the top of the head
   // ahoge: one curled strand standing up from the top of the hair, arching forward (size: hair.sculpt.ahogeSize)
   const AHOGE = (() => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (OPT.hair.sculpt.shell || 0.02);
-    const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [x * S, top + y * S, z * S]), segs = [];
+    const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D);   // direction it curls: 0 = forward, 90 = toward the character's left
+    const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), segs = [];
     for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); segs.push(strandSeg(pts[i], pts[i + 1], (0.014 * (1 - t0 * 0.55)) * S, (0.014 * (1 - t1 * 0.55)) * S, 0.6)); }
     return G(segs, 0.006); })();
   const smax = (a, b, k) => -smin(-a, -b, k);
@@ -65,7 +66,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
     "blunt": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
   };
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
-  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
+  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 },
+    "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
   { const BT = OPT.hair.sculpt.bob; if (BT) Object.assign(BACKS.bob, BT); }   // bob overrides: tips (depth of the hem's points), teeth (how many), flare (outward flick)   // height of the hairline at the forehead
@@ -75,7 +77,18 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   const BACKV_TOP = OPT.hair.sculpt.backVolumeTop ?? null;   // fades out again toward the top (the sides get fuller, the top doesn't rise, no groove down the middle)
   const BACKV_Z = OPT.hair.sculpt.backVolumeZ ?? [0.12, -0.12], BACKV_Y = OPT.hair.sculpt.backVolumeY ?? [1.08, 1.3];   // where the extra volume fades in: front→back (z) and bottom→top (y)
   const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
-  function backBlock(o) {
+  // long: the hair's cross-section at height yc, carried straight down (a curtain behind the head and shoulders), behind z = zc,
+  // widening a little toward the bottom (spread), with pointed tips along its lower edge
+  function longCurtain(o, base) {
+    const L = o.long, e = (x, z) => skullOnly(x, L.yc, z) - (o.r[0] - 0.282 * KX) - SHELL;
+    const f = (x, y, z) => { const sp = 1 + L.spread * Math.max(0, L.yc - y), th = Math.atan2(x, z);
+      const bottom = L.bottom + L.tips * (1 - Math.pow(Math.abs(Math.cos(th * L.teeth)), 2)) + L.curve * x * x;   // points along the lower edge, the sides a little higher
+      const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;
+      return smax(smax(smax(smax(e(x / sp, z), z - L.zc, 0.03), bottom - y, 0.012), y - L.yc - 0.04, 0.05), -ear, EAR_GAP.k); };
+    return { ...base, by0: 0.85, br: 0.65, f: (x, y, z) => smin(base.f(x, y, z), f(x, y, z), 0.03) };
+  }
+  function backBlock(o) { const b = backBlock0(o); return o.long ? longCurtain(o, b) : b; }
+  function backBlock0(o) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
       const th = Math.atan2(x, z), c = Math.cos(th);

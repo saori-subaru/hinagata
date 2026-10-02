@@ -357,6 +357,16 @@ export const DEFAULTS = {
       "shortBack": 0.86,
       "shell": 0.036,
       "ahogeSize": 1.15,
+      "ahogeDir": 90,
+      "long": {
+        "yc": 1.0,
+        "zc": -0.02,
+        "bottom": 0.55,
+        "spread": 0.25,
+        "tips": 0.035,
+        "teeth": 9,
+        "curve": 0.8
+      },
       "bob": {
         "tips": 0.045,
         "teeth": 8,

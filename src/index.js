@@ -104,7 +104,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   parts.soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(mesh(sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, fast.sock), OPT.outfit.socks.color, 0.003);
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
-  const makeHair = (h) => skinned(mesh(HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);
+  const makeHair = (h) => skinned(mesh(HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.4, hairPick.back === "long" ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);   // long hair reaches down the back
   parts.hair = makeHair(H);
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
