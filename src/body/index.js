@@ -37,7 +37,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const SOCK_IN = { d: OPT.body.sculpt.socketInner.depth, x: OPT.body.sculpt.socketInner.x + EX, w: OPT.body.sculpt.socketInner.width, h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
   const SOCK_BAND = { on: !oldSock, len: OPT.body.sculpt.socketBand.length, lift: OPT.body.sculpt.socketBand.lift };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: 0.035, w: 0.085, h: 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
-  const EAR = { flare: 0.7, tilt: 0.3, x: 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
+  const EAR = { flare: 0.7, tilt: 0.3, x: OPT.body.sculpt.ears.x ?? 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
   P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057, 0.056, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
   P.trap = E([0, 0.77, -0.016], [0.12, 0.03, 0.056], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
@@ -51,7 +51,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);   // 頭(大きな丸。横幅・前後とも見本どおり)
   P.occiput = E([0, 1.0, -0.07], [0.17, 0.09, 0.14], "head", 0.08);   // 後頭部の下(首の上まで丸くふくらむ)
   P.face = E([0, 0.935, 0.08], [OPT.body.sculpt.cheeks.width, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
-  P.jaw = E([0, 0.868, 0.094], [0.112, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
+  P.jaw = E([0, 0.868, 0.094], [OPT.body.sculpt.jaw.width, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
   P.muzzle = E([0, OPT.body.sculpt.muzzle.y, 0.17], [0.075, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
   const NOSE_DY = -0.035;
   const NOSE_Z = OPT.body.sculpt.nose.tipZ;   // 鼻先の前後(前は0.273。少し内側へ)
@@ -130,7 +130,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // the planes fade out instead of stopping: below cutY0 the front plane moves forward, behind sideZ the side planes move outward (no steps at their edges)
   if (FB.cutFront) planeCuts.push(cut({ t: 3, k: FB.cutK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max(FB.cutFront + FB.cutSlope * ramp(FB.cutY0 - y) - z, y - FB.cutY1) / Math.hypot(1, FB.cutSlope * ramp1(FB.cutY0 - y)) }));
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
-  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), ...planeCuts, BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+  // ears go on after the shape cuts, so flat sides don't trim them; their hollows right after them
+  const isEar = (k) => /^ear\./.test(k);
+  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
+    ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
@@ -154,7 +157,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, HEAD];
   const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  return { J, PARENT, BONES, BI, P, CUT, PLANES: planeCuts, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
 /**
