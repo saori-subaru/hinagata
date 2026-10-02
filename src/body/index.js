@@ -44,14 +44,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const TO = OPT.body.torso;
   P.chest = E([0, 0.68, 0.015], [0.13 * TO.chest, 0.1, 0.1 * TO.chest], "chest", 0.05);       // 胸は細め(脇の下を高くする)
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, a little apart.
-  // Each is an ellipsoid that is long above its center (it slopes gently out of the chest) and short below (a nearly level underside),
-  // joined with a small blend so there is a step under it
-  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = 0.06 * Math.max(1, TO.chest), cy = 0.65, ru = r * 1.4, rd = r * 0.78, rz = r * 0.9;
-    const zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust);   // zf: the chest's front surface there
-    for (const [sd, m] of [["L", 1], ["R", -1]]) { const cx = m * bx;
-      P[`bust.${sd}`] = { t: 3, k: 0.014, bone: "chest", bx0: cx, by0: cy, bz0: cz, br: ru, f: (x, y, z) => {
-        const ry = y > cy ? ru : rd, a = (x - cx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz);
-        return k0 * (k0 - 1) / k1; } }; } }
+  // Seen from the side: above, it rises out of the chest in a gentle hollow-then-round curve (like ノ, a wide blend); the most forward
+  // point is a little low; below, it turns back in quickly with a small blend, so there is a step to the belly.
+  // The part holds the chest itself so the blend width can change with height; joined to the body with almost no blend of its own.
+  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = 0.06 * Math.max(1, TO.chest), cy = 0.645, ru = r * 1.05, rd = r * 0.72, rz = r * 0.9, KU = 0.075, KD = 0.007;
+    const zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
+    const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + 0.035 ** 2) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored, rounded across the middle), so the shirt doesn't crease there
+    P.bust = { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.072, 0.1], "hips", 0.09);
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.215 - TO.waist), 0.575, 0], [0.05, 0.1, 0.14], "spine", 0.05));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
