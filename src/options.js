@@ -437,15 +437,15 @@ export const DEFAULTS = {
     "blush": {
       "cheeks": {
         "on": false,
-        "color": "#ff8a9a",
+        "color": "#ff8a73",
         "strength": 0.45,
         "size": 0.042,
         "x": 0.15,
-        "y": 0.95
+        "y": 0.93
       },
       "nose": {
         "on": false,
-        "color": "#ff8a9a",
+        "color": "#ff8a73",
         "strength": 0.4,
         "size": 0.016
       }

@@ -73,6 +73,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tLine" type="button" aria-pressed="true">輪郭線</button>
     <button class="btn" id="tBlushC" type="button" aria-pressed="false">ほっぺの赤み</button>
     <button class="btn" id="tBlushN" type="button" aria-pressed="false">鼻先の赤み</button>
+    <label class="btn pick">赤みの色 <input type="color" id="blushCol" aria-label="赤みの色" style="width:28px;height:20px;padding:0;border:0;background:none;cursor:pointer"></label>
     <button class="btn" id="tCloth" type="button" aria-pressed="true">服</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
@@ -154,8 +155,8 @@ const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new
 // ── 素体を作る ──
 const WRAP = { zc: -0.02, r: 0.24 };   // 顔の絵の貼り方: 頭のまわりに巻きつける(?wrap)
 let avatar, parts, I, face, helper = null, curPose = "aPose";
-const LOOK = { shade: "toon", line: true, cheeks: false, nose: false };   // 塗り方・輪郭線・赤み(作り直しても引き継ぐ)
-const keepStyle = (av) => { if (LOOK.shade !== "toon") av.setShading(LOOK.shade); if (!LOOK.line) av.setOutline({ on: false }); if (LOOK.cheeks || LOOK.nose) av.setBlush({ cheeks: { on: LOOK.cheeks }, nose: { on: LOOK.nose } }); };
+const LOOK = { shade: "toon", line: true, cheeks: false, nose: false, blush: null };   // 塗り方・輪郭線・赤み(作り直しても引き継ぐ。blush: 選んだ赤みの色)
+const keepStyle = (av) => { if (LOOK.shade !== "toon") av.setShading(LOOK.shade); if (!LOOK.line) av.setOutline({ on: false }); if (LOOK.cheeks || LOOK.nose || LOOK.blush) av.setBlush({ cheeks: { on: LOOK.cheeks, ...(LOOK.blush ? { color: LOOK.blush } : {}) }, nose: { on: LOOK.nose, ...(LOOK.blush ? { color: LOOK.blush } : {}) } }); };
 async function makeAvatar(opts, quiet = false) {   // 作る(作り直すときは古いのを捨てる)。quiet: 画面を隠さず、上に小さく「作り直し中」
   $(quiet ? "busy" : "msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   if (avatar) avatar.dispose();
@@ -262,6 +263,8 @@ toggle("tLine", (on) => { LOOK.line = on; for (const av of [avatar, twin].filter
 // ほっぺ・鼻先の赤み(ほわっと塗る。表情の「ぽっ」とは別)
 toggle("tBlushC", (on) => { LOOK.cheeks = on; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ cheeks: { on } }); });
 toggle("tBlushN", (on) => { LOOK.nose = on; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ nose: { on } }); });
+$("blushCol").value = avatar.options.face.blush.cheeks.color.slice(0, 7);
+$("blushCol").addEventListener("input", (e) => { LOOK.blush = e.target.value; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ cheeks: { color: LOOK.blush }, nose: { color: LOOK.blush } }); });   // ほっぺと鼻先は同じ色
 toggle("tWire", (on) => { wire = on; refreshLook(); });
 $("tFace").addEventListener("click", () => { faceI = (faceI + 1) % FACES.length; avatar.setFace(face.PRESETS[FACES[faceI]]); faceLabels(); });
 const cyc = (id, slot) => $(id).addEventListener("click", () => { const k = Object.keys(face.PARTS[slot]); avatar.setFace({ [slot]: k[(k.indexOf(avatar.faceSel[slot]) + 1) % k.length] }); faceLabels(); });
