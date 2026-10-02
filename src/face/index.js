@@ -88,6 +88,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       "ω": () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
       "へ": () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.013), py(y - 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.013), py(y - 0.006)); fctx.stroke(); },
     },
+    nose: {   // 鼻の下の影: 光に関係なく、いつも同じ所に描く(アニメ調の塗り)。位置は頭の座標で、絵のずれ(FACE_DY)を打ち消して置く
+      "影": () => { const N = OPT.face.noseShadow, x = 0, y = N.y - FACE.dy, g = fctx.createRadialGradient(px(x), py(y), 0, px(x), py(y), pu(N.width));
+        g.addColorStop(0, N.color); g.addColorStop(1, N.color.slice(0, 7) + "00");
+        fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(1, N.height / N.width); fctx.translate(-px(x), -py(y)); fctx.fillStyle = g; fctx.fillRect(px(x - N.width), py(y + N.width), pu(N.width * 2), pu(N.width * 2)); fctx.restore(); },
+      "なし": () => {},
+    },
     cheeks: {
       "なし": () => {},
       "ぽっ": (m) => { const { x, y } = CHEEK, g = fctx.createRadialGradient(px(x), py(y), 0, px(x), py(y), pu(0.034)); g.addColorStop(0, "#ff8fa8a0"); g.addColorStop(1, "#ff8fa800");
@@ -95,14 +101,14 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0025, "#e8607e"); for (let i = -1; i <= 1; i++) { fctx.beginPath(); fctx.moveTo(px(x + i * 0.011 + 0.004), py(y + 0.007)); fctx.lineTo(px(x + i * 0.011 - 0.003), py(y - 0.007)); fctx.stroke(); } },
     },
   };
-  const SLOTS = ["brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
+  const SLOTS = ["nose", "brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
   const SIDED = { eyes: true, brows: true, cheeks: true };
   const PRESETS = { "ふつう": { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" }, "絵": { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" }, "ふつう(前)": { eyes: "まる目(前)", brows: "ふつう(前)", mouth: "にこ", cheeks: "なし" }, "にこっ": { eyes: "にっこり", brows: "ふつう", mouth: "あーん", cheeks: "ぽっ" },
     "すやすや": { eyes: "とじ目", brows: "ふつう", mouth: "お", cheeks: "ぽっ" }, "びっくり": { eyes: "びっくり", brows: "こまり", mouth: "お", cheeks: "なし" }, "じとー": { eyes: "ジト目", brows: "おこ", mouth: "へ", cheeks: "なし" } };
   /** Draw a face: sel = { eyes, brows, mouth, cheeks } (names in PARTS). blinking swaps open eyes for closed ones. */
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && /まる|ジト|びっくり|絵/.test(sel.eyes) ? "とじ目" : sel[slot], draw = PARTS[slot][name];
+    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && /まる|ジト|びっくり|絵/.test(sel.eyes) ? "とじ目" : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       if (SIDED[slot]) for (const m of [1, -1]) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
       else draw(1); }
     faceTex.needsUpdate = true;

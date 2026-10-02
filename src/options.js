@@ -298,6 +298,13 @@ export const DEFAULTS = {
     }
   },
   "face": {
+    "noseShadow": {
+      "on": true,
+      "y": 0.927,
+      "width": 0.02,
+      "height": 0.0075,
+      "color": "#a8786290"
+    },
     "eyeSize": 1.25,
     "layout": {
       "eyeX": 0.096,

@@ -90,7 +90,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   // face: parts drawn into a texture on a thin copy of the front of the head
   let faceDrawHook = null, faceWrap = debug.faceWrap ?? null, blinking = false, blinkAt = 2.5;
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
-  const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" };   // default: code-drawn face (no image files needed)
+  const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし", nose: OPT.face.noseShadow.on ? "影" : "なし" };   // default: code-drawn face (no image files needed)
   let faceLayer = null;
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HT.identity ? null : HT.toHead);
