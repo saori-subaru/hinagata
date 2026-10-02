@@ -75,17 +75,15 @@ export function blend(list) {
 //   効きうる = マスの中心で測った距離から、マスの大きさぶんの余裕を見ても、部品の外接球が届く範囲にあるもの。並び順はそのまま
 export function blendFast(list, lo, hi, C = 0.04) {
   const slow = blend(list), nx = Math.ceil((hi[0] - lo[0]) / C), ny = Math.ceil((hi[1] - lo[1]) / C), nz = Math.ceil((hi[2] - lo[2]) / C);
-  let cells = null;
-  const build = () => { cells = new Array(nx * ny * nz); const r = C * 0.866, M = 2.5 * r + 0.01;   // M: 距離の見積もりの余裕
-    for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const x = lo[0] + (i + 0.5) * C, y = lo[1] + (j + 0.5) * C, z = lo[2] + (k + 0.5) * C, d = slow(x, y, z);
-      cells[i + nx * (j + ny * k)] = list.filter((p) => { const far = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br - r; return p.sub ? far < p.k - d + M : far < d + p.k + M; });
-    } };
+  // each cell keeps only the parts that can matter inside it. Built per cell on first use (a whole table costs ~0.25 s, and a build
+  // worker that meshes one slab of the body only ever touches its own cells)
+  const cells = new Array(nx * ny * nz), r = C * 0.866, M = 2.5 * r + 0.01;   // M: 距離の見積もりの余裕
+  const cellOf = (i, j, k) => { const x = lo[0] + (i + 0.5) * C, y = lo[1] + (j + 0.5) * C, z = lo[2] + (k + 0.5) * C, d = slow(x, y, z);
+    return list.filter((p) => { const far = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br - r; return p.sub ? far < p.k - d + M : far < d + p.k + M; }); };
   return (x, y, z) => {
     const i = Math.floor((x - lo[0]) / C), j = Math.floor((y - lo[1]) / C), k = Math.floor((z - lo[2]) / C);
     if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return slow(x, y, z);
-    if (!cells) build();
-    const L = cells[i + nx * (j + ny * k)]; let d = 1e9;
+    const ci = i + nx * (j + ny * k), L = cells[ci] ?? (cells[ci] = cellOf(i, j, k)); let d = 1e9;
     for (let n = 0; n < L.length; n++) { const p = L[n], dx = x - p.bx0, dy = y - p.by0, dz = z - p.bz0, far = Math.sqrt(dx * dx + dy * dy + dz * dz) - p.br;
       if (p.sub) { if (far >= p.k - d) continue; const di = dPrim(p, x, y, z); d = -smin(-d, di, p.k); continue; }
       if (far >= d + p.k) continue; const di = dPrim(p, x, y, z); d = d > 1e8 ? di : smin(d, di, p.k); }

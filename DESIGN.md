@@ -126,20 +126,23 @@ The playground keeps reading URL parameters, but as `?o=<options JSON>` for shar
 
 ## Speed (2026-10-02)
 
-Measured on the default character (browser, software GL; Node gives similar ratios).
+Measured on the default character (browser, software GL, 4 cores; Node gives similar ratios).
 
 | settings | first build | vertices drawn |
 |---|---|---|
 | `quality: "high"` (6.8 mm cells, the old default; the playground still uses it) | ~5.4 s | ~156,000 |
-| `quality: "game"` (13.6 mm cells, **default**) | ~2.2 s | ~34,000 |
-| `"game"` + `simplify: 0.4` | ~1.9 s | ~14,000 |
-| any of the above, second time (`cache`) | ~0.6 s | same |
+| `quality: "game"` (13.6 mm cells, **default**), one thread (`workers: false`) | ~1.2–1.7 s | ~34,000 |
+| `"game"` with workers (**default**) | ~0.86 s (~1.2 s the very first time on a page: the workers load) | same |
+| `"game"` + `simplify: 0.4` (one thread) | ~1.9 s | ~14,000 |
+| any of the above, second time (`cache`) | **~0.05 s** | same |
 
 - **game quality**: building time is mostly grid sampling, so a coarser grid is the biggest lever. Only thin tips and cut edges (bang tips, hems, sock tops) get slightly rougher; the face parts are drawn into a texture and don't change.
-- **cache**: built meshes go to IndexedDB under a key made of the resolved options and the source text of the generator modules (`src/cache.js`), so editing the sculpt code never returns a stale mesh. The newest 12 characters are kept.
+- **workers** (`src/pool.js`, `src/worker.js`, `src/build.js`): the body and the hair are built at once, then the clothes (they read the body's grid). Each part's grid is sampled in slabs and its vertices are projected and weighted in slices, on 1–4 workers; the cheap steps in between run on the main thread. `surfaceNets` is split into the same steps (`sampleGrid → fixAmbiguous → extractVerts → projectVerts → quads`) and the part table is shared (`src/parts.js`), so the mesh is identical to a one-thread build (same `checksum()`). If workers can't start or a job doesn't answer in 15 s, everything falls back to the main thread.
+- **cache**: built meshes (and which body vertices the clothes cover) go to IndexedDB under a key made of the resolved options (without colors, outline, shading and blush) and the source text of the generator modules (`src/cache.js`), so editing the sculpt code never returns a stale mesh. The newest 12 characters are kept.
+- **the body's cell table** (`blendFast`): the list of parts that matter in each 4 cm cell is now built per cell on first use (a whole table cost ~0.25 s, paid again by every worker and by a cached build that never meshes).
 - **cull**: body triangles deep (6 mm) inside a visible shirt, pants or shoes are left out of the body's index (about 4,000 at game quality). It follows each garment's `.m.visible`, so hiding a garment brings the body back. Socks are skipped (the leg is only ~2 mm inside).
-- **simplify**: meshoptimizer after building. Simplifying the high-quality mesh to 1/10 (~15,000) looked the same as the original in a side-by-side check; it is optional because it needs the extra package.
-- Not done yet: building in a Web Worker (the page still pauses during the first build).
+- **simplify**: meshoptimizer after building. Simplifying the high-quality mesh to 1/10 (~15,000) looked the same as the original in a side-by-side check; it is optional because it needs the extra package (and it keeps the build on the main thread).
+- `avatar.TIMES` shows where a build spent its time (ms per step).
 
 ## Playground
 
