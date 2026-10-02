@@ -71,13 +71,26 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
     geo.setAttribute("shadeN", new THREE.BufferAttribute(S, 3));
   }
-  const shadeToon = (c) => { const m = toon(c); m.onBeforeCompile = (sh) => { sh.vertexShader = "attribute vec3 shadeN;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;"); }; return m; };
+  // painted jaw shadow (anime style, not from lighting): under the jaw toward the ears, and the top of the neck. Stored per vertex as "paint" (0..1)
+  const JS = OPT.face.jawShadow;
+  function addPaint(geo) {
+    const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, A = new Float32Array(Pa.length / 3);
+    if (JS.on) for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];
+      const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);   // the underside of the jaw (faces down), in front of the ears
+      const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(-0.06, 0.0, z);   // the top of the neck, front half, darkest right under the jaw
+      A[v] = Math.min(1, Math.max(jaw, neck)); }
+    geo.setAttribute("paint", new THREE.BufferAttribute(A, 1));
+  }
+  const shadeToon = (c) => { const m = toon(c); m.onBeforeCompile = (sh) => {
+    sh.vertexShader = "attribute vec3 shadeN;\nattribute float paint;\nvarying float vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
+    sh.fragmentShader = "varying float vPaint;\nuniform vec3 paintColor;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * paintColor, vPaint);");
+    sh.uniforms.paintColor = { value: new THREE.Color(JS.color) }; }; return m; };
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   parts.body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), OPT.colors.skin); bodyAt = gridSampler(mesh.last, bodySdf);
-  addShadeNormals(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
+  addShadeNormals(parts.body.m.geometry); addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
   parts.shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * OPT.quality.shirtCell, null, /^(hips|spine|chest|upperChest|neck|upperArm)/, fast.shirt), OPT.outfit.shirt.color);
   parts.pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, fast.pants), OPT.outfit.pants.color);
   parts.shoes = skinned(mesh(shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), OPT.outfit.shoes.color);

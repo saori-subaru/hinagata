@@ -42,6 +42,9 @@ export const DEFAULTS = {
         "depth": 0.262,
         "y": 1.108
       },
+      "neck": {
+        "width": 0.85
+      },
       "skullTop": {
         "extra": 0,
         "y": 1.17,
@@ -338,6 +341,15 @@ export const DEFAULTS = {
     }
   },
   "face": {
+    "jawShadow": {
+      "on": true,
+      "color": "#cfa294",
+      "jawNy": [0.75, 0.95],
+      "jawY": [0.8, 0.84, 0.9, 0.95],
+      "backZ": -0.02,
+      "neckY": [0.74, 0.8, 0.84, 0.86],
+      "neckX": [0.03, 0.07]
+    },
     "noseShadow": {
       "on": true,
       "y": 0.938,
