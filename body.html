@@ -253,7 +253,7 @@ $("tExport").addEventListener("click", async () => {
 });
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
 // 頭の試作: 押すと次の案でキャラを作り直す(ページは読み込み直さない)。並べているときは右のキャラを切りかえる
-const NOSE0 = { face: { noseShadow: { on: false } }, hair: { sculpt: { backVolumeX: null, taper: 0, taperBack: 0, backVolume: 0, corner: null, taperSides: null } }, body: { sculpt: { skullTop: { extra: 0 }, crown: { tilt: 0 }, noseGroove: { depth: 0 }, ears: { scale: 1, lobe: 0, turn: 0, trimDepth: 0.04 }, faceBox: { y: 1.02, height: 0.12 }, mouth: { cheekBack: 0, back: 0 }, nose: { lift: 0, tipRadius: 0.0045, tipZ: 0.267, under: { dent: 0 } } } } };   // 鼻・鼻の下・頬をいじる前(古い案が今後の変更を拾わないように)
+const NOSE0 = { face: { noseShadow: { on: false } }, hair: { sculpt: { backVolumeTop: null, taper: 0, taperBack: 0, backVolume: 0, corner: null, taperSides: null } }, body: { sculpt: { skullTop: { extra: 0 }, crown: { tilt: 0 }, noseGroove: { depth: 0 }, ears: { scale: 1, lobe: 0, turn: 0, trimDepth: 0.04 }, faceBox: { y: 1.02, height: 0.12 }, mouth: { cheekBack: 0, back: 0 }, nose: { lift: 0, tipRadius: 0.0045, tipZ: 0.267, under: { dent: 0 } } } } };   // 鼻・鼻の下・頬をいじる前(古い案が今後の変更を拾わないように)
 const V6 = merge(NOSE0, { hair: { sculpt: { square: 1, hairline: 1.165, peak: { depth: 0 }, corner: null } },   // 案6: 低い頭蓋・平らな側面・四角い生え際(サイコロ寄り。いったん保留)
   body: { sculpt: { skull: { width: 0.21, height: 0.2, y: 1.09 }, cheeks: { width: 0.185 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, crown: { y: 1.235 }, faceBox: { sideX: 0.175, sideZ: -0.25, sideK: 0.04, round: 0.07 }, jaw: { width: 0.13 }, ears: { x: 0.188 } }, head: { shift: { z: 0 } } } });
 const V2 = merge(NOSE0, { face: { layout: { eyeX: 0.112, browX: 0.112, browY: 1.09 } }, hair: { sculpt: { shell: 0, square: 0, hairline: null, peak: { depth: 0 }, corner: null } },   // 案2
@@ -262,7 +262,7 @@ const OLD = merge(V2, { body: { head: { scale: 1 }, sculpt: { skull: { width: 0.
 const V3 = merge(V2, { body: { sculpt: { faceBox: { cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } });   // 顔の正面と横を平らな面に
 const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
 const PREV = { hair: { sculpt: { corner: { a0: 0, a1: 95 } } }, body: { sculpt: { skullTop: { extra: 0.01 } } } };   // ひとつ前(生え際を丸いアーチ・頭の上を広げていた版)
-const CORN0 = { hair: { sculpt: { corner: { a0: 35, a1: 92 }, backVolumeX: null } } };   // 生え際を耳の上へ丸く下ろしていた版
+const CORN0 = { hair: { sculpt: { corner: { a0: 35, a1: 92 }, backVolumeTop: null } } };   // 生え際を耳の上へ丸く下ろしていた版
 const VOL0 = merge(CORN0, { hair: { sculpt: { backVolume: 0 } } });   // 後ろ頭側の髪のボリュームを足す前
 const SIDEBURN = { hair: { sculpt: { corner: { a0: 35, a1: 60, drop: 0.3 } } } };   // もみあげ(生え際が耳の前まで下りる。前髪のパターンとして)
 const TS0 = merge(VOL0, { hair: { sculpt: { corner: null, taperSides: null } } });   // 生え際を耳までつなげる・こめかみをへこませる前
@@ -380,7 +380,7 @@ faceLabels(); hairLabels(); refreshLook();
 if (/[?&]cmp/.test(location.search)) $("tCmp").click();
 const HT = [0.35, 0.5, 0.01];
 const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
-  nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hf: [0, 1.05, 1.3, 0, 1.05, 0], h34: [-1.05, 1.08, 0.75, 0, 1.0, 0.03], np: [0.5, 0.94, 0.17, 0, 0.94, 0.17], ef: [0.17, 0.95, 0.55, 0.17, 0.95, 0], es: [0.75, 0.96, -0.01, 0.15, 0.96, -0.01], h34b: [-0.75, 1.0, 1.05, 0, 0.98, 0.05], hs: [1.3, 1.05, 0.02, 0, 1.05, 0], hb: [-0.75, 1.15, -1.1, 0, 1.05, 0], ha: [0, 2.0, 0.3, 0, 1.05, 0], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
+  nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hf: [0, 1.05, 1.3, 0, 1.05, 0], h34: [-1.05, 1.08, 0.75, 0, 1.0, 0.03], np: [0.5, 0.94, 0.17, 0, 0.94, 0.17], ef: [0.17, 0.95, 0.55, 0.17, 0.95, 0], es: [0.75, 0.96, -0.01, 0.15, 0.96, -0.01], h34b: [-0.75, 1.0, 1.05, 0, 0.98, 0.05], hbt: [-0.5, 1.75, -0.9, 0, 1.1, 0], hft: [0.5, 1.75, 0.9, 0, 1.1, 0], hs: [1.3, 1.05, 0.02, 0, 1.05, 0], hb: [-0.75, 1.15, -1.1, 0, 1.05, 0], ha: [0, 2.0, 0.3, 0, 1.05, 0], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
 if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
 const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
 

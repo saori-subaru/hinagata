@@ -48,7 +48,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
   const CORNER = OPT.hair.sculpt.corner ?? null, TAPER_SIDES = OPT.hair.sculpt.taperSides ?? null;
   const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
-  const BACKV_X = OPT.hair.sculpt.backVolumeX ?? null;   // only on the sides (none in the middle, so the top doesn't rise)
+  const BACKV_TOP = OPT.hair.sculpt.backVolumeTop ?? null;   // fades out again toward the top (the sides get fuller, the top doesn't rise, no groove down the middle)
   const BACKV_Z = OPT.hair.sculpt.backVolumeZ ?? [0.12, -0.12], BACKV_Y = OPT.hair.sculpt.backVolumeY ?? [1.08, 1.3];   // where the extra volume fades in: front→back (z) and bottom→top (y)
   const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
   function backBlock(o) {
@@ -65,11 +65,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
       // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
       let tf = 1; if (TAPER || TAPER_BACK) { const s2x = Math.min(1, (x / 0.21) ** 2), front = o.top - (CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : o.arch * (SQ ? (1 - SQ) * s2x + SQ * s2x ** 3 : s2x)), back = o.back + (o.side - o.back) * s2x;
-        const sideKeep = TAPER_SIDES ? sstep(TAPER_SIDES.a0, TAPER_SIDES.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : 0;   // taperSides: no thinning on the sides of the head (the outline stays full at the temples)
+        const sideKeep = TAPER_SIDES ? sstep(TAPER_SIDES.a0, TAPER_SIDES.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) * (1 - sstep(1.12, 1.24, y)) : 0;   // only on the sides: on top of the head the angle swings across the middle, which made ridges   // taperSides: no thinning on the sides of the head (the outline stays full at the temples)
         const ff = TAPER ? 1 - (1 - sstep(0, TAPER, y - Math.max(front, o.side - 0.05))) * (1 - sideKeep) : 1, fb = TAPER_BACK ? sstep(0, TAPER_BACK, y - back) : 1;
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
       const thick = SHELL ? SHELL * tf
-        + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_X ? sstep(BACKV_X[0], BACKV_X[1], Math.abs(x)) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
+        + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
       return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, EAR_GAP.k);
     } };
   }
