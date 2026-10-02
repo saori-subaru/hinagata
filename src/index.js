@@ -141,12 +141,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     geo.setAttribute("hairUV", new THREE.BufferAttribute(U, 2));
   }
   const glf = (v) => (+v).toFixed(4);
-  const hairMat = (c) => { const m = shaded(OPT.shading.style, c), HP = OPT.hair.paint, St = HP.strands, R = HP.ring, rc = new THREE.Color(R.color);
+  // the ring's color when none is given: the hair color, lighter and a little warmer (brown hair → orange), so it doesn't stand out as white
+  const ringOf = (c) => { const h = {}; new THREE.Color(c).getHSL(h); return new THREE.Color().setHSL(h.h + (0.075 - h.h) * 0.5, Math.min(1, h.s * 1.1 + 0.08), Math.min(0.85, h.l + 0.14)); };
+  const hairMat = (c) => { const m = shaded(OPT.shading.style, c), HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "varying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, N = ${glf(St.count)};
-    float s = ph * N / 6.2832 + ${glf(St.wobble)} * sin(th * 9.0 + ph * 2.0) + 0.25 * sin(ph * N * 0.37 + 1.3);   // strand lines: around the head, wavering a little
+    float s = ph * N / 6.2832 + ${glf(LU?.amp ? LU.twist * St.count / LU.count : 0)} * th * sin(ph) + ${glf(St.wobble)} * sin(th * 9.0 + ph * 2.0) + 0.25 * sin(ph * N * 0.37 + 1.3);   // strand lines: around the head, wavering a little, sweeping back with the hair's bundles (lumps)
     float id = floor(s), f = fract(s), k = fract(sin(id * 12.9898) * 43758.5453);                                   // k: a random value per strand (strength / length)
     float line = (1.0 - smoothstep(0.0, ${glf(St.width)}, min(f, 1.0 - f))) * smoothstep(${glf(St.start)}, ${glf(St.start)} + 0.35, th) * step(0.25, k);
     float ring = 0.0;

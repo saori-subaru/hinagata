@@ -89,6 +89,12 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       return smax(smax(smax(smax(e(x / sp, z), z - L.zc, 0.03), bottom - y, 0.012), y - L.yc - 0.04, 0.05), -ear, EAR_GAP.k); };
     return { ...base, by0: 0.85, br: 0.65, f: (x, y, z) => smin(base.f(x, y, z), f(x, y, z), 0.03) };
   }
+  // lumps: the hair's surface swells into rounded bundles that run down from the crown, twisting a little, so the head's outline is bumpy
+  // (count around the head, must be whole; twist: on the sides the bundles sweep back as they go down (mirrored left/right), which is what
+  //  makes bumps on the front outline; sharp < 1: rounder bundles, narrower creases)
+  const LU = OPT.hair.sculpt.lumps, SKY = OPT.body.sculpt.skull.y;
+  const lumpOf = (x, y, z) => { if (!LU?.amp) return 0; const dz = z + 0.005, th = Math.atan2(Math.hypot(x, dz), y - SKY), ph = Math.atan2(x, dz), s = ph * LU.count / (2 * Math.PI) + LU.twist * th * Math.sin(ph);
+    return LU.amp * (Math.pow(Math.abs(Math.sin(Math.PI * s)), LU.sharp) - 0.6) * sstep(LU.from, LU.from + 0.35, th); };   // fades out toward the crown, where the bundles meet
   function backBlock(o) { const b = backBlock0(o); return o.long ? longCurtain(o, b) : b; }
   function backBlock0(o) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
@@ -109,7 +115,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
       const thick = SHELL ? SHELL * tf
         + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
-      return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, EAR_GAP.k);
+      return smax(smax(dPrim(e, x, y, z) - thick - flare - lumpOf(x, y, z), hem - y, 0.012), -ear, EAR_GAP.k);
     } };
   }
   const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](pick), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
