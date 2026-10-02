@@ -335,6 +335,25 @@ export const DEFAULTS = {
     }
   },
   "hair": {
+    "paint": {
+      "strands": {
+        "on": true,
+        "count": 30,
+        "width": 0.12,
+        "strength": 0.2,
+        "wobble": 0.06,
+        "start": 0.25
+      },
+      "ring": {
+        "on": true,
+        "color": "#ffffff",
+        "strength": 0.35,
+        "center": 0.95,
+        "width": 0.05,
+        "zig": 0.07,
+        "teeth": 30
+      }
+    },
     "bangs": "nendo",
     "back": "short",
     "ahoge": true,
