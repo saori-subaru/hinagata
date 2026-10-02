@@ -84,12 +84,15 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const ew = [eu[1] * ev[2] - eu[2] * ev[1], eu[2] * ev[0] - eu[0] * ev[2], eu[0] * ev[1] - eu[1] * ev[0]].map((c) => c * m), ec = [m * EAR.x, EAR.y, -0.022];   // ew: 耳の表(前・外向き)
     { const c = Math.cos(EAR.lean), sn = Math.sin(EAR.lean), u = eu.slice(), v = ev.slice(); for (let i = 0; i < 3; i++) { eu[i] = u[i] * c - v[i] * sn; ev[i] = v[i] * c + u[i] * sn; } }   // 上を後ろへ倒す(横から見て上が広い形に)
     const ES = OPT.body.sculpt.ears.scale;   // ear size
+    // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
+    const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
+    if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }
     { const e0 = E(ec, [0.062 * ES, 0.067 * ES, 0.019 * ES], "head", 0.02, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth * ES, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
       P[`ear.${s}`] = { ...e0, t: 3, f: (x, y, z) => -smin(-dPrim(e0, x, y, z), -(n[0] * (x - ec[0]) + n[1] * (y - ec[1]) + n[2] * (z - ec[2]) - tc), 0.012) }; }   // 耳の後ろの下側をななめに落として、下へ細くとがらせる
     // earlobe: a small lump at the bottom front of the ear, against the head, so seen from the front the ear's lower edge first runs down from
     // where it meets the head, then turns out diagonally to the widest point (one more corner)
     const LB = OPT.body.sculpt.ears.lobe;
-    if (LB) { const lc = [ec[0] - m * OPT.body.sculpt.ears.lobeIn, ec[1] - 0.056 * ES, ec[2] + 0.008];
+    if (LB) { const lo = rotE([-m * OPT.body.sculpt.ears.lobeIn, -0.056 * ES, 0.008]), lc = ec.map((v, i) => v + lo[i]);
       P[`earLobe.${s}`] = E(lc, [0.016 * LB * ES, 0.022 * LB * ES, 0.014 * LB * ES], "head", 0.016);
       // lobeFill: a straight piece from the lobe up to the ear's widest point, so the edge between them has no dip (without it: a big "lucky" earlobe)
       const LF = OPT.body.sculpt.ears.lobeFill;
@@ -151,11 +154,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const qx = x / rx, qy = dy / ry, k0 = Math.hypot(qx, qy), k1 = Math.hypot(qx / rx, qy / ry);
     return -(k1 < 1e-9 ? -Math.min(rx, ry) : k0 * (k0 - 1) / k1); } }));
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
-  // with flat-plane cuts, ears go on after them (so the planes don't trim the ears), their hollows right after
-  const isEar = (k) => /^ear\./.test(k);
-  const HEAD = G(planeCuts.length ? [...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
-    ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose]
-    : [...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+  // ears go on after the shape cuts (so the chin cut and flat planes don't clip them), their hollows right after
+  const isEar = (k) => /^ear(Lobe|Fill)?\./.test(k);
+  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
+    ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }

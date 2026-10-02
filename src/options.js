@@ -142,7 +142,8 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
-        "lobe": 1.3,
+        "turn": 0.3,
+        "lobe": 0,
         "lobeIn": 0.004,
         "lobeFill": {
           "out": 0.035,
@@ -152,7 +153,7 @@ export const DEFAULTS = {
         "x": null,
         "y": 0.958,
         "trimAngle": 0.35,
-        "trimDepth": 0.04
+        "trimDepth": 0.2
       },
       "muzzle": {
         "width": 0.075,
