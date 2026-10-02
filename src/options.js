@@ -374,6 +374,7 @@ export const DEFAULTS = {
         "thick": 0.048,
         "smooth": true,
         "overEars": true,
+        "slits": [[-40, 0.06, 0.014], [-17.25, 0.08, 0.015], [5.75, 0.05, 0.013], [28.5, 0.07, 0.015]],
         "slope": 2,
         "curve": 4,
         "round": 0.006,
@@ -495,7 +496,7 @@ export const DEFAULTS = {
         "strength": 0.45,
         "size": 0.042,
         "x": 0.15,
-        "y": 0.93
+        "y": 0.95
       },
       "nose": {
         "on": false,
