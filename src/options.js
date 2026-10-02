@@ -45,6 +45,11 @@ export const DEFAULTS = {
       "neck": {
         "width": 1
       },
+      "faceNarrow": {
+        "k": 1,
+        "y0": 1.02,
+        "y1": 1.12
+      },
       "skullTop": {
         "extra": 0,
         "y": 1.17,

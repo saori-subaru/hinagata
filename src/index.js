@@ -32,9 +32,9 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   const H = quality === "low" ? 0.0095 : 0.0068;   // mesh cell size
 
   // shapes
-  const { J, PARENT, BONES, BI, P, CUT, EARS, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
-  const hairKit = buildHair(OPT, { P, CUT, PLANES, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
+  const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI });
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
 

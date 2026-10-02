@@ -3,7 +3,7 @@
 import { smin, E, C, G, dPrim, blend, sstep } from "../sdf/prim.js";
 import { grad } from "../sdf/mesh.js";
 
-export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
+export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, bodySdf }) {
   //  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
   //  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
   const KX = OPT.body.sculpt.skull.width / 0.249;   // hair follows the skull width
@@ -76,7 +76,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
   const BACKV_TOP = OPT.hair.sculpt.backVolumeTop ?? null;   // fades out again toward the top (the sides get fuller, the top doesn't rise, no groove down the middle)
   const BACKV_Z = OPT.hair.sculpt.backVolumeZ ?? [0.12, -0.12], BACKV_Y = OPT.hair.sculpt.backVolumeY ?? [1.08, 1.3];   // where the extra volume fades in: front→back (z) and bottom→top (y)
-  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
+  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean))) : null;   // the head without ears and face details
   // long: the hair's cross-section at height yc, carried straight down (a curtain behind the head and shoulders), behind z = zc,
   // widening a little toward the bottom (spread), with pointed tips along its lower edge
   function longCurtain(o, base) {
