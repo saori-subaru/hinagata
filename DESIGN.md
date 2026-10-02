@@ -67,6 +67,7 @@ interface Avatar {
   play(motion: string, opts?: { fade?: number }): void
   setColors(colors: Partial<Colors>): void          // instant
   setOutline(o: { on?: boolean, width?: number, color?: string }): void   // instant
+  setShading(style: "toon" | "smooth" | "flat"): void   // instant
   setFace(face: Partial<FaceOptions>): Promise<void> // instant (redraws the face texture)
   rebuild(options: Partial<AvatarOptions>): Promise<void>  // regenerates only what changed
   exportGLB(): Promise<ArrayBuffer>
@@ -84,6 +85,7 @@ Two tiers, so the common knobs stay short and the sculpt details stay out of the
 {
   "colors": { "skin": "#ffe0c8", "hair": "#6a4a30", "eyes": "#4f6a9a" },
   "outline": { "on": true, "width": 1, "color": "#3a2a3a" },   // art style: some games want no outline. avatar.setOutline() changes it instantly
+  "shading": { "style": "toon" },   // "toon" (3 flat bands) | "smooth" (soft light falloff) | "flat" (no lighting). avatar.setShading() changes it instantly
   "face": {
     "eyes": "image", "brows": "image", "mouth": "image",   // or code-drawn: "round", "smile", "closed", ...
     "images": { "eye": "img/parts/eye.png", "brow": "img/parts/brow.png", "mouth": "img/parts/mouth.png" },
@@ -117,7 +119,7 @@ The playground keeps reading URL parameters, but as `?o=<options JSON>` for shar
 
 | change | cost |
 |---|---|
-| colors, outline, face parts, motion | instant (and the cache key ignores colors and the outline, so recolored characters reuse the same meshes) |
+| colors, outline, shading, face parts, motion | instant (and the cache key ignores colors, the outline and the shading, so recolored characters reuse the same meshes) |
 | hair style | hair only (~0.5 s) |
 | outfit on/off, outfit shape | that garment only |
 | body shape | body + clothes + hair (a few seconds) |

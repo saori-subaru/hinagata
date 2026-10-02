@@ -11,6 +11,9 @@ export const DEFAULTS = {
     "width": 1,
     "color": "#3a2a3a"
   },
+  "shading": {
+    "style": "toon"
+  },
   "body": {
     "head": {
       "scale": 0.9,

@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { sstep } from "./sdf/prim.js";
 import { surfaceNets, gridSampler } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
-import { toon, outlineMat } from "./materials.js";
+import { shaded, SHADINGS, outlineMat } from "./materials.js";
 import { DEFAULTS, resolveOptions } from "./options.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
@@ -18,7 +18,7 @@ import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 
-export { DEFAULTS, POSES, resolveOptions };
+export { DEFAULTS, POSES, SHADINGS, resolveOptions };
 export { BODY_TYPES } from "./body/types.js";
 
 /**
@@ -33,10 +33,10 @@ export { BODY_TYPES } from "./body/types.js";
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             debug: { slow, oldSock, faceWrap } — checking aids, normally unused }
  */
-// options without the parts that only change colors or the outline (the geometry is the same, so the cache can reuse it)
+// options without the parts that only change colors, the outline or the shading (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, ...rest } = OPT; return { ...rest, outfit: strip(OPT.outfit) };
+  const { colors, outline, shading, ...rest } = OPT; return { ...rest, outfit: strip(OPT.outfit) };
 }
 
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, debug = {} } = {}) {
@@ -92,7 +92,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     return { pos: P, nor: N, idx: out };
   }
   function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1)
-    const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
+    const m = new THREE.SkinnedMesh(geo, shaded(OPT.shading.style, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
     const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
     const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
     return { m, o, on: true };
@@ -127,7 +127,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
   }
-  const shadeToon = (c) => { const m = toon(c); m.onBeforeCompile = (sh) => {
+  const shadeToon = (c) => { const m = shaded(OPT.shading.style, c); m.onBeforeCompile = (sh) => {
     sh.vertexShader = "attribute vec3 shadeN;\nattribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
     sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return m; };
 
@@ -226,6 +226,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setOutline({ on, width, color } = {}) {
       Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
       root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+    },
+    /** Shading style (instant, no rebuild): "toon" | "smooth" | "flat" (see SHADINGS). Keeps the current colors. */
+    setShading(style) {
+      if (!SHADINGS.includes(style)) throw new Error(`Unknown shading "${style}". Available: ${SHADINGS.join(", ")}`);
+      OPT.shading.style = style;
+      for (const [k, x] of Object.entries(parts)) {
+        if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
+        const old = x.m.material; x.m.material = shaded(style, old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
+      }
     },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). */
     setHair(pick) {
