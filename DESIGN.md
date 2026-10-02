@@ -57,7 +57,7 @@ site/avatar/
 ## API
 
 ```ts
-createAvatar(options?: AvatarOptions, settings?: { quality?: "high" | "low", onProgress?: (p: number) => void }): Promise<Avatar>
+createAvatar(options?: AvatarOptions, settings?: { quality?: "game" | "high" | "low", cell?: number, simplify?: number, cache?: boolean, cull?: boolean, onProgress?: (p: number) => void }): Promise<Avatar>
 
 interface Avatar {
   object: THREE.Group          // add to your scene; contains the skinned meshes and the skeleton
@@ -119,6 +119,23 @@ The playground keeps reading URL parameters, but as `?o=<options JSON>` for shar
 | hair style | hair only (~0.5 s) |
 | outfit on/off, outfit shape | that garment only |
 | body shape | body + clothes + hair (a few seconds) |
+
+## Speed (2026-10-02)
+
+Measured on the default character (browser, software GL; Node gives similar ratios).
+
+| settings | first build | vertices drawn |
+|---|---|---|
+| `quality: "high"` (6.8 mm cells, the old default; the playground still uses it) | ~5.4 s | ~156,000 |
+| `quality: "game"` (13.6 mm cells, **default**) | ~2.2 s | ~34,000 |
+| `"game"` + `simplify: 0.4` | ~1.9 s | ~14,000 |
+| any of the above, second time (`cache`) | ~0.6 s | same |
+
+- **game quality**: building time is mostly grid sampling, so a coarser grid is the biggest lever. Only thin tips and cut edges (bang tips, hems, sock tops) get slightly rougher; the face parts are drawn into a texture and don't change.
+- **cache**: built meshes go to IndexedDB under a key made of the resolved options and the source text of the generator modules (`src/cache.js`), so editing the sculpt code never returns a stale mesh. The newest 12 characters are kept.
+- **cull**: body triangles deep (6 mm) inside a visible shirt, pants or shoes are left out of the body's index (about 4,000 at game quality). It follows each garment's `.m.visible`, so hiding a garment brings the body back. Socks are skipped (the leg is only ~2 mm inside).
+- **simplify**: meshoptimizer after building. Simplifying the high-quality mesh to 1/10 (~15,000) looked the same as the original in a side-by-side check; it is optional because it needs the extra package.
+- Not done yet: building in a Web Worker (the page still pauses during the first build).
 
 ## Playground
 
