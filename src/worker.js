@@ -28,7 +28,7 @@ onmessage = ({ data: m }) => {
     } else {
       const pos = m.pos, nor = new Float32Array(pos.length);   // pos: Float64 (the same numbers the main thread would project)
       projectVerts(s.sdf, pos, nor, m.opt.quality.project);
-      const { si, sw } = skinOf(new Float32Array(pos), kit.weightsAt, kit.BI, s.bone1, s.only);   // weights from the stored (float32) positions, as on the main thread
+      const { si, sw } = skinOf(new Float32Array(pos), kit.weightsAt, kit.BI, s.bone1, s.only, s.soft);   // weights from the stored (float32) positions, as on the main thread
       postMessage({ id: m.id, pos, nor, si, sw }, [pos.buffer, nor.buffer, si.buffer, sw.buffer]);
     }
   } catch (e) { postMessage({ id: m.id, error: String((e && e.message) || e) }); }

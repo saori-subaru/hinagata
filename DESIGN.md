@@ -50,7 +50,7 @@ site/avatar/
   facekit/              (as now)
   docs/
     AGENTS.md           how to use and extend, for coding agents
-    options.schema.json every option: type, range, default, rebuild yes/no
+    options.schema.json every option: type, range, default, names, rebuild cost (written by tools/schema.mjs)
   examples/             copy-paste examples (one character, a crowd of NPCs, walking, export)
 ```
 
@@ -65,15 +65,21 @@ interface Avatar {
   bones: Record<BoneName, THREE.Bone>
   update(dt: number): void     // advance motion and blinking
   play(motion: string, opts?: { fade?: number }): void
-  setColors(colors: Partial<Colors>): void          // instant
+  setColors(c: { skin?, hair?, eyes?, shirt?, pants?, socks?, shoes?, soles? }): void   // instant
+  setWorn(w: { shirt?: boolean, pants?: boolean, socks?: boolean, shoes?: boolean }): void   // instant
   setOutline(o: { on?: boolean, width?: number, color?: string }): void   // instant
   setShading(style: "toon" | "smooth" | "flat"): void   // instant
-  setFace(face: Partial<FaceOptions>): Promise<void> // instant (redraws the face texture)
-  rebuild(options: Partial<AvatarOptions>): Promise<void>  // regenerates only what changed
+  setFace(face: string | { eyes?, brows?, mouth?, cheeks?, nose? }): void   // instant: an expression id, or part ids by slot
+  setFaceLayout(l: { eyeX?, eyeY?, eyeSize?, browX?, browY?, mouthY? }): void   // instant
+  setBlush(b: { cheeks?, nose? }): void   // instant
+  setHair(pick: { bangs?, back?, ahoge? }): void   // rebuilds the hair only
+  rebuild(options: Partial<AvatarOptions>): Promise<void>  // (not yet) regenerates only what changed
   exportGLB(): Promise<ArrayBuffer>
   dispose(): void
 }
 ```
+
+**`avatar.options` is the recipe** (2026-10-02): every instant change above is written back into it, so saving or copying `avatar.options` (or `diff(DEFAULTS, avatar.options)`, only what differs) always gives back the character on screen. `resolveOptions` returns a fresh copy, so an avatar never changes `DEFAULTS` or the caller's object. One exception: `face.layout.eyeX / eyeY` also place the eye sockets in the head's shape, which only follows on the next build.
 
 ## Options
 
@@ -87,16 +93,16 @@ Two tiers, so the common knobs stay short and the sculpt details stay out of the
   "outline": { "on": true, "width": 1, "color": "#3a2a3a" },   // art style: some games want no outline. avatar.setOutline() changes it instantly
   "shading": { "style": "toon" },   // "toon" (3 flat bands) | "smooth" (soft light falloff) | "flat" (no lighting). avatar.setShading() changes it instantly
   "face": {
-    "eyes": "image", "brows": "image", "mouth": "image",   // or code-drawn: "round", "smile", "closed", ...
-    "images": { "eye": "img/parts/eye.png", "brow": "img/parts/brow.png", "mouth": "img/parts/mouth.png" },
-    "cheeks": "none"
-  },
+    "parts": { "eyes": "round", "brows": "normal", "mouth": "smile", "cheeks": "none", "nose": null },   // ids in PART_LABELS (with ja / en names); "image" = a drawn part. nose null = follow noseShadow.on
+    "images": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },   // drawn parts (null = the bundled img/parts/*.png)
+    "layout": { "eyeX": 0.096, "eyeY": 0.998, "browX": 0.088, "browY": 1.092, "mouthY": 0.896 }, "eyeSize": 1.25
+  },   // expressions (EXPRESSIONS: normal, happy, sleeping, surprised, glare, ...) are presets of parts: avatar.setFace("happy")
   "hair": { "bangs": "none", "back": "short", "ahoge": false },
   "outfit": {
-    "shirt": { "color": "#7fb6e8" },                        // null = no shirt
-    "pants": { "color": "#5a4f7a", "hem": 0.3 },
-    "socks": { "color": "#f7f3ea", "top": 0.15 },
-    "shoes": { "color": "#c8564b", "sole": "#f4f1ea" }
+    "shirt": { "on": true, "color": "#7fb6e8", "sleeve": "short", "length": "tuck" },   // on: worn or not (avatar.setWorn)
+    "pants": { "on": true, "color": "#5a4f7a", "length": "shorts", "hem": 0.3 },
+    "socks": { "on": true, "color": "#f7f3ea", "top": 0.15 },
+    "shoes": { "on": true, "color": "#c8564b", "soleColor": "#f4f1ea" }
   },
   "body": { "headSize": 1, "chubby": 0, "legLength": 1, "shoulderDrop": 0.008 }   // a few broad sliders (new)
 }
@@ -152,6 +158,52 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - "Generating…" indicator while geometry is rebuilt. Works on phones.
 - Language: see "Languages" below (the editor opens in English, with a Japanese toggle).
 - Developer drawer (collapsed): clay, wireframe, bones, compare with reference sheet, face sheet export.
+
+### Editor features (2026-10-02, the list for (a); (b) takes a subset)
+
+Engine: **yes** = the engine has it, the editor only needs UI; **part** = there, but not in the recipe or not a library API yet; **no** = not in the engine yet.
+
+| area | features | engine |
+|---|---|---|
+| recipe | new from a preset; save in the browser (a list of characters); save / load JSON; share by URL (`?o=`); copy as code (only what differs); undo / redo of every change; reset a section / all; count of values that differ from the defaults; two recipes side by side | editor-side |
+| export | GLB (A-pose, no outlines) | yes |
+| | PNG (transparent, fixed views) | editor-side |
+| | face part template (frames to draw in) and reading a framed PNG back | part (lives in `body.html`, move into the library) |
+| | VRM | no |
+| view | orbit camera, view buttons (front / side / back / 3-4 / face), background, floor and shadow, reference image overlay | editor-side |
+| | shading (toon / smooth / flat), outline (on / width / color), clay, wireframe, bones, quality, vertex count and build time | yes |
+| body | body type presets (5), torso (7), limb thickness (5), knee / foot spacing, head scale / width / depth, skin color, sculpt (~160 values, folded) | yes |
+| | leg length, chubbiness (proportion sliders that move joints) | no |
+| face | parts by slot (eyes 7, brows 6, mouth 6, nose 3, cheeks 2), expressions, layout (eye spacing / height / size, brows, mouth), eye color, soft blush, nose / jaw shadows, ear line / shade, eye-area depth, blinking | yes |
+| | drawn parts read from a framed PNG | part (see export) |
+| | naming an expression when reading a drawing (see "Face parts editor") | no |
+| hair | bangs (5), back (4: short / bob / flip / long), ahoge (on / size / direction), color, strands and angel ring, volume and hairline sculpt | yes |
+| | dragging bang tufts (the data is in the recipe; the dragging lives in `body.html`) | part |
+| | ponytails, twin tails, swaying strands (spring bones) | no |
+| outfit | worn or not (each garment), shirt sleeve (3) / length (3) / collar, pants length (3) / hem, socks height, shoes and soles, colors | yes |
+| | skirts, frills, capes, hats | no |
+| | cloth textures (below) | no |
+| motion | poses (9), freeze at a time | yes |
+| | play / pause, speed, scrub | editor-side |
+| | play once, hit events, held items (`attach`) | no (see "Sword presets") |
+| extras | knight / beast / mage presets, extra bones, spring bones | no |
+
+Still missing in the engine before the editor: `avatar.rebuild()` (today a body change means a whole new `createAvatar`, ~1 s with the cache warm).
+
+### Options schema (2026-10-02, done)
+
+`src/schema.js` describes every option by path; `docs/options.schema.json` is written from it (`node tools/schema.mjs`; `--check` fails when it is out of date). Each entry: `type` (number / boolean / color / enum / image / json), `default`, `min` / `max` / `step`, enum `options`, `label` and `section` in ja / en, `group` (the editor's tab), `tier` (main = shown, advanced = folded), `cost` (instant / paint / hair / clothes / body), `apply` (the avatar method that applies it without a rebuild) and `alsoShapes`.
+- It is built from DEFAULTS, so a new option is never missing: about 80 main values are described by hand (`MAIN` in `src/schema.js`); every other value (the sculpt tuning) gets an entry made from its default, with a guessed range marked `soft` and an English label from its key. To promote a value to the editor's main panels, add it to `MAIN`.
+- `checkOptions(options)` lists unknown paths, wrong types, enum values that don't exist and numbers outside a described range. `createAvatar` prints them as a warning (typos used to be ignored silently).
+
+### Cloth textures (2026-10-02, Saori; plan)
+
+Clothes get pictures the way the face does. Three layers, bottom to top:
+1. **Base color** (exists).
+2. **Pattern**: stripes, checks, dots… drawn in the shader from the angle around the body and the height (like the hair strands), so no texture and no UVs.
+3. **Drawn picture**: like the face template, the editor exports a front and a back template of each garment; the drawing is read back and projected from the front and the back. Logos and one-point marks go here too.
+
+The garments have no UVs (surface nets); layers 2 and 3 are projections, so they don't need any. The hard part is the seam at the sides where the front and back pictures meet.
 
 ## Reference presets
 

@@ -81,6 +81,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tCloth" type="button" aria-pressed="true">服</button>
     <button class="btn" id="tSleeve" type="button">袖: 半袖</button>
     <button class="btn" id="tShirtLen" type="button">シャツの丈: 入れる</button>
+    <button class="btn" id="tPantsKind" type="button">下: ズボン</button>
     <button class="btn" id="tPantsLen" type="button">ズボンの丈: 短パン</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
@@ -154,7 +155,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { createAvatar, POSES, SHADINGS } from "./src/index.js";
+import { createAvatar, POSES, SHADINGS, EXPRESSIONS, PART_LABELS } from "./src/index.js";
 import { clayMat, toon } from "./src/materials.js";
 import { fromQuery, merge } from "./src/options.js";
 import { BODY_TYPES } from "./src/body/types.js";
@@ -225,7 +226,8 @@ function refreshLook() {
 
 // ── 顔 ──
 const FACES = Object.keys(face.PRESETS); let faceI = 0;
-function faceLabels() { const s = avatar.faceSel; $("tFace").textContent = `表情: ${FACES[faceI]}`; $("tEyes").textContent = `目: ${s.eyes}`; $("tBrow").textContent = `眉: ${s.brows}`; $("tMouth").textContent = `口: ${s.mouth}`; }
+const ja = (slot, id) => PART_LABELS[slot][id]?.ja ?? id;
+function faceLabels() { const s = avatar.faceSel; $("tFace").textContent = `表情: ${EXPRESSIONS[FACES[faceI]]?.ja ?? FACES[faceI]}`; $("tEyes").textContent = `目: ${ja("eyes", s.eyes)}`; $("tBrow").textContent = `眉: ${ja("brows", s.brows)}`; $("tMouth").textContent = `口: ${ja("mouth", s.mouth)}`; }
 // 顔全体を1枚に描いた絵(PNG)を貼る(古いやり方)。顔の絵と同じ座標(1024×768)で置く
 //   置き方: 絵の基準点(ax, ay)を、下絵の(512 + x, 586 + y)に、大きさ s 倍で合わせる(基準点=鼻の点の左右・口の高さ)
 const FACE_IMG = { on: false, img: null, ax: 445, ay: 596, x: 0, y: 200, s: 1 };
@@ -251,7 +253,7 @@ function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { 
 // 顔のテンプレ: 顔の絵(1024×768)とぴったり同じ範囲で、正面から撮った頭 + いまの顔(薄く) + 位置の目印
 //   kind "whole": 1枚絵用(目・眉・口・鼻の位置に十字) / "frames": パーツ用(目・眉・口の枠。facekit と同じ大きさの枠を、いまの位置に置く)
 const PART_FRAMES = { eye: { size: [340, 290], mirror: true, at: () => face.EYE, label: "目" }, brow: { size: [330, 110], mirror: true, at: () => face.BROW, label: "眉" }, mouth: { size: [260, 90], mirror: false, at: () => face.MOUTHP, label: "口" }, nose: { size: [120, 100], mirror: false, at: () => face.NOSEP, label: "鼻" } };
-const PART_SLOT = { eye: ["eyes", "絵の目"], brow: ["brows", "絵の眉"], mouth: ["mouth", "絵の口"], nose: ["nose", "絵の鼻"] };   // 枠 → 顔のどこに、どの名前で付けるか
+const PART_SLOT = { eye: ["eyes", "image"], brow: ["brows", "image"], mouth: ["mouth", "image"], nose: ["nose", "image"] };   // 枠 → 顔のどこに、どの名前で付けるか
 const frameRect = (k) => { const F = PART_FRAMES[k], P = face.PART_IMG[k], A = F.at(), [w, h] = F.size; return [Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2), Math.round(face.py(A.y + (P.dy ?? 0)) - h / 2), w, h]; };   // 枠の真ん中 = パーツの絵の真ん中が来る点
 function headShot() {   // 顔の絵と同じ範囲で、正面から頭(肌だけ)を撮る
   const { FACE, faceCanvas } = face, W = faceCanvas.width, Hc = faceCanvas.height, HT = I.HT;
@@ -528,7 +530,7 @@ for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
 $("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
 // 服の形: 袖・シャツの丈・ズボンの丈(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
 const OUTFIT = { outfit: { shirt: {}, pants: {} } };
-const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }]];
+const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }], ["tPantsKind", "pants", "kind", "下", { pants: "ズボン", skirt: "スカート" }]];
 for (const [id, g, k, label, names] of OUTFIT_KINDS) {
   const cur = () => OUTFIT.outfit[g][k] ?? avatar.options.outfit[g][k], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit[g][k] = ks[(ks.indexOf(cur()) + 1) % ks.length]; show(); rebuildBody(); });
