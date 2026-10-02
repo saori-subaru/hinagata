@@ -22,8 +22,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
   const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
-  const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy } };
-  for (const k in PART_IMG) { const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
+  const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
+    nose: { src: OPT.face.images.nose?.src ?? null, w: OPT.face.images.nose?.width ?? 0, dx: 0, dy: OPT.face.images.nose?.dy ?? 0 } };   // nose: no picture unless one is given
+  const NOSEP = { x: 0, y: 0.929 + OPT.body.sculpt.nose.lift - FACE.dy };   // the nose tip on the face picture (head space, same as the tip in body/index.js)
+  for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
   const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
   const PARTS = {
     eyes: {
@@ -92,6 +94,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       "影": () => { const N = OPT.face.noseShadow, x = 0, y = N.y - FACE.dy, g = fctx.createRadialGradient(px(x), py(y), 0, px(x), py(y), pu(N.width));
         g.addColorStop(0, N.color); g.addColorStop(1, N.color.slice(0, 7) + "00");
         fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(1, N.height / N.width); fctx.translate(-px(x), -py(y)); fctx.fillStyle = g; fctx.fillRect(px(x - N.width), py(y + N.width), pu(N.width * 2), pu(N.width * 2)); fctx.restore(); },
+      "絵の鼻": () => imgPart("nose", NOSEP.x, NOSEP.y),
       "なし": () => {},
     },
     cheeks: {
@@ -145,5 +148,5 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     if (l.browX != null) BROW.x = l.browX; if (l.browY != null) BROW.y = l.browY; if (l.mouthY != null) MOUTHP.y = l.mouthY;
   }
   const getLayout = () => ({ eyeX: EYE.x, eyeY: EYE.y, eyeSize: LAY.eyeSize, browX: BROW.x, browY: BROW.y, mouthY: MOUTHP.y });
-  return { setLayout, getLayout, FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
+  return { setLayout, getLayout, FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
 }
