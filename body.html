@@ -302,11 +302,11 @@ $("layReset").addEventListener("click", () => { avatar.setFaceLayout(layDefault(
 let layCam = null;
 // 手足の太さスライダー(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
 // [グループ, キー, 名前, 最小, 最大, 刻み]
-const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.85, 1.2, 0.01],
+const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }, SHAPE0 = structuredClone(SHAPE);
 function curOpts() { return merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), { body: structuredClone(SHAPE) }); }
-const TYPE_LABEL = { toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
+const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
   for (const b of $("bodyTypes").children) b.setAttribute("aria-pressed", String(LIMB_SLIDERS.every(([g, k]) => BODY_TYPES[b.dataset.t].body[g][k] === SHAPE[g][k])));
