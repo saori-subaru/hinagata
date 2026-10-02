@@ -130,6 +130,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const planeCuts = [];
   // the planes fade out instead of stopping: below cutY0 the front plane moves forward, behind sideZ the side planes move outward (no steps at their edges)
   if (FB.cutFront) planeCuts.push(cut({ t: 3, k: FB.cutK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max(FB.cutFront + FB.cutSlope * ramp(FB.cutY0 - y) - z, y - FB.cutY1) / Math.hypot(1, FB.cutSlope * ramp1(FB.cutY0 - y)) }));
+  // round lower face: seen from the front, trim what's outside a U (an elliptical bottom below y, opening out above it), front half only
+  const JU = OPT.body.sculpt.jawU;
+  if (JU.on) planeCuts.push(cut({ t: 3, k: JU.k, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => {
+    const grow = 1.5 * ramp(JU.z0 - z) + JU.open * ramp(y - JU.y), rx = JU.rx + grow, ry = JU.ry + grow, dy = Math.min(0, y - JU.y);   // behind z0 and above y the U opens out (no step, the skull is untouched)
+    const qx = x / rx, qy = dy / ry, k0 = Math.hypot(qx, qy), k1 = Math.hypot(qx / rx, qy / ry);
+    return -(k1 < 1e-9 ? -Math.min(rx, ry) : k0 * (k0 - 1) / k1); } }));
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
   // with flat-plane cuts, ears go on after them (so the planes don't trim the ears), their hollows right after
   const isEar = (k) => /^ear\./.test(k);
