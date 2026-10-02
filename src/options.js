@@ -265,7 +265,7 @@ export const DEFAULTS = {
     "sculpt": {
       "shortBack": 0.86,
       "shell": 0.028,
-      "square": 0,
+      "square": 1,
       "hairline": null
     }
   },
