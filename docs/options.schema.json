@@ -4612,20 +4612,25 @@
   "outfit.pants.tilt": {
    "path": "outfit.pants.tilt",
    "type": "number",
-   "default": 0.25,
+   "default": 0.12,
    "label": {
-    "en": "pants › tilt"
+    "ja": "ウエストの後ろ上がり",
+    "en": "Waist rise at the back"
    },
    "group": "outfit",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.125,
-   "max": 0.375,
-   "step": 0.001,
-   "soft": true,
+   "min": 0,
+   "max": 0.4,
+   "step": 0.01,
    "section": {
-    "en": "pants"
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "ズボンとスカートの上端の傾き。0 = 水平",
+    "en": "How much the top of the pants or skirt rises toward the back. 0 = level"
    }
   },
   "outfit.shoes.on": {

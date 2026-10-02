@@ -112,6 +112,7 @@ const MAIN = [
   ["outfit.pants.kind", L("ズボン / スカート", "Pants or skirt"), { options: opts({ pants: ["ズボン", "Pants"], skirt: ["スカート", "Skirt"] }), section: L("ズボン", "Pants") }],
   ["outfit.pants.length", L("丈", "Length"), { options: opts({ shorts: ["短パン", "Shorts"], knee: ["ひざ下", "Below the knee"], long: ["長ズボン", "Long"] }), section: L("ズボン", "Pants") }],
   ["outfit.pants.hem", L("短パンの裾の高さ", "Shorts hem height"), { min: 0.22, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("丈が「短パン」のときだけ", "Only for shorts") }],
+  ["outfit.pants.tilt", L("ウエストの後ろ上がり", "Waist rise at the back"), { min: 0, max: 0.4, step: 0.01, section: L("ズボン", "Pants"), help: L("ズボンとスカートの上端の傾き。0 = 水平", "How much the top of the pants or skirt rises toward the back. 0 = level") }],
   ["outfit.pants.skirt.hem", L("スカートの裾の高さ", "Skirt hem height"), { min: 0.2, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
   ["outfit.pants.skirt.flare", L("スカートの広がり", "Skirt flare"), { min: 0, max: 0.8, step: 0.01, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
   ["outfit.pants.skirt.pleats", L("プリーツの数", "Pleats"), { min: 0, max: 32, step: 1, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
