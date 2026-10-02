@@ -142,6 +142,7 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
+        "scale": 1.15,
         "x": null,
         "y": 0.958,
         "trimAngle": 0.35,
@@ -296,6 +297,7 @@ export const DEFAULTS = {
     "sculpt": {
       "shortBack": 0.86,
       "shell": 0.028,
+      "taper": 0.09,
       "square": 1,
       "hairline": 1.203,
       "peak": {
@@ -307,9 +309,9 @@ export const DEFAULTS = {
   "face": {
     "noseShadow": {
       "on": true,
-      "y": 0.927,
-      "width": 0.02,
-      "height": 0.0075,
+      "y": 0.938,
+      "width": 0.013,
+      "height": 0.009,
       "color": "#a8786290"
     },
     "eyeSize": 1.25,
