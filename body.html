@@ -35,6 +35,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .side { display: grid; gap: 6px; justify-items: end; pointer-events: auto; max-height: calc(100vh - 130px); overflow-y: auto; padding: 0 2px 4px; }   /* ボタンが多いので、画面が低いときはスクロール */
 .btn { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: #ffffffd8; border: 2px solid #00000014; border-radius: 99px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
+@media (max-width: 720px) { body.chgOpen .side > :not(#tChg):not(.pick):not(#tPair) { display: none; } }   /* 狭い画面: 変更パネル中は右の顔がボタンに隠れないように */
+.chg { display: grid; gap: 3px; } .chg label { display: flex; gap: 6px; align-items: center; font-size: 12px; } .chg input { width: 16px; height: 16px; }
 .pick { display: inline-flex; gap: 6px; align-items: center; } .pick select { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: transparent; border: 0; max-width: 150px; cursor: pointer; }
 .poses { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 10px; z-index: 2; }
 .poses .btn { font-size: 14px; padding: 9px 16px; box-shadow: 0 3px 0 #0000001a; }
@@ -60,6 +62,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
     <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
+    <button class="btn" id="tChg" type="button" aria-pressed="false">変更を選ぶ</button>
     <button class="btn" id="tLimb" type="button" aria-pressed="false">体型スライダー</button>
     <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
     <label class="btn pick"><span id="headPickL">頭</span><select id="headPick" aria-label="頭の案"></select></label>
@@ -104,6 +107,12 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <div id="limbSliders"></div>
   <button class="btn" id="limbReset" type="button">はじめに戻す</button>
   <label>設定(これを教えてくれれば反映する)<textarea id="limbOut" rows="2" readonly></textarea></label>
+</div>
+<div class="lay" id="chgPanel" hidden>
+  <b>「幅を縮める前」からの変更(チェックを外すと戻す)</b>
+  <div id="chgList" class="chg"></div>
+  <div class="types"><button class="btn" id="chgApply" type="button" aria-pressed="true">反映(数秒)</button><button class="btn" id="chgAll" type="button">全部オン</button><button class="btn" id="chgNone" type="button">全部オフ</button></div>
+  <label>選んだ組み合わせ(これを教えてくれれば標準にする)<textarea id="chgOut" rows="2" readonly></textarea></label>
 </div>
 <div class="busy" id="busy" hidden>作り直し中…</div>
 <div class="poses" id="poses"></div>
@@ -337,7 +346,22 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }, SHAPE0 = structuredClone(SHAPE);
-function curOpts() { return merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), { body: structuredClone(SHAPE) }); }
+// 「幅を縮める前」からの変更: チェックを外したものは、その前の値に戻す(off がその値)
+const CHANGES = [
+  ["顔の幅を縮める", { body: { sculpt: { skull: { width: 0.21 }, cheeks: { width: 0.185 } } } }],
+  ["頭の前半分を後ろへ(前後を詰める)", { body: { head: { shift: { z: 0 } } } }],
+  ["鼻先を上向き・前へ", { body: { sculpt: { nose: { tipZ: 0.267, tipRadius: 0.0045, lift: 0 } } } }],
+  ["鼻の下を引っこめる(斜めの輪郭)", { body: { sculpt: { mouth: { cheekBack: 0 } } } }],
+  ["鼻の下の影", { face: { noseShadow: { on: false } } }],
+  ["髪を生え際へ薄く(前・うなじ)", { hair: { sculpt: { taper: 0, taperBack: 0, taperSides: null } } }],
+  ["後ろ頭の髪のボリューム", { hair: { sculpt: { backVolume: 0, backVolumeTop: null } } }],
+  ["耳を大きく", { body: { sculpt: { ears: { scale: 1 } } } }],
+  ["耳の形(下を前へ・丸く)", { body: { sculpt: { ears: { turn: 0, trimDepth: 0.04, blend: 0.02 } } }, hair: { sculpt: { earGap: { gap: 0.01, k: 0.006 } } } }],
+  ["首を細く", { body: { sculpt: { neck: { width: 1 } } } }],
+];
+const CHG_ON = CHANGES.map(() => true);
+const chgOff = () => CHANGES.reduce((o, [, off], i) => CHG_ON[i] ? o : merge(o, off), {});
+function curOpts() { return merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }); }
 const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
@@ -369,13 +393,28 @@ for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
 $("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
 let limbCam = null;
+// 変更を選ぶパネル: チェックしてから「反映」で1回だけ作り直す。開くと右に「幅を縮める前」を並べる
+for (const [i, [name]] of CHANGES.entries()) { const l = document.createElement("label"); l.innerHTML = `<input type="checkbox" checked> ${name}`; l.firstChild.addEventListener("change", (e) => { CHG_ON[i] = e.target.checked; chgSync(); }); $("chgList").append(l); }
+function chgSync() { [...$("chgList").querySelectorAll("input")].forEach((c, i) => { c.checked = CHG_ON[i]; });
+  const off = CHANGES.filter((_, i) => !CHG_ON[i]).map(([n]) => n); $("chgOut").value = off.length ? "外す: " + off.join(" / ") : "(全部入り = いまの標準)"; }
+$("chgAll").addEventListener("click", () => { CHG_ON.fill(true); chgSync(); });
+$("chgNone").addEventListener("click", () => { CHG_ON.fill(false); chgSync(); });
+$("chgApply").addEventListener("click", () => rebuildBody());
+toggle("tChg", async (on) => {
+  for (const id of ["tLimb", "tLay"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
+  $("chgPanel").hidden = !on; document.body.classList.toggle("chgOpen", on); chgSync();
+  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "幅を縮める前"); $("tPair").click(); }
+  if (on) { while (!twin) await new Promise((r) => setTimeout(r, 200));   // 並べ終わってから、2人の顔に寄る(狭い画面では下のパネルに隠れないよう上に)
+    const narrow = innerWidth <= 720; camera.position.set(0, narrow ? 0.75 : 1.0, narrow ? 3.6 : 2.7); controls.target.set(0, narrow ? 0.62 : 0.92, 0); }
+});
 toggle("tLimb", (on) => {
-  if (on && $("tLay").getAttribute("aria-pressed") === "true") $("tLay").click();
+  for (const id of ["tLay", "tChg"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("limbPanel").hidden = !on; $("poses").hidden = on || compare; limbSync();
   if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.55, twin ? 6.2 : 5.2); controls.target.set(x, 0.0, 0); }
   else if (!on && limbCam) { camera.position.copy(limbCam[0]); controls.target.copy(limbCam[1]); limbCam = null; }
 });
 toggle("tLay", (on) => {
+  if (on && $("tChg").getAttribute("aria-pressed") === "true") $("tChg").click();
   if (on && $("tLimb").getAttribute("aria-pressed") === "true") $("tLimb").click();
   $("layPanel").hidden = !on; $("poses").hidden = on || compare; laySync();
   if (on) { layCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
