@@ -122,6 +122,8 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
 
     /** Face: sel = { eyes, brows, mouth, cheeks } part names (see face.PARTS / face.PRESETS). */
     setFace(sel) { Object.assign(faceSel, sel); avatar.drawFace(); },
+    /** Move the face parts on the face picture (instant): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. */
+    setFaceLayout(l) { face.setLayout(l); avatar.drawFace(); },
     drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },

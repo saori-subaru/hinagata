@@ -8,7 +8,7 @@ export const DEFAULTS = {
   },
   "body": {
     "head": {
-      "scale": 1,
+      "scale": 0.9,
       "width": 1,
       "depth": 1,
       "pivotY": 0.845,
@@ -20,10 +20,10 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "skull": {
-        "width": 0.249
+        "width": 0.225
       },
       "faceBox": {
-        "on": 0,
+        "on": 1,
         "y": 1.02,
         "height": 0.12,
         "width": 0.17,
@@ -242,7 +242,11 @@ export const DEFAULTS = {
   "face": {
     "eyeSize": 1.25,
     "layout": {
-      "browY": 1.09
+      "eyeX": 0.112,
+      "eyeY": 0.998,
+      "browX": 0.112,
+      "browY": 1.09,
+      "mouthY": 0.896
     },
     "images": {
       "eye": {

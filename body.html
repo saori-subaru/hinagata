@@ -41,6 +41,9 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .stat { font: 500 10px var(--mono); color: var(--muted); text-align: right; }
 .fimg { display: grid; gap: 4px; justify-items: end; background: #ffffffd8; border-radius: 12px; padding: 8px 10px; font-size: 11px; font-weight: 800; }
 .fimg label { display: flex; gap: 6px; align-items: center; } .fimg input[type=range] { width: 110px; }
+.lay { position: fixed; left: 12px; top: 64px; z-index: 3; width: 236px; max-height: calc(100vh - 140px); overflow-y: auto; display: grid; gap: 6px; background: #ffffffe6; border-radius: 14px; padding: 10px 12px; font-size: 11px; box-shadow: 0 4px 14px #0000001a; }
+.lay b { font-size: 12px; } .lay .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center; } .lay .row input { grid-column: 1 / -1; width: 100%; }
+.lay .val { font: 500 10px var(--mono); color: var(--muted); } .lay textarea { width: 100%; font: 500 10px var(--mono); resize: none; border-radius: 8px; border: 1px solid #0002; padding: 4px; }
 </style>
 </head>
 <body>
@@ -49,6 +52,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <div class="top">
   <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
+    <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
     <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
     <button class="btn" id="tHeadV" type="button">頭: いまの</button>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
@@ -79,6 +83,12 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tExport" type="button">glTFを書き出す</button>
     <div class="stat" id="stat"></div>
   </div>
+</div>
+<div class="lay" id="layPanel" hidden>
+  <b>顔の絵の位置</b>
+  <div id="laySliders"></div>
+  <button class="btn" id="layReset" type="button">はじめに戻す</button>
+  <label>設定(これを教えてくれれば反映する)<textarea id="layOut" rows="3" readonly></textarea></label>
 </div>
 <div class="poses" id="poses"></div>
 <div class="msg" id="msg">素体を組み立て中…</div>
@@ -227,11 +237,11 @@ $("tExport").addEventListener("click", async () => {
 });
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
 // 頭の試作: 押すと次の案でキャラを作り直す(ページは読み込み直さない)。並べているときは右のキャラを切りかえる
-const V2 = { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1 } } } };
-const V3 = { body: { head: { scale: 0.9 }, sculpt: { skull: { width: 0.225 }, faceBox: { on: 1, cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } };   // 顔の正面と横を平らな面に
+const OLD = { body: { head: { scale: 1 }, sculpt: { skull: { width: 0.249 }, faceBox: { on: 0 } } } };   // 案2にする前のモデル
+const V3 = { body: { sculpt: { faceBox: { cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } };   // 顔の正面と横を平らな面に
 const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
-const HEAD_VARIANTS = [["いまの", null], ["案2", V2], ["案3", V3], ["案4", V4]];
-let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = HEAD_VARIANTS.length - 1;
+const HEAD_VARIANTS = [["案2", null], ["旧", OLD], ["案3", V3], ["案4", V4]];
+let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 const headLabel = () => { $("tHeadV").textContent = twin ? `右: ${HEAD_VARIANTS[pairI][0]}` : `頭: ${HEAD_VARIANTS[headI][0]}`; $("tPair").textContent = twin ? "並べるのをやめる" : "案を横に並べる"; };
 const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed") === "true"; av.parts.shirt.on = av.parts.pants.on = on("tCloth"); av.parts.shoes.on = av.parts.soles.on = on("tShoe"); av.parts.socks.on = on("tSock"); av.parts.hair.on = on("tHair"); };
 async function makeTwin() {
@@ -239,6 +249,7 @@ async function makeTwin() {
   twin?.dispose();
   twin = await createAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), { quality: low ? "low" : "high" });
   scene.add(twin.object); twin.play(curPose); twin.setFace(avatar.faceSel); twin.object.position.x = 0.48;
+  twin.setFaceLayout(face.getLayout());
   $("msg").hidden = true;
 }
 headLabel();
@@ -254,6 +265,20 @@ toggle("tPair", async (on) => {
   else { twin?.dispose(); twin = null; avatar.object.position.x = 0; camera.position.set(0.9, 0.95, 3.0); controls.target.set(0, 0.62, 0); }
   headLabel(); refreshLook();
 });
+// 顔の絵の位置スライダー(作り直さずに、その場で描き直す)
+const LAY_SLIDERS = [["eyeX", "目の間隔", 0.07, 0.16, 0.001], ["eyeY", "目の高さ", 0.94, 1.06, 0.001], ["eyeSize", "目の大きさ", 0.8, 1.8, 0.01], ["browX", "眉の間隔", 0.07, 0.16, 0.001], ["browY", "眉の高さ", 1.02, 1.14, 0.001], ["mouthY", "口の高さ", 0.86, 0.95, 0.001]];
+const layDefault = () => ({ ...avatar.options.face.layout, eyeSize: avatar.options.face.eyeSize });
+function layOut() { const L = face.getLayout(), d = layDefault(), diff = {}; for (const [k] of LAY_SLIDERS) if (Math.abs(L[k] - d[k]) > 1e-9) diff[k] = +L[k].toFixed(3);
+  const { eyeSize, ...layout } = diff; $("layOut").value = JSON.stringify({ face: { ...(eyeSize != null ? { eyeSize } : {}), ...(Object.keys(layout).length ? { layout } : {}) } }); }
+function laySync() { const L = face.getLayout(); for (const [k] of LAY_SLIDERS) { $("ls-" + k).value = L[k]; $("lv-" + k).textContent = (+L[k]).toFixed(3); } layOut(); }
+for (const [k, label, min, max, step] of LAY_SLIDERS) {
+  const row = document.createElement("div"); row.className = "row";
+  row.innerHTML = `<span>${label}</span><span class="val" id="lv-${k}"></span><input type="range" id="ls-${k}" min="${min}" max="${max}" step="${step}">`;
+  $("laySliders").append(row);
+  $("ls-" + k).addEventListener("input", (e) => { const l = { [k]: +e.target.value }; avatar.setFaceLayout(l); twin?.setFaceLayout(l); laySync(); });
+}
+$("layReset").addEventListener("click", () => { avatar.setFaceLayout(layDefault()); twin?.setFaceLayout(layDefault()); laySync(); });
+toggle("tLay", (on) => { $("layPanel").hidden = !on; laySync(); });
 faceLabels(); hairLabels(); refreshLook();
 
 // ── 確認用: ?view=front&pose=歩く&t=0.25 など ──

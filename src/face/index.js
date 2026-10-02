@@ -14,10 +14,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const faceMat = new THREE.MeshBasicMaterial({ map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";
-  const EYE_SIZE = OPT.face.eyeSize;   // 目の大きさ(コードで描く目)
+  const LAY = { eyeSize: OPT.face.eyeSize };   // 目の大きさ(コードで描く目)。あとから setLayout で変えられる
   const EYE_COL = ["#2c3858", "#4f6a9a", "#8aa3cc", "#cfdcef"];   // 虹彩の色(上の暗い色 → 下の明るい色)
   // 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
-  const EYE = { x: 0.112, y: 0.998 }, BROW = { x: 0.112, y: OPT.face.layout.browY }, MOUTHP = { x: 0, y: 0.896 }, CHEEK = { x: 0.152, y: 0.955 };
+  const FL = OPT.face.layout, EYE = { x: FL.eyeX, y: FL.eyeY }, BROW = { x: FL.browX, y: FL.browY }, MOUTHP = { x: 0, y: FL.mouthY }, CHEEK = { x: 0.152, y: 0.955 };   // 顔の絵の上の位置(体の座標)
   const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
   const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
@@ -30,7 +30,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       "絵の目": () => imgPart("eye", EYE.x, EYE.y),
       "まる目": () => {   // アニメの目: 白目・虹彩(上が暗く下が明るい)・瞳・ハイライト・太い上まつげ(目じりで跳ねる)・二重の線・下まぶた
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
-        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(EYE_SIZE, EYE_SIZE); fctx.translate(-px(cx), -py(cy));   // 大きさは EYE_SIZE で
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));   // 大きさは LAY.eyeSize で
         // 目の形(白目)
         const open = () => { fctx.beginPath(); mv(-0.033, 0.0); bz(-0.03, 0.03, 0.012, 0.042, 0.042, 0.016); bz(0.042, -0.012, 0.022, -0.038, -0.002, -0.038); bz(-0.02, -0.038, -0.034, -0.02, -0.033, 0.0); fctx.closePath(); };
         open(); { const g = fctx.createLinearGradient(...P(0, 0.04), ...P(0, -0.03)); g.addColorStop(0, "#c9c6cf"); g.addColorStop(0.35, "#f3f1f2"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
@@ -123,5 +123,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx);
     return g;
   }
-  return { FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
+  /** Move face parts on the picture (no rebuild): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. Redraw afterwards. */
+  function setLayout(l) {
+    if (l.eyeX != null) EYE.x = l.eyeX; if (l.eyeY != null) EYE.y = l.eyeY; if (l.eyeSize != null) LAY.eyeSize = l.eyeSize;
+    if (l.browX != null) BROW.x = l.browX; if (l.browY != null) BROW.y = l.browY; if (l.mouthY != null) MOUTHP.y = l.mouthY;
+  }
+  const getLayout = () => ({ eyeX: EYE.x, eyeY: EYE.y, eyeSize: LAY.eyeSize, browX: BROW.x, browY: BROW.y, mouthY: MOUTHP.y });
+  return { setLayout, getLayout, FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
 }
