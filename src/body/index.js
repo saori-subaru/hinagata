@@ -27,12 +27,14 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const P = {}, CUT = {};
   const FACE_DY = -0.015;   // 顔の絵と眼窩をまとめて上下にずらす量
   const SOCKET_OUT = 0.065;
+  // the eye sockets and the sculpt around the eyes follow the eye position of the face picture (defaults: eyeX 0.112, eyeY 0.998)
+  const EX = OPT.face.layout.eyeX - 0.112, EY = OPT.face.layout.eyeY - 0.998;
   const TEMPLE_Z0 = OPT.body.sculpt.temple.minZ;   // これより後ろ(顔の横)は前へ出さない
-  const TEMPLE = { d: OPT.body.sculpt.temple.depth, x: OPT.body.sculpt.temple.x, y: OPT.body.sculpt.temple.y, w: 0.06, h: OPT.body.sculpt.temple.height };   // 目じりの横を前へ出す量 / 中心の横位置 / 横・縦の広がり
+  const TEMPLE = { d: OPT.body.sculpt.temple.depth, x: OPT.body.sculpt.temple.x + EX, y: OPT.body.sculpt.temple.y + EY, w: 0.06, h: OPT.body.sculpt.temple.height };   // 目じりの横を前へ出す量 / 中心の横位置 / 横・縦の広がり
   const SIDE_TRIM = { d: OPT.body.sculpt.cheekTrim.depth, x: OPT.body.sculpt.cheekTrim.x, y: OPT.body.sculpt.cheekTrim.y, w: OPT.body.sculpt.cheekTrim.width, h: OPT.body.sculpt.cheekTrim.height };   // ほおの横を抑える量 / 位置 / 広がり
-  const CHEEK_FILL = { d: OPT.body.sculpt.cheekFill.depth, x: OPT.body.sculpt.cheekFill.x, y: OPT.body.sculpt.cheekFill.y, w: OPT.body.sculpt.cheekFill.width, h: OPT.body.sculpt.cheekFill.height };   // 目の下のほおを足す量 / 位置 / 広がり
-  const EYE_UNDER = { d: OPT.body.sculpt.underEye.depth, x: OPT.body.sculpt.underEye.x, y: OPT.body.sculpt.underEye.y, wi: OPT.body.sculpt.underEye.widthInner, wo: OPT.body.sculpt.underEye.widthOuter, h: OPT.body.sculpt.underEye.height };   // 目の下半分のうしろだけを沈める(眼窩の外側は触らない): 量 / 中心 / 目頭側・目じり側の広がり / 上下の広がり
-  const SOCK_IN = { d: OPT.body.sculpt.socketInner.depth, x: OPT.body.sculpt.socketInner.x, w: OPT.body.sculpt.socketInner.width, h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
+  const CHEEK_FILL = { d: OPT.body.sculpt.cheekFill.depth, x: OPT.body.sculpt.cheekFill.x + EX, y: OPT.body.sculpt.cheekFill.y + EY, w: OPT.body.sculpt.cheekFill.width, h: OPT.body.sculpt.cheekFill.height };   // 目の下のほおを足す量 / 位置 / 広がり
+  const EYE_UNDER = { d: OPT.body.sculpt.underEye.depth, x: OPT.body.sculpt.underEye.x + EX, y: OPT.body.sculpt.underEye.y, wi: OPT.body.sculpt.underEye.widthInner, wo: OPT.body.sculpt.underEye.widthOuter, h: OPT.body.sculpt.underEye.height };   // 目の下半分のうしろだけを沈める(眼窩の外側は触らない): 量 / 中心 / 目頭側・目じり側の広がり / 上下の広がり
+  const SOCK_IN = { d: OPT.body.sculpt.socketInner.depth, x: OPT.body.sculpt.socketInner.x + EX, w: OPT.body.sculpt.socketInner.width, h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
   const SOCK_BAND = { on: !oldSock, len: OPT.body.sculpt.socketBand.length, lift: OPT.body.sculpt.socketBand.lift };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: 0.035, w: 0.085, h: 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
   const EAR = { flare: 0.7, tilt: 0.3, x: 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
@@ -42,9 +44,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   P.belly = E([0, 0.52, 0.035], [0.165, 0.14, 0.115], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   P.pelvis = E([0, 0.435, -0.005], [0.157, 0.072, 0.1], "hips", 0.09);
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
-  P.skull = E([0, 1.137, -0.005], [OPT.body.sculpt.skull.width, 0.26, 0.262], "head", 0.06);   // 頭(大きな丸。横幅・前後とも見本どおり)
+  const SK = OPT.body.sculpt.skull;
+  P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);   // 頭(大きな丸。横幅・前後とも見本どおり)
   P.occiput = E([0, 1.0, -0.07], [0.17, 0.09, 0.14], "head", 0.08);   // 後頭部の下(首の上まで丸くふくらむ)
-  P.face = E([0, 0.935, 0.08], [0.2, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
+  P.face = E([0, 0.935, 0.08], [OPT.body.sculpt.cheeks.width, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
   P.jaw = E([0, 0.868, 0.094], [0.112, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
   P.muzzle = E([0, OPT.body.sculpt.muzzle.y, 0.17], [0.075, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
   const NOSE_DY = -0.035;
@@ -61,6 +64,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   CUT.chin = plane((x, y) => (y - 0.835 + 0.014 * Math.exp(-x * x / 0.0032) - 0.95 * x * x) / Math.sqrt(1 + 4 * x * x), 0.015);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   CUT.mouth = plane((x, y, z) => (0.222 + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   CUT.crown = plane((x, y) => OPT.body.sculpt.crown.y - y, OPT.body.sculpt.crown.blend);   // 頭のてっぺんを少しだけ平たく
+  // flat back of the head: cut behind z = -backPlane.z, tilted so the plane leans forward at the top (0 = off)
+  { const BP = OPT.body.sculpt.backPlane; if (BP.z) CUT.back = cut({ t: 3, k: BP.k, bone: "head", bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => (z + BP.z - BP.tilt * (y - 1.1)) / Math.hypot(1, BP.tilt) }); }
   CUT.nape = plane((x, y, z) => (z + 0.15 + 3.5 * (y - 0.89)) / 3.64, 0.018);   // 後頭部の下は首の手前で内側へ巻き込む(首の後ろとの間にくびれ)
   for (const [s, m] of [["L", 1], ["R", -1]]) {
     const j = (n) => J[`${n}.${s}`];
@@ -124,7 +129,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
   const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), ...planeCuts, BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
-  const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * 0.128, dy = y - 0.995 - FACE_DY, ry = dy > 0 ? 0.088 : 0.105;
+  const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
       else { const v = Math.abs(dy) / ry, t = dx * m / SOCK_BAND.len;   // 目じり側: 上下のふちは平行のまま、頭の横へ向かってなだらかに浅くなる(1点にすぼまらない)
         if (v < 1 && t < 1) d += 0.014 * (1 - v * v) ** 2 * (1 - t * t) ** 2 * (1 - SOCK_BAND.lift * Math.min(1, t * 2)); }

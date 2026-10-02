@@ -26,13 +26,24 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "skull": {
-        "width": 0.225
+        "width": 0.21,
+        "height": 0.26,
+        "depth": 0.262,
+        "y": 1.128
+      },
+      "cheeks": {
+        "width": 0.185
+      },
+      "backPlane": {
+        "z": 0,
+        "k": 0.05,
+        "tilt": 0.2
       },
       "faceBox": {
         "on": 1,
         "y": 1.02,
         "height": 0.12,
-        "width": 0.17,
+        "width": 0.155,
         "front": 0.21,
         "depth": 0.12,
         "round": 0.05,
@@ -96,7 +107,7 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
-        "y": 0.983,
+        "y": 0.958,
         "trimAngle": 0.35,
         "trimDepth": 0.04
       },
@@ -120,8 +131,8 @@ export const DEFAULTS = {
         "free": 0.95
       },
       "crown": {
-        "y": 1.39,
-        "blend": 0.02
+        "y": 1.345,
+        "blend": 0.05
       },
       "forearm": {
         "wristRadius": 0.032,
@@ -242,16 +253,17 @@ export const DEFAULTS = {
     "back": "short",
     "ahoge": false,
     "sculpt": {
-      "shortBack": 0.86
+      "shortBack": 0.86,
+      "shell": 0.028
     }
   },
   "face": {
     "eyeSize": 1.25,
     "layout": {
-      "eyeX": 0.112,
+      "eyeX": 0.096,
       "eyeY": 0.998,
-      "browX": 0.112,
-      "browY": 1.09,
+      "browX": 0.088,
+      "browY": 1.092,
       "mouthY": 0.896
     },
     "images": {

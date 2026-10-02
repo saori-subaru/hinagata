@@ -33,7 +33,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   // shapes
   const { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
-  const hairKit = buildHair(OPT, { P, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
+  const hairKit = buildHair(OPT, { P, CUT, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI });
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
 
