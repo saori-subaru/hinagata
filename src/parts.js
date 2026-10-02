@@ -11,8 +11,10 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
   const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, foot0 = [-0.22, -0.01, -0.12];
   switch (name) {
     case "body": return { sdf: bodySdf, lo: [-0.47, -0.02, -0.3], hi: [0.47, 1.43, 0.34], h: H };
-    case "shirt": return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), lo: [-0.3, 0.33, -0.2], hi: [0.3, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: /^(hips|spine|chest|upperChest|neck|upperArm)/ };
-    case "pants": return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, 0.2, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ };
+    case "shirt": { const long = OPT.outfit.shirt.sleeve === "long", w = long ? 0.37 : 0.3;   // long sleeves reach the wrists (and follow the forearms)
+      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), lo: [-w, 0.33, -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|neck|upperArm)/ }; }
+    case "pants": { const y0 = { knee: 0.17, long: 0.07 }[OPT.outfit.pants.length] ?? 0.2;   // long pants reach the ankles
+      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "shoes": return { sdf: C.shoeSdf, lo: foot0, hi: [0.22, 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
     case "soles": return { sdf: C.soleSdf, lo: foot0, hi: [0.22, 0.03, 0.14], h: H * 0.6, only: /^foot/ };
     case "socks": return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, 0.17, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };

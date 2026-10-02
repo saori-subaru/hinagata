@@ -302,6 +302,8 @@ export const DEFAULTS = {
   "outfit": {
     "shirt": {
       "color": "#7fb6e8",
+      "sleeve": "short",
+      "length": "tuck",
       "collar": {
         "y": 0.764,
         "bowl": 2.2,
@@ -319,6 +321,7 @@ export const DEFAULTS = {
     },
     "pants": {
       "color": "#5a4f7a",
+      "length": "shorts",
       "hem": 0.3,
       "offset": 0.016,
       "top": 0.505,
