@@ -18,24 +18,28 @@ export function G(list, k) {   // まとめて溶かした部品を、ひとか�
   return { t: 2, f: blend(list), list, k, bx0: cx, by0: cy, bz0: cz, br: Math.max(...a.map((p) => Math.hypot(p.bx0 - cx, p.by0 - cy, p.bz0 - cz) + p.br)) };
 }
 export function C(a, b, ra, rb, bone, k = 0.045, sx = 1) { const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], L = Math.hypot(bx, by, bz); return { t: 1, ax: a[0], ay: a[1], az: a[2], bx, by, bz, il: 1 / (L * L), ra, rb, sx, bone, k, bx0: a[0] + bx / 2, by0: a[1] + by / 2, bz0: a[2] + bz / 2, br: L / 2 + Math.max(ra, rb) }; }
-// 太さを変える: 骨の軸(a→b の直線)からの横方向だけ k 倍にする。長さと付け根の位置は変わらない
-export function thicken(p, a, b, k) {
-  if (k === 1) return p;
+// 太さを変える: 骨の軸(a→b の直線)から見た横方向だけ k 倍にする。長さと付け根の位置は変わらない
+//   部品そのものの半径と、軸からのずれを変える(距離をゆがめないので、継ぎ目に筋が出ない)。楕円体は軸に沿った向きの半径はそのまま
+//   kb: the factor at the b end (default k); in between it changes linearly (e.g. keep the wrist as is so the hand still fits)
+export function thicken(p, a, b, k, kb = k) {
+  if (k === 1 && kb === 1) return p;
   const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, (b[2] - a[2]) / L];
-  const q = [p.bx0 - a[0], p.by0 - a[1], p.bz0 - a[2]], s = q[0] * u[0] + q[1] * u[1] + q[2] * u[2];
-  [p.bx0, p.by0, p.bz0] = [0, 1, 2].map((i) => a[i] + s * u[i] + (q[i] - s * u[i]) * k);   // 外接球も同じように動かす
-  p.br *= Math.max(1, k);
-  p.th = { a, u, k };
+  const kAt = (x, y, z) => k + (kb - k) * Math.min(1, Math.max(0, ((x - a[0]) * u[0] + (y - a[1]) * u[1] + (z - a[2]) * u[2]) / L));
+  const spread = (x, y, z) => { const q = [x - a[0], y - a[1], z - a[2]], s = q[0] * u[0] + q[1] * u[1] + q[2] * u[2], f = kAt(x, y, z); return [0, 1, 2].map((i) => a[i] + s * u[i] + (q[i] - s * u[i]) * f); };
+  if (p.t === 1 || p.t === 4) {   // カプセル: 両端を軸から離し(近づけ)、半径を k 倍
+    const ka = kAt(p.ax, p.ay, p.az), kb1 = kAt(p.ax + p.bx, p.ay + p.by, p.az + p.bz), p0 = spread(p.ax, p.ay, p.az), p1 = spread(p.ax + p.bx, p.ay + p.by, p.az + p.bz);
+    [p.ax, p.ay, p.az] = p0; [p.bx, p.by, p.bz] = [0, 1, 2].map((i) => p1[i] - p0[i]);
+    const l = Math.hypot(p.bx, p.by, p.bz); p.il = 1 / (l * l); p.ra *= ka; p.rb *= kb1; p.k *= (ka + kb1) / 2;   // the blend width scales too, so seams keep their shape
+    [p.bx0, p.by0, p.bz0] = [0, 1, 2].map((i) => p0[i] + (p1[i] - p0[i]) / 2); p.br = l / 2 + Math.max(p.ra, p.rb);
+  } else if (p.t === 0) {   // 楕円体: 中心を動かし、軸を向いていない半径ほど k 倍
+    const M = p.M ?? [p.cr, p.sr, 0, -p.sr, p.cr, 0, 0, 0, 1], r = ["rx", "ry", "rz"], kc = kAt(p.cx, p.cy, p.cz);
+    [p.cx, p.cy, p.cz] = spread(p.cx, p.cy, p.cz);
+    r.forEach((n, i) => { const al = Math.abs(M[i * 3] * u[0] + M[i * 3 + 1] * u[1] + M[i * 3 + 2] * u[2]); p[n] *= 1 + (kc - 1) * (1 - al); }); p.k *= kc;
+    [p.bx0, p.by0, p.bz0] = [p.cx, p.cy, p.cz]; p.br = Math.max(p.rx, p.ry, p.rz);
+  } else throw new Error("thicken: unsupported part");
   return p;
 }
 export function dPrim(p, x, y, z) {
-  if (p.th) {   // 軸から見て横方向を 1/k に縮めた点で測り、距離を k 倍に戻す
-    const { a, u, k } = p.th, qx = x - a[0], qy = y - a[1], qz = z - a[2], s = qx * u[0] + qy * u[1] + qz * u[2];
-    return k * dBase(p, a[0] + s * u[0] + (qx - s * u[0]) / k, a[1] + s * u[1] + (qy - s * u[1]) / k, a[2] + s * u[2] + (qz - s * u[2]) / k);
-  }
-  return dBase(p, x, y, z);
-}
-function dBase(p, x, y, z) {
   if (p.t === 2) return p.f(x, y, z);
   if (p.t === 3) return p.f(x, y, z);   // 平面・曲面で削る用
   if (p.t === 0) {   // 楕円体(近似。z軸まわりに回せる)

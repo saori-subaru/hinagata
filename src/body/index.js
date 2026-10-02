@@ -40,9 +40,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const EAR = { flare: 0.7, tilt: 0.3, x: 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
   P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057, 0.056, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
   P.trap = E([0, 0.77, -0.016], [0.12, 0.03, 0.056], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
-  P.chest = E([0, 0.68, 0.015], [0.13, 0.1, 0.1], "chest", 0.05);       // 胸は細め(脇の下を高くする)
-  P.belly = E([0, 0.52, 0.035], [0.165, 0.14, 0.115], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
-  P.pelvis = E([0, 0.435, -0.005], [0.157, 0.072, 0.1], "hips", 0.09);
+  // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
+  const TO = OPT.body.torso;
+  P.chest = E([0, 0.68, 0.015], [0.13 * TO.chest, 0.1, 0.1 * TO.chest], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+  P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
+  P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.072, 0.1], "hips", 0.09);
+  if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.215 - TO.waist), 0.575, 0], [0.05, 0.1, 0.14], "spine", 0.05));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);   // 頭(大きな丸。横幅・前後とも見本どおり)
@@ -77,7 +80,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     { const e0 = E(ec, [0.062, 0.067, 0.019], "head", 0.02, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
       P[`ear.${s}`] = { ...e0, t: 3, f: (x, y, z) => -smin(-dPrim(e0, x, y, z), -(n[0] * (x - ec[0]) + n[1] * (y - ec[1]) + n[2] * (z - ec[2]) - tc), 0.012) }; }   // 耳の後ろの下側をななめに落として、下へ細くとがらせる
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + ew[i] * 0.025 + eu[i] * 0.024), [0.026, 0.042, 0.011], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
-    P[`butt.${s}`] = E([m * 0.07, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
+    P[`butt.${s}`] = E([m * 0.07 * TO.hips, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
     P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
     P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
@@ -118,7 +121,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
-  const BODY = Object.entries(P).filter(([k]) => !/^(sleeve|leghole)/.test(k)).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
+  const BODY = Object.entries(P).filter(([k, v]) => !/^(sleeve|leghole)/.test(k) && !v.sub).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
   // experimental: a rounded box in front of the face, so the face front (forehead to under the eyes) is a flat plane and the eyes don't wrap around a sphere
   const FB = OPT.body.sculpt.faceBox, faceBox = FB.on ? roundBox([0, FB.y, FB.front - FB.depth], [FB.width, FB.height, FB.depth], FB.round, FB.blend) : null;
   // flat planes: cut the face front at z = cutFront (between cutY0 and cutY1), and the face sides at |x| = sideX (in front of z = sideZ, ahead of the ears)

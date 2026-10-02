@@ -29,6 +29,24 @@ export function surfaceNets(sdf, lo, hi, h, { fast = sdf, band = 6, proj = 1 } =
     let dm = Mg[m]; if (dm !== dm) dm = Mg[m] = fast(lo[0] + mi * 2 * h, lo[1] + mj * 2 * h, lo[2] + mk * 2 * h);
     V[id(i, j, k)] = Math.abs(dm) > 3.5 * h ? dm : fast(lo[0] + i * h, lo[1] + j * h, lo[2] + k * h);
   }
+  // ambiguous faces: a grid face whose corners alternate inside / outside (a surface that just grazes a grid plane, e.g. the top of a
+  // limb running diagonally) makes folded triangles. Ask the field at the face center which way it connects, and flip the shallow
+  // corners that disagree (they move by less than a quarter cell, and the projection below puts the vertices back on the surface)
+  const eps = 0.25 * h, tiny = 1e-6 * h;
+  for (let pass = 0; pass < 2; pass++) {
+    let flips = 0;
+    for (const [ax, bx] of [[[1, 0, 0], [0, 1, 0]], [[1, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 0, 1]]]) {
+      const da = ax[0] + nx * (ax[1] + ny * ax[2]), db = bx[0] + nx * (bx[1] + ny * bx[2]);
+      for (let k = 0; k < nz - ax[2] - bx[2]; k++) for (let j = 0; j < ny - ax[1] - bx[1]; j++) for (let i = 0; i < nx - ax[0] - bx[0]; i++) {
+        const o = id(i, j, k), a = V[o], b = V[o + da], c = V[o + db], d = V[o + da + db];
+        if ((a < 0) !== (d < 0) || (b < 0) !== (c < 0) || (a < 0) === (b < 0)) continue;   // not a checkerboard
+        const m = sdf(lo[0] + (i + (ax[0] + bx[0]) / 2) * h, lo[1] + (j + (ax[1] + bx[1]) / 2) * h, lo[2] + (k + (ax[2] + bx[2]) / 2) * h);
+        // the pair on the other side from the center is cut off from each other; flip its shallow corners to the center's side
+        for (const q of a < 0 === m < 0 ? [o + da, o + db] : [o, o + da + db]) if (Math.abs(V[q]) < eps) { V[q] = m < 0 ? -tiny : tiny; flips++; }
+      }
+    }
+    if (!flips) break;
+  }
   const grid = { V, lo, h, nx, ny, nz };
   time.sample = performance.now() - T0;
   // one vertex per cell that the surface crosses: the average of the edge crossings
