@@ -174,7 +174,9 @@ export const DEFAULTS = {
       },
       "crown": {
         "y": 1.32,
-        "blend": 0.05
+        "blend": 0.05,
+        "tilt": 0.25,
+        "pivotZ": -0.12
       },
       "forearm": {
         "wristRadius": 0.032,
