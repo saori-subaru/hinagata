@@ -344,7 +344,16 @@ export const DEFAULTS = {
     "pants": {
       "on": true,
       "color": "#5a4f7a",
+      "kind": "pants",
       "length": "shorts",
+      "skirt": {
+        "hem": 0.3,
+        "flare": 0.4,
+        "pleats": 16,
+        "pleatDepth": 0.008,
+        "thick": 0.018,
+        "follow": 0.85
+      },
       "hem": 0.3,
       "offset": 0.016,
       "top": 0.505,

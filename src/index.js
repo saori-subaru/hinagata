@@ -74,7 +74,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const PROF = [];   // per mesh: vertex count and build time (ms)
   let bodyAt = (x, y, z) => bodySdf(x, y, z);   // body distance; after the body is meshed, read back from its grid (clothes don't recompute the body)
   // name: which part (the cache key inside this character) / fast: cheaper sdf for grid sampling / bone1: bind everything to this bone / only: RegExp of bones allowed
-  function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf) {
+  function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null) {
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
     if (w) fresh[name] = rec;
@@ -82,7 +82,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
       if (MS) ({ pos, nor, idx } = simplified(pos, nor, idx));
-      const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only);
+      const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only, soft);
       rec = fresh[name] = { pos, nor, idx, si, sw };
     }
     const g = new THREE.BufferGeometry();
@@ -184,7 +184,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
-  const meshPart = (name, h = H) => { const s = partSpec(name, { OPT, H: h, kit, bodyAt }); return mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast); };   // the part table (parts.js) is shared with the workers
+  const meshPart = (name, h = H) => { const s = partSpec(name, { OPT, H: h, kit, bodyAt }); return mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft); };   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
   addShadeNormals(parts.body.m.geometry); addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
