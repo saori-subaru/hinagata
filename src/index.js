@@ -13,6 +13,7 @@ import { partSpec, skinOf, hairPartName, CLOTHES } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, SHADINGS, outlineMat } from "./materials.js";
 import { DEFAULTS, resolveOptions, diff } from "./options.js";
+import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
@@ -20,7 +21,7 @@ import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 
-export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS };
+export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
 
 /**
@@ -46,6 +47,7 @@ function shapeOnly(OPT) {
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
+  { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
   const H = cell || { game: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
   let MS = null;   // meshoptimizer's simplifier, only when asked for

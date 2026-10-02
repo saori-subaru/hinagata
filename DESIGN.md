@@ -50,7 +50,7 @@ site/avatar/
   facekit/              (as now)
   docs/
     AGENTS.md           how to use and extend, for coding agents
-    options.schema.json every option: type, range, default, rebuild yes/no
+    options.schema.json every option: type, range, default, names, rebuild cost (written by tools/schema.mjs)
   examples/             copy-paste examples (one character, a crowd of NPCs, walking, export)
 ```
 
@@ -188,7 +188,13 @@ Engine: **yes** = the engine has it, the editor only needs UI; **part** = there,
 | | play once, hit events, held items (`attach`) | no (see "Sword presets") |
 | extras | knight / beast / mage presets, extra bones, spring bones | no |
 
-Still missing in the engine before the editor: `options.schema.json` (range, names, rebuild cost for each value) and `avatar.rebuild()` (today a body change means a whole new `createAvatar`, ~1 s with the cache warm).
+Still missing in the engine before the editor: `avatar.rebuild()` (today a body change means a whole new `createAvatar`, ~1 s with the cache warm).
+
+### Options schema (2026-10-02, done)
+
+`src/schema.js` describes every option by path; `docs/options.schema.json` is written from it (`node tools/schema.mjs`; `--check` fails when it is out of date). Each entry: `type` (number / boolean / color / enum / image / json), `default`, `min` / `max` / `step`, enum `options`, `label` and `section` in ja / en, `group` (the editor's tab), `tier` (main = shown, advanced = folded), `cost` (instant / paint / hair / clothes / body), `apply` (the avatar method that applies it without a rebuild) and `alsoShapes`.
+- It is built from DEFAULTS, so a new option is never missing: about 80 main values are described by hand (`MAIN` in `src/schema.js`); every other value (the sculpt tuning) gets an entry made from its default, with a guessed range marked `soft` and an English label from its key. To promote a value to the editor's main panels, add it to `MAIN`.
+- `checkOptions(options)` lists unknown paths, wrong types, enum values that don't exist and numbers outside a described range. `createAvatar` prints them as a warning (typos used to be ignored silently).
 
 ### Cloth textures (2026-10-02, Saori; plan)
 
