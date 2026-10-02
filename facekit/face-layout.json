@@ -1,0 +1,9 @@
+{
+  "canvas": [1024, 768],
+  "note": "Face texture coordinates (px). center: where the middle of the part image goes. size: the frame that gets cut out. Parts with mirror: true are drawn only on the RIGHT side of the image (the character's left); the other side is mirrored automatically.",
+  "parts": {
+    "eye":   { "center": [809, 340], "size": [340, 290], "mirror": true },
+    "brow":  { "center": [809, 115], "size": [330, 110], "mirror": true },
+    "mouth": { "center": [512, 612], "size": [260, 90],  "mirror": false }
+  }
+}

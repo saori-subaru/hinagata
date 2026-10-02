@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>saon 素体(試作)</title>
+<meta name="theme-color" content="#f0ece4">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Martian+Mono:wght@400;500&display=swap">
+<!--
+  🧸新しいアバターの「素体」の試作。ピーロの体を使わず、ぜんぶコードで作る。
+  ・寸法は見本の三面図(img/sotai-ref.jpg)から測った: 身長519px=1.4、約2.4頭身、首はほぼ無し、なで肩、ぽっこりおなか、短くて太い脚、指を開いた手
+  ・体の形: 丸い形(楕円体と、太さの変わるカプセル)を置いて、なめらかに溶け合わせた1枚の肌にする(符号つき距離 → サーフェスネッツで網目)
+  ・骨: 17本(腰・背骨・胸・首・頭 / 左右の 上腕・前腕・手 / 左右の 太もも・すね・足)。重みは「どの部品にいちばん近いか」から自動
+  ・服と髪: 体を少しふくらませて、いらない所を切り取って作る → 体型が変わっても自動で合い、同じ骨で動く
+  ・「三面図」: 見本と同じ縮尺・同じ位置で正面/横/後ろを描き、見本の画像を重ねて比べられる(URLに ?cmp でも開く)
+  ・「glTFを書き出す」で .glb を保存(Blender でそのまま開ける)
+-->
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<style>
+:root { --ink: #2b2230; --muted: #7a6f80; --bg: #f0ece4; --round: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', system-ui, sans-serif; --mono: 'Martian Mono', ui-monospace, monospace; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--round); font-weight: 500; overflow: hidden; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#ref { position: fixed; pointer-events: none; opacity: .62; mix-blend-mode: multiply; }   /* 自分(青)と見本(灰)を重ねる: 重なり=濃い青 / 自分だけ=うすい青 / 見本だけ=灰 */
+.top { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; z-index: 2; }
+.top h1 { margin: 0; font-size: 18px; font-weight: 800; }
+.top small { display: block; font: 500 10px var(--mono); color: var(--muted); letter-spacing: .06em; }
+.top a { pointer-events: auto; color: var(--muted); font-size: 12px; }
+.side { display: grid; gap: 6px; justify-items: end; pointer-events: auto; }
+.btn { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: #ffffffd8; border: 2px solid #00000014; border-radius: 99px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.poses { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 10px; z-index: 2; }
+.poses .btn { font-size: 14px; padding: 9px 16px; box-shadow: 0 3px 0 #0000001a; }
+.msg { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); font-weight: 800; z-index: 5; }
+.stat { font: 500 10px var(--mono); color: var(--muted); text-align: right; }
+.fimg { display: grid; gap: 4px; justify-items: end; background: #ffffffd8; border-radius: 12px; padding: 8px 10px; font-size: 11px; font-weight: 800; }
+.fimg label { display: flex; gap: 6px; align-items: center; } .fimg input[type=range] { width: 110px; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<img id="ref" src="img/sotai-ref.jpg" alt="" hidden>
+<div class="top">
+  <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨18本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
+  <div class="side">
+    <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
+    <button class="btn" id="tRef" type="button" aria-pressed="true" hidden>見本を重ねる</button>
+    <button class="btn" id="tClay" type="button" aria-pressed="false">ねんど色</button>
+    <button class="btn" id="tCloth" type="button" aria-pressed="true">服</button>
+    <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
+    <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
+    <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
+    <button class="btn" id="tBangs" type="button">前髪</button>
+    <button class="btn" id="tBack" type="button">後ろ髪</button>
+    <button class="btn" id="tFaceImg" type="button" aria-pressed="false">顔: コードの絵</button>
+    <button class="btn" id="tWrap" type="button" aria-pressed="false">貼り方: 正面から</button>
+    <div class="fimg" id="fimgPanel" hidden>
+      <label>上下 <input type="range" id="fiY" min="-100" max="320" step="1"></label>
+      <label>左右 <input type="range" id="fiX" min="-100" max="100" step="1"></label>
+      <label>大きさ <input type="range" id="fiS" min="0.6" max="1.5" step="0.01"></label>
+      <span class="stat" id="fiVal"></span>
+      <label class="btn">PNGを読む<input type="file" id="fiFile" accept="image/*" hidden></label>
+    </div>
+    <button class="btn" id="tFace" type="button">表情: ふつう</button>
+    <button class="btn" id="tEyes" type="button">目</button>
+    <button class="btn" id="tBrow" type="button">眉</button>
+    <button class="btn" id="tMouth" type="button">口</button>
+    <button class="btn" id="tSkin" type="button">肌の色</button>
+    <button class="btn" id="tBone" type="button" aria-pressed="false">骨を見る</button>
+    <button class="btn" id="tWire" type="button" aria-pressed="false">網目を見る</button>
+    <button class="btn" id="tExport" type="button">glTFを書き出す</button>
+    <div class="stat" id="stat"></div>
+  </div>
+</div>
+<div class="poses" id="poses"></div>
+<div class="msg" id="msg">素体を組み立て中…</div>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const $ = (id) => document.getElementById(id);
+const low = matchMedia("(pointer: coarse)").matches || innerWidth < 820;
+
+// ============================================================
+//  形(符号つき距離)。身長 1.4、正面は +z、キャラの左手が +x
+// ============================================================
+const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
+function E(c, r, bone, k = 0.045, rot = 0) {   // rot: z軸の角度、または体の向きの軸3本 [[x軸],[y軸],[z軸]]
+  const M = Array.isArray(rot) ? rot.flat() : null, a = M ? 0 : rot;
+  return { t: 0, cx: c[0], cy: c[1], cz: c[2], rx: r[0], ry: r[1], rz: r[2], cr: Math.cos(a), sr: Math.sin(a), M, bone, k, bx0: c[0], by0: c[1], bz0: c[2], br: Math.max(...r) };
+}
+// 回転(x→y→zの順に回した軸3本)
+function axes(ax, ay = 0, az = 0) {
+  const rx = (v) => [v[0], v[1] * Math.cos(ax) - v[2] * Math.sin(ax), v[1] * Math.sin(ax) + v[2] * Math.cos(ax)];
+  const ry = (v) => [v[0] * Math.cos(ay) + v[2] * Math.sin(ay), v[1], -v[0] * Math.sin(ay) + v[2] * Math.cos(ay)];
+  const rz = (v) => [v[0] * Math.cos(az) - v[1] * Math.sin(az), v[0] * Math.sin(az) + v[1] * Math.cos(az), v[2]];
+  return [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map((v) => rz(ry(rx(v))));
+}
+const cut = (p) => Object.assign(p, { sub: true });   // 削る部品
+function G(list, k) {   // まとめて溶かした部品を、ひとかたまりとして扱う
+  const a = list.filter((p) => !p.sub), cx = a.reduce((s, p) => s + p.bx0, 0) / a.length, cy = a.reduce((s, p) => s + p.by0, 0) / a.length, cz = a.reduce((s, p) => s + p.bz0, 0) / a.length;
+  return { t: 2, f: blend(list), list, k, bx0: cx, by0: cy, bz0: cz, br: Math.max(...a.map((p) => Math.hypot(p.bx0 - cx, p.by0 - cy, p.bz0 - cz) + p.br)) };
+}
+function C(a, b, ra, rb, bone, k = 0.045, sx = 1) { const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], L = Math.hypot(bx, by, bz); return { t: 1, ax: a[0], ay: a[1], az: a[2], bx, by, bz, il: 1 / (L * L), ra, rb, sx, bone, k, bx0: a[0] + bx / 2, by0: a[1] + by / 2, bz0: a[2] + bz / 2, br: L / 2 + Math.max(ra, rb) }; }
+function dPrim(p, x, y, z) {
+  if (p.t === 2) return p.f(x, y, z);
+  if (p.t === 3) return p.f(x, y, z);   // 平面・曲面で削る用
+  if (p.t === 0) {   // 楕円体(近似。z軸まわりに回せる)
+    let dx = x - p.cx, dy = y - p.cy, dz = z - p.cz; if (p.M) { const M = p.M, u = M[0] * dx + M[1] * dy + M[2] * dz, v = M[3] * dx + M[4] * dy + M[5] * dz; dz = M[6] * dx + M[7] * dy + M[8] * dz; dx = u; dy = v; } else if (p.sr) { const u = dx * p.cr + dy * p.sr, v = -dx * p.sr + dy * p.cr; dx = u; dy = v; }
+    const qx = dx / p.rx, qy = dy / p.ry, qz = dz / p.rz, k0 = Math.sqrt(qx * qx + qy * qy + qz * qz), k1 = Math.sqrt((qx / p.rx) ** 2 + (qy / p.ry) ** 2 + (qz / p.rz) ** 2);
+    return k1 < 1e-9 ? -Math.min(p.rx, p.ry, p.rz) : k0 * (k0 - 1) / k1;
+  }
+  if (p.t === 4) {   // 毛束: 頭に沿って平たいカプセル
+    const qx = x - p.ax, qy = y - p.ay, qz = z - p.az, h = Math.min(1, Math.max(0, (qx * p.bx + qy * p.by + qz * p.bz) * p.il));
+    const vx = qx - p.bx * h, vy = qy - p.by * h, vz = qz - p.bz * h, vn = vx * p.n[0] + vy * p.n[1] + vz * p.n[2];
+    return Math.sqrt(vx * vx + vy * vy + vz * vz - vn * vn + (vn / p.flat) ** 2) - (p.ra + (p.rb - p.ra) * h);
+  }
+  const px = (x - p.ax) * p.sx, py = y - p.ay, pz = z - p.az;   // 太さの変わるカプセル(sx<1で横に太る)
+  const h = Math.min(1, Math.max(0, (px * p.bx + py * p.by + pz * p.bz) * p.il));
+  const dx = px - p.bx * h, dy = py - p.by * h, dz = pz - p.bz * h;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz) - (p.ra + (p.rb - p.ra) * h);
+}
+// 溶け合わせ。遠い部品は計算を飛ばす(結果は変わらない)
+function blend(list) {
+  return (x, y, z) => {
+    let d = 1e9;
+    for (const p of list) {
+      const dx = x - p.bx0, dy = y - p.by0, dz = z - p.bz0, far = Math.sqrt(dx * dx + dy * dy + dz * dz) - p.br;
+      if (p.sub) { if (far >= p.k - d) continue; const di = dPrim(p, x, y, z); d = -smin(-d, di, p.k); continue; }   // 削る(なめらかに)
+      if (far >= d + p.k) continue; const di = dPrim(p, x, y, z); d = d > 1e8 ? di : smin(d, di, p.k);
+    }
+    return d;
+  };
+}
+
+
+// 速い溶け合わせ: 箱を小さなマスに分け、マスごとに「そこで効きうる部品」だけを先に選んでおく(結果はほぼ同じで、ずっと速い)
+//   効きうる = マスの中心で測った距離から、マスの大きさぶんの余裕を見ても、部品の外接球が届く範囲にあるもの。並び順はそのまま
+function blendFast(list, lo, hi, C = 0.04) {
+  const slow = blend(list), nx = Math.ceil((hi[0] - lo[0]) / C), ny = Math.ceil((hi[1] - lo[1]) / C), nz = Math.ceil((hi[2] - lo[2]) / C);
+  let cells = null;
+  const build = () => { cells = new Array(nx * ny * nz); const r = C * 0.866, M = 2.5 * r + 0.01;   // M: 距離の見積もりの余裕
+    for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const x = lo[0] + (i + 0.5) * C, y = lo[1] + (j + 0.5) * C, z = lo[2] + (k + 0.5) * C, d = slow(x, y, z);
+      cells[i + nx * (j + ny * k)] = list.filter((p) => { const far = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br - r; return p.sub ? far < p.k - d + M : far < d + p.k + M; });
+    } };
+  return (x, y, z) => {
+    const i = Math.floor((x - lo[0]) / C), j = Math.floor((y - lo[1]) / C), k = Math.floor((z - lo[2]) / C);
+    if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return slow(x, y, z);
+    if (!cells) build();
+    const L = cells[i + nx * (j + ny * k)]; let d = 1e9;
+    for (let n = 0; n < L.length; n++) { const p = L[n], dx = x - p.bx0, dy = y - p.by0, dz = z - p.bz0, far = Math.sqrt(dx * dx + dy * dy + dz * dz) - p.br;
+      if (p.sub) { if (far >= p.k - d) continue; const di = dPrim(p, x, y, z); d = -smin(-d, di, p.k); continue; }
+      if (far >= d + p.k) continue; const di = dPrim(p, x, y, z); d = d > 1e8 ? di : smin(d, di, p.k); }
+    return d > 1e8 ? slow(x, y, z) : d;
+  };
+}
+
+// 関節(骨のつけ根)。寸法は見本から
+const FOOT_X = +(new URLSearchParams(location.search).get("fx") || 0.116);   // 足首の横位置(小さいほど内側に着く。がに股に見えないように)
+const KNEE_X = +(new URLSearchParams(location.search).get("kx") || 0.108);   // 膝の横位置(足首を内側に寄せたのに合わせる)
+const J = {
+  hips: [0, 0.42, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.732, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
+  "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
+  "upperLeg.L": [0.11, 0.4, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
+};
+for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
+const PARENT = { hips: null, spine: "hips", chest: "spine", upperChest: "chest", neck: "upperChest", head: "neck" };   // upperChest: 両肩をつなぐ点(肩の高さ)
+for (const s of ["L", "R"]) Object.assign(PARENT, { [`upperArm.${s}`]: "upperChest", [`lowerArm.${s}`]: `upperArm.${s}`, [`hand.${s}`]: `lowerArm.${s}`, [`upperLeg.${s}`]: "hips", [`lowerLeg.${s}`]: `upperLeg.${s}`, [`foot.${s}`]: `lowerLeg.${s}` });
+const BONES = Object.keys(PARENT);
+const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
+
+// 体の部品(見本の正面・横のシルエットに合わせた)
+const FOOT_H = +(new URLSearchParams(location.search).get("fh") || 0.029);   // 足の厚み(平たく)
+const SHOULDER_DROP = +(new URLSearchParams(location.search).get("sdrop") || 0.008);   // 肩の頂点を下げる量(なで肩に)
+const P = {}, CUT = {};
+const FACE_DY = -0.015;   // 顔の絵と眼窩をまとめて上下にずらす量
+const WRAP = { zc: -0.02, r: 0.24 }; let FACE_WRAP = /[?&]wrap/.test(location.search) ? WRAP : null;   // 顔の絵の貼り方: null=正面からまっすぐ / { zc, r }=頭のまわりに巻きつける
+const SOCKET_OUT = 0.065;
+const TEMPLE_Z0 = +(new URLSearchParams(location.search).get("tz0") || 0.09);   // これより後ろ(顔の横)は前へ出さない
+const TEMPLE = { d: +(new URLSearchParams(location.search).get("td") || 0.006), x: +(new URLSearchParams(location.search).get("tx") || 0.19), y: +(new URLSearchParams(location.search).get("ty") || 0.98), w: 0.06, h: +(new URLSearchParams(location.search).get("th") || 0.13) };   // 目じりの横を前へ出す量 / 中心の横位置 / 横・縦の広がり
+const SIDE_TRIM = { d: +(new URLSearchParams(location.search).get("sd") || 0.008), x: +(new URLSearchParams(location.search).get("sx") || 0.2), y: +(new URLSearchParams(location.search).get("sy") || 0.9), w: +(new URLSearchParams(location.search).get("sw") || 0.05), h: +(new URLSearchParams(location.search).get("sh") || 0.08) };   // ほおの横を抑える量 / 位置 / 広がり
+const CHEEK_FILL = { d: +(new URLSearchParams(location.search).get("cf") || 0.008), x: +(new URLSearchParams(location.search).get("cfx") || 0.125), y: +(new URLSearchParams(location.search).get("cfy") || 0.905), w: +(new URLSearchParams(location.search).get("cfw") || 0.095), h: +(new URLSearchParams(location.search).get("cfh") || 0.06) };   // 目の下のほおを足す量 / 位置 / 広がり
+const EYE_UNDER = { d: +(new URLSearchParams(location.search).get("eud") || 0.01), x: +(new URLSearchParams(location.search).get("eux") || 0.105), y: +(new URLSearchParams(location.search).get("euy") || -0.032), wi: +(new URLSearchParams(location.search).get("euwi") || 0.05), wo: +(new URLSearchParams(location.search).get("euwo") || 0.032), h: +(new URLSearchParams(location.search).get("euh") || 0.035) };   // 目の下半分のうしろだけを沈める(眼窩の外側は触らない): 量 / 中心 / 目頭側・目じり側の広がり / 上下の広がり
+const SOCK_IN = { d: +(new URLSearchParams(location.search).get("sid") || 0.005), x: +(new URLSearchParams(location.search).get("six") || 0.075), w: +(new URLSearchParams(location.search).get("siw") || 0.055), h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
+const SOCK_BAND = { on: !/[?&]oldsock/.test(location.search), len: +(new URLSearchParams(location.search).get("blen") || 0.11), lift: +(new URLSearchParams(location.search).get("blift") || 0.6) };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
+const SOCKET_LOW = { d: +(new URLSearchParams(location.search).get("low") || 0.014), y: 0.035, w: 0.085, h: 0.06, hu: +(new URLSearchParams(location.search).get("lhu") || 0.11) };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
+const EAR = { flare: 0.7, tilt: 0.3, x: 0.24, y: +(new URLSearchParams(location.search).get("eary") || 0.983), lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
+P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057, 0.056, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+P.trap = E([0, 0.77, -0.016], [0.12, 0.03, 0.056], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+P.chest = E([0, 0.68, 0.015], [0.13, 0.1, 0.1], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+P.belly = E([0, 0.52, 0.035], [0.165, 0.14, 0.115], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
+P.pelvis = E([0, 0.435, -0.005], [0.157, 0.072, 0.1], "hips", 0.09);
+// 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
+P.skull = E([0, 1.137, -0.005], [0.249, 0.26, 0.262], "head", 0.06);   // 頭(大きな丸。横幅・前後とも見本どおり)
+P.occiput = E([0, 1.0, -0.07], [0.17, 0.09, 0.14], "head", 0.08);   // 後頭部の下(首の上まで丸くふくらむ)
+P.face = E([0, 0.935, 0.08], [0.2, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
+P.jaw = E([0, 0.868, 0.094], [0.112, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
+P.muzzle = E([0, +(new URLSearchParams(location.search).get("my") || 0.925), 0.17], [0.075, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
+const NOSE_DY = -0.035;
+const NOSE_Z = +(new URLSearchParams(location.search).get("nz") || 0.267);   // 鼻先の前後(前は0.273。少し内側へ)
+const LIP_CURVE = +(new URLSearchParams(location.search).get("pb") || 45);   // 鼻の下〜あご: 鼻先から1本のなめらかな弧になるよう、上ほど前へ反らせる
+P.muzzle2 = E([0, +(new URLSearchParams(location.search).get("m2y") || 0.905), 0.243], [0.035, 0.045, 0.04], "head", 0.03);   // その弧の下地(前を削る面で形が決まる)
+const NOSE_UNDER = { dent: +(new URLSearchParams(location.search).get("nd") || 0), dy: +(new URLSearchParams(location.search).get("ndy") || 0.915), y: +(new URLSearchParams(location.search).get("ny") || -0.002), slope: +(new URLSearchParams(location.search).get("ns") || 0.5) };   // 鼻の下側を切る線: 先端からの下がり / 傾き(奥へ)
+const MOUTH_FREE = +(new URLSearchParams(location.search).get("mf") || 0.95);   // 鼻の下を削る面を、この高さより上では前へ逃がす   // 鼻(鼻筋・付け根の凹みごと)を顔の絵の鼻の点に合わせて下げる量
+{ const c = C([0, 0.976 + NOSE_DY, 0.238], [0, 0.964 + NOSE_DY, NOSE_Z], 0.012, +(new URLSearchParams(location.search).get("nr") || 0.0045), "head"), yt = 0.964 + NOSE_DY - NOSE_UNDER.y, zt = NOSE_Z + 0.007, sl = NOSE_UNDER.slope, L = Math.hypot(1, sl);
+  P.nose = { t: 3, k: +(new URLSearchParams(location.search).get("nk") || 0.02), bone: "head", bx0: c.bx0, by0: c.by0, bz0: c.bz0, br: c.br,   // 鼻: 付け根から急に立ち上がって、先が尖る。下側は先端からまっすぐ奥へ切る(先端をひとつに)
+    f: (x, y, z) => Math.max(dPrim(c, x, y, z), ((z - zt) - (y - yt) * sl) / L) }; }
+CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
+CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
+const plane = (f, k) => cut({ t: 3, f, k, bx0: 0, by0: 0, bz0: 0, br: 1e9 });
+CUT.chin = plane((x, y) => (y - 0.835 + 0.014 * Math.exp(-x * x / 0.0032) - 0.95 * x * x) / Math.sqrt(1 + 4 * x * x), 0.015);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
+CUT.mouth = plane((x, y, z) => (0.222 + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
+CUT.crown = plane((x, y) => +(new URLSearchParams(location.search).get("crown") || 1.39) - y, +(new URLSearchParams(location.search).get("crk") || 0.02));   // 頭のてっぺんを少しだけ平たく
+CUT.nape = plane((x, y, z) => (z + 0.15 + 3.5 * (y - 0.89)) / 3.64, 0.018);   // 後頭部の下は首の手前で内側へ巻き込む(首の後ろとの間にくびれ)
+for (const [s, m] of [["L", 1], ["R", -1]]) {
+  const j = (n) => J[`${n}.${s}`];
+  // 耳: 前の縁は頭にぴったり付き、後ろの縁が外へ開いて浮く板。くぼみは前・外を向く(横から見ると前がまっすぐのD字)
+  const nrm = (v) => { const l = Math.hypot(...v); return v.map((c) => c / l); }, dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const eu = nrm([m * EAR.flare, 0, -1]), ev0 = [m * EAR.tilt, 1, 0], ev = nrm(ev0.map((c, i) => c - dot(ev0, eu) * eu[i]));
+  const ew = [eu[1] * ev[2] - eu[2] * ev[1], eu[2] * ev[0] - eu[0] * ev[2], eu[0] * ev[1] - eu[1] * ev[0]].map((c) => c * m), ec = [m * EAR.x, EAR.y, -0.022];   // ew: 耳の表(前・外向き)
+  { const c = Math.cos(EAR.lean), sn = Math.sin(EAR.lean), u = eu.slice(), v = ev.slice(); for (let i = 0; i < 3; i++) { eu[i] = u[i] * c - v[i] * sn; ev[i] = v[i] * c + u[i] * sn; } }   // 上を後ろへ倒す(横から見て上が広い形に)
+  { const e0 = E(ec, [0.062, 0.067, 0.019], "head", 0.02, [eu, ev, ew]), ta = +(new URLSearchParams(location.search).get("eta") || 0.35), tc = +(new URLSearchParams(location.search).get("etc") || 0.04), n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
+    P[`ear.${s}`] = { ...e0, t: 3, f: (x, y, z) => -smin(-dPrim(e0, x, y, z), -(n[0] * (x - ec[0]) + n[1] * (y - ec[1]) + n[2] * (z - ec[2]) - tc), 0.012) }; }   // 耳の後ろの下側をななめに落として、下へ細くとがらせる
+  CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + ew[i] * 0.025 + eu[i] * 0.024), [0.026, 0.042, 0.011], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
+  P[`butt.${s}`] = E([m * 0.07, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
+  P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩
+  P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
+  P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, +(new URLSearchParams(location.search).get("far") || 0.032), `lowerArm.${s}`, +(new URLSearchParams(location.search).get("ek") || 0.01));   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
+  { const a = j("lowerArm"), b = j("hand"), t = +(new URLSearchParams(location.search).get("fbt") || 0.3), L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;   // ひじの下の前腕のふくらみ: 下寄りにふくらませ(上側は控えめ)、手首へ細くなりながらなめらかにつなぐ
+    const nd = [m * uy, -m * ux], od = +(new URLSearchParams(location.search).get("fbo") || 0.004), c = [a[0] + (b[0] - a[0]) * t + nd[0] * od, a[1] + (b[1] - a[1]) * t + nd[1] * od, a[2] + (b[2] - a[2]) * t];
+    P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], +(new URLSearchParams(location.search).get("fbr") || 0.0445), +(new URLSearchParams(location.search).get("fbe") || 0.041), `lowerArm.${s}`, +(new URLSearchParams(location.search).get("fbk") || 0.03));
+    Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: +(new URLSearchParams(location.search).get("ffl") || 0.64) }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
+  // 手: Aポーズで手のひらが下を向く。指4本(少し開く)+親指
+  const w = j("hand"), D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];   // D=指の向き N=手のひらの向き S=親指の側
+  const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
+  const palm = at(w, [D, 0.03], [N, 0.002]);
+  P[`palm.${s}`] = E(palm, [0.034, 0.05, 0.019], `hand.${s}`, 0.02, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
+  [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
+    const fd = D.map((v, k) => v * Math.cos(sp) + S[k] * Math.sin(sp)), b0 = at(palm, [D, 0.022], [S, o]);
+    P[`finger${i}.${s}`] = C(b0, at(b0, [fd, len], [N, 0.006]), 0.0125, 0.0115, `hand.${s}`, 0.008);   // 指の股はくっきり
+  });
+  const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
+  P[`thumb.${s}`] = C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013, 0.011, `hand.${s}`, 0.012);
+  P[`thigh.${s}`] = C(j("upperLeg"), j("lowerLeg"), 0.08, 0.066, `upperLeg.${s}`, 0.05);
+  P[`thighB.${s}`] = E([m * 0.11, +(new URLSearchParams(location.search).get("tby") || 0.335), +(new URLSearchParams(location.search).get("tbz") || -0.045)], [0.058, +(new URLSearchParams(location.search).get("tbh") || 0.055), +(new URLSearchParams(location.search).get("tbd") || 0.046)], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
+  P[`thighF.${s}`] = E([m * 0.11, +(new URLSearchParams(location.search).get("tfy") || 0.33), +(new URLSearchParams(location.search).get("tfz") || 0.035)], [+(new URLSearchParams(location.search).get("tfw") || 0.055), +(new URLSearchParams(location.search).get("tfh") || 0.125), +(new URLSearchParams(location.search).get("tfd") || 0.06)], `upperLeg.${s}`, +(new URLSearchParams(location.search).get("tfk") || 0.05));   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
+  P[`thighIn.${s}`] = E([m * +(new URLSearchParams(location.search).get("tix") || 0.062), +(new URLSearchParams(location.search).get("tiy") || 0.34), 0.002], [+(new URLSearchParams(location.search).get("tiw") || 0.042), +(new URLSearchParams(location.search).get("tih") || 0.06), 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
+  P[`calfO.${s}`] = E([m * (FOOT_X + +(new URLSearchParams(location.search).get("cox") || 0.018)), +(new URLSearchParams(location.search).get("coy") || 0.175), -0.008], [+(new URLSearchParams(location.search).get("cow") || 0.036), +(new URLSearchParams(location.search).get("coh") || 0.06), 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
+  P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.057, `lowerLeg.${s}`, 0.05);
+  P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, +(new URLSearchParams(location.search).get("cbz") || -0.017)], [+(new URLSearchParams(location.search).get("cbw") || 0.055), 0.068, +(new URLSearchParams(location.search).get("cbd") || 0.058)], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
+  P[`foot.${s}`] = E([m * (FOOT_X - 0.002), -0.003 + FOOT_H, 0.015], [0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
+  // 服用: 半分の長さの袖・すそ
+  const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
+  P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);
+  const ul = j("upperLeg"), ll = j("lowerLeg"), mk = ul.map((v, i) => v + (ll[i] - v) * 0.45);
+  P[`leghole.${s}`] = C(ul, mk, 0.078, 0.072, `upperLeg.${s}`, 0.05);
+}
+const isHead = (k) => /^(skull|occiput|face|jaw|muzzle|nose|ear)/.test(k);
+const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
+const BODY = Object.entries(P).filter(([k]) => !/^(sleeve|leghole)/.test(k)).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
+const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...Object.values(CUT), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+// 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
+const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * 0.128, dy = y - 0.995 - FACE_DY, ry = dy > 0 ? 0.088 : 0.105;
+    if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
+    else { const v = Math.abs(dy) / ry, t = dx * m / SOCK_BAND.len;   // 目じり側: 上下のふちは平行のまま、頭の横へ向かってなだらかに浅くなる(1点にすぼまらない)
+      if (v < 1 && t < 1) d += 0.014 * (1 - v * v) ** 2 * (1 - t * t) ** 2 * (1 - SOCK_BAND.lift * Math.min(1, t * 2)); }
+  { const ix = (x - m * SOCK_IN.x) / SOCK_IN.w, iy = dy / SOCK_IN.h, ir = ix * ix + iy * iy; if (ir < 1) d += SOCK_IN.d * (1 - ir) ** 2; }   // 目頭側(鼻すじのとなり)を少し引っこめて、目の乗る面を平らに
+  { const ex = x - m * EYE_UNDER.x, ux = ex / (ex * m > 0 ? EYE_UNDER.wo : EYE_UNDER.wi), uy = (dy - EYE_UNDER.y) / EYE_UNDER.h, ur = ux * ux + uy * uy; if (ur < 1) d += EYE_UNDER.d * (1 - ur) ** 2; }   // 目の下だけ: 目じり側は早めに消す
+  const ly = dy + SOCKET_LOW.y, lr = Math.hypot(dx / SOCKET_LOW.w, ly / (ly > 0 ? SOCKET_LOW.hu : SOCKET_LOW.h)); if (lr < 1) d += SOCKET_LOW.d * (1 - lr * lr) ** 2; } return d; };   // 目の下半分のうしろ: 前に出ないよう、もう少し沈めて平らに
+// 顔の側面の目じりのあたりを少し前(外)へ出す。眼窩の帯の外の端あたりを中心に、上下は帯と同じ幅で、なだらかに
+const temple = (x, y, z) => { if (z < -0.02) return 0; let d = 0, trim = 0; for (const m of [1, -1]) { const dx = (x - m * TEMPLE.x) / TEMPLE.w, dy = (y - TEMPLE.y) / TEMPLE.h, r = dx * dx + dy * dy; if (r < 1) d += TEMPLE.d * (1 - r) ** 2; } for (const m of [1, -1]) { const dx = (x - m * CHEEK_FILL.x) / CHEEK_FILL.w, dy = (y - CHEEK_FILL.y) / CHEEK_FILL.h, r = dx * dx + dy * dy; if (r < 1) d += CHEEK_FILL.d * (1 - r) ** 2; }   // 目の下〜鼻の横のほお(上から見てこけないように)
+  for (const m of [1, -1]) { const dx = (x - m * SIDE_TRIM.x) / SIDE_TRIM.w, dy = (y - SIDE_TRIM.y) / SIDE_TRIM.h, r = dx * dx + dy * dy; if (r < 1) trim += SIDE_TRIM.d * (1 - r) ** 2; }   // ほおの横のでっぱりを少し抑える(上・斜めから見て角ばらないように)
+  return d * Math.min(1, Math.max(0, (z - TEMPLE_Z0) / 0.06)) - trim; };   // 前を向いた面だけ前へ出す(横には広げない)
+if (!new URLSearchParams(location.search).has("slow")) HEAD.f = blendFast(HEAD.list, [-0.32, 0.7, -0.34], [0.32, 1.44, 0.4], +(new URLSearchParams(location.search).get("hc") || 0.025));   // 頭の部品も速い版で
+{ const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y) - temple(x, y, z); }
+const CROTCH = cut(E([0, +(new URLSearchParams(location.search).get("cry") || 0.29), 0], [+(new URLSearchParams(location.search).get("crw") || 0.025), +(new URLSearchParams(location.search).get("crh") || 0.075), 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
+const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + +(new URLSearchParams(location.search).get("kox") || 0.088)), +(new URLSearchParams(location.search).get("koy") || 0.25), 0], [+(new URLSearchParams(location.search).get("kow") || 0.012), +(new URLSearchParams(location.search).get("koh") || 0.03), 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
+const KNEE_IN = cut(E([0, +(new URLSearchParams(location.search).get("kiy") || 0.22), 0], [+(new URLSearchParams(location.search).get("kix") || 0.035), +(new URLSearchParams(location.search).get("kih") || 0.1), 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
+const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, HEAD];
+const bodySdfSlow = blend(BODY_LIST), bodySdf = new URLSearchParams(location.search).has("slow") ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], +(new URLSearchParams(location.search).get("bc") || 0.04));   // ?slow で元の遅い版(確認用)
+const PROF = [];   // 確認用: 部品ごとの生成時間と頂点数
+globalThis.sotai = { bodySdf, bodySdfSlow, P, CUT, blend, PROF };   // 確認用
+const pick = (...names) => names.flatMap((n) => [P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);
+const shirtCore = blendFast(pick("chest", "belly", "pelvis", "neck", "trap", "shoulder", "sleeve"), [-0.36, 0.4, -0.25], [0.36, 0.95, 0.27]);   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
+const COLLAR = { y: +(new URLSearchParams(location.search).get("cy") || 0.764), bowl: +(new URLSearchParams(location.search).get("cbw") || 2.2), tilt: +(new URLSearchParams(location.search).get("ctl") || 0.3), front: +(new URLSearchParams(location.search).get("cfr") || 0.35), fwd: +(new URLSearchParams(location.search).get("cfw") || 0.01) };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
+const SHOULDER_FIT = { x0: +(new URLSearchParams(location.search).get("sfx") || 0), xw: +(new URLSearchParams(location.search).get("sfw") || 0.13), off: +(new URLSearchParams(location.search).get("sfo") || 0.006), y0: +(new URLSearchParams(location.search).get("sf0") || 0.67), y1: +(new URLSearchParams(location.search).get("sf1") || 0.75) };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
+const shirtSdf = (x, y, z, B = bodySdf) => {   // B: 体の距離(服を作るときは格子から読む速い版を渡す)
+  const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nx = x, nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;   // 首の柱(少し前に傾く)からの位置
+  const neck = y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (nx * nx + rz * rz));   // えりぐり: 首から離れるほど高くなるおわん形の面で切る(首に沿う布と平行にならないので、ふちがガタつかない)
+  const sm = (a, b) => -smin(-a, -b, 0.012);   // 角を丸めて切る
+  const fit = y > SHOULDER_FIT.y0 ? B(x, y, z) - SHOULDER_FIT.off - 0.3 * (1 - sstep(SHOULDER_FIT.y0, SHOULDER_FIT.y1, y) * sstep(SHOULDER_FIT.x0, SHOULDER_FIT.x0 + SHOULDER_FIT.xw, Math.abs(x))) : -1;   // 肩の上は体から離れすぎないように(怒り肩にしない)。首のまわりは効かせない
+  return Math.max(sm(sm(shirtCore(x, y, z) - 0.014, neck), fit), 0.455 - y); };   // すそはズボンの中に入れる
+const PANTS_HEM = +(new URLSearchParams(location.search).get("hem") || 0.3);   // ズボンのすその高さ
+const pantsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn"), CROTCH]);   // ズボンを着せる範囲
+const PANTS_OFF = +(new URLSearchParams(location.search).get("pao") || 0.016), PANTS_TOP = +(new URLSearchParams(location.search).get("pat") || 0.505), PANTS_TILT = +(new URLSearchParams(location.search).get("ptl") || 0.25);   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
+const pantsCore = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) + 0.024 - PANTS_OFF, pantsMask(x, y, z) - 0.03);   // 体の形にそって着せる(横から見て分厚くならないように)
+const pantsSdf = (x, y, z, B = bodySdf) => Math.max(pantsCore(x, y, z, B) - 0.024, y - (PANTS_TOP - PANTS_TILT * z), PANTS_HEM - y);   // シャツより少し外側。上の口は後ろ上がり
+// 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
+const SHOE = { off: +(new URLSearchParams(location.search).get("sof") || 0.012), top: +(new URLSearchParams(location.search).get("stop") || 0.095), tilt: +(new URLSearchParams(location.search).get("stl") || 0.25), sole: +(new URLSearchParams(location.search).get("ssh") || 0.02), rim: +(new URLSearchParams(location.search).get("srm") || 0.008) };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
+const shoeCore = blend(pick("foot", "calf")), soleCore = blend(pick("foot"));
+const shoeSdf = (x, y, z) => Math.max(shoeCore(x, y, z) - SHOE.off, y - (SHOE.top - SHOE.tilt * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる
+const soleSdf = (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);
+// 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
+const SOCK_TOP = +(new URLSearchParams(location.search).get("skt") || 0.15);   // 靴下のはき口の高さ
+const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
+const FAST = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };   // 格子で測るとき用
+// ============================================================
+//  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
+//  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
+// ============================================================
+const HC = { c: [0, 1.137, -0.005], r: [0.255, 0.26, 0.262] };   // 毛束の通り道に使う頭の丸(頭の部品と同じ)
+const deg = Math.PI / 180;
+function onScalp(th, ph, off) {   // th: 頭のまわりの角度(0=正面, +=キャラの左) / ph: 高さの角度 / off: 頭の表面からの浮き
+  let p = [HC.c[0] + HC.r[0] * Math.cos(ph) * Math.sin(th), HC.c[1] + HC.r[1] * Math.sin(ph), HC.c[2] + HC.r[2] * Math.cos(ph) * Math.cos(th)];
+  for (let i = 0; i < 8; i++) { const d = bodySdf(...p), g = grad(bodySdf, ...p); p = p.map((v, k) => v + g[k] * (off - d)); }   // 体(顔・耳)にめりこまないよう、表面から off だけ離す
+  return p;
+}
+// 毛束の断面: 頭に沿って平たく(厚みは幅の flat 倍)。毛先に向かって細くとがる
+function strandSeg(a, b, ra, rb, flat) {
+  const c = C(a, b, ra, rb, "head", 0.004), mid = a.map((v, i) => (v + b[i]) / 2), n = grad(bodySdf, ...mid);
+  return Object.assign(c, { t: 4, n, flat });
+}
+function strand({ th0, ph0, th1, ph1, w, off0 = 0.012, off1 = 0.024, flat = 0.55, bend = 0, N = 7 }) {
+  const segs = []; let prev = null, prevR = 0;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, th = (th0 + (th1 - th0) * t + bend * Math.sin(Math.PI * t)) * deg, ph = (ph0 + (ph1 - ph0) * t) * deg;
+    const p = onScalp(th, ph, off0 + (off1 - off0) * t * t), r = Math.max(0.0042, w * (1 - Math.pow(t, 2.2)) * (0.85 + 0.15 * Math.sin(Math.PI * Math.min(1, t * 1.6))));
+    if (prev) segs.push(strandSeg(prev, p, prevR, r, flat)); prev = p; prevR = r;
+  }
+  return G(segs, 0.006);
+}
+const AHOGE = (() => { const pts = [[0, 1.392, 0.0], [0.004, 1.43, 0.012], [0.012, 1.455, 0.04], [0.02, 1.455, 0.07]], segs = []; for (let i = 0; i + 1 < pts.length; i++) segs.push(strandSeg(pts[i], pts[i + 1], 0.012 * (1 - i / 3) + 0.003, 0.012 * (1 - (i + 1) / 3) + 0.0028, 0.55)); return G(segs, 0.006); })();
+const smax = (a, b, k) => -smin(-a, -b, k);
+// 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
+const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
+const BANGS = {
+  "三分け": () => [[0, 2, -12, 0.074, 0], [-25, -30, -15, 0.07, -3], [25, 30, -15, 0.07, 3], [-47, -55, -24, 0.052, 0], [47, 55, -24, 0.052, 0]]
+    .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
+  "七三": () => [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
+    .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
+  "なし": () => [],
+  "ぱっつん": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
+};
+// 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
+const BACKS = { "ショート": { r: [0.282, 0.292, 0.29], side: 0.965, back: +(new URLSearchParams(location.search).get("hb") || 0.86), top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "ボブ": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
+function backBlock(o) {
+  const e = E([0, 1.125, -0.02], o.r, "head");
+  return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
+    const th = Math.atan2(x, z), c = Math.cos(th);
+    let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - o.arch * Math.sin(th) ** 2), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
+    if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * 6)), 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
+    const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
+    const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - 0.01;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
+    return smax(smax(dPrim(e, x, y, z) - flare, hem - y, 0.012), -ear, 0.006);
+  } };
+}
+const HAIR_PICK = { bangs: "なし", back: "ショート", ahoge: false };
+const hairSdfOf = () => blend([backBlock(BACKS[HAIR_PICK.back]), ...BANGS[HAIR_PICK.bangs](), ...(HAIR_PICK.ahoge ? [AHOGE] : [])]);
+let hairSdf = hairSdfOf();
+
+// 重み: いちばん近い部品の骨に寄せる(近い部品どうしは、なめらかに分け合う)
+const SIG = 0.013;
+const WL = new Map(), WACC = new Float32Array(64), WD = new Float64Array(512), WF = new Float64Array(512);
+function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(ズボンが腕に引っぱられないように)
+  const key = only ? only.source : "";
+  let L = WL.get(key); if (!L) { L = only ? BODY.filter((p) => only.test(p.bone)) : BODY; WL.set(key, L); }
+  // まず外接球で大まかな距離を出し、いちばん近そうな部品で上限を決める。上限より十分遠い部品は測らない(結果は同じ)
+  let best = 0; for (let n = 0; n < L.length; n++) { const p = L[n]; WF[n] = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br; if (WF[n] < WF[best]) best = n; }
+  const ub = dPrim(L[best], x, y, z), cut = ub + 12 * SIG; let dmin = ub;
+  for (let n = 0; n < L.length; n++) { if (n === best) { WD[n] = ub; continue; } if (WF[n] >= cut) { WD[n] = Infinity; continue; } const d = dPrim(L[n], x, y, z); WD[n] = d; if (d < dmin) dmin = d; }
+  const acc = WACC; acc.fill(0, 0, BONES.length);
+  for (let n = 0; n < L.length; n++) { const e = (WD[n] - dmin) / SIG; if (e < 12) acc[BI[L[n].bone]] += Math.exp(-e); }
+  let sum = 0; for (let k = 0; k < 4; k++) { let bi = 0, bv = -1; for (let b = 0; b < BONES.length; b++) if (acc[b] > bv) { bv = acc[b]; bi = b; } out.idx[k] = bi; out.w[k] = bv; sum += bv; acc[bi] = -1; }   // 重い順に4本
+  for (let k = 0; k < 4; k++) out.w[k] /= sum;
+}
+
+// ============================================================
+//  網目にする(サーフェスネッツ)
+// ============================================================
+function grad(sdf, x, y, z, e = 0.0012) { const gx = sdf(x + e, y, z) - sdf(x - e, y, z), gy = sdf(x, y + e, z) - sdf(x, y - e, z), gz = sdf(x, y, z + e) - sdf(x, y, z - e); const l = Math.hypot(gx, gy, gz) || 1; return [gx / l, gy / l, gz / l]; }
+// 傾きと値を4回の計算で(四面体の4点)。返り値 [nx, ny, nz, 距離]
+function grad4(sdf, x, y, z, e = 0.0012) { const a = sdf(x + e, y - e, z - e), b = sdf(x - e, y - e, z + e), c = sdf(x - e, y + e, z - e), d = sdf(x + e, y + e, z + e);
+  const gx = a - b - c + d, gy = -a - b + c + d, gz = -a + b - c + d, l = Math.hypot(gx, gy, gz) || 1; return [gx / l, gy / l, gz / l, (a + b + c + d) / 4]; }
+const PROJ = +(new URLSearchParams(location.search).get("proj") || 1);   // 表面へ寄せる回数
+const BAND = +(new URLSearchParams(location.search).get("band") || 6);   // 粗い格子で表面からこれだけ(×網目)離れていたら、細かく測らない
+// 体の距離は一度だけ測って取っておき、服を作るときは格子から読む(体の計算をやり直さない)
+let BODY_GRID = null;
+function bodyAt(x, y, z) { const G = BODY_GRID; if (G) { const fx = (x - G.lo[0]) / G.h, fy = (y - G.lo[1]) / G.h, fz = (z - G.lo[2]) / G.h, i = Math.floor(fx), j = Math.floor(fy), k = Math.floor(fz);
+    if (i >= 0 && j >= 0 && k >= 0 && i < G.nx - 1 && j < G.ny - 1 && k < G.nz - 1) { const V = G.V, nx = G.nx, nxy = G.nx * G.ny, o = i + nx * j + nxy * k, tx = fx - i, ty = fy - j, tz = fz - k, lim = 4 * G.h;
+      const a = V[o], b = V[o + 1], c = V[o + nx], d = V[o + nx + 1], e = V[o + nxy], f = V[o + nxy + 1], g = V[o + nxy + nx], hh = V[o + nxy + nx + 1];
+      if (Math.max(Math.abs(a), Math.abs(b), Math.abs(c), Math.abs(d), Math.abs(e), Math.abs(f), Math.abs(g), Math.abs(hh)) < lim) {
+        const ab = a + (b - a) * tx, cd = c + (d - c) * tx, ef = e + (f - e) * tx, gh = g + (hh - g) * tx, l0 = ab + (cd - ab) * ty, l1 = ef + (gh - ef) * ty; return l0 + (l1 - l0) * tz; } } }
+  return bodySdf(x, y, z); }
+function mesh(sdf, lo, hi, h, bone1, only, fast = sdf) {   // fast: 格子で測るときに使う速い版(なければ sdf)   // bone1: 指定すると全部その骨だけに付ける(髪は頭の骨) / only: 重みを付けてよい骨(正規表現)
+  const T0 = performance.now(), tm = {};
+  const nx = Math.ceil((hi[0] - lo[0]) / h) + 1, ny = Math.ceil((hi[1] - lo[1]) / h) + 1, nz = Math.ceil((hi[2] - lo[2]) / h) + 1;
+  const V = new Float32Array(nx * ny * nz), id = (i, j, k) => i + nx * (j + ny * k);
+  // まず粗い格子で測って、表面から遠いところは細かく測らない(形は同じで、ずっと速い)
+  const S = 4, mx = Math.ceil((nx - 1) / S) + 1, my = Math.ceil((ny - 1) / S) + 1, mz = Math.ceil((nz - 1) / S) + 1, Cg = new Float32Array(mx * my * mz);
+  for (let k = 0; k < mz; k++) for (let j = 0; j < my; j++) for (let i = 0; i < mx; i++) Cg[i + mx * (j + my * k)] = fast(lo[0] + i * S * h, lo[1] + j * S * h, lo[2] + k * S * h);
+  // 中くらいの格子(2マスおき)を、粗い格子で表面に近いところだけ測る。細かく測るのは、中くらいの格子でも表面に近いところだけ
+  const qx = Math.ceil((nx - 1) / 2) + 1, qy = Math.ceil((ny - 1) / 2) + 1, Mg = new Float32Array(qx * qy * (Math.ceil((nz - 1) / 2) + 1)).fill(NaN);
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const dc = Cg[Math.round(i / S) + mx * (Math.round(j / S) + my * Math.round(k / S))];
+    if (Math.abs(dc) > BAND * h) { V[id(i, j, k)] = dc; continue; }
+    const mi = Math.round(i / 2), mj = Math.round(j / 2), mk = Math.round(k / 2), m = mi + qx * (mj + qy * mk);
+    let dm = Mg[m]; if (dm !== dm) dm = Mg[m] = fast(lo[0] + mi * 2 * h, lo[1] + mj * 2 * h, lo[2] + mk * 2 * h);
+    V[id(i, j, k)] = Math.abs(dm) > 3.5 * h ? dm : fast(lo[0] + i * h, lo[1] + j * h, lo[2] + k * h);
+  }
+  mesh.last = { V, lo, h, nx, ny, nz };   // 体の格子は服が使い回す
+  tm.sample = performance.now() - T0;
+  const cx = nx - 1, cy = ny - 1, cell = new Int32Array(cx * cy * (nz - 1)).fill(-1), cid = (i, j, k) => i + cx * (j + cy * k);
+  const CO = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
+  const ED = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const pos = [], v8 = new Float32Array(8);
+  for (let k = 0; k < nz - 1; k++) for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    let neg = 0; for (let c = 0; c < 8; c++) { v8[c] = V[id(i + CO[c][0], j + CO[c][1], k + CO[c][2])]; if (v8[c] < 0) neg++; }
+    if (neg === 0 || neg === 8) continue;
+    let sx = 0, sy = 0, sz = 0, n = 0;
+    for (const [a, b] of ED) { const va = v8[a], vb = v8[b]; if ((va < 0) === (vb < 0)) continue; const t = va / (va - vb); sx += CO[a][0] + (CO[b][0] - CO[a][0]) * t; sy += CO[a][1] + (CO[b][1] - CO[a][1]) * t; sz += CO[a][2] + (CO[b][2] - CO[a][2]) * t; n++; }
+    cell[cid(i, j, k)] = pos.length / 3; pos.push(lo[0] + (i + sx / n) * h, lo[1] + (j + sy / n) * h, lo[2] + (k + sz / n) * h);
+  }
+  const nor = new Float32Array(pos.length);
+  for (let v = 0; v < pos.length; v += 3) {
+    let g = PROJ > 1 ? grad4(sdf, pos[v], pos[v + 1], pos[v + 2]) : null; if (g) { pos[v] -= g[0] * g[3]; pos[v + 1] -= g[1] * g[3]; pos[v + 2] -= g[2] * g[3]; }
+    g = grad4(sdf, pos[v], pos[v + 1], pos[v + 2]); pos[v] -= g[0] * g[3]; pos[v + 1] -= g[1] * g[3]; pos[v + 2] -= g[2] * g[3]; nor[v] = g[0]; nor[v + 1] = g[1]; nor[v + 2] = g[2];   // 2回で表面へ寄せ、2回目の向きをそのまま法線に
+  }
+  tm.project = performance.now() - T0 - tm.sample;
+  const idx = [];
+  const quad = (a, b, c, d) => {
+    if (a < 0 || b < 0 || c < 0 || d < 0) return;
+    const ax = pos[a * 3], ay = pos[a * 3 + 1], az = pos[a * 3 + 2];
+    const ux = pos[b * 3] - ax, uy = pos[b * 3 + 1] - ay, uz = pos[b * 3 + 2] - az, wx = pos[c * 3] - ax, wy = pos[c * 3 + 1] - ay, wz = pos[c * 3 + 2] - az;
+    const fx = uy * wz - uz * wy, fy = uz * wx - ux * wz, fz = ux * wy - uy * wx;
+    if (fx * (nor[a * 3] + nor[c * 3]) + fy * (nor[a * 3 + 1] + nor[c * 3 + 1]) + fz * (nor[a * 3 + 2] + nor[c * 3 + 2]) >= 0) idx.push(a, b, c, a, c, d); else idx.push(a, c, b, a, d, c);
+  };
+  for (let k = 1; k < nz - 1; k++) for (let j = 1; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
+    const v0 = V[id(i, j, k)] < 0;
+    if (v0 !== (V[id(i + 1, j, k)] < 0)) quad(cell[cid(i, j - 1, k - 1)], cell[cid(i, j, k - 1)], cell[cid(i, j, k)], cell[cid(i, j - 1, k)]);
+    if (v0 !== (V[id(i, j + 1, k)] < 0)) quad(cell[cid(i - 1, j, k - 1)], cell[cid(i, j, k - 1)], cell[cid(i, j, k)], cell[cid(i - 1, j, k)]);
+    if (v0 !== (V[id(i, j, k + 1)] < 0)) quad(cell[cid(i - 1, j - 1, k)], cell[cid(i, j - 1, k)], cell[cid(i, j, k)], cell[cid(i - 1, j, k)]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setIndex(idx);
+  tm.w0 = performance.now();
+  const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
+  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
+    for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } }
+  g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4));
+  PROF.push({ verts: nv, ms: Math.round(performance.now() - T0), sample: Math.round(tm.sample), project: Math.round(tm.project), weights: Math.round(performance.now() - tm.w0) });
+  return g;
+}
+
+// ============================================================
+//  見た目
+// ============================================================
+const canvas = $("gl");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, low ? 1.5 : 2)); renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 50); camera.position.set(0.9, 0.95, 3.0);
+const controls = new OrbitControls(camera, canvas); controls.target.set(0, 0.62, 0); controls.enableDamping = true; controls.minDistance = 0.7; controls.maxDistance = 6; controls.maxPolarAngle = Math.PI * 0.55;
+const hemi = new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -1.2, right: 1.2, top: 1.8, bottom: -0.4, near: 0.5, far: 8 }); sun.shadow.bias = -0.0008; scene.add(sun);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(1.6, 48), new THREE.MeshToonMaterial({ color: 0xe2d8c8 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+function size() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 44 : 32; camera.updateProjectionMatrix(); }
+addEventListener("resize", size); size();
+
+const ramp = (() => { const d = new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: ramp });
+function outlineMat(w) { const m = new THREE.MeshBasicMaterial({ color: 0x3a2a3a, side: THREE.BackSide }); m.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace("#include <skinning_vertex>", `#include <skinning_vertex>\n  transformed += normalize(objectNormal) * ${w.toFixed(4)};`); }; return m; }
+
+// 骨
+const avatar = new THREE.Group(); scene.add(avatar);
+const bone = {};
+for (const b of BONES) { const o = new THREE.Bone(); o.name = b; const p = J[b], q = PARENT[b] ? J[PARENT[b]] : [0, 0, 0]; o.position.set(p[0] - q[0], p[1] - q[1], p[2] - q[2]); bone[b] = o; (PARENT[b] ? bone[PARENT[b]] : avatar).add(o); }
+avatar.updateMatrixWorld(true);
+const skeleton = new THREE.Skeleton(BONES.map((b) => bone[b]));
+const HIPS0 = bone.hips.position.clone();
+
+const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
+const CLAY = "#d6d6d4";
+const clayMat = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.62, metalness: 0 });
+const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)   // ねんど色: なめらかな陰影(見本と同じ見え方)
+function skinned(geo, color, ow = 0.005) {
+  const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; avatar.add(m); m.bind(skeleton);
+  const o = new THREE.SkinnedMesh(geo, outlineMat(ow)); o.frustumCulled = false; o.userData.outline = true; avatar.add(o); o.bind(skeleton);
+  return { m, o, on: true };
+}
+
+// ============================================================
+//  顔(テクスチャ): 頭の前の網目を写した「顔レイヤー」に、パーツを重ねて描いた絵を正面から貼る
+//  パーツは差し替え式。いまは仮の絵をコードで描いているが、あとで透過PNGに置き換えられる
+// ============================================================
+const FACE = { x0: -0.2, x1: 0.2, y0: 0.82, y1: 1.12, S: 2560, dy: FACE_DY };   // 顔の絵が受け持つ範囲(体の座標)と、1単位あたりのピクセル数
+const faceCanvas = document.createElement("canvas"); faceCanvas.width = (FACE.x1 - FACE.x0) * FACE.S; faceCanvas.height = (FACE.y1 - FACE.y0) * FACE.S;
+const fctx = faceCanvas.getContext("2d");
+const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
+const faceMat = new THREE.MeshBasicMaterial({ map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
+const INK = "#3a2632", MOUTH = "#b8475e";
+const EYE_SIZE = 1.25;   // 目の大きさ
+const EYE_COL = ["#2c3858", "#4f6a9a", "#8aa3cc", "#cfdcef"];   // 虹彩の色(上の暗い色 → 下の明るい色)
+// 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
+const EYE = { x: 0.112, y: 0.998 }, BROW = { x: 0.112, y: +(new URLSearchParams(location.search).get("by") || 1.09) }, MOUTHP = { x: 0, y: 0.896 }, CHEEK = { x: 0.152, y: 0.955 };
+const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
+const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
+const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
+// 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
+const PART_IMG = { eye: { src: "img/parts/eye.png", w: +(new URLSearchParams(location.search).get("iew") || 0), dx: +(new URLSearchParams(location.search).get("iex") || 0.004), dy: +(new URLSearchParams(location.search).get("iey") || 0.004) }, brow: { src: "img/parts/brow.png", w: +(new URLSearchParams(location.search).get("ibw") || 0), dx: +(new URLSearchParams(location.search).get("ibx") || 0.004), dy: +(new URLSearchParams(location.search).get("iby") || 0) }, mouth: { src: "img/parts/mouth.png", w: +(new URLSearchParams(location.search).get("imw") || 0), dx: 0, dy: +(new URLSearchParams(location.search).get("imy") || 0) } };
+for (const k in PART_IMG) { const im = new Image(); im.onload = () => { PART_IMG[k].img = im; if (typeof drawFace === "function") drawFace(); }; im.src = PART_IMG[k].src; }
+const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
+const PARTS = {
+  eyes: {
+    "絵の目": () => imgPart("eye", EYE.x, EYE.y),
+    "まる目": () => {   // アニメの目: 白目・虹彩(上が暗く下が明るい)・瞳・ハイライト・太い上まつげ(目じりで跳ねる)・二重の線・下まぶた
+      const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+      const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(EYE_SIZE, EYE_SIZE); fctx.translate(-px(cx), -py(cy));   // 大きさは EYE_SIZE で
+      // 目の形(白目)
+      const open = () => { fctx.beginPath(); mv(-0.033, 0.0); bz(-0.03, 0.03, 0.012, 0.042, 0.042, 0.016); bz(0.042, -0.012, 0.022, -0.038, -0.002, -0.038); bz(-0.02, -0.038, -0.034, -0.02, -0.033, 0.0); fctx.closePath(); };
+      open(); { const g = fctx.createLinearGradient(...P(0, 0.04), ...P(0, -0.03)); g.addColorStop(0, "#c9c6cf"); g.addColorStop(0.35, "#f3f1f2"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+      fctx.save(); open(); fctx.clip();
+      // 虹彩
+      const ir = () => { fctx.beginPath(); fctx.ellipse(...P(-0.001, -0.003), pu(0.027), pu(0.037), 0, 0, Math.PI * 2); };
+      ir(); { const g = fctx.createLinearGradient(...P(0, 0.034), ...P(0, -0.04)); g.addColorStop(0, IR[0]); g.addColorStop(0.42, IR[1]); g.addColorStop(0.78, IR[2]); g.addColorStop(1, IR[3]); fctx.fillStyle = g; fctx.fill(); }
+      fctx.save(); ir(); fctx.clip();
+      ell(cx - 0.001, cy - 0.03, 0.022, 0.016, IR[3] + "c0");                                   // 下の明るい三日月
+      ell(cx - 0.001, cy + 0.03, 0.03, 0.022, IR[0] + "b0");                                    // 上まつげの影
+      fctx.restore();
+      ell(cx - 0.001, cy + 0.0, 0.0085, 0.014, "#2a1c22");                                      // 瞳
+      line(0.0024, "#2b2533"); ir(); fctx.stroke();                                              // 虹彩のふち
+      fctx.restore();
+      // 下まぶた(細い線、目じり寄り)
+      line(0.0022, "#6a4c50"); fctx.beginPath(); mv(0.006, -0.0375); qc(0.03, -0.034, 0.04, -0.012); fctx.stroke();
+      // 上まつげ(内側は細く、目じりへ太く、最後に外へ跳ねる)
+      fctx.beginPath(); mv(-0.035, -0.002); bz(-0.031, 0.031, 0.012, 0.045, 0.043, 0.02); qc(0.05, 0.012, 0.056, 0.0); qc(0.047, 0.006, 0.04, 0.009);
+      bz(0.012, 0.034, -0.026, 0.024, -0.033, 0.002); fctx.closePath(); fctx.fillStyle = "#3a2830"; fctx.fill();
+      // 二重の線
+      line(0.0028, "#c98c80"); fctx.beginPath(); mv(-0.016, 0.046); qc(0.012, 0.056, 0.036, 0.04); fctx.stroke();
+      // ハイライト
+      ell(cx - 0.012, cy + 0.014, 0.0085, 0.0085, "#ffffff"); ell(cx + 0.012, cy - 0.018, 0.0035, 0.0035, "#ffffffe0"); ell(cx - 0.004, cy + 0.002, 0.0022, 0.0022, "#ffffffd0");
+      fctx.restore();
+    },
+    "まる目(前)": (m) => { const { x, y } = EYE, rx = 0.035, ry = 0.047;   // ひとつ前の、塗りつぶしの丸い目
+      const g = fctx.createLinearGradient(0, py(y + ry), 0, py(y - ry)); g.addColorStop(0, "#2a1b26"); g.addColorStop(0.55, "#4a3042"); g.addColorStop(1, "#8a5a72");
+      ell(x, y, rx, ry, g); ell(x, y - 0.004, rx * 0.5, ry * 0.55, "#21141d");
+      ell(x - 0.012, y + 0.019, 0.011, 0.014, "#fff"); ell(x + 0.014, y - 0.019, 0.005, 0.005, "#ffffffd8");
+      lash(m, x, y + ry * 0.92, rx, 0.012); },
+    "にっこり": (m) => { const { x, y } = EYE; line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - 0.028), py(y - 0.012)); fctx.quadraticCurveTo(px(x), py(y + 0.028), px(x + 0.028), py(y - 0.012)); fctx.stroke(); },
+    "とじ目": (m) => { const { x, y } = EYE; line(0.007); fctx.beginPath(); fctx.moveTo(px(x - 0.028), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y - 0.026), px(x + 0.028), py(y - 0.002)); fctx.stroke();
+      fctx.beginPath(); fctx.moveTo(px(x + m * 0.028), py(y - 0.002)); fctx.lineTo(px(x + m * 0.036), py(y + 0.004)); fctx.stroke(); },
+    "びっくり": (m) => { const { x, y } = EYE; ell(x, y, 0.027, 0.04, "#fff"); line(0.003); fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(0.027), pu(0.04), 0, 0, Math.PI * 2); fctx.stroke();
+      ell(x, y - 0.002, 0.012, 0.016, INK); ell(x - 0.004, y + 0.004, 0.004, 0.005, "#fff"); lash(m, x, y + 0.04, 0.027, 0.012); },
+    "ジト目": (m) => { const { x, y } = EYE, rx = 0.03, ry = 0.041; fctx.save(); fctx.beginPath(); fctx.rect(0, py(y + 0.006), faceCanvas.width, faceCanvas.height); fctx.clip();
+      ell(x, y, rx, ry, "#3a2632"); ell(x + 0.012, y - 0.016, 0.0045, 0.0045, "#ffffffd8"); fctx.restore();
+      line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.1), py(y + 0.006)); fctx.lineTo(px(x + m * rx * 1.25), py(y + 0.008)); fctx.stroke(); },
+  },
+  brows: {
+    "絵の眉": () => imgPart("brow", BROW.x, BROW.y),
+    "ふつう": () => { const { x, y } = BROW; fctx.beginPath(); fctx.moveTo(px(x - 0.034), py(y - 0.006)); fctx.quadraticCurveTo(px(x - 0.002), py(y + 0.014), px(x + 0.04), py(y - 0.002));   // 細くとがる眉(内側が太め)
+      fctx.quadraticCurveTo(px(x), py(y + 0.006), px(x - 0.033), py(y - 0.012)); fctx.closePath(); fctx.fillStyle = "#6a4a3e"; fctx.fill(); },
+    "ふつう(前)": (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + m * 0.026), py(y - 0.004)); fctx.stroke(); },
+    "こまり": (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y + 0.008)); fctx.quadraticCurveTo(px(x), py(y + 0.004), px(x + m * 0.026), py(y - 0.008)); fctx.stroke(); },
+    "おこ": (m) => { const { x, y } = BROW; line(0.006); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.01)); fctx.quadraticCurveTo(px(x), py(y), px(x + m * 0.026), py(y + 0.004)); fctx.stroke(); },
+    "なし": () => {},
+  },
+  mouth: {
+    "絵の口": () => imgPart("mouth", MOUTHP.x, MOUTHP.y),
+    "にこ": () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.014), py(y + 0.003)); fctx.quadraticCurveTo(px(x), py(y - 0.01), px(x + 0.014), py(y + 0.003)); fctx.stroke(); },
+    "あーん": () => { const { x, y } = MOUTHP; fctx.beginPath(); fctx.moveTo(px(x - 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.016), py(y - 0.02), px(x), py(y - 0.02)); fctx.quadraticCurveTo(px(x - 0.016), py(y - 0.02), px(x - 0.02), py(y + 0.006)); fctx.fillStyle = MOUTH; fctx.fill();
+      fctx.save(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore(); line(0.003); fctx.stroke(); },
+    "お": () => { const { x, y } = MOUTHP; ell(x, y - 0.004, 0.009, 0.011, MOUTH); line(0.003); fctx.stroke(); },
+    "ω": () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
+    "へ": () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.013), py(y - 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.013), py(y - 0.006)); fctx.stroke(); },
+  },
+  cheeks: {
+    "なし": () => {},
+    "ぽっ": (m) => { const { x, y } = CHEEK, g = fctx.createRadialGradient(px(x), py(y), 0, px(x), py(y), pu(0.034)); g.addColorStop(0, "#ff8fa8a0"); g.addColorStop(1, "#ff8fa800");
+      fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(1, 0.62); fctx.translate(-px(x), -py(y)); fctx.fillStyle = g; fctx.fillRect(px(x - 0.04), py(y + 0.04), pu(0.08), pu(0.08)); fctx.restore();
+      line(0.0025, "#e8607e"); for (let i = -1; i <= 1; i++) { fctx.beginPath(); fctx.moveTo(px(x + i * 0.011 + 0.004), py(y + 0.007)); fctx.lineTo(px(x + i * 0.011 - 0.003), py(y - 0.007)); fctx.stroke(); } },
+  },
+};
+// 顔全体を1枚に描いた絵(PNG)を貼る(古いやり方)。顔の絵と同じ座標(1024×768)で置く
+//   置き方: 絵の基準点(ax, ay)を、下絵の(512 + x, 586 + y)に、大きさ s 倍で合わせる(基準点=鼻の点の左右・口の高さ)
+const FACE_IMG = { on: false, img: null, ax: 445, ay: 596, x: 0, y: 200, s: 1 };
+function whiteToAlpha(im) {   // 白い背景(ふちから続く真っ白)だけ透明にする。白目は少し灰色なので残る。もともと透明な絵はそのまま
+  const W = im.width, H = im.height, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, W, H), D = d.data, A = new Uint8Array(W * H), q = [];
+  const white = (i) => D[i * 4 + 3] > 0 && D[i * 4] > 250 && D[i * 4 + 1] > 250 && D[i * 4 + 2] > 250;
+  for (let x = 0; x < W; x++) q.push(x, (H - 1) * W + x); for (let y = 0; y < H; y++) q.push(y * W, y * W + W - 1);
+  while (q.length) { const i = q.pop(); if (A[i] || !white(i)) continue; A[i] = 1; const x = i % W; if (x > 0) q.push(i - 1); if (x < W - 1) q.push(i + 1); if (i >= W) q.push(i - W); if (i < W * (H - 1)) q.push(i + W); }
+  for (let i = 0; i < W * H; i++) { if (A[i]) { D[i * 4 + 3] = 0; continue; }
+    const x = i % W; if ((x > 0 && A[i - 1]) || (x < W - 1 && A[i + 1]) || (i >= W && A[i - W]) || (i < W * (H - 1) && A[i + W])) { const m = Math.min(D[i * 4], D[i * 4 + 1], D[i * 4 + 2]); if (m > 180) D[i * 4 + 3] = Math.round(255 * Math.min(1, (255 - m) / 75)); } }
+  g.putImageData(d, 0, 0); return c;
+}
+function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { FACE_IMG.img = whiteToAlpha(im); if (anchor) Object.assign(FACE_IMG, anchor); else Object.assign(FACE_IMG, { ax: im.width / 2, ay: im.height * 0.95 }); drawFace(); }; im.src = src; }
+loadFaceImg("img/face-test.png", { ax: 445, ay: 596 });
+const SLOTS = ["brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
+const SIDED = { eyes: true, brows: true, cheeks: true };
+const faceSel = { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" };
+const PRESETS = { "絵": { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" }, "ふつう": { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" }, "ふつう(前)": { eyes: "まる目(前)", brows: "ふつう(前)", mouth: "にこ", cheeks: "なし" }, "にこっ": { eyes: "にっこり", brows: "ふつう", mouth: "あーん", cheeks: "ぽっ" },
+  "すやすや": { eyes: "とじ目", brows: "ふつう", mouth: "お", cheeks: "ぽっ" }, "びっくり": { eyes: "びっくり", brows: "こまり", mouth: "お", cheeks: "なし" }, "じとー": { eyes: "ジト目", brows: "おこ", mouth: "へ", cheeks: "なし" } };
+const FACES = Object.keys(PRESETS); let faceI = 0, blinking = false;
+function drawFace() {
+  fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+  if (FACE_IMG.on && FACE_IMG.img) { const F = FACE_IMG, w = F.img.width * F.s, h = F.img.height * F.s;
+    fctx.drawImage(F.img, 512 + F.x - F.ax * F.s, 586 + F.y - F.ay * F.s, w, h); faceTex.needsUpdate = true;
+    $("fiVal").textContent = `上下 ${F.y} / 左右 ${F.x} / 大きさ ${F.s.toFixed(2)}`; return; }
+  for (const slot of SLOTS) { const name = slot === "eyes" && blinking && /まる|ジト|びっくり|絵/.test(faceSel.eyes) ? "とじ目" : faceSel[slot], draw = PARTS[slot][name];
+    if (SIDED[slot]) for (const m of [1, -1]) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // 右側は左右反転して描く
+    else draw(1); }
+  faceTex.needsUpdate = true;
+  $("tFace").textContent = `表情: ${FACES[faceI]}`; $("tEyes").textContent = `目: ${faceSel.eyes}`; $("tBrow").textContent = `眉: ${faceSel.brows}`; $("tMouth").textContent = `口: ${faceSel.mouth}`;
+}
+// 顔レイヤー: 体の網目のうち、顔の前面だけを写して、ほんの少し浮かせる。骨の重みは体と同じなので、首を動かしてもずれない
+let faceLayer = null;
+function buildFaceLayer(src) {
+  const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
+  const ok = (v) => { const x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2]; return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.05 && N0[v * 3 + 2] > 0.3; };
+  const map = new Map(), pos = [], nor = [], uv = [], si = [], sw = [], idx = [];
+  const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2];
+    pos.push(x + N0[v * 3] * 0.0012, y + N0[v * 3 + 1] * 0.0012, z + N0[v * 3 + 2] * 0.0012); nor.push(N0[v * 3], N0[v * 3 + 1], N0[v * 3 + 2]);
+    const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
+    uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - FACE.y0) / (FACE.y1 - FACE.y0));
+    for (let q = 0; q < 4; q++) { si.push(SI[v * 4 + q]); sw.push(SW[v * 4 + q]); } map.set(v, n); return n; };
+  for (let t = 0; t < I0.length; t += 3) { const a = I0[t], b = I0[t + 1], c = I0[t + 2]; if (ok(a) && ok(b) && ok(c)) idx.push(add(a), add(b), add(c)); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx);
+  if (faceLayer) { avatar.remove(faceLayer); faceLayer.geometry.dispose(); }
+  faceLayer = new THREE.SkinnedMesh(g, faceMat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; avatar.add(faceLayer); faceLayer.bind(skeleton);
+}
+// まばたき(絵を描き直すだけ)
+let blinkAt = 2.5;
+function blinkTick(T) { if (FACE_IMG.on) return; if (T > blinkAt && !blinking) { blinking = true; drawFace(); } if (T > blinkAt + 0.12 && blinking) { blinking = false; drawFace(); blinkAt = T + 2.5 + Math.random() * 3; } }
+
+// 小道具(いす: 座面の上が 0.2)
+const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.04, 0.26), wood); seat.position.set(0, 0.18, -0.03); chair.add(seat); const back = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.36, 0.035), wood); back.position.set(0, 0.36, -0.16); chair.add(back); for (const [x, z] of [[-0.17, 0.08], [0.17, 0.08], [-0.17, -0.14], [0.17, -0.14]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.18, 0.035), wood); l.position.set(x, 0.09, z); chair.add(l); } chair.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); chair.visible = false; scene.add(chair); }
+
+// ============================================================
+//  ポーズ(初期の形=見本と同じAポーズ)
+// ============================================================
+const sin = Math.sin, cos = Math.cos, mx = Math.max;
+const ARMS_DOWN = { "upperArm.L": [0, 0, -0.45], "upperArm.R": [0, 0, 0.45], "lowerArm.L": [0, 0, -0.08], "lowerArm.R": [0, 0, 0.08] };
+const POSES = {
+  "Aポーズ": () => ({ b: {}, y: 0 }),
+  "立つ": (t) => ({ b: { ...ARMS_DOWN, chest: [sin(t * 1.6) * 0.02, 0, 0], head: [sin(t * 0.8) * 0.04, sin(t * 0.5) * 0.12, sin(t * 0.7) * 0.05] }, y: 0 }),
+  "歩く": (t) => { const ph = t * 6.2, s = sin(ph), kL = 0.12 + 0.75 * mx(0, sin(ph + 1.9)), kR = 0.12 + 0.75 * mx(0, sin(ph + 1.9 + Math.PI));
+    return { b: { hips: [0, s * 0.12, 0], spine: [0.05, -s * 0.08, 0], head: [0.02, -s * 0.05, 0], "upperLeg.L": [-0.5 * s, 0, 0], "upperLeg.R": [0.5 * s, 0, 0], "lowerLeg.L": [kL, 0, 0], "lowerLeg.R": [kR, 0, 0], "foot.L": [-0.25 * s - kL * 0.3, 0, 0], "foot.R": [0.25 * s - kR * 0.3, 0, 0],
+      "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
+  "手をふる": (t) => ({ b: { "upperArm.L": [0, 0, -0.45], "lowerArm.L": [0, 0, -0.1], "upperArm.R": [-0.2, 0, -1.5], "lowerArm.R": [0, 0, -0.95 + sin(t * 9) * 0.45], "hand.R": [0, 0, sin(t * 9 - 0.6) * 0.3], head: [0.04, -0.15, -0.14], chest: [0, -0.08, -0.05] }, y: 0 }),
+  "ばんざい": (t) => { const k = mx(0, sin(t * 5.2)), squat = mx(0, -sin(t * 5.2));
+    return { b: { "upperArm.L": [-0.15, 0, 1.5 + k * 0.25], "upperArm.R": [-0.15, 0, -1.5 - k * 0.25], "lowerArm.L": [0, 0, 0.55], "lowerArm.R": [0, 0, -0.55], "upperLeg.L": [-0.5 * squat - 0.1 * k, 0, 0.08], "upperLeg.R": [-0.5 * squat - 0.1 * k, 0, -0.08], "lowerLeg.L": [0.9 * squat + 0.35 * k, 0, 0], "lowerLeg.R": [0.9 * squat + 0.35 * k, 0, 0], "foot.L": [-0.4 * squat + 0.3 * k, 0, 0], "foot.R": [-0.4 * squat + 0.3 * k, 0, 0], head: [-0.15 * k, 0, 0], spine: [0.2 * squat, 0, 0] }, y: k * 0.15 - squat * 0.05 }; },
+  "いすに座る": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
+      "upperArm.L": [-0.45, 0, -0.35], "upperArm.R": [-0.45, 0, 0.35], "lowerArm.L": [-0.75, 0, 0], "lowerArm.R": [-0.75, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true }),
+  "床に座る": (t) => ({ b: { "upperLeg.L": [-1.5, 0, 0.14], "upperLeg.R": [-1.5, 0, -0.14], "lowerLeg.L": [0.05, 0, 0], "lowerLeg.R": [0.05, 0, 0], "foot.L": [0.25 + sin(t * 3) * 0.2, 0, 0], "foot.R": [0.25 - sin(t * 3) * 0.2, 0, 0],
+      "upperArm.L": [0.65, 0, -0.25], "upperArm.R": [0.65, 0, 0.25], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [-0.18, 0, 0], chest: [-0.05, 0, 0], head: [0.18, 0, sin(t * 0.8) * 0.12] }, y: -0.315 }),
+  "体育座り": (t) => ({ b: { "upperLeg.L": [-2.35, 0, 0.1], "upperLeg.R": [-2.35, 0, -0.1], "lowerLeg.L": [2.45, 0, 0], "lowerLeg.R": [2.45, 0, 0], "foot.L": [-0.1, 0, 0], "foot.R": [-0.1, 0, 0],
+      "upperArm.L": [-1.1, 0, -0.25], "upperArm.R": [-1.1, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25], spine: [0.25, 0, 0], chest: [0.15, 0, 0], head: [0.1 + sin(t * 1.2) * 0.04, 0, 0.12] }, y: -0.31 }),
+};
+let poseName = "Aポーズ", compare = false;
+const qT = new THREE.Quaternion(), eT = new THREE.Euler();
+function applyPose(t, dt) {
+  const P0 = POSES[compare ? "Aポーズ" : poseName](t), k = compare ? 1 : 1 - Math.exp(-dt * 9);
+  for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
+  bone.hips.position.y += (HIPS0.y + (P0.y || 0) - bone.hips.position.y) * k;
+  chair.visible = !!P0.chair && !compare;
+}
+
+// ============================================================
+//  三面図(見本の画像と同じ縮尺・同じ位置に、正面/横/後ろを描く)
+// ============================================================
+const REF = { W: 1376, H: 768, floor: 732, hpx: 519, fx: [271, 699, 1128] };
+const ortho = [0, 1, 2].map(() => new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 30));
+ortho[0].position.set(0, 0, 10); ortho[1].position.set(10, 0, 0); ortho[2].position.set(0, 0, -10); ortho.forEach((c) => c.lookAt(0, 0, 0));
+function refRect() { const vw = innerWidth, vh = innerHeight, A = REF.W / REF.H; let rw = vw, rh = vw / A; if (rh > vh * 0.86) { rh = vh * 0.86; rw = rh * A; } return { rw, rh, ox: (vw - rw) / 2, oy: (vh - rh) / 2 }; }
+function renderCompare() {
+  const { rw, rh, ox, oy } = refRect(), k = (REF.hpx / REF.H * rh) / 1.4;
+  const img = $("ref"); Object.assign(img.style, { left: ox + "px", top: oy + "px", width: rw + "px", height: rh + "px" });
+  const bg = scene.background; scene.background = null; renderer.setClearColor(bg, 1);   // 背景色があると、描くたびに画面が消える
+  renderer.autoClear = false; renderer.setViewport(0, 0, innerWidth, innerHeight); renderer.clear();
+  renderer.setViewport(ox, innerHeight - oy - rh, rw, rh);
+  ortho.forEach((c, i) => { const f = REF.fx[i] / REF.W; c.left = -f * rw / k; c.right = (1 - f) * rw / k; c.top = (REF.floor / REF.H) * rh / k; c.bottom = -(1 - REF.floor / REF.H) * rh / k; c.updateProjectionMatrix(); renderer.render(scene, c); });
+  renderer.autoClear = true; renderer.setViewport(0, 0, innerWidth, innerHeight); scene.background = bg;
+}
+
+// ============================================================
+//  組み立て
+// ============================================================
+let hair, shirt, pants, shoes, soles, socks, body, clay = false, wire = false;
+const all = () => [body, shirt, pants, socks, shoes, soles, hair];
+function refreshLook() {
+  body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
+  for (const x of all()) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
+  faceLayer.visible = !clay; floor.visible = !compare;
+}
+const hairMesh = (H) => skinned(mesh(hairSdf, [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], H * +(new URLSearchParams(location.search).get("hr") || 0.85), "head"), "#6a4a30", 0.004);
+function makeHair(H) { const h = hairMesh(H); $("tBangs").textContent = `前髪: ${HAIR_PICK.bangs}`; $("tBack").textContent = `後ろ髪: ${HAIR_PICK.back}`; return h; }
+function rebuildHair() {   // 髪だけ作り直す
+  const on = hair.on; for (const m of [hair.m, hair.o]) { avatar.remove(m); m.geometry.dispose(); }
+  hairSdf = hairSdfOf(); hair = makeHair(low ? 0.0095 : 0.0068); hair.on = on; refreshLook();
+}
+// 顔の陰: 陰を計算するときの面の向きだけを、なめらかな楕円(頭と顔の丸み)から借りる。形はそのままで、アニメ塗りの境目がガタつかない(ねんど色は本当の向きのまま)
+const FACE_SHADE = { w: +(new URLSearchParams(location.search).get("fsw") || 1), c: [0, +(new URLSearchParams(location.search).get("fsy") || 1.04), +(new URLSearchParams(location.search).get("fsz") || -0.02)], r: [0.25, +(new URLSearchParams(location.search).get("fsry") || 0.31), +(new URLSearchParams(location.search).get("fsrz") || 0.2)] };   // 借りる強さ / 楕円の中心 / 半径
+function addShadeNormals(geo) {
+  const P = geo.attributes.position.array, N = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
+  for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2];
+    let w = F.w * sstep(0.86, 0.93, y); for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // 首から上だけ。耳は自分の陰のまま
+    const ex = (x - F.c[0]) / F.r[0] ** 2, ey = (y - F.c[1]) / F.r[1] ** 2, ez = (z - F.c[2]) / F.r[2] ** 2, el = Math.hypot(ex, ey, ez) || 1;
+    const sx = N[i] + (ex / el - N[i]) * w, sy = N[i + 1] + (ey / el - N[i + 1]) * w, sz = N[i + 2] + (ez / el - N[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
+    S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
+  geo.setAttribute("shadeN", new THREE.BufferAttribute(S, 3));
+}
+function shadeToon(c) { const m = toon(c); m.onBeforeCompile = (sh) => { sh.vertexShader = "attribute vec3 shadeN;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;"); }; return m; }
+// 顔の下絵づくり用: 顔の絵と同じ座標(1024×768)で、正面からまっすぐ撮った頭の画像と、パーツの基準点を返す(tools/facekit が使う)
+globalThis.sotaiFaceSheet = (mode = "skin") => {
+  const W = faceCanvas.width, Hc = faceCanvas.height, yc = (FACE.y0 + FACE.y1) / 2;
+  const cam = new THREE.OrthographicCamera(FACE.x0, FACE.x1, FACE.y1 - yc, FACE.y0 - yc, 0.1, 10); cam.position.set(0, yc, 3); cam.lookAt(0, yc, 0);
+  skeleton.pose(); for (const x of all()) { x.m.visible = x === body; x.o.visible = x === body && mode !== "clay"; } faceLayer.visible = false; floor.visible = false; helper.visible = false;
+  body.m.material = mode === "clay" ? clayMat : body.toonMat;
+  const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(W, Hc, false); renderer.render(scene, cam);
+  const url = renderer.domElement.toDataURL("image/png");
+  renderer.setPixelRatio(pr); size(); refreshLook();
+  const at = (k, a) => [px(a.x + PART_IMG[k].dx), py(a.y + PART_IMG[k].dy)];   // パーツの絵の真ん中が来る点(絵のピクセル)
+  return { url, size: [W, Hc], anchors: { eye: at("eye", EYE), brow: at("brow", BROW), mouth: at("mouth", MOUTHP) } };
+};
+function build() {
+  const t0 = performance.now(), H = low ? 0.0095 : 0.0068;
+  BODY_GRID = null; body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); BODY_GRID = mesh.last;   // 体の格子を服に使い回す
+  addShadeNormals(body.m.geometry); body.m.material.dispose(); body.m.material = body.toonMat = shadeToon(SKINS[skinI]);
+  shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * +(new URLSearchParams(location.search).get("shr") || 0.75), null, /^(hips|spine|chest|upperChest|neck|upperArm)/, FAST.shirt), "#7fb6e8");
+  pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, FAST.pants), "#5a4f7a");
+  shoes = skinned(mesh(shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), "#c8564b");
+  soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), "#f4f1ea");
+  socks = skinned(mesh(sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, FAST.sock), "#f7f3ea", 0.003);
+  hair = makeHair(H);
+  buildFaceLayer(body.m.geometry); drawFace(); refreshLook();
+  const nv = all().reduce((s, x) => s + x.m.geometry.attributes.position.count, 0);
+  $("stat").textContent = `頂点 ${nv.toLocaleString()} / 骨 ${BONES.length} / 生成 ${Math.round(performance.now() - t0)}ms`;
+}
+
+// ── UI ──
+const toggle = (id, fn) => { const b = $(id); b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on)); fn(on); }); };
+toggle("tCloth", (on) => { shirt.on = pants.on = on; refreshLook(); });
+toggle("tShoe", (on) => { shoes.on = soles.on = on; refreshLook(); });
+toggle("tSock", (on) => { socks.on = on; refreshLook(); });
+toggle("tHair", (on) => { hair.on = on; refreshLook(); });
+toggle("tClay", (on) => { clay = on; refreshLook(); });
+toggle("tCmp", (on) => { compare = on; $("tRef").hidden = !on; $("ref").hidden = !on || $("tRef").getAttribute("aria-pressed") !== "true"; $("poses").hidden = on; if (on && !clay) $("tClay").click(); refreshLook(); });
+toggle("tRef", (on) => { $("ref").hidden = !on; refreshLook(); });
+const helper = new THREE.SkeletonHelper(avatar); helper.visible = false; helper.material.depthTest = false; scene.add(helper);
+toggle("tBone", (on) => { helper.visible = on; for (const m of [clayMat, body.toonMat, shirt.m.material, pants.m.material, shoes.m.material, soles.m.material, socks.m.material, hair.m.material]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } });
+toggle("tWire", (on) => { wire = on; refreshLook(); });
+$("tFace").addEventListener("click", () => { faceI = (faceI + 1) % FACES.length; Object.assign(faceSel, PRESETS[FACES[faceI]]); drawFace(); });
+const cyc = (id, slot) => $(id).addEventListener("click", () => { const k = Object.keys(PARTS[slot]); faceSel[slot] = k[(k.indexOf(faceSel[slot]) + 1) % k.length]; drawFace(); });
+for (const [id, key, list] of [["tBangs", "bangs", BANGS], ["tBack", "back", BACKS]]) $(id).addEventListener("click", () => { const k = Object.keys(list); HAIR_PICK[key] = k[(k.indexOf(HAIR_PICK[key]) + 1) % k.length]; rebuildHair(); });
+for (const [id, k] of [["fiY", "y"], ["fiX", "x"], ["fiS", "s"]]) { $(id).value = FACE_IMG[k]; $(id).addEventListener("input", () => { FACE_IMG[k] = +$(id).value; drawFace(); }); }
+toggle("tWrap", (on) => { FACE_WRAP = on ? WRAP : null; $("tWrap").textContent = on ? "貼り方: 巻きつけ" : "貼り方: 正面から"; buildFaceLayer(body.m.geometry); refreshLook(); });
+toggle("tFaceImg", (on) => { FACE_IMG.on = on; $("fimgPanel").hidden = !on; $("tFaceImg").textContent = on ? "顔: 絵(PNG)" : "顔: コードの絵"; drawFace(); });
+$("fiFile").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadFaceImg(URL.createObjectURL(f)); });
+cyc("tEyes", "eyes"); cyc("tBrow", "brows"); cyc("tMouth", "mouth");
+$("tSkin").addEventListener("click", () => { skinI = (skinI + 1) % SKINS.length; if (clay) $("tClay").click(); else refreshLook(); });
+$("tExport").addEventListener("click", async () => {
+  const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
+  const outs = []; avatar.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
+  const saved = BONES.map((b) => bone[b].quaternion.clone()), hy = bone.hips.position.y;
+  BONES.forEach((b) => bone[b].quaternion.identity()); bone.hips.position.copy(HIPS0);   // Aポーズで書き出す
+  new GLTFExporter().parse(avatar, (buf) => {
+    outs.forEach((o) => { o.visible = true; }); BONES.forEach((b, i) => bone[b].quaternion.copy(saved[i])); bone.hips.position.y = hy;
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([buf], { type: "model/gltf-binary" })); a.download = "saon-sotai.glb"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, (e) => { console.error(e); outs.forEach((o) => { o.visible = true; }); }, { binary: true });
+});
+for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = name; b.setAttribute("aria-pressed", String(name === poseName)); b.addEventListener("click", () => { poseName = name; [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
+
+setTimeout(() => {
+  build(); $("msg").hidden = true;
+  if (/[?&]cmp/.test(location.search)) $("tCmp").click();
+  const Q = new URLSearchParams(location.search), HT = [0.35, 0.5, 0.01];   // 確認用: ?view=front&pose=歩く など
+  const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
+    nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
+  if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
+  const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
+  let last = performance.now(), T = 0;   // ?t=0.25 のように時刻を止めて確認できる
+  (function frame(now) { requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now; T = Q.has("t") ? +Q.get("t") : T + dt; applyPose(T, dt); blinkTick(T);
+    if (compare) renderCompare(); else { controls.update(); renderer.render(scene, camera); } })(last);
+}, 30);
+</script>
+</body>
+</html>
