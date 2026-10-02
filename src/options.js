@@ -42,6 +42,13 @@ export const DEFAULTS = {
         "depth": 0.262,
         "y": 1.108
       },
+      "skullTop": {
+        "extra": 0.01,
+        "y": 1.17,
+        "z": 0.02,
+        "ry": 0.1,
+        "rz": 0.2
+      },
       "cheeks": {
         "width": 0.175
       },
@@ -312,6 +319,7 @@ export const DEFAULTS = {
       "backVolume": 0.02,
       "backVolumeZ": [0.1, -0.06],
       "backVolumeY": [0.98, 1.15],
+      "backVolumeX": [0.06, 0.16],
       "earGap": {
         "gap": 0.012,
         "k": 0.02
