@@ -60,7 +60,7 @@ export const DEFAULTS = {
         "k": 0.03
       },
       "noseGroove": {
-        "depth": 0.007,
+        "depth": 0,
         "y": 0.952,
         "rx": 0.024,
         "ry": 0.03,
