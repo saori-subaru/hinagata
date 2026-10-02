@@ -434,6 +434,22 @@ export const DEFAULTS = {
       "neckY": [0.74, 0.8, 0.84, 0.86],
       "neckX": [0.03, 0.07]
     },
+    "blush": {
+      "cheeks": {
+        "on": false,
+        "color": "#ff8a9a",
+        "strength": 0.45,
+        "size": 0.042,
+        "x": 0.15,
+        "y": 0.95
+      },
+      "nose": {
+        "on": false,
+        "color": "#ff8a9a",
+        "strength": 0.4,
+        "size": 0.016
+      }
+    },
     "noseShadow": {
       "on": false,
       "y": 0.927,

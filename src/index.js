@@ -33,10 +33,10 @@ export { BODY_TYPES } from "./body/types.js";
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             debug: { slow, oldSock, faceWrap } — checking aids, normally unused }
  */
-// options without the parts that only change colors, the outline or the shading (the geometry is the same, so the cache can reuse it)
+// options without the parts that only change colors, the outline, the shading or the blush (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, ...rest } = OPT; return { ...rest, outfit: strip(OPT.outfit) };
+  const { colors, outline, shading, ...rest } = OPT, { blush, ...face } = OPT.face; return { ...rest, face, outfit: strip(OPT.outfit) };
 }
 
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, debug = {} } = {}) {
@@ -236,6 +236,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const old = x.m.material; x.m.material = shaded(style, old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
       }
     },
+    /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
+    setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). */
     setHair(pick) {
       Object.assign(hairPick, pick);
