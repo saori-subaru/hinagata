@@ -129,6 +129,31 @@ The playground keeps reading URL parameters, but as `?o=<options JSON>` for shar
 - English UI, Japanese toggle.
 - Developer drawer (collapsed): clay, wireframe, bones, compare with reference sheet, face sheet export.
 
+## Reference presets
+
+Each preset exists to show agents **one mechanism**, so they can copy the pattern to new parts.
+
+| preset | parts | mechanism it teaches |
+|---|---|---|
+| Casual (baseline) | short hair, T-shirt, shorts, socks, shoes | plain skinned meshes + walk / idle. The minimum to compare against |
+| Knight | helmet or big hat, shoulder pads, sword or staff in hand | **rigid attachments**: a separate mesh added to a bone (`bones.head.add(hat)`), no skinning. Needs a gripping hand shape |
+| Beast | animal ears, fluffy tail | **procedural secondary motion**: ears and tail on short bone chains, driven by sine waves (tail sways when idle, ears bounce when running) |
+| Mage / Fencer | long hair or ponytail, cape or robe hem | **spring bones**: 2-3 bone chains that follow their parent with a lag (tiny spring math, no physics engine), plus sphere colliders so the cape doesn't go through the back and legs |
+
+Order to build them: Casual (what exists today) → Knight (cheapest) → Beast → Mage (hardest: springs + collisions).
+
+### Extension points the library needs for these
+
+- **Extra bones**: presets can add bone chains under existing bones (ears, tail, hair, cape), and their meshes are weighted to them.
+- **Attachments**: `avatar.attach(boneName, object3d, offset)` for rigid parts; the hand gets an optional grip shape.
+- **Behaviors**: small per-part update functions run every frame after the pose (`{ bone, update(t, dt, state) }`), used for sine-wave motion and springs alike.
+- **Colliders**: spheres on body bones that spring chains are pushed out of.
+- Export: spring and procedural motion are runtime-only. A GLB export carries the extra bones but not their behavior (VRM's spring bone extension could carry it later).
+
+## Playground look
+
+Should feel like a dependable developer tool, not a toy: neutral palette, one accent color, clear type hierarchy, consistent spacing, a visible version number, and links to the docs and the repository.
+
 ## Migration plan (each step keeps the character pixel-identical)
 
 1. Move pure code (sdf, mesh, rig, materials) into modules; `body.html` imports them.
