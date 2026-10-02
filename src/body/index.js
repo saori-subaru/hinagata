@@ -89,7 +89,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // earlobe: a small lump at the bottom front of the ear, against the head, so seen from the front the ear's lower edge first runs down from
     // where it meets the head, then turns out diagonally to the widest point (one more corner)
     const LB = OPT.body.sculpt.ears.lobe;
-    if (LB) P[`earLobe.${s}`] = E([ec[0] - m * OPT.body.sculpt.ears.lobeIn, ec[1] - 0.056 * ES, ec[2] + 0.008], [0.016 * LB * ES, 0.022 * LB * ES, 0.014 * LB * ES], "head", 0.016);
+    if (LB) { const lc = [ec[0] - m * OPT.body.sculpt.ears.lobeIn, ec[1] - 0.056 * ES, ec[2] + 0.008];
+      P[`earLobe.${s}`] = E(lc, [0.016 * LB * ES, 0.022 * LB * ES, 0.014 * LB * ES], "head", 0.016);
+      // lobeFill: a straight piece from the lobe up to the ear's widest point, so the edge between them has no dip (without it: a big "lucky" earlobe)
+      const LF = OPT.body.sculpt.ears.lobeFill;
+      if (LF) { const tip = ec.map((v, i) => v + (eu[i] * LF.out + ev[i] * LF.up) * ES); P[`earFill.${s}`] = C(lc, tip, 0.011 * ES, 0.009 * ES, "head", 0.01); } }
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     P[`butt.${s}`] = E([m * 0.07 * TO.hips, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
     P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩

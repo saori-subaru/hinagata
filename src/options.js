@@ -144,6 +144,10 @@ export const DEFAULTS = {
       "ears": {
         "lobe": 1.3,
         "lobeIn": 0.004,
+        "lobeFill": {
+          "out": 0.035,
+          "up": -0.025
+        },
         "scale": 1.15,
         "x": null,
         "y": 0.958,
