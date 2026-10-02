@@ -149,7 +149,7 @@ export const DEFAULTS = {
         "height": 0.06
       },
       "underEye": {
-        "depth": 0.01,
+        "depth": 0,
         "x": 0.105,
         "y": -0.032,
         "widthInner": 0.05,
@@ -166,7 +166,7 @@ export const DEFAULTS = {
         "lift": 0.6
       },
       "socketLow": {
-        "depth": 0.014,
+        "depth": 0,
         "heightUp": 0.11
       },
       "ears": {
