@@ -316,7 +316,7 @@ export const DEFAULTS = {
       },
       "corner": {
         "a0": 35,
-        "a1": 60
+        "a1": 92
       },
       "taperSides": {
         "a0": 45,

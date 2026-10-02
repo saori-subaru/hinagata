@@ -53,7 +53,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
       const th = Math.atan2(x, z), c = Math.cos(th);
-      const s2 = Math.sin(th) ** 2, arch = o.arch * (CORNER ? sstep(CORNER.a0, CORNER.a1, Math.abs(th) / deg) : SQ ? (1 - SQ) * s2 + SQ * s2 ** 3 : s2);   // corner: the hairline turns down between these angles (degrees from the front), so it reaches the ear without receding at the temples   // square: the hairline stays level across the forehead and turns down at the corners
+      const s2 = Math.sin(th) ** 2, arch = CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(th) / deg) : o.arch * (SQ ? (1 - SQ) * s2 + SQ * s2 ** 3 : s2);   // corner: the hairline turns down between these angles (degrees from the front), so it reaches the ear without receding at the temples   // square: the hairline stays level across the forehead and turns down at the corners
       const pk = PEAK.depth && c > 0 ? PEAK.depth * Math.max(0, 1 - Math.abs(th) / (PEAK.width * Math.PI / 180)) ** 2 : 0;   // widow's peak: the middle of the hairline dips down in a small V
       let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
       if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * 6)), 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
@@ -62,7 +62,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
       // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
       // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
-      let tf = 1; if (TAPER || TAPER_BACK) { const s2x = Math.min(1, (x / 0.21) ** 2), front = o.top - o.arch * (CORNER ? sstep(CORNER.a0, CORNER.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : SQ ? (1 - SQ) * s2x + SQ * s2x ** 3 : s2x), back = o.back + (o.side - o.back) * s2x;
+      let tf = 1; if (TAPER || TAPER_BACK) { const s2x = Math.min(1, (x / 0.21) ** 2), front = o.top - (CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : o.arch * (SQ ? (1 - SQ) * s2x + SQ * s2x ** 3 : s2x)), back = o.back + (o.side - o.back) * s2x;
         const sideKeep = TAPER_SIDES ? sstep(TAPER_SIDES.a0, TAPER_SIDES.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : 0;   // taperSides: no thinning on the sides of the head (the outline stays full at the temples)
         const ff = TAPER ? 1 - (1 - sstep(0, TAPER, y - Math.max(front, o.side - 0.05))) * (1 - sideKeep) : 1, fb = TAPER_BACK ? sstep(0, TAPER_BACK, y - back) : 1;
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
