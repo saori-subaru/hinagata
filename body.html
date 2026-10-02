@@ -87,6 +87,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
     <button class="btn" id="tBangs" type="button">前髪</button>
     <button class="btn" id="tBack" type="button">後ろ髪</button>
+    <button class="btn" id="tSocket" type="button" aria-pressed="true">目のくぼみ</button>
     <button class="btn" id="tPartTpl" type="button">顔パーツの枠テンプレ</button>
     <label class="btn">枠つきPNGを読む<input type="file" id="partFile" accept="image/*" hidden></label>
     <button class="btn" id="tFaceImg" type="button" aria-pressed="false">顔: コードの絵</button>
@@ -297,6 +298,8 @@ function cutBackground(c, tol = 48) {   // 枠のふちから続く「ふちの�
   for (let i = 0; i < w * h; i++) { if (seen[i]) continue; const x = i % w; if ((x > 0 && seen[i - 1]) || (x < w - 1 && seen[i + 1]) || (i >= w && seen[i - w]) || (i < w * (h - 1) && seen[i + w])) { if (green) D[i * 4 + 1] = Math.min(D[i * 4 + 1], Math.max(D[i * 4], D[i * 4 + 2])); D[i * 4 + 3] = Math.min(D[i * 4 + 3], Math.round(255 * Math.min(1, dist(i) / (tol * 2.5)))); } }
   g.putImageData(d, 0, 0); return c;
 }
+// 目のくぼみ(眼窩)をなくす: 描いた目(とくに横長でまっすぐな線)が、上や斜めから見て曲がらないように(作り直す)
+const SOCKET_OPT = { body: { sculpt: {} } };
 const PARTS_OPT = { face: { images: {} } };   // 読んだパーツの絵(作り直したときもこれを使う)
 function loadPartsImg(src) {
   const im = new Image(); im.onload = () => {
@@ -447,7 +450,7 @@ const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed")
 async function makeTwin() {
   $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   twin?.dispose();
-  twin = await createAvatar(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), OUTFIT), PARTS_OPT), { quality: low ? "low" : "high" });
+  twin = await createAvatar(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), OUTFIT), PARTS_OPT), SOCKET_OPT), { quality: low ? "low" : "high" });
   scene.add(twin.object); keepStyle(twin); twin.play(curPose); twin.setFace({ ...avatar.faceSel, nose: twin.faceSel.nose }); twin.object.position.x = 0.48;
   twin.setFaceLayout(face.getLayout());
   $("msg").hidden = true;
@@ -486,7 +489,7 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸板", 0.8, 1.4, 0.01], ["torso", "bust", "胸(ふくらみ)", 0, 1, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01], ["torso", "butt", "おしり", 0.4, 1.2, 0.01], ["torso", "back", "背中の厚み", 0.3, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "thighTop", "太ももの付け根", 0.5, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }; SHAPE.thickness.thighTop ??= SHAPE.thickness.thigh; const SHAPE0 = structuredClone(SHAPE);   // thighTop: null = same as the thigh
-function curOpts() { const o = merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT), PARTS_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
+function curOpts() { const o = merge(merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT), PARTS_OPT), SOCKET_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
 const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
@@ -523,6 +526,7 @@ for (const [id, g, k, label, names] of OUTFIT_KINDS) {
   const cur = () => OUTFIT.outfit[g][k] ?? avatar.options.outfit[g][k], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit[g][k] = ks[(ks.indexOf(cur()) + 1) % ks.length]; show(); rebuildBody(); });
 }
+toggle("tSocket", (on) => { SOCKET_OPT.body.sculpt.socketScale = on ? 1 : 0; rebuildBody(); });
 // 狭い画面では、下のパネルに隠れないよう全身を上半分に出す
 let limbCam = null;
 // 変更を選ぶパネル: チェックしてから「反映」で1回だけ作り直す。開くと右に「幅を縮める前」を並べる
@@ -650,7 +654,7 @@ faceLabels(); hairLabels(); refreshLook();
 if (/[?&]cmp/.test(location.search)) $("tCmp").click();
 const HT = [0.35, 0.5, 0.01];
 const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
-  nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hf: [0, 1.05, 1.3, 0, 1.05, 0], h34: [-1.05, 1.08, 0.75, 0, 1.0, 0.03], np: [0.5, 0.94, 0.17, 0, 0.94, 0.17], ef: [0.17, 0.95, 0.55, 0.17, 0.95, 0], es: [0.75, 0.96, -0.01, 0.15, 0.96, -0.01], h34b: [-0.75, 1.0, 1.05, 0, 0.98, 0.05], hbt: [-0.5, 1.75, -0.9, 0, 1.1, 0], hft: [0.5, 1.75, 0.9, 0, 1.1, 0], hs: [1.3, 1.05, 0.02, 0, 1.05, 0], hb: [-0.75, 1.15, -1.1, 0, 1.05, 0], ha: [0, 2.0, 0.3, 0, 1.05, 0], tf: [0, 0.7, 1.25, 0, 0.66, 0], ts: [1.0, 0.7, 0.75, 0, 0.64, 0.03], tsh: [0.55, 0.85, 0.75, 0.15, 0.72, 0], tq: [0.7, 0.8, 1.1, 0.05, 0.62, 0], nkb: [-0.15, 0.85, -0.6, 0, 0.75, 0], kn: [0.6, 0.3, 0.6, 0.12, 0.27, 0], kz: [0.42, 0.25, -0.02, 0.2, 0.24, -0.02], tqb: [0.7, 0.85, -1.1, 0.05, 0.62, 0], shz: [0.13, 0.76, 0.55, 0.13, 0.74, 0], shb: [0.2, 0.8, -0.55, 0.13, 0.74, 0], hip: [0, 0.55, 1.05, 0, 0.53, 0], hip34: [0.75, 0.58, 0.75, 0, 0.53, 0], bf: [0, 0.6, 2.0, 0, 0.55, 0], bs: [2.0, 0.6, 0.02, 0, 0.55, 0], bb: [0, 0.6, -2.0, 0, 0.55, 0], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
+  nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hf: [0, 1.05, 1.3, 0, 1.05, 0], h34: [-1.05, 1.08, 0.75, 0, 1.0, 0.03], np: [0.5, 0.94, 0.17, 0, 0.94, 0.17], ef: [0.17, 0.95, 0.55, 0.17, 0.95, 0], es: [0.75, 0.96, -0.01, 0.15, 0.96, -0.01], h34b: [-0.75, 1.0, 1.05, 0, 0.98, 0.05], hbt: [-0.5, 1.75, -0.9, 0, 1.1, 0], hft: [0.5, 1.75, 0.9, 0, 1.1, 0], hs: [1.3, 1.05, 0.02, 0, 1.05, 0], hb: [-0.75, 1.15, -1.1, 0, 1.05, 0], ha: [0, 2.0, 0.3, 0, 1.05, 0], tf: [0, 0.7, 1.25, 0, 0.66, 0], ts: [1.0, 0.7, 0.75, 0, 0.64, 0.03], tsh: [0.55, 0.85, 0.75, 0.15, 0.72, 0], tq: [0.7, 0.8, 1.1, 0.05, 0.62, 0], nkb: [-0.15, 0.85, -0.6, 0, 0.75, 0], kn: [0.6, 0.3, 0.6, 0.12, 0.27, 0], kz: [0.42, 0.25, -0.02, 0.2, 0.24, -0.02], fa: [0, 1.45, 0.75, 0, 1.0, 0.1], fa2: [0.35, 1.35, 0.8, 0, 1.0, 0.1], tqb: [0.7, 0.85, -1.1, 0.05, 0.62, 0], shz: [0.13, 0.76, 0.55, 0.13, 0.74, 0], shb: [0.2, 0.8, -0.55, 0.13, 0.74, 0], hip: [0, 0.55, 1.05, 0, 0.53, 0], hip34: [0.75, 0.58, 0.75, 0, 0.53, 0], bf: [0, 0.6, 2.0, 0, 0.55, 0], bs: [2.0, 0.6, 0.02, 0, 0.55, 0], bb: [0, 0.6, -2.0, 0, 0.55, 0], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")];
 if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
 const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
 

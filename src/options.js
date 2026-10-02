@@ -57,6 +57,7 @@ export const DEFAULTS = {
       "neck": {
         "width": 0.85
       },
+      "socketScale": 1,
       "faceNarrow": {
         "k": 1,
         "y0": 1.02,
