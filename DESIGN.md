@@ -202,6 +202,23 @@ The trap: motions tuned in the prototype (swing height, speed, hit moment) are w
 - Decide this before the sword presets: retrofitting it after the motions exist means rewriting them.
 - Pitch that follows from it: "the feel you tune in the prototype carries over to the final characters" — stronger than "placeholder characters for prototypes".
 
+### Motion list for the presets (2026-10-02, draft)
+
+A light list, made now to find what the skeleton and the motion layer are missing **before** anything is polished. Angles and timings are decided when each preset is built. Today's motions: `idle, walk, wave, cheer, sitChair, sitFloor, hugKnees` (+ `aPose, tPose`); they keep working after the shoulder bones (only hugKnees changes, on purpose).
+
+| group | motions | what it needs |
+|---|---|---|
+| common | idle, walk, run, turn in place | feet that don't slide (scaled to the character's size) |
+| common | jump (take-off, air, landing) | hip height and travel scaled by leg length |
+| common | flinch, fall down, get up | play once and return |
+| one-handed sword | stance, horizontal slash, vertical slash, thrust, 3-hit combo | hit event, item tip, height / direction knobs |
+| one-handed sword | charged slash, overhead wind-up | speed knob, **shoulder bones** |
+| one-handed sword | toss something with the free hand | the other hand free (a tennis serve uses this) |
+| two-handed sword | stance, overhead chop, sweep, spin slash | **both hands on one item**, shoulder bones |
+| everyday | wave, cheer, sit, hug knees (exist) | a rounded back (three bend points) |
+
+Check after building the shoulder bones: every row's "what it needs" is covered by the skeleton or the motion layer.
+
 ### Shoulder bones and a rounder back (2026-10-02, decided)
 
 Saori wants shoulder (clavicle) bones. Do this **before the sword presets**: once motions exist, changing the skeleton means rewriting them.
