@@ -40,6 +40,11 @@ export const DEFAULTS = {
       "cheeks": {
         "width": 0.175
       },
+      "chin": {
+        "y": 0.843,
+        "curve": 2.6,
+        "k": 0.035
+      },
       "jaw": {
         "width": 0.112
       },
