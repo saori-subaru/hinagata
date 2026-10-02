@@ -150,6 +150,16 @@ Order to build them: Casual (what exists today) → Knight (cheapest) → Beast 
 - **Colliders**: spheres on body bones that spring chains are pushed out of.
 - Export: spring and procedural motion are runtime-only. A GLB export carries the extra bones but not their behavior (VRM's spring bone extension could carry it later).
 
+## Range: from chibi to pretty-girl and armored fantasy characters
+
+The goal is that, with effort, the same system can make a stylish anime girl or a knight in fantasy armor — not only today's chibi. What that takes:
+
+- **Base bodies, not one body.** A 2.4-head chibi and a 6-head anime girl differ too much for sliders alone. The library holds several base bodies (chibi, mini, standard), each sculpted on its own; sliders adjust within a base. Today's body becomes the `chibi` base.
+- **Proportions drive the joints.** Joint positions come from proportion values (head size, torso length, arm and leg length), and every body part is placed relative to its joints. Then changing proportions moves everything together. This is decided now, in migration step 2, even while only the chibi base exists.
+- **Hair is the biggest quality lever** for pretty characters: long hair, layered bangs, ponytails, made of strands on spring bones.
+- **Hard surfaces** (armor plates, helmets, weapons) don't come out well from the soft blending used for the body. They are built as separate rigid meshes (simple shapes, beveled edges, or loaded models) attached to bones, with detail (engraving, trim) in textures.
+- **Clothing beyond basics**: skirts, frills, capes on spring bones (see reference presets).
+
 ## Playground look
 
 Should feel like a dependable developer tool, not a toy: neutral palette, one accent color, clear type hierarchy, consistent spacing, a visible version number, and links to the docs and the repository.
@@ -157,7 +167,7 @@ Should feel like a dependable developer tool, not a toy: neutral palette, one ac
 ## Migration plan (each step keeps the character pixel-identical)
 
 1. Move pure code (sdf, mesh, rig, materials) into modules; `body.html` imports them.
-2. Move body / clothes / hair / face / motion into modules that read an options object instead of URL parameters. Write `defaults` from today's values.
+2. Move body / clothes / hair / face / motion into modules that read an options object instead of URL parameters. Write `defaults` from today's values. Place body parts relative to joints, and joints from proportion values (see "Range").
 3. Wrap it in `createAvatar` and the `Avatar` object.
 4. Build the playground on `createAvatar`; retire `body.html` (keep a redirect).
 5. `tools/shoot.mjs`, then presets, then docs.
