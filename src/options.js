@@ -33,15 +33,15 @@ export const DEFAULTS = {
     "sculpt": {
       "skull": {
         "width": 0.21,
-        "height": 0.2,
+        "height": 0.26,
         "depth": 0.262,
-        "y": 1.09
+        "y": 1.128
       },
       "cheeks": {
         "width": 0.185
       },
       "jaw": {
-        "width": 0.13
+        "width": 0.112
       },
       "backPlane": {
         "z": 0,
@@ -55,16 +55,16 @@ export const DEFAULTS = {
         "width": 0.155,
         "front": 0.21,
         "depth": 0.12,
-        "round": 0.07,
+        "round": 0.05,
         "blend": 0.04,
         "cutFront": 0,
         "cutY0": 0.95,
         "cutY1": 1.3,
         "cutK": 0.02,
         "cutSlope": 2,
-        "sideX": 0.175,
-        "sideZ": -0.25,
-        "sideK": 0.04,
+        "sideX": 0,
+        "sideZ": 0.06,
+        "sideK": 0.03,
         "sideSlope": 1.5
       },
       "foot": {
@@ -116,7 +116,7 @@ export const DEFAULTS = {
         "heightUp": 0.11
       },
       "ears": {
-        "x": 0.188,
+        "x": null,
         "y": 0.958,
         "trimAngle": 0.35,
         "trimDepth": 0.04
@@ -141,7 +141,7 @@ export const DEFAULTS = {
         "free": 0.95
       },
       "crown": {
-        "y": 1.235,
+        "y": 1.345,
         "blend": 0.05
       },
       "forearm": {
@@ -265,8 +265,8 @@ export const DEFAULTS = {
     "sculpt": {
       "shortBack": 0.86,
       "shell": 0.028,
-      "square": 1,
-      "hairline": 1.165
+      "square": 0,
+      "hairline": null
     }
   },
   "face": {

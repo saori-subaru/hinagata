@@ -130,10 +130,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // the planes fade out instead of stopping: below cutY0 the front plane moves forward, behind sideZ the side planes move outward (no steps at their edges)
   if (FB.cutFront) planeCuts.push(cut({ t: 3, k: FB.cutK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max(FB.cutFront + FB.cutSlope * ramp(FB.cutY0 - y) - z, y - FB.cutY1) / Math.hypot(1, FB.cutSlope * ramp1(FB.cutY0 - y)) }));
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
-  // ears go on after the shape cuts, so flat sides don't trim them; their hollows right after them
+  // with flat-plane cuts, ears go on after them (so the planes don't trim the ears), their hollows right after
   const isEar = (k) => /^ear\./.test(k);
-  const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
-    ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+  const HEAD = G(planeCuts.length ? [...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
+    ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose]
+    : [...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.values(CUT), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
