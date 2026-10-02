@@ -32,13 +32,13 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "skull": {
-        "width": 0.21,
+        "width": 0.198,
         "height": 0.24,
         "depth": 0.262,
         "y": 1.108
       },
       "cheeks": {
-        "width": 0.185
+        "width": 0.175
       },
       "jaw": {
         "width": 0.112
