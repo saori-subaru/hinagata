@@ -150,7 +150,7 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - Panel generated from `options.schema.json` (public tier). An "Advanced" section shows sculpt values.
 - Buttons: Copy as code (only the values that differ from the defaults), Save / Load JSON, Export GLB, Save PNG.
 - "Generating…" indicator while geometry is rebuilt. Works on phones.
-- English UI, Japanese toggle.
+- Language: see "Languages" below (the editor opens in English, with a Japanese toggle).
 - Developer drawer (collapsed): clay, wireframe, bones, compare with reference sheet, face sheet export.
 
 ## Reference presets
@@ -261,9 +261,27 @@ Low head-to-body ratio only (about 2 to 3 heads). Tall anime characters are well
 
 ## Playground look
 
-Should feel like a dependable developer tool, not a toy: neutral palette, one accent color, clear type hierarchy, consistent spacing, a visible version number, and links to the docs and the repository.
+Two editors, one look (2026-10-02, Saori):
+- **(a) the full editor** (the GitHub playground): every feature the engine has, built first.
+- **(b) the site's maker**: built after (a), from the same parts. Fewer features, presets up front, the detailed parameters folded away. Same look as (a), not a separate playful style.
 
-Open (2026-10-02): this was written for the GitHub playground. The maker on the site is for people who don't write code, so it may want the site's playful look instead, with the same engine underneath.
+The look is "Atelier" (chosen from three tone mockups: a dark studio tool, a warm light one, a technical blueprint one): warm paper neutrals, one indigo accent, rounded panels and pill buttons, monospace for numbers. It should still feel like a dependable tool: clear type hierarchy, consistent spacing, a visible version number, links to the docs and the repository. A dark theme can come later as an option.
+
+Details shown in the mockups that carry over:
+- Settings the engine doesn't have yet (e.g. head size, leg length) are shown disabled and marked as coming, not hidden.
+- Changes that rebuild geometry say so ("rebuilds the body, about 1 s").
+- The sculpt values (about 160 for the body) start folded.
+- The panel shows how many values differ from the defaults.
+
+## Languages (2026-10-02, decided)
+
+| where | default | other |
+|---|---|---|
+| the repository (code, comments, DESIGN.md, AGENTS.md, the options schema) | English (easiest for agents to read) | a Japanese README for people |
+| (a) the full editor | English | Japanese toggle |
+| (b) the site's maker | Japanese | English toggle |
+
+Both editors take their text from one dictionary (ja / en), so neither language is an afterthought.
 
 ## Migration plan (each step keeps the character pixel-identical)
 
@@ -301,7 +319,6 @@ Two places, two kinds of people, one engine underneath.
 - **Rewards from the games → character level** (2026-10-02): playing the games gives coins (dress-up, furniture) *and* EXP, because coins alone bore people who don't care for dress-up. Decided: levels are spent on **solo bosses first**; a shared raid boss only if enough people actually come (a raid that depends on headcount is a dead feature on a quiet site). Passing rewards from a game to the site needs the games and the site under one registrable domain (`*.pages.dev` are separate sites): own domain + one subdomain per game is the leading option.
 - **Trips load during the ride** (2026-10-02): everything ends up under one domain (user: 「最終的に同じドメインにするつもり」). So a game doesn't open as a new page: the plaza page pulls it into a hidden frame the moment the train (or the warp hole) starts, the game builds itself behind the ride, and on arrival the frame is shown instead of navigating. Navigating would throw the work away; that is how every web page behaves, not an artifact limit. The same frame carries rewards back to the plaza (messages from the game frame), so one subdomain per game still works; plain paths would also share storage directly. Opening a game on its own (not from the plaza) still needs its normal start.
 - **Where the solo boss lives** (2026-10-02, decided): deep in the old-growth forest. Only people who widen the forest find it. Once found, the plaza's warp hole gains a second destination ("the boss's lair"), so later visits skip the forest. People who haven't found it see nothing new.
-- The maker's look: see "Playground look" — the GitHub playground and the site's maker may want different looks.
 
 ## Face parts editor (plan, from Saori 2026-10-02)
 
