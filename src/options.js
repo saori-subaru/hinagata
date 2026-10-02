@@ -332,7 +332,7 @@ export const DEFAULTS = {
         "slope": 0.5,
         "span": 92,
         "thick": 0.036,
-        "extra": 0.012,
+        "extra": -0.014,
         "top": 1.25,
         "groove": 0.02,
         "grooveW": 5,
