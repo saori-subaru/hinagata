@@ -44,6 +44,11 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .lay { position: fixed; left: 12px; top: 64px; z-index: 3; width: 236px; max-height: calc(100vh - 140px); overflow-y: auto; display: grid; gap: 6px; background: #ffffffe6; border-radius: 14px; padding: 10px 12px; font-size: 11px; box-shadow: 0 4px 14px #0000001a; }
 .lay b { font-size: 12px; } .lay .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; align-items: center; } .lay .row input { grid-column: 1 / -1; width: 100%; }
 .lay .val { font: 500 10px var(--mono); color: var(--muted); } .lay textarea { width: 100%; font: 500 10px var(--mono); resize: none; border-radius: 8px; border: 1px solid #0002; padding: 4px; }
+@media (max-width: 720px) {   /* 狭い画面: 顔が隠れないように下に寄せて、スライダーは2列 */
+  .lay { top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); width: auto; max-height: 46vh; padding: 8px 10px; gap: 4px; }
+  #laySliders { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+  .lay textarea { height: 2.6em; }
+}
 </style>
 </head>
 <body>
@@ -278,7 +283,14 @@ for (const [k, label, min, max, step] of LAY_SLIDERS) {
   $("ls-" + k).addEventListener("input", (e) => { const l = { [k]: +e.target.value }; avatar.setFaceLayout(l); twin?.setFaceLayout(l); laySync(); });
 }
 $("layReset").addEventListener("click", () => { avatar.setFaceLayout(layDefault()); twin?.setFaceLayout(layDefault()); laySync(); });
-toggle("tLay", (on) => { $("layPanel").hidden = !on; laySync(); });
+// 開いている間は顔に寄る(狭い画面では、下のパネルに隠れないよう顔を上半分に出す)
+let layCam = null;
+toggle("tLay", (on) => {
+  $("layPanel").hidden = !on; $("poses").hidden = on || compare; laySync();
+  if (on) { layCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
+    camera.position.set(x, 0.98 - low, (twin ? 2.4 : 1.75) * (low ? 1.25 : 1)); controls.target.set(x, 0.95 - low, 0); }
+  else if (layCam) { camera.position.copy(layCam[0]); controls.target.copy(layCam[1]); layCam = null; }
+});
 faceLabels(); hairLabels(); refreshLook();
 
 // ── 確認用: ?view=front&pose=歩く&t=0.25 など ──
