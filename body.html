@@ -35,6 +35,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 .side { display: grid; gap: 6px; justify-items: end; pointer-events: auto; max-height: calc(100vh - 130px); overflow-y: auto; padding: 0 2px 4px; }   /* ボタンが多いので、画面が低いときはスクロール */
 .btn { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: #ffffffd8; border: 2px solid #00000014; border-radius: 99px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
 .btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.pick { display: inline-flex; gap: 6px; align-items: center; } .pick select { font: inherit; font-size: 12px; font-weight: 800; color: var(--ink); background: transparent; border: 0; max-width: 150px; cursor: pointer; }
 .poses { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 10px; z-index: 2; }
 .poses .btn { font-size: 14px; padding: 9px 16px; box-shadow: 0 3px 0 #0000001a; }
 .busy { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 4; background: var(--ink, #2a2333); color: #fff; border-radius: 99px; padding: 6px 14px; font-weight: 800; font-size: 12px; }
@@ -61,7 +62,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
     <button class="btn" id="tLimb" type="button" aria-pressed="false">体型スライダー</button>
     <button class="btn" id="tPair" type="button" aria-pressed="false">案を横に並べる</button>
-    <button class="btn" id="tHeadV" type="button">頭: いまの</button>
+    <label class="btn pick"><span id="headPickL">頭</span><select id="headPick" aria-label="頭の案"></select></label>
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
     <button class="btn" id="tRef" type="button" aria-pressed="true" hidden>見本を重ねる</button>
     <button class="btn" id="tClay" type="button" aria-pressed="false">ねんど色</button>
@@ -288,7 +289,9 @@ const V5 = merge(STEP1, { hair: { sculpt: { square: 0, corner: null } } });   //
 const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   // 案7: 前後を詰める(後頭部が出すぎないように)
 const HEAD_VARIANTS = [["いまの", null], ["ひとつ前", PREV], ["首の前", NECK0], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
-const headLabel = () => { $("tHeadV").textContent = twin ? `右: ${HEAD_VARIANTS[pairI][0]}` : `頭: ${HEAD_VARIANTS[headI][0]}`; $("tPair").textContent = twin ? "並べるのをやめる" : "案を横に並べる"; };
+// 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
+for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
+const headLabel = () => { $("headPickL").textContent = twin ? "右:" : "頭:"; $("headPick").value = twin ? pairI : headI; $("tPair").textContent = twin ? "並べるのをやめる" : "案を横に並べる"; };
 const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed") === "true"; av.parts.shirt.on = av.parts.pants.on = on("tCloth"); av.parts.shoes.on = av.parts.soles.on = on("tShoe"); av.parts.socks.on = on("tSock"); av.parts.hair.on = on("tHair"); };
 async function makeTwin() {
   $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
@@ -299,9 +302,10 @@ async function makeTwin() {
   $("msg").hidden = true;
 }
 headLabel();
-$("tHeadV").addEventListener("click", async () => {
-  if (twin) { pairI = (pairI + 1) % HEAD_VARIANTS.length; headLabel(); await makeTwin(); refreshLook(); return; }
-  headI = (headI + 1) % HEAD_VARIANTS.length; headLabel();
+$("headPick").addEventListener("change", async (e) => {
+  const v = +e.target.value;
+  if (twin) { pairI = v; headLabel(); await makeTwin(); refreshLook(); return; }
+  headI = v; headLabel();
   await makeAvatar(curOpts());
   keepLook(avatar); faceI = 0; faceLabels(); hairLabels(); refreshLook();
 });
