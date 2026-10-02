@@ -357,7 +357,7 @@ export const DEFAULTS = {
       "hem": 0.3,
       "offset": 0.016,
       "top": 0.505,
-      "tilt": 0.25
+      "tilt": 0.12
     },
     "shoes": {
       "on": true,
