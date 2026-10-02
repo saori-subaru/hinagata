@@ -33,9 +33,9 @@ export const DEFAULTS = {
     "sculpt": {
       "skull": {
         "width": 0.21,
-        "height": 0.26,
+        "height": 0.24,
         "depth": 0.262,
-        "y": 1.128
+        "y": 1.108
       },
       "cheeks": {
         "width": 0.185
@@ -141,7 +141,7 @@ export const DEFAULTS = {
         "free": 0.95
       },
       "crown": {
-        "y": 1.345,
+        "y": 1.32,
         "blend": 0.05
       },
       "forearm": {
@@ -266,7 +266,11 @@ export const DEFAULTS = {
       "shortBack": 0.86,
       "shell": 0.028,
       "square": 1,
-      "hairline": null
+      "hairline": 1.203,
+      "peak": {
+        "depth": 0.015,
+        "width": 25
+      }
     }
   },
   "face": {
