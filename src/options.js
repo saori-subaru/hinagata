@@ -143,6 +143,7 @@ export const DEFAULTS = {
       },
       "ears": {
         "turn": 0.3,
+        "blend": 0.035,
         "lobe": 0,
         "lobeIn": 0.004,
         "lobeFill": {

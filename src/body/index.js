@@ -87,7 +87,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
     const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
     if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }
-    { const e0 = E(ec, [0.062 * ES, 0.067 * ES, 0.019 * ES], "head", 0.02, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth * ES, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
+    { const e0 = E(ec, [0.062 * ES, 0.067 * ES, 0.019 * ES], "head", OPT.body.sculpt.ears.blend, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth * ES, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
       P[`ear.${s}`] = { ...e0, t: 3, f: (x, y, z) => -smin(-dPrim(e0, x, y, z), -(n[0] * (x - ec[0]) + n[1] * (y - ec[1]) + n[2] * (z - ec[2]) - tc), 0.012) }; }   // 耳の後ろの下側をななめに落として、下へ細くとがらせる
     // earlobe: a small lump at the bottom front of the ear, against the head, so seen from the front the ear's lower edge first runs down from
     // where it meets the head, then turns out diagonally to the widest point (one more corner)
