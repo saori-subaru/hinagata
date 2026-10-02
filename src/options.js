@@ -43,7 +43,7 @@ export const DEFAULTS = {
         "y": 1.108
       },
       "skullTop": {
-        "extra": 0.01,
+        "extra": 0,
         "y": 1.17,
         "z": 0.02,
         "ry": 0.1,
@@ -324,10 +324,7 @@ export const DEFAULTS = {
         "gap": 0.012,
         "k": 0.02
       },
-      "corner": {
-        "a0": 0,
-        "a1": 95
-      },
+      "corner": null,
       "taperSides": {
         "a0": 45,
         "a1": 75
