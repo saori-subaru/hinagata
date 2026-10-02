@@ -106,26 +106,13 @@ import { buildClothes } from "./src/clothes/index.js";   // 服・靴・靴下
 const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
 const FAST = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };   // 格子で測るとき用
 import { buildHair } from "./src/hair/index.js";   // 髪(前髪・後ろ髪・アホ毛)
+import { makeSkeleton, makeWeights } from "./src/rig.js";   // 骨と重み
+const weightsAt = makeWeights({ BODY, BONES, BI });
 const { BANGS, BACKS, hairSdfOf: hairOf } = buildHair(OPT, { P, bodySdf });
 const HAIR_PICK = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };   // いま選んでいる髪型
 const hairSdfOf = () => hairOf(HAIR_PICK);
 let hairSdf = hairSdfOf();
 
-// 重み: いちばん近い部品の骨に寄せる(近い部品どうしは、なめらかに分け合う)
-const SIG = 0.013;
-const WL = new Map(), WACC = new Float32Array(64), WD = new Float64Array(512), WF = new Float64Array(512);
-function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(ズボンが腕に引っぱられないように)
-  const key = only ? only.source : "";
-  let L = WL.get(key); if (!L) { L = only ? BODY.filter((p) => only.test(p.bone)) : BODY; WL.set(key, L); }
-  // まず外接球で大まかな距離を出し、いちばん近そうな部品で上限を決める。上限より十分遠い部品は測らない(結果は同じ)
-  let best = 0; for (let n = 0; n < L.length; n++) { const p = L[n]; WF[n] = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br; if (WF[n] < WF[best]) best = n; }
-  const ub = dPrim(L[best], x, y, z), cut = ub + 12 * SIG; let dmin = ub;
-  for (let n = 0; n < L.length; n++) { if (n === best) { WD[n] = ub; continue; } if (WF[n] >= cut) { WD[n] = Infinity; continue; } const d = dPrim(L[n], x, y, z); WD[n] = d; if (d < dmin) dmin = d; }
-  const acc = WACC; acc.fill(0, 0, BONES.length);
-  for (let n = 0; n < L.length; n++) { const e = (WD[n] - dmin) / SIG; if (e < 12) acc[BI[L[n].bone]] += Math.exp(-e); }
-  let sum = 0; for (let k = 0; k < 4; k++) { let bi = 0, bv = -1; for (let b = 0; b < BONES.length; b++) if (acc[b] > bv) { bv = acc[b]; bi = b; } out.idx[k] = bi; out.w[k] = bv; sum += bv; acc[bi] = -1; }   // 重い順に4本
-  for (let k = 0; k < 4; k++) out.w[k] /= sum;
-}
 
 // ============================================================
 //  網目にする(サーフェスネッツ)
@@ -166,12 +153,7 @@ addEventListener("resize", size); size();
 
 
 // 骨
-const avatar = new THREE.Group(); scene.add(avatar);
-const bone = {};
-for (const b of BONES) { const o = new THREE.Bone(); o.name = b; const p = J[b], q = PARENT[b] ? J[PARENT[b]] : [0, 0, 0]; o.position.set(p[0] - q[0], p[1] - q[1], p[2] - q[2]); bone[b] = o; (PARENT[b] ? bone[PARENT[b]] : avatar).add(o); }
-avatar.updateMatrixWorld(true);
-const skeleton = new THREE.Skeleton(BONES.map((b) => bone[b]));
-const HIPS0 = bone.hips.position.clone();
+const { root: avatar, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES }); scene.add(avatar);
 
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)   // ねんど色: なめらかな陰影(見本と同じ見え方)
@@ -417,6 +399,7 @@ globalThis.sotaiFaceSheet = (mode = "skin") => {
   const at = (k, a) => [px(a.x + PART_IMG[k].dx), py(a.y + PART_IMG[k].dy)];   // パーツの絵の真ん中が来る点(絵のピクセル)
   return { url, size: [W, Hc], anchors: { eye: at("eye", EYE), brow: at("brow", BROW), mouth: at("mouth", MOUTHP) } };
 };
+globalThis.sotaiChecksum = () => all().map((x) => { const g = x.m.geometry, a = g.attributes; let h = 0; for (const k of ["position", "skinIndex", "skinWeight"]) { const v = a[k].array; for (let i = 0; i < v.length; i++) h = (h * 31 + Math.round(v[i] * 1e5)) % 1000000007; } return h; });   // 確認用: 網目と重みの指紋
 function build() {
   const t0 = performance.now(), H = low ? 0.0095 : 0.0068;
   bodyAt = (x, y, z) => bodySdf(x, y, z); body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); bodyAt = gridSampler(mesh.last, bodySdf);   // 体の格子を服に使い回す
