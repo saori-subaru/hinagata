@@ -131,6 +131,31 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     sh.vertexShader = "attribute vec3 shadeN;\nattribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
     sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return m; };
 
+  // hair paint (anime style, not lighting): thin darker strands flowing from the crown, and a bright band (angel ring) around the top.
+  // Each hair vertex gets its direction from the head's center (head space): around the head (phi) and down from the crown (theta)
+  function addHairUV(geo) {
+    const Pa = geo.attributes.position.array, U = new Float32Array(Pa.length / 3 * 2), S = OPT.body.sculpt.skull;
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]), dz = z + 0.005, dy = y - S.y;
+      U[v * 2] = Math.atan2(x, dz); U[v * 2 + 1] = Math.atan2(Math.hypot(x, dz), dy); }
+    geo.setAttribute("hairUV", new THREE.BufferAttribute(U, 2));
+  }
+  const glf = (v) => (+v).toFixed(4);
+  const hairMat = (c) => { const m = shaded(OPT.shading.style, c), HP = OPT.hair.paint, St = HP.strands, R = HP.ring, rc = new THREE.Color(R.color);
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
+      sh.fragmentShader = "varying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  { float ph = vHair.x, th = vHair.y, N = ${glf(St.count)};
+    float s = ph * N / 6.2832 + ${glf(St.wobble)} * sin(th * 9.0 + ph * 2.0) + 0.25 * sin(ph * N * 0.37 + 1.3);   // strand lines: around the head, wavering a little
+    float id = floor(s), f = fract(s), k = fract(sin(id * 12.9898) * 43758.5453);                                   // k: a random value per strand (strength / length)
+    float line = (1.0 - smoothstep(0.0, ${glf(St.width)}, min(f, 1.0 - f))) * smoothstep(${glf(St.start)}, ${glf(St.start)} + 0.35, th) * step(0.25, k);
+    float ring = 0.0;
+    if (${R.on ? "true" : "false"}) { float z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0;                 // the ring's lower edge zigzags
+      float lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
+      ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); }
+    if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line)); }`); };
+    return m; };
+
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
@@ -142,7 +167,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.soles = skinned(mesh("soles", soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(mesh("socks", sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, fast.sock), OPT.outfit.socks.color, 0.003);
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
-  const makeHair = (h) => skinned(mesh("hair:" + JSON.stringify(hairPick), HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.4, hairPick.back === "long" ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);   // long hair reaches down the back
+  const makeHair0 = (h) => skinned(mesh("hair:" + JSON.stringify(hairPick), HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.4, hairPick.back === "long" ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);   // long hair reaches down the back
+  const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
   parts.hair = makeHair(H);
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
@@ -233,7 +259,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       OPT.shading.style = style;
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = shaded(style, old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = (k === "hair" ? hairMat : (c) => shaded(style, c))(old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
       }
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
