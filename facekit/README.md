@@ -20,6 +20,8 @@ The avatar's face is made by placing eye, brow and mouth images on the head. Thi
 The check page (`body.html`) does the same without any tools:
 
 - **顔パーツの枠テンプレ** makes this template for the face as it is now: frames centered where the parts sit with the current layout (the face-layout.json frames are from an older layout, so the eye frame there sits about 40 px further out).
+- The template there also has a **nose** frame. Frames left empty are skipped (that part stays as it is).
+- Wide eyes with long straight lines can look bent from above (the eye sockets under them): switch **目のまわり** to **なだらか** (a wide, gentle dip). Tall, big eyes look rounder with the default **深い**.
 - **枠つきPNGを読む** reads a drawing on that template (transparent PNG, or a solid background that gets removed), cuts eye / brow / mouth out of the frames and puts them on the face right away (blinking, expressions and the layout sliders still work).
 
 ## Rules

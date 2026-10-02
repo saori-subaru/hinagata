@@ -523,6 +523,11 @@ export const DEFAULTS = {
         "src": null,
         "width": 0,
         "dy": 0
+      },
+      "nose": {
+        "src": null,
+        "width": 0,
+        "dy": 0
       }
     },
     "shading": {

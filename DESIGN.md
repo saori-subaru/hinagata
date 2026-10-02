@@ -226,6 +226,16 @@ Two places, two kinds of people, one engine underneath.
 - **Where the solo boss lives** (2026-10-02, decided): deep in the old-growth forest. Only people who widen the forest find it. Once found, the plaza's warp hole gains a second destination ("the boss's lair"), so later visits skip the forest. People who haven't found it see nothing new.
 - The maker's look: see "Playground look" — the GitHub playground and the site's maker may want different looks.
 
+## Face parts editor (plan, from Saori 2026-10-02)
+
+When the face editor is built for real (beyond the check page's 枠つきPNGを読む):
+
+- Reading a drawing asks for an **expression name** (e.g. にっこり笑顔).
+- Only frames that have something drawn are read; empty frames are ignored.
+- Each part that was read is registered under that name in its own slot: eyes「にっこり笑顔」, mouth「にっこり笑顔」, ... (parts accumulate; a later drawing doesn't replace an earlier name's parts).
+- The name is also registered as an expression preset: choosing「にっこり笑顔」in the expressions sets every slot that has a part by that name (slots without one keep what they have).
+- So one drawing = one expression, and its parts can still be mixed with other expressions'.
+
 ## Decisions
 
 Decided: working name "Hinagata" (check npm before publishing); code-drawn face is the default; first body sliders are head size, chubbiness and leg length; chibi proportions only.
