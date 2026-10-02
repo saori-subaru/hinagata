@@ -46,13 +46,15 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
     // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
     // tips: [angle, height, slope?, skew?, group?]. skew: the left/right edges get different slopes (the clump sweeps sideways);
     // tips with the same group form one big clump whose end splits into small points (no groove between them). curve: edges bow (<1) or bulge (>1)
-    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl, sk, g]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null]), CV = B.curve ?? 1;
+    "nendo": (pick = {}) => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl, sk, g, sw]) => [a * deg, y, sl ?? B.slope, sk ?? 0, g ?? null, (sw ?? 0) * deg]), CV = B.curve ?? 1;
+      const backExtra = BACKS[pick.back] ? BACKS[pick.back].r[0] - 0.282 * KX : 0;   // match the back hair's thickness (the bob is a little thicker), so there's no step where they meet
       const notches = T.slice(1).map(([a, , , , g], i) => g != null && g === T[i][4] ? null : (a + T[i][0]) / 2).filter((a) => a != null);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
         const th = Math.atan2(x, z), rr = Math.hypot(x, z);
-        let hem = 9; for (const [a, ty, sl, sk] of T) { const d = th - a, ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
+        // sweep: near its tip the clump shifts sideways (the whole clump bends to one side, both edges together)
+        let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
-        const thick = B.thick + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y);
+        const thick = B.thick + backExtra + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y);
         const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
         const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // keep off the ears
         return smax(smax(smax(shell, hem - y, 0.006), side, 0.01), -ear, EAR_GAP.k); } }]; },
@@ -95,6 +97,6 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, EAR_GAP.k);
     } };
   }
-  const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
+  const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](pick), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
   return { BANGS, BACKS, hairSdfOf };
 }
