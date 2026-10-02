@@ -141,6 +141,7 @@ export const DEFAULTS = {
         "trimDepth": 0.04
       },
       "muzzle": {
+        "width": 0.075,
         "y": 0.925,
         "baseY": 0.905
       },
@@ -159,7 +160,8 @@ export const DEFAULTS = {
       "mouth": {
         "curve": 45,
         "free": 0.95,
-        "cheekBack": 0,
+        "cheekBack": 0.03,
+        "cheekBackWidth": 0.06,
         "back": 0
       },
       "crown": {
