@@ -6,6 +6,11 @@ export const DEFAULTS = {
     "skin": "#ffe0c8",
     "hair": "#6a4a30"
   },
+  "outline": {
+    "on": true,
+    "width": 1,
+    "color": "#3a2a3a"
+  },
   "body": {
     "head": {
       "scale": 0.9,

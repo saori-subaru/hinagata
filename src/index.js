@@ -33,6 +33,12 @@ export { BODY_TYPES } from "./body/types.js";
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             debug: { slow, oldSock, faceWrap } — checking aids, normally unused }
  */
+// options without the parts that only change colors or the outline (the geometry is the same, so the cache can reuse it)
+function shapeOnly(OPT) {
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor)$/.test(k)) r[k] = strip(v); return r; };
+  const { colors, outline, ...rest } = OPT; return { ...rest, outfit: strip(OPT.outfit) };
+}
+
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const OPT = resolveOptions(options);
@@ -44,7 +50,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   }
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), OPT, H, simplify) : null;
+  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
 
   // shapes
@@ -85,9 +91,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
     return { pos: P, nor: N, idx: out };
   }
-  function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton
+  function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1)
     const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
-    const o = new THREE.SkinnedMesh(geo, outlineMat(ow)); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
+    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
+    const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
     return { m, o, on: true };
   }
 
@@ -214,6 +221,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setColors({ skin, hair, shirt, pants, shoes, soles, socks } = {}) {
       if (skin) parts.body.toonMat.color.set(skin);
       for (const [k, c] of Object.entries({ hair, shirt, pants, shoes, soles, socks })) if (c) parts[k].m.material.color.set(c);
+    },
+    /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
+    setOutline({ on, width, color } = {}) {
+      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
     },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). */
     setHair(pick) {
