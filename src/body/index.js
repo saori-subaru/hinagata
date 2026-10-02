@@ -43,6 +43,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   P.chest = E([0, 0.68, 0.015], [0.13 * TO.chest, 0.1, 0.1 * TO.chest], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+  // bust (0 = none; a girl's chest, not the chest board): two soft round swellings on the front of the chest, a little apart and pointing slightly outward
+  if (TO.bust) { const r = 0.046 * Math.cbrt(TO.bust), bx = 0.058 * Math.max(1, TO.chest), zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2);   // zf: the chest's front surface there
+    for (const [sd, m] of [["L", 1], ["R", -1]]) P[`bust.${sd}`] = E([m * bx, 0.66, zf - r * (0.75 - 0.6 * TO.bust)], [r, r * 0.92, r * 0.85], "chest", 0.035); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.072, 0.1], "hips", 0.09);
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.215 - TO.waist), 0.575, 0], [0.05, 0.1, 0.14], "spine", 0.05));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)

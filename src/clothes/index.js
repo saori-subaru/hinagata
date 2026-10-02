@@ -4,7 +4,7 @@ import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
 
 export function buildClothes(OPT, { P, CROTCH, bodySdf }) {
   const pick = (...names) => names.flatMap((n) => [P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);
-  const shirtCore = blendFast(pick("chest", "belly", "pelvis", "waist", "neck", "trap", "shoulder", "sleeve"), [-0.36, 0.4, -0.25], [0.36, 0.95, 0.27]);   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
+  const shirtCore = blendFast(pick("chest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", "sleeve"), [-0.36, 0.4, -0.25], [0.36, 0.95, 0.27]);   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
   const COLLAR = { y: OPT.outfit.shirt.collar.y, bowl: OPT.outfit.shirt.collar.bowl, tilt: OPT.outfit.shirt.collar.tilt, front: OPT.outfit.shirt.collar.front, fwd: OPT.outfit.shirt.collar.forward };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   const shirtSdf = (x, y, z, B = bodySdf) => {   // B: 体の距離(服を作るときは格子から読む速い版を渡す)

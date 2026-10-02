@@ -31,7 +31,8 @@ export const DEFAULTS = {
       "chest": 1,
       "belly": 1,
       "waist": 0,
-      "hips": 1
+      "hips": 1,
+      "bust": 0
     },
     "thickness": {
       "upperArm": 1,
