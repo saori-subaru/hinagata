@@ -152,9 +152,9 @@ export const DEFAULTS = {
           "y": -0.002,
           "slope": 0.5
         },
-        "tipRadius": 0.0045,
+        "tipRadius": 0.0035,
         "blend": 0.02,
-        "lift": 0
+        "lift": 0.012
       },
       "mouth": {
         "curve": 45,
