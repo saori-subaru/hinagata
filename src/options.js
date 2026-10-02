@@ -309,6 +309,10 @@ export const DEFAULTS = {
       "taper": 0.22,
       "taperBack": 0.18,
       "backVolume": 0,
+      "earGap": {
+        "gap": 0.012,
+        "k": 0.02
+      },
       "square": 1,
       "hairline": 1.203,
       "peak": {

@@ -46,6 +46,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;   // height of the hairline at the forehead
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
+  const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
   const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? blend([P.skull, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean)) : null;   // the head without ears and face details
   function backBlock(o) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - (o.r[0] - 0.282 * KX) } : e0;   // bob: a little thicker
@@ -56,7 +57,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
       if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * 6)), 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
-      const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - 0.01;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
+      const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
       // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
       // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
@@ -65,7 +66,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
       const thick = SHELL ? SHELL * tf
         + BACKV * sstep(0.12, -0.12, z) * sstep(1.08, 1.3, y) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
-      return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, 0.006);
+      return smax(smax(dPrim(e, x, y, z) - thick - flare, hem - y, 0.012), -ear, EAR_GAP.k);
     } };
   }
   const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
