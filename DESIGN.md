@@ -174,6 +174,21 @@ Order to build them: Casual (what exists today) → Knight (cheapest) → Beast 
 - **Colliders**: spheres on body bones that spring chains are pushed out of.
 - Export: spring and procedural motion are runtime-only. A GLB export carries the extra bones but not their behavior (VRM's spring bone extension could carry it later).
 
+### Sword presets: one-handed and two-handed (2026-10-02, Saori)
+
+Saori plans one-handed and two-handed sword presets. They should teach **mechanisms**, not baked animations, so an agent can copy them for other held things. The test case: "make a tennis game with this character" should work by copying the sword preset (racket instead of sword, forehand instead of slash).
+
+What the sword presets must provide:
+- **Holding**: attach an item to the hand bone with a gripping hand shape (`avatar.attach("hand.R", item)`), with a documented hand orientation, so an agent doesn't guess angles.
+- **Play once and return**: wind-up → swing → follow-through → back to the stance, then a "done" signal. Today every motion loops.
+- **Hit moment**: an event at the instant of contact (a sword deals damage there; a racket returns the ball there).
+- **Item tip**: a marker for the business end (sword point / racket sweet spot), readable in world space for hit checks.
+- **Both hands on one item** (two-handed): the second hand follows the item. The same build gives tennis's two-handed backhand.
+- **Knobs on the swing**: height / direction (high, middle, low → a ball at any height) and speed (time the hit to an incoming ball; a charged slash).
+- **The other hand stays free** with the one-handed sword (no shield): a serve's ball toss uses it.
+
+Adding motions (checked 2026-10-02): agents can already add one — `POSES` is exported and `avatar.play(name)` accepts any name in it, and `bones` can be turned directly after `avatar.update()`. What's missing is listed above (play once, the hit event, a clock per motion: today `time` is one shared clock, so a one-shot motion has to track its own start), plus written bone axis conventions (which axis swings an arm forward).
+
 ## Scope: chibi only, but wide within it
 
 Low head-to-body ratio only (about 2 to 3 heads). Tall anime characters are well served by VRoid and game engines, and are heavy for browser games built with three.js — the target users here. Within chibi proportions, the goal is range: with effort the same system can make a cute anime girl or a knight in fantasy armor. What that takes:
