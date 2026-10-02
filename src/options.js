@@ -59,6 +59,13 @@ export const DEFAULTS = {
         "open": 1.5,
         "k": 0.03
       },
+      "noseGroove": {
+        "depth": 0.007,
+        "y": 0.952,
+        "rx": 0.024,
+        "ry": 0.03,
+        "width": 0.014
+      },
       "jaw": {
         "width": 0.112
       },
