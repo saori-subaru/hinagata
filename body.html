@@ -332,26 +332,25 @@ const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   //
 // 「幅を縮める前」(いまの標準)のあとに試した変更: チェックすると足す
 const CHANGES = [
   ["顔の幅を縮める(頭はそのまま)", { body: { sculpt: { faceNarrow: { k: 0.943 } } } }],
-  ["頭ごと幅を縮める", { body: { sculpt: { skull: { width: 0.198 }, cheeks: { width: 0.175 } } } }],
-  ["頭の前半分を後ろへ(前後を詰める)", { body: { head: { shift: { z: 0.03 } } } }],
   ["鼻先を上向き・前へ", { body: { sculpt: { nose: { tipZ: 0.28, tipRadius: 0.0035, lift: 0.02 } } } }],
   ["鼻の下を引っこめる(斜めの輪郭)", { body: { sculpt: { mouth: { cheekBack: 0.03 } } } }],
   ["鼻の下の影", { face: { noseShadow: { on: true, y: 0.938, width: 0.013, height: 0.009 } } }],
   ["髪を生え際へ薄く(前・うなじ)", { hair: { sculpt: { taper: 0.22, taperBack: 0.18, taperSides: { a0: 45, a1: 75 } } } }],
-  ["後ろ頭の髪のボリューム", { hair: { sculpt: { backVolume: 0.02, backVolumeTop: [1.18, 1.32] } } }],
   ["耳を大きく", { body: { sculpt: { ears: { scale: 1.15 } } } }],
   ["耳の形(下を前へ・丸く)", { body: { sculpt: { ears: { turn: 0.3, trimDepth: 0.2, blend: 0.035 } } }, hair: { sculpt: { earGap: { gap: 0.012, k: 0.02 } } } }],
-  ["首を細く", { body: { sculpt: { neck: { width: 0.85 } } } }],
 ];
 const CHG_ON = CHANGES.map(() => false);
 const chgOff = () => CHANGES.reduce((o, [, on], i) => CHG_ON[i] ? merge(o, on) : o, {});
-const ALL = CHANGES.reduce((o, [, on]) => merge(o, on), {});   // 10個の変更を全部入れた版(幅を縮める前に戻す直前の標準)
+// 標準に入れた4つ(頭ごと幅 / 前半分を後ろへ / 後ろ頭の髪のボリューム / 首を細く): それより前の案はこれを戻した上に重ねる
+const STD4 = { body: { sculpt: { skull: { width: 0.198 }, cheeks: { width: 0.175 }, neck: { width: 0.85 } }, head: { shift: { z: 0.03 } } }, hair: { sculpt: { backVolume: 0.02, backVolumeTop: [1.18, 1.32] } } };
+const STD4_0 = { body: { sculpt: { skull: { width: 0.21 }, cheeks: { width: 0.185 }, neck: { width: 1 } }, head: { shift: { z: 0 } } }, hair: { sculpt: { backVolume: 0, backVolumeTop: null } } };
+const ALL = merge(CHANGES.reduce((o, [, on]) => merge(o, on), {}), STD4);   // 10個の変更を全部入れた版(幅を縮める前に戻す直前の標準)
 const HEAD_VARIANTS0 = [ ["ひとつ前(耳の面)", PREV], ["耳の線", LINE1], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
 // それより前の案は前の標準(全部入り)からの差分なので、全部入りの上に重ねる
 const HEAD_VARIANTS1 = [["髪の筋・天使の輪なし", { hair: { paint: { strands: { on: false }, ring: { on: false } } } }], ["ひとつ前(カーブ)", { hair: { sculpt: { nendo: { tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.045], [-26, 1.045], [-9, 0.975, 1.4, 0, "c", -6], [3, 0.965, 1.4, 0, "c", -6], [22, 1.04], [41, 1.045], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["うねり", { hair: { sculpt: { nendo: { tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.045], [-26, 1.045], [-9, 0.975, 1.4, 0.4, "c"], [3, 0.965, 1.4, 0.4, "c"], [22, 1.04], [41, 1.045], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["薄い前髪", { hair: { sculpt: { nendo: { extra: -0.014 } } } }], ["大きな房の前", { hair: { sculpt: { nendo: { round: 0.012, tips: [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.035], [-22, 0.995], [-5, 1.045], [9, 0.975], [26, 1.03], [44, 1.04], [63, 0.995], [84, 0.87, 0.7]] } } } }], ["ロング", { hair: { back: "long" } }], ["ボブ", { hair: { back: "bob" } }], ["アホ毛が前向き", { hair: { sculpt: { ahogeDir: 0 } } }], ["ジャイアン(前の前髪)", { hair: { ahoge: false, sculpt: { shell: 0.028, nendo: { tips: [[-62, 0.98], [-44, 1.05], [-27, 1.075], [-9, 1.065], [9, 1.07], [26, 1.06], [43, 1.05], [62, 0.98]], round: 0.004, span: 72, thick: 0.034 } } } }], ["前髪なし", { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } }], ["全部入り(前の標準)", merge(ALL, { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } })], ...HEAD_VARIANTS0.map(([n, v]) => [n, merge(merge(ALL, { hair: { bangs: "none", ahoge: false, sculpt: { shell: 0.028 } } }), v ?? {})])];
 // 髪を凸凹させる・天使の輪を髪の色にする前(白い輪)。それより前の案もみんなこの上に重ねる
 const LUMP0 = { hair: { sculpt: { lumps: { amp: 0 } }, paint: { ring: { color: "#ffffff", strength: 0.35 } } } };
-const HEAD_VARIANTS = [["いまの", null], ["凸凹の前(白い輪)", LUMP0], ...HEAD_VARIANTS1.map(([n, v]) => [n, merge(LUMP0, v ?? {})])];
+const HEAD_VARIANTS = [["いまの", null], ["4つを標準にする前", STD4_0], ["凸凹の前(白い輪)", merge(STD4_0, LUMP0)], ...HEAD_VARIANTS1.map(([n, v]) => [n, merge(merge(STD4_0, LUMP0), v ?? {})])];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
@@ -441,7 +440,7 @@ $("chgApply").addEventListener("click", () => rebuildBody());
 toggle("tChg", async (on) => {
   for (const id of ["tLimb", "tLay", "tBang"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("chgPanel").hidden = !on; document.body.classList.toggle("chgOpen", on); chgSync();
-  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "凸凹の前(白い輪)"); $("tPair").click(); }
+  if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "4つを標準にする前"); $("tPair").click(); }
   if (on) { while (!twin) await new Promise((r) => setTimeout(r, 200));   // 並べ終わってから、2人の顔に寄る(狭い画面では下のパネルに隠れないよう上に)
     const narrow = innerWidth <= 720; camera.position.set(0, narrow ? 0.75 : 1.0, narrow ? 3.6 : 2.7); controls.target.set(0, narrow ? 0.62 : 0.92, 0); }
 });

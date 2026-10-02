@@ -22,7 +22,7 @@ export const DEFAULTS = {
       "pivotY": 0.845,
       "pivotZ": 0.006,
       "shift": {
-        "z": 0,
+        "z": 0.03,
         "z0": -0.08,
         "z1": 0.06
       }
@@ -49,13 +49,13 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "skull": {
-        "width": 0.21,
+        "width": 0.198,
         "height": 0.24,
         "depth": 0.262,
         "y": 1.108
       },
       "neck": {
-        "width": 1
+        "width": 0.85
       },
       "faceNarrow": {
         "k": 1,
@@ -70,7 +70,7 @@ export const DEFAULTS = {
         "rz": 0.2
       },
       "cheeks": {
-        "width": 0.185
+        "width": 0.175
       },
       "chin": {
         "y": 0.835,
@@ -418,10 +418,10 @@ export const DEFAULTS = {
       },
       "taper": 0,
       "taperBack": 0,
-      "backVolume": 0,
+      "backVolume": 0.02,
       "backVolumeZ": [0.1, -0.06],
       "backVolumeY": [0.98, 1.15],
-      "backVolumeTop": null,
+      "backVolumeTop": [1.18, 1.32],
       "earGap": {
         "gap": 0.01,
         "k": 0.006
