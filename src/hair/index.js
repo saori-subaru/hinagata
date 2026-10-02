@@ -69,7 +69,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     "none": () => [],
     // hime: a princess cut. The same layer as nendo, but square-ended clumps: a straight fringe across the forehead and straight side locks
     // down to the cheeks (a steep curve keeps each clump's end flat; the grooves between them show the clumps)
-    "hime": (pick = {}) => BANGS.nendo(pick, { ...OPT.hair.sculpt.nendo, ...OPT.hair.sculpt.hime }),
+    // curl: the side locks bend forward toward their ends (seen from the side the lock curves toward the chin): below curlY0 the lock is
+    // shifted forward, more and more toward curlY1 (curl m there), only at the sides (|x| beyond curlX)
+    "hime": (pick = {}) => { const H = { ...OPT.hair.sculpt.nendo, ...OPT.hair.sculpt.hime }, parts = BANGS.nendo(pick, H);
+      if (!H.curl) return parts;
+      return parts.map((p) => ({ ...p, f: (x, y, z) => { const t = sstep(H.curlY0, H.curlY1, y) * sstep(H.curlX, H.curlX + 0.05, Math.abs(x)); return p.f(x, y, z - H.curl * t * t); } })); },
   };
   Object.defineProperty(BANGS, "blunt", { value: BANGS.hime, enumerable: false });   // the old helmet-shaped "blunt" was replaced by hime
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
