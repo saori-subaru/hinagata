@@ -317,8 +317,8 @@ export const DEFAULTS = {
         "k": 0.02
       },
       "corner": {
-        "a0": 35,
-        "a1": 92
+        "a0": 0,
+        "a1": 95
       },
       "taperSides": {
         "a0": 45,
