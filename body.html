@@ -111,6 +111,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
   <b>前髪のふさ(玉を引っぱる: 左右=位置 / 上下=毛先の高さ。離すと髪だけ作り直す)</b>
   <div id="bangNote" class="stat" style="text-align:left"></div>
   <div id="bangSliders"></div>
+  <div class="types"><button class="btn" id="bangUndo" type="button" disabled>↶ 元に戻す</button><button class="btn" id="bangRedo" type="button" disabled>↷ やり直す</button></div>
   <div class="types"><button class="btn" id="bangAdd" type="button">ふさを足す</button><button class="btn" id="bangDel" type="button">このふさを消す</button><button class="btn" id="bangReset" type="button">はじめに戻す</button></div>
   <label>設定(これを教えてくれれば反映する)<textarea id="bangOut" rows="3" readonly></textarea></label>
 </div>
@@ -164,7 +165,7 @@ const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new
 const WRAP = { zc: -0.02, r: 0.24 };   // 顔の絵の貼り方: 頭のまわりに巻きつける(?wrap)
 let avatar, parts, I, face, helper = null, curPose = "aPose";
 let onAvatar = null;   // キャラを作り直したあとに呼ぶ(前髪の玉を置き直す)
-const BANG = { tips: null };   // 前髪のふさを動かした結果(作り直しても引き継ぐ)。null = いじっていない
+const BANG = { tips: null, thick: null };   // 前髪のふさ・厚さを動かした結果(作り直しても引き継ぐ)。null = いじっていない
 const LOOK = { shade: "toon", line: true, cheeks: false, nose: false, blush: null };   // 塗り方・輪郭線・赤み(作り直しても引き継ぐ。blush: 選んだ赤みの色)
 const keepStyle = (av) => { if (LOOK.shade !== "toon") av.setShading(LOOK.shade); if (!LOOK.line) av.setOutline({ on: false }); if (LOOK.cheeks || LOOK.nose || LOOK.blush) av.setBlush({ cheeks: { on: LOOK.cheeks, ...(LOOK.blush ? { color: LOOK.blush } : {}) }, nose: { on: LOOK.nose, ...(LOOK.blush ? { color: LOOK.blush } : {}) } }); };
 async function makeAvatar(opts, quiet = false) {   // 作る(作り直すときは古いのを捨てる)。quiet: 画面を隠さず、上に小さく「作り直し中」
@@ -395,7 +396,7 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸", 0.8, 1.4, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }, SHAPE0 = structuredClone(SHAPE);
-function curOpts() { const o = merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips) } } } }) : o; }
+function curOpts() { const o = merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
 const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
@@ -462,32 +463,49 @@ const D2R = Math.PI / 180, bangGrp = new THREE.Group(); bangGrp.visible = false;
 const bangMat = new THREE.MeshBasicMaterial({ color: 0xff5a7a, depthTest: false, transparent: true, opacity: 0.9 }), bangSelMat = new THREE.MeshBasicMaterial({ color: 0x2b78ff, depthTest: false });
 let bangSel = -1, bangDrag = null, bangCam = null, bangHome = null;
 const bangTips = () => avatar.options.hair.sculpt.nendo.tips;
+// 毛先が実際にある角度: 「流れ」(表の6番目=sw)を付けたふさは、毛先が sw だけ横へずれる(hair/index.js の nendo と同じ)
+const tipAngle = (t) => t[0] - (t[5] ?? 0);
 function tipPoint(a, y) {   // 頭の座標の (角度, 高さ) → 毛先のすぐ上の、髪の外側の表面(キャラの座標)
   const f = I.hairKit.hairSdfOf(I.hairPick), sn = Math.sin(a * D2R), cs = Math.cos(a * D2R), yy = y + 0.006; let r = 0.42;
   for (; r > 0.05; r -= 0.003) if (f(sn * r, yy, cs * r) < 0) break;
+  if (r <= 0.05) r = 0.3;   // そこに髪が無い(となりのふさに隠れた等): 頭の外側に置く(顔の中に埋もれないように)
   return new THREE.Vector3(...I.HT.fromHead(sn * r, yy, cs * r));
 }
 function bangBuild() {   // 玉を置き直す
   avatar.object.add(bangGrp); bangGrp.clear();
   if (I.hairPick.bangs !== "nendo") { $("bangNote").textContent = `いまの前髪(${I.hairPick.bangs})は ふさを動かせない。「前髪: nendo」にすると動かせる`; return; }
   $("bangNote").textContent = `ふさ ${bangTips().length}本。玉を押すと選べる`;
-  bangTips().forEach(([a, y], i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 16, 12), i === bangSel ? bangSelMat : bangMat); m.position.copy(tipPoint(a, y)); m.renderOrder = 10; m.userData.i = i; bangGrp.add(m); });
+  bangTips().forEach((t, i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 16, 12), i === bangSel ? bangSelMat : bangMat); m.position.copy(tipPoint(tipAngle(t), t[1])); m.renderOrder = 10; m.userData.i = i; bangGrp.add(m); });
   bangPanelSync();
 }
-// 選んだふさのスライダー(傾き・片寄り・流れ)。動かし終わったら作り直す
-const BANG_SLIDERS = [[2, "傾き(とがり)", 0.15, 1.6, 0.01, () => avatar.options.hair.sculpt.nendo.slope], [3, "片寄り", -1, 1, 0.01, () => 0], [5, "流れ(度)", -25, 25, 0.5, () => 0]];
-for (const [k, label, min, max, step] of BANG_SLIDERS) { const row = document.createElement("div"); row.className = "row";
-  row.innerHTML = `<span>${label}</span><span class="val" id="bv-${k}"></span><input type="range" id="bs-${k}" min="${min}" max="${max}" step="${step}">`; $("bangSliders").append(row);
-  $("bs-" + k).addEventListener("input", (e) => { if (bangSel < 0) return; const t = bangTips()[bangSel]; while (t.length <= k) t.push(t.length === 4 ? null : t.length === 2 ? avatar.options.hair.sculpt.nendo.slope : 0); t[k] = +e.target.value; $("bv-" + k).textContent = (+e.target.value).toFixed(2); bangOut(); });
-  $("bs-" + k).addEventListener("change", () => bangRebuild()); }
+// 選んだふさのスライダー(傾き・片寄り・流れ・厚さ)と、前髪全体の厚さ。動かし終わったら作り直す
+//   [表の何番目, 名前, 最小, 最大, 刻み, 書いていないときの値, 小数の桁]
+const BANG_SLIDERS = [[2, "傾き(とがり)", 0.15, 1.6, 0.01, () => avatar.options.hair.sculpt.nendo.slope, 2], [3, "片寄り", -1, 1, 0.01, () => 0, 2], [5, "流れ(度)", -25, 25, 0.5, () => 0, 1], [6, "このふさの厚さ(足す)", -0.02, 0.03, 0.001, () => 0, 3]];
+const bangNendo = () => avatar.options.hair.sculpt.nendo;
+const bangSnap = () => ({ tips: structuredClone(bangTips()), thick: bangNendo().thick });   // 元に戻す/やり直す用の控え
+const BHIST = [], BFUT = []; let bangBefore = null;   // BHIST: 戻せる控え / BFUT: やり直せる控え / bangBefore: いま動かしている途中の、動かす前
+function bangCommit(before) { BHIST.push(before); if (BHIST.length > 60) BHIST.shift(); BFUT.length = 0; bangHistSync(); }   // 変更が1つ確定した(動かす前を積む)
+function bangRestore(st) { bangNendo().tips = structuredClone(st.tips); bangNendo().thick = st.thick; if (bangSel >= bangTips().length) bangSel = -1; bangRebuild(); }
+function bangUndo() { if (!BHIST.length) return; BFUT.push(bangSnap()); bangRestore(BHIST.pop()); bangHistSync(); }
+function bangRedo() { if (!BFUT.length) return; BHIST.push(bangSnap()); bangRestore(BFUT.pop()); bangHistSync(); }
+function bangHistSync() { $("bangUndo").disabled = !BHIST.length; $("bangRedo").disabled = !BFUT.length; }
+const bangSlider = (id, label, min, max, step, onInput) => { const row = document.createElement("div"); row.className = "row";
+  row.innerHTML = `<span>${label}</span><span class="val" id="bv-${id}"></span><input type="range" id="bs-${id}" min="${min}" max="${max}" step="${step}">`; $("bangSliders").append(row);
+  $("bs-" + id).addEventListener("input", (e) => { bangBefore ??= bangSnap(); onInput(+e.target.value); bangOut(); });
+  $("bs-" + id).addEventListener("change", () => { if (bangBefore) { bangCommit(bangBefore); bangBefore = null; } bangRebuild(); }); };
+bangSlider("all", "前髪全体の厚さ", 0.015, 0.07, 0.001, (v) => { bangNendo().thick = v; $("bv-all").textContent = v.toFixed(3); });
+for (const [k, label, min, max, step, , dec] of BANG_SLIDERS) bangSlider(k, label, min, max, step, (v) => { if (bangSel < 0) return; const t = bangTips()[bangSel];
+  while (t.length <= k) t.push(t.length === 4 ? null : t.length === 2 ? bangNendo().slope : 0); t[k] = v; $("bv-" + k).textContent = v.toFixed(dec); });
 function bangPanelSync() {
   const t = bangSel >= 0 ? bangTips()[bangSel] : null;
-  for (const [k, , , , , def] of BANG_SLIDERS) { const v = t ? (t[k] ?? def()) : def(); $("bs-" + k).value = v; $("bs-" + k).disabled = !t; $("bv-" + k).textContent = t ? (+v).toFixed(2) : "-"; }
-  $("bangDel").disabled = !t; bangOut();
+  for (const [k, , , , , def, dec] of BANG_SLIDERS) { const v = t ? (t[k] ?? def()) : def(); $("bs-" + k).value = v; $("bs-" + k).disabled = !t; $("bv-" + k).textContent = t ? (+v).toFixed(dec) : "-"; }
+  $("bs-all").value = bangNendo().thick; $("bv-all").textContent = bangNendo().thick.toFixed(3);
+  $("bangDel").disabled = !t; bangHistSync(); bangOut();
 }
 const r3 = (v) => Math.round(v * 1000) / 1000;
 function bangOut() { const T = bangTips().map((t) => { const u = [...t]; while (u.length > 2 && (u[u.length - 1] == null || u[u.length - 1] === 0 && u.length > 3)) u.pop(); return u.map((v) => typeof v === "number" ? r3(v) : v); });
-  BANG.tips = structuredClone(T); $("bangOut").value = JSON.stringify({ hair: { sculpt: { nendo: { tips: T } } } }); }
+  const N = { tips: T }; if (bangHome && bangNendo().thick !== bangHome.thick) N.thick = r3(bangNendo().thick);
+  BANG.tips = structuredClone(T); BANG.thick = bangNendo().thick; $("bangOut").value = JSON.stringify({ hair: { sculpt: { nendo: N } } }); }
 async function bangRebuild() {   // 髪だけ作り直す(数秒かかることがある)
   $("busy").hidden = false; await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   avatar.setHair({ ...I.hairPick }); refreshLook(); $("busy").hidden = true; bangBuild();
@@ -499,26 +517,31 @@ canvas.addEventListener("pointerdown", (e) => {
   const hit = bangRay.intersectObjects(bangGrp.children)[0]; if (!hit) return;
   bangSel = hit.object.userData.i; controls.enabled = false; canvas.setPointerCapture(e.pointerId);
   bangPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), hit.object.getWorldPosition(new THREE.Vector3()));
-  bangDrag = { moved: false }; bangBuild();
+  bangDrag = { moved: false, before: bangSnap() }; bangBuild();
 }, { capture: true });   // OrbitControls より先に受ける(玉の上ではカメラを回さない)
 canvas.addEventListener("pointermove", (e) => {
   if (!bangDrag) return; toNdc(e); if (!bangRay.ray.intersectPlane(bangPlane, bangHit)) return;
   const p = avatar.object.worldToLocal(bangHit.clone()), [x, y, z] = I.HT.toHead(p.x, p.y, p.z), span = avatar.options.hair.sculpt.nendo.span;
-  const t = bangTips()[bangSel]; t[0] = Math.max(-span, Math.min(span, Math.atan2(x, Math.max(z, 0.02)) / D2R)); t[1] = Math.max(0.82, Math.min(1.16, y - 0.006));
-  bangGrp.children[bangSel].position.copy(tipPoint(t[0], t[1])); bangDrag.moved = true; bangOut();
+  const t = bangTips()[bangSel], at = Math.max(-span, Math.min(span, Math.atan2(x, Math.max(z, 0.02)) / D2R));   // at: 毛先を置きたい角度 → 表には「流れ」の分を足して入れる
+  t[0] = at + (t[5] ?? 0); t[1] = Math.max(0.82, Math.min(1.16, y - 0.006));
+  bangGrp.children[bangSel].position.copy(tipPoint(at, t[1])); bangDrag.moved = true; bangOut();
 });
-const bangUp = () => { if (!bangDrag) return; const moved = bangDrag.moved; bangDrag = null; controls.enabled = true; if (moved) bangRebuild(); };
+const bangUp = () => { if (!bangDrag) return; const { moved, before } = bangDrag; bangDrag = null; controls.enabled = true; if (moved) { bangCommit(before); bangRebuild(); } };
 canvas.addEventListener("pointerup", bangUp); canvas.addEventListener("pointercancel", bangUp);
 $("bangAdd").addEventListener("click", () => {   // 選んだふさ(なければ真ん中)のとなりに1本足す
   const T = bangTips(), i = bangSel >= 0 ? bangSel : Math.floor(T.length / 2), j = Math.min(i + 1, T.length - 1), a = i === j ? T[i][0] + 8 : (T[i][0] + T[j][0]) / 2;
-  T.splice(i + 1, 0, [r3(a), r3((T[i][1] + T[j][1]) / 2)]); bangSel = i + 1; bangRebuild(); });
-$("bangDel").addEventListener("click", () => { if (bangSel < 0 || bangTips().length <= 2) return; bangTips().splice(bangSel, 1); bangSel = -1; bangRebuild(); });
-$("bangReset").addEventListener("click", () => { avatar.options.hair.sculpt.nendo.tips = structuredClone(bangHome); BANG.tips = null; bangSel = -1; bangRebuild(); });
+  bangCommit(bangSnap()); T.splice(i + 1, 0, [r3(a), r3((T[i][1] + T[j][1]) / 2)]); bangSel = i + 1; bangRebuild(); });
+$("bangDel").addEventListener("click", () => { if (bangSel < 0 || bangTips().length <= 2) return; bangCommit(bangSnap()); bangTips().splice(bangSel, 1); bangSel = -1; bangRebuild(); });
+$("bangReset").addEventListener("click", () => { bangCommit(bangSnap()); bangSel = -1; bangRestore(bangHome); });   // はじめに戻すも「元に戻す」で取り消せる
+$("bangUndo").addEventListener("click", bangUndo); $("bangRedo").addEventListener("click", bangRedo);
+addEventListener("keydown", (e) => {   // Ctrl/⌘+Z = 元に戻す / Ctrl/⌘+Shift+Z・Ctrl+Y = やり直す(前髪の板を開いているときだけ)
+  if ($("bangPanel").hidden || !(e.ctrlKey || e.metaKey)) return; const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); bangUndo(); } else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); bangRedo(); } });
 onAvatar = () => { if (bangGrp.visible) bangBuild(); };
 toggle("tBang", (on) => {
   for (const id of ["tLay", "tLimb", "tChg"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("bangPanel").hidden = !on; $("poses").hidden = on || compare; bangGrp.visible = on;
-  if (on) { bangHome ??= structuredClone(bangTips()); if (curPose !== "aPose") [...$("poses").children].find((x) => x.textContent === "Aポーズ")?.click();   // 玉は立ち姿の位置に置くのでAポーズで
+  if (on) { bangHome ??= bangSnap(); if (curPose !== "aPose") [...$("poses").children].find((x) => x.textContent === "Aポーズ")?.click();   // 玉は立ち姿の位置に置くのでAポーズで
     bangBuild(); bangCam = [camera.position.clone(), controls.target.clone()]; const x = avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
     camera.position.set(x, 1.02 - low, 1.6 * (low ? 1.3 : 1)); controls.target.set(x, 0.98 - low, 0); }
   else { bangSel = -1; if (bangCam) { camera.position.copy(bangCam[0]); controls.target.copy(bangCam[1]); bangCam = null; } }
