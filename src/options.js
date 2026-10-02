@@ -324,13 +324,14 @@ export const DEFAULTS = {
   "hair": {
     "bangs": "nendo",
     "back": "short",
-    "ahoge": false,
+    "ahoge": true,
     "sculpt": {
       "nendo": {
-        "tips": [[-62, 0.98], [-44, 1.05], [-27, 1.075], [-9, 1.065], [9, 1.07], [26, 1.06], [43, 1.05], [62, 0.98]],
+        "tips": [[-84, 0.87, 0.7], [-62, 1.0], [-42, 1.035], [-22, 0.995], [-5, 1.045], [9, 0.975], [26, 1.03], [44, 1.04], [63, 0.995], [84, 0.87, 0.7]],
+        "round": 0.012,
         "slope": 0.5,
-        "span": 72,
-        "thick": 0.034,
+        "span": 92,
+        "thick": 0.036,
         "extra": 0.012,
         "top": 1.25,
         "groove": 0.02,
@@ -353,7 +354,14 @@ export const DEFAULTS = {
         ]
       },
       "shortBack": 0.86,
-      "shell": 0.028,
+      "shell": 0.036,
+      "ahogeSize": 1.15,
+      "bob": {
+        "tips": 0.045,
+        "teeth": 8,
+        "sharp": 3,
+        "flare": 0.045
+      },
       "taper": 0,
       "taperBack": 0,
       "backVolume": 0,

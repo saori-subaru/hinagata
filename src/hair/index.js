@@ -29,7 +29,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
     return G(segs, 0.006);
   }
   const AY = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) - 1.39;   // the ahoge sits on the top of the head
-  const AHOGE = (() => { const pts = [[0, 1.392 + AY, 0.0], [0.004, 1.43 + AY, 0.012], [0.012, 1.455 + AY, 0.04], [0.02, 1.455 + AY, 0.07]], segs = []; for (let i = 0; i + 1 < pts.length; i++) segs.push(strandSeg(pts[i], pts[i + 1], 0.012 * (1 - i / 3) + 0.003, 0.012 * (1 - (i + 1) / 3) + 0.0028, 0.55)); return G(segs, 0.006); })();
+  // ahoge: one curled strand standing up from the top of the hair, arching forward (size: hair.sculpt.ahogeSize)
+  const AHOGE = (() => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (OPT.hair.sculpt.shell || 0.02);
+    const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [x * S, top + y * S, z * S]), segs = [];
+    for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); segs.push(strandSeg(pts[i], pts[i + 1], (0.014 * (1 - t0 * 0.55)) * S, (0.014 * (1 - t1 * 0.55)) * S, 0.6)); }
+    return G(segs, 0.006); })();
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
@@ -40,15 +44,16 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
     // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
-    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y]) => [a * deg, y]);
+    "nendo": () => { const B = OPT.hair.sculpt.nendo, T = B.tips.map(([a, y, sl]) => [a * deg, y, sl ?? B.slope]);
       const notches = T.slice(1).map(([a], i) => (a + T[i][0]) / 2);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
         const th = Math.atan2(x, z), rr = Math.hypot(x, z);
-        let hem = 9; for (const [a, ty] of T) hem = Math.min(hem, ty + B.slope * Math.abs(th - a));   // V points: lines rising from each tip meet at the notches
+        let hem = 9; for (const [a, ty, sl] of T) hem = -smax(-hem, -(ty + sl * Math.abs(th - a)), B.round);   // V points: lines rising from each tip meet at the (slightly rounded) notches
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y);
         const shell = skullOnly(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;
-        return smax(smax(shell, hem - y, 0.006), side, 0.01); } }]; },
+        const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // keep off the ears
+        return smax(smax(smax(shell, hem - y, 0.006), side, 0.01), -ear, EAR_GAP.k); } }]; },
     // nendoStrands: the same idea made of separate strands (thin tips break up on a coarse mesh)
     "nendoStrands": () => { const B = OPT.hair.sculpt.nendo;   // wide, flat clumps that overlap, tips at the brows, longer locks at the sides
       return B.clumps.map(([th0, th1, ph1, w, bend, layer = 1]) => strand({ th0, ph0: B.root, th1, ph1, w: w * B.width, bend, off0: 0.014 * layer, off1: B.lift * layer, flat: B.flat, N: 8, tipPow: B.tipPow })); },   // layer: clumps in front / behind, so their edges show
@@ -58,7 +63,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
   const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
-  if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;   // height of the hairline at the forehead
+  if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
+  { const BT = OPT.hair.sculpt.bob; if (BT) Object.assign(BACKS.bob, BT); }   // bob overrides: tips (depth of the hem's points), teeth (how many), flare (outward flick)   // height of the hairline at the forehead
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
   const CORNER = OPT.hair.sculpt.corner ?? null, TAPER_SIDES = OPT.hair.sculpt.taperSides ?? null;
   const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
@@ -72,7 +78,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], bodySdf }) {
       const s2 = Math.sin(th) ** 2, arch = CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(th) / deg) : o.arch * (SQ ? (1 - SQ) * s2 + SQ * s2 ** 3 : s2);   // corner: the hairline turns down between these angles (degrees from the front), so it reaches the ear without receding at the temples   // square: the hairline stays level across the forehead and turns down at the corners
       const pk = PEAK.depth && c > 0 ? PEAK.depth * Math.max(0, 1 - Math.abs(th) / (PEAK.width * Math.PI / 180)) ** 2 : 0;   // widow's peak: the middle of the hairline dips down in a small V
       let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
-      if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * 6)), 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
+      if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * (o.teeth ?? 6))), o.sharp ?? 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
       const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
