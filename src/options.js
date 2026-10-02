@@ -166,8 +166,10 @@ export const DEFAULTS = {
         "lift": 0.6
       },
       "socketLow": {
-        "depth": 0,
-        "heightUp": 0.11
+        "depth": 0.01,
+        "width": 0.15,
+        "height": 0.1,
+        "heightUp": 0.14
       },
       "ears": {
         "hollow": {
