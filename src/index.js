@@ -52,6 +52,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
   const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
+  let building = true;
 
   // shapes
   const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
@@ -65,7 +66,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   let bodyAt = (x, y, z) => bodySdf(x, y, z);   // body distance; after the body is meshed, read back from its grid (clothes don't recompute the body)
   // name: which part (the cache key inside this character) / fast: cheaper sdf for grid sampling / bone1: bind everything to this bone / only: RegExp of bones allowed
   function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf) {
-    const T0 = performance.now(); let rec = hit?.[name], time = null;
+    const T0 = performance.now(); let rec = building ? hit?.[name] : null, time = null;   // the cache only serves the first build (later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = null;
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
@@ -288,6 +289,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   };
   avatar.drawFace();
   syncCover();
+  building = false;
   if (useCache && Object.keys(fresh).length) cachePut(cacheKey, fresh);   // not awaited: storing happens after the avatar is already on screen
   return avatar;
 }
