@@ -220,7 +220,7 @@ Two places, two kinds of people, one engine underneath.
 - `AGENTS.md` with how to send a part as a pull request.
 - The first parts are made by the owner.
 - Automatic checks on part pull requests (does it fit the art style, is it light enough).
-- A treasure hunt in the plaza (`site/lab/plaza.html`): walk, find, wear. If it happens, the gacha prototype (`gacha.html`) is not used — the gacha was only a test. The prizes would be Piilo's avatar items (the plaza already runs Piilo's witch via `lab/look.js`), not parts of this engine: this engine stays a developer tool focused on the base body and template presets.
+- A treasure hunt in the plaza (`site/lab/plaza.html`): walk, find, wear. If it happens, the gacha prototype (`gacha.html`) is not used — the gacha was only a test. What the prizes are is open: this engine focuses on the base body and template presets, so it may not grow enough parts to hand out as prizes.
 - The maker's look: see "Playground look" — the GitHub playground and the site's maker may want different looks.
 
 ## Decisions
