@@ -218,8 +218,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   //   腕と胴が脇より4cm下までひとかたまりになり、腕を上げると水かきのように伸びた。腕の下側の線より下・胴の側面(女の子の幅 x)より外・前後の帯の中だけを削る
   //   = 胸の前と背中の肉は残る(本物の脇と同じく、前後のひだにはさまれたくぼみ)。もともと腕と胴が離れている体型では空を削るだけで形は変わらない
   const AP = OPT.body.sculpt.armpit ?? {};
-  const ARMPIT = AP.on === false ? [] : [1, -1].map((m) => { const s = m > 0 ? "L" : "R", a = J[`upperArm.${s}`], b = J[`lowerArm.${s}`], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const ux = Math.abs(b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux, r = P[`upperArm.${s}`].ra + (AP.margin ?? 0.004);   // n: 腕の下側(下・内向き)
+  const ARMPIT = AP.on === false ? [] : [1, -1].map((m) => { const s = m > 0 ? "L" : "R", ja = J[`upperArm.${s}`], jb = J[`lowerArm.${s}`], a = [Math.abs(ja[0]), ja[1]], b = [Math.abs(jb[0]), jb[1]], L = Math.hypot(b[0] - a[0], b[1] - a[1]);   // 右側も左と同じ向きの座標で(X = |x| で計算するので、関節も |x| にそろえる)
+    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux, r = P[`upperArm.${s}`].ra + (AP.margin ?? 0.004);   // n: 腕の下側(下・内向き)
     const A0 = [AP.x ?? 0.105, AP.y ?? 0.67], B0 = [(AP.x ?? 0.105) + 0.05, (AP.y ?? 0.67) - 0.1], dl = Math.hypot(B0[0] - A0[0], B0[1] - A0[1]), qx = -(B0[1] - A0[1]) / dl, qy = (B0[0] - A0[0]) / dl;   // 胴の側面の線(外向きの法線 q)
     const ZW = AP.depth ?? 0.07, RND = AP.round ?? 0.02;
     return { t: 3, sub: true, k: AP.blend ?? 0.015, bone: "chest", bx0: m * 0.15, by0: 0.64, bz0: 0, br: 0.14,

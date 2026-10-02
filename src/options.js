@@ -136,9 +136,9 @@ export const DEFAULTS = {
       "armpit": {
         "x": 0.105,
         "y": 0.67,
-        "margin": 0,
-        "round": 0.02,
-        "blend": 0.008,
+        "margin": 0.006,
+        "round": 0.03,
+        "blend": 0.025,
         "depth": 0.07
       },
       "temple": {
