@@ -69,8 +69,8 @@ export const DEFAULTS = {
       },
       "faceBox": {
         "on": 1,
-        "y": 1.05,
-        "height": 0.09,
+        "y": 1.02,
+        "height": 0.12,
         "width": 0.155,
         "front": 0.21,
         "depth": 0.12,
@@ -145,22 +145,22 @@ export const DEFAULTS = {
         "baseY": 0.905
       },
       "nose": {
-        "tipZ": 0.29,
+        "tipZ": 0.267,
         "under": {
-          "dent": 0.02,
+          "dent": 0,
           "dentY": 0.915,
           "y": -0.002,
           "slope": 0.5
         },
         "tipRadius": 0.0045,
         "blend": 0.02,
-        "lift": 0.02
+        "lift": 0
       },
       "mouth": {
         "curve": 45,
         "free": 0.95,
-        "cheekBack": 2,
-        "back": 0.014
+        "cheekBack": 0,
+        "back": 0
       },
       "crown": {
         "y": 1.32,
