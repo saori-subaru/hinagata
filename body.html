@@ -476,8 +476,8 @@ function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { 
 loadFaceImg("img/face-test.png", { ax: 445, ay: 596 });
 const SLOTS = ["brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
 const SIDED = { eyes: true, brows: true, cheeks: true };
-const faceSel = { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" };
-const PRESETS = { "絵": { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" }, "ふつう": { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" }, "ふつう(前)": { eyes: "まる目(前)", brows: "ふつう(前)", mouth: "にこ", cheeks: "なし" }, "にこっ": { eyes: "にっこり", brows: "ふつう", mouth: "あーん", cheeks: "ぽっ" },
+const faceSel = { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" };   // 標準はコードで描く顔(画像ファイルなしで動く)
+const PRESETS = { "ふつう": { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" }, "絵": { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" }, "ふつう(前)": { eyes: "まる目(前)", brows: "ふつう(前)", mouth: "にこ", cheeks: "なし" }, "にこっ": { eyes: "にっこり", brows: "ふつう", mouth: "あーん", cheeks: "ぽっ" },
   "すやすや": { eyes: "とじ目", brows: "ふつう", mouth: "お", cheeks: "ぽっ" }, "びっくり": { eyes: "びっくり", brows: "こまり", mouth: "お", cheeks: "なし" }, "じとー": { eyes: "ジト目", brows: "おこ", mouth: "へ", cheeks: "なし" } };
 const FACES = Object.keys(PRESETS); let faceI = 0, blinking = false;
 function drawFace() {
