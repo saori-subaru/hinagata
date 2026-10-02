@@ -194,6 +194,9 @@ export const DEFAULTS = {
     }
   },
   "hair": {
+    "bangs": "none",
+    "back": "short",
+    "ahoge": false,
     "sculpt": {
       "shortBack": 0.86
     }

@@ -102,82 +102,13 @@ import { buildBody } from "./src/body/index.js";   // 体(関節と部品)
 const { J, PARENT, BONES, BI, P, CUT, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow } = buildBody(OPT, { slow: new URLSearchParams(location.search).has("slow"), oldSock: /[?&]oldsock/.test(location.search) });
 const PROF = [];   // 確認用: 部品ごとの生成時間と頂点数
 globalThis.sotai = { bodySdf, bodySdfSlow, P, CUT, blend, PROF, OPT };   // 確認用
-const pick = (...names) => names.flatMap((n) => [P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);
-const shirtCore = blendFast(pick("chest", "belly", "pelvis", "neck", "trap", "shoulder", "sleeve"), [-0.36, 0.4, -0.25], [0.36, 0.95, 0.27]);   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
-const COLLAR = { y: OPT.outfit.shirt.collar.y, bowl: OPT.outfit.shirt.collar.bowl, tilt: OPT.outfit.shirt.collar.tilt, front: OPT.outfit.shirt.collar.front, fwd: OPT.outfit.shirt.collar.forward };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
-const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
-const shirtSdf = (x, y, z, B = bodySdf) => {   // B: 体の距離(服を作るときは格子から読む速い版を渡す)
-  const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nx = x, nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;   // 首の柱(少し前に傾く)からの位置
-  const neck = y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (nx * nx + rz * rz));   // えりぐり: 首から離れるほど高くなるおわん形の面で切る(首に沿う布と平行にならないので、ふちがガタつかない)
-  const sm = (a, b) => -smin(-a, -b, 0.012);   // 角を丸めて切る
-  const fit = y > SHOULDER_FIT.y0 ? B(x, y, z) - SHOULDER_FIT.off - 0.3 * (1 - sstep(SHOULDER_FIT.y0, SHOULDER_FIT.y1, y) * sstep(SHOULDER_FIT.x0, SHOULDER_FIT.x0 + SHOULDER_FIT.xw, Math.abs(x))) : -1;   // 肩の上は体から離れすぎないように(怒り肩にしない)。首のまわりは効かせない
-  return Math.max(sm(sm(shirtCore(x, y, z) - 0.014, neck), fit), 0.455 - y); };   // すそはズボンの中に入れる
-const PANTS_HEM = OPT.outfit.pants.hem;   // ズボンのすその高さ
-const pantsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn"), CROTCH]);   // ズボンを着せる範囲
-const PANTS_OFF = OPT.outfit.pants.offset, PANTS_TOP = OPT.outfit.pants.top, PANTS_TILT = OPT.outfit.pants.tilt;   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
-const pantsCore = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) + 0.024 - PANTS_OFF, pantsMask(x, y, z) - 0.03);   // 体の形にそって着せる(横から見て分厚くならないように)
-const pantsSdf = (x, y, z, B = bodySdf) => Math.max(pantsCore(x, y, z, B) - 0.024, y - (PANTS_TOP - PANTS_TILT * z), PANTS_HEM - y);   // シャツより少し外側。上の口は後ろ上がり
-// 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
-const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
-const shoeCore = blend(pick("foot", "calf")), soleCore = blend(pick("foot"));
-const shoeSdf = (x, y, z) => Math.max(shoeCore(x, y, z) - SHOE.off, y - (SHOE.top - SHOE.tilt * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる
-const soleSdf = (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);
-// 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
-const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
-const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
+import { buildClothes } from "./src/clothes/index.js";   // 服・靴・靴下
+const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf } = buildClothes(OPT, { P, CROTCH, bodySdf });
 const FAST = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };   // 格子で測るとき用
-// ============================================================
-//  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
-//  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
-// ============================================================
-const HC = { c: [0, 1.137, -0.005], r: [0.255, 0.26, 0.262] };   // 毛束の通り道に使う頭の丸(頭の部品と同じ)
-const deg = Math.PI / 180;
-function onScalp(th, ph, off) {   // th: 頭のまわりの角度(0=正面, +=キャラの左) / ph: 高さの角度 / off: 頭の表面からの浮き
-  let p = [HC.c[0] + HC.r[0] * Math.cos(ph) * Math.sin(th), HC.c[1] + HC.r[1] * Math.sin(ph), HC.c[2] + HC.r[2] * Math.cos(ph) * Math.cos(th)];
-  for (let i = 0; i < 8; i++) { const d = bodySdf(...p), g = grad(bodySdf, ...p); p = p.map((v, k) => v + g[k] * (off - d)); }   // 体(顔・耳)にめりこまないよう、表面から off だけ離す
-  return p;
-}
-// 毛束の断面: 頭に沿って平たく(厚みは幅の flat 倍)。毛先に向かって細くとがる
-function strandSeg(a, b, ra, rb, flat) {
-  const c = C(a, b, ra, rb, "head", 0.004), mid = a.map((v, i) => (v + b[i]) / 2), n = grad(bodySdf, ...mid);
-  return Object.assign(c, { t: 4, n, flat });
-}
-function strand({ th0, ph0, th1, ph1, w, off0 = 0.012, off1 = 0.024, flat = 0.55, bend = 0, N = 7 }) {
-  const segs = []; let prev = null, prevR = 0;
-  for (let i = 0; i <= N; i++) {
-    const t = i / N, th = (th0 + (th1 - th0) * t + bend * Math.sin(Math.PI * t)) * deg, ph = (ph0 + (ph1 - ph0) * t) * deg;
-    const p = onScalp(th, ph, off0 + (off1 - off0) * t * t), r = Math.max(0.0042, w * (1 - Math.pow(t, 2.2)) * (0.85 + 0.15 * Math.sin(Math.PI * Math.min(1, t * 1.6))));
-    if (prev) segs.push(strandSeg(prev, p, prevR, r, flat)); prev = p; prevR = r;
-  }
-  return G(segs, 0.006);
-}
-const AHOGE = (() => { const pts = [[0, 1.392, 0.0], [0.004, 1.43, 0.012], [0.012, 1.455, 0.04], [0.02, 1.455, 0.07]], segs = []; for (let i = 0; i + 1 < pts.length; i++) segs.push(strandSeg(pts[i], pts[i + 1], 0.012 * (1 - i / 3) + 0.003, 0.012 * (1 - (i + 1) / 3) + 0.0028, 0.55)); return G(segs, 0.006); })();
-const smax = (a, b, k) => -smin(-a, -b, k);
-// 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
-const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
-const BANGS = {
-  "三分け": () => [[0, 2, -12, 0.074, 0], [-25, -30, -15, 0.07, -3], [25, 30, -15, 0.07, 3], [-47, -55, -24, 0.052, 0], [47, 55, -24, 0.052, 0]]
-    .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
-  "七三": () => [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
-    .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
-  "なし": () => [],
-  "ぱっつん": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
-};
-// 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
-const BACKS = { "ショート": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "ボブ": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
-function backBlock(o) {
-  const e = E([0, 1.125, -0.02], o.r, "head");
-  return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
-    const th = Math.atan2(x, z), c = Math.cos(th);
-    let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - o.arch * Math.sin(th) ** 2), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
-    if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * 6)), 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
-    const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
-    const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - 0.01;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
-    return smax(smax(dPrim(e, x, y, z) - flare, hem - y, 0.012), -ear, 0.006);
-  } };
-}
-const HAIR_PICK = { bangs: "なし", back: "ショート", ahoge: false };
-const hairSdfOf = () => blend([backBlock(BACKS[HAIR_PICK.back]), ...BANGS[HAIR_PICK.bangs](), ...(HAIR_PICK.ahoge ? [AHOGE] : [])]);
+import { buildHair } from "./src/hair/index.js";   // 髪(前髪・後ろ髪・アホ毛)
+const { BANGS, BACKS, hairSdfOf: hairOf } = buildHair(OPT, { P, bodySdf });
+const HAIR_PICK = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };   // いま選んでいる髪型
+const hairSdfOf = () => hairOf(HAIR_PICK);
 let hairSdf = hairSdfOf();
 
 // 重み: いちばん近い部品の骨に寄せる(近い部品どうしは、なめらかに分け合う)
