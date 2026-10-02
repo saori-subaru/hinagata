@@ -187,6 +187,8 @@ Low head-to-body ratio only (about 2 to 3 heads). Tall anime characters are well
 
 Should feel like a dependable developer tool, not a toy: neutral palette, one accent color, clear type hierarchy, consistent spacing, a visible version number, and links to the docs and the repository.
 
+Open (2026-10-02): this was written for the GitHub playground. The maker on the site is for people who don't write code, so it may want the site's playful look instead, with the same engine underneath.
+
 ## Migration plan (each step keeps the character pixel-identical)
 
 Status: steps 1-3 done (pixel-identical, checked with screenshots and a mesh/skin-weight checksum). `examples/minimal.html` uses `createAvatar` on its own. Sliders wait until the model, hair and motion are polished (relative placement makes sculpting slower).
@@ -198,6 +200,27 @@ Status: steps 1-3 done (pixel-identical, checked with screenshots and a mesh/ski
 5. `tools/shoot.mjs`, then presets, then docs.
 
 After each step: same vertex counts, and screenshots from fixed views compared against the previous step.
+
+## Where it lives and who uses it (2026-10-02)
+
+Two places, two kinds of people, one engine underneath.
+
+**Decided**
+- **GitHub is for people with agents.** They clone the repo, have their agent read it and add parts, and send them back as pull requests.
+- **The site is for people who don't write code.** They make a character there and walk around with it. It is a place to visit, not a workbench.
+- **No AI and no API keys in the site's maker.** It stays simple: pick parts, pick colors, tune the bangs.
+- **An avatar is a recipe**: the options JSON, not a mesh and not code. Saved in the browser (localStorage) first; a server only when people want to show theirs to others.
+- **The site only runs the library's own parts.** It never runs code from strangers.
+- **Parts flow one way**: a pull request merged on GitHub → the part appears in the site's maker.
+- **The engine moves to its own public repository** at some point. When is the owner's call.
+
+**Not decided yet**
+- License.
+- Writing parts as data (JSON) instead of code, so the site could take them without running anything.
+- `AGENTS.md` with how to send a part as a pull request.
+- The first parts are made by the owner.
+- Automatic checks on part pull requests (does it fit the art style, is it light enough).
+- The maker's look: see "Playground look" — the GitHub playground and the site's maker may want different looks.
 
 ## Decisions
 
