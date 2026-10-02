@@ -73,18 +73,25 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   }
   // painted jaw shadow (anime style, not from lighting): under the jaw toward the ears, and the top of the neck. Stored per vertex as "paint" (0..1)
   const JS = OPT.face.jawShadow;
+  // painted color per vertex (multiplied into the skin): the jaw shadow, and a soft crescent of shade inside each ear (reads as the ear's hollow)
+  const ES_ = OPT.face.earShade;
   function addPaint(geo) {
-    const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, A = new Float32Array(Pa.length / 3);
-    if (JS.on) for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];
-      const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);   // the underside of the jaw (faces down), in front of the ears
-      const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(-0.06, 0.0, z);   // the top of the neck, front half, darkest right under the jaw
-      A[v] = Math.min(1, Math.max(jaw, neck)); }
-    geo.setAttribute("paint", new THREE.BufferAttribute(A, 1));
+    const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), jc = new THREE.Color(JS.color), ec = new THREE.Color(ES_.color);
+    const put = (v, c, k) => { if (k <= 0) return; for (const [o, ch] of [[0, "r"], [1, "g"], [2, "b"]]) A[v * 3 + o] *= 1 + (c[ch] - 1) * Math.min(1, k); };
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];
+      if (JS.on) { const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);
+        const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(-0.06, 0.0, z);
+        put(v, jc, Math.max(jaw, neck)); }
+      if (ES_.on) { const h = HT.toHead(x, y, z);
+        for (const E of EARS) { const d = [0, 1, 2].map((k) => h[k] - E.c[k]), u = (d[0] * E.eu[0] + d[1] * E.eu[1] + d[2] * E.eu[2]) / E.ES, vv = (d[0] * E.ev[0] + d[1] * E.ev[1] + d[2] * E.ev[2]) / E.ES, w = (d[0] * E.ew[0] + d[1] * E.ew[1] + d[2] * E.ew[2]) / E.ES;
+          if (w < -0.012 || w > 0.04 || Math.abs(u) > 0.09 || Math.abs(vv) > 0.09) continue;   // the ear's front only
+          const r1 = Math.hypot((u - ES_.cu) / ES_.ru, (vv - ES_.cv) / ES_.rv), r2 = Math.hypot((u - ES_.cu + ES_.shift) / ES_.ru, (vv - ES_.cv) / (ES_.rv * 0.92));
+          put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
+    geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
   }
   const shadeToon = (c) => { const m = toon(c); m.onBeforeCompile = (sh) => {
-    sh.vertexShader = "attribute vec3 shadeN;\nattribute float paint;\nvarying float vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
-    sh.fragmentShader = "varying float vPaint;\nuniform vec3 paintColor;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * paintColor, vPaint);");
-    sh.uniforms.paintColor = { value: new THREE.Color(JS.color) }; }; return m; };
+    sh.vertexShader = "attribute vec3 shadeN;\nattribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
+    sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return m; };
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };

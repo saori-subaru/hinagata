@@ -341,8 +341,19 @@ export const DEFAULTS = {
     }
   },
   "face": {
-    "earLine": {
+    "earShade": {
       "on": true,
+      "color": "#ccab9f",
+      "strength": 1,
+      "cu": 0.006,
+      "cv": 0.002,
+      "ru": 0.038,
+      "rv": 0.05,
+      "shift": 0.022,
+      "soft": 0.45
+    },
+    "earLine": {
+      "on": false,
       "color": "#74463f",
       "width": 0.0024,
       "lift": 0.001,

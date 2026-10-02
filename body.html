@@ -254,7 +254,7 @@ $("tExport").addEventListener("click", async () => {
 });
 for (const name of Object.keys(POSES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = POSE_LABEL[name] ?? name; b.setAttribute("aria-pressed", String(name === avatar.pose)); b.addEventListener("click", () => { curPose = name; avatar.play(name); twin?.play(name); [...$("poses").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }); $("poses").append(b); }
 // 頭の試作: 押すと次の案でキャラを作り直す(ページは読み込み直さない)。並べているときは右のキャラを切りかえる
-const NOSE0 = { face: { noseShadow: { on: false }, jawShadow: { on: false }, earLine: { on: false } }, hair: { sculpt: { backVolumeTop: null, taper: 0, taperBack: 0, backVolume: 0, corner: null, taperSides: null } }, body: { sculpt: { neck: { width: 1 }, skullTop: { extra: 0 }, crown: { tilt: 0 }, noseGroove: { depth: 0 }, ears: { scale: 1, lobe: 0, turn: 0, trimDepth: 0.04 }, faceBox: { y: 1.02, height: 0.12 }, mouth: { cheekBack: 0, back: 0 }, nose: { lift: 0, tipRadius: 0.0045, tipZ: 0.267, under: { dent: 0 } } } } };   // 鼻・鼻の下・頬をいじる前(古い案が今後の変更を拾わないように)
+const NOSE0 = { face: { noseShadow: { on: false }, jawShadow: { on: false }, earLine: { on: false }, earShade: { on: false } }, hair: { sculpt: { backVolumeTop: null, taper: 0, taperBack: 0, backVolume: 0, corner: null, taperSides: null } }, body: { sculpt: { neck: { width: 1 }, skullTop: { extra: 0 }, crown: { tilt: 0 }, noseGroove: { depth: 0 }, ears: { scale: 1, lobe: 0, turn: 0, trimDepth: 0.04 }, faceBox: { y: 1.02, height: 0.12 }, mouth: { cheekBack: 0, back: 0 }, nose: { lift: 0, tipRadius: 0.0045, tipZ: 0.267, under: { dent: 0 } } } } };   // 鼻・鼻の下・頬をいじる前(古い案が今後の変更を拾わないように)
 const V6 = merge(NOSE0, { hair: { sculpt: { square: 1, hairline: 1.165, peak: { depth: 0 }, corner: null } },   // 案6: 低い頭蓋・平らな側面・四角い生え際(サイコロ寄り。いったん保留)
   body: { sculpt: { skull: { width: 0.21, height: 0.2, y: 1.09 }, cheeks: { width: 0.185 }, chin: { y: 0.835, curve: 0.95, k: 0.015 }, crown: { y: 1.235 }, faceBox: { sideX: 0.175, sideZ: -0.25, sideK: 0.04, round: 0.07 }, jaw: { width: 0.13 }, ears: { x: 0.188 } }, head: { shift: { z: 0 } } } });
 const V2 = merge(NOSE0, { face: { layout: { eyeX: 0.112, browX: 0.112, browY: 1.09 } }, hair: { sculpt: { shell: 0, square: 0, hairline: null, peak: { depth: 0 }, corner: null } },   // 案2
@@ -262,10 +262,11 @@ const V2 = merge(NOSE0, { face: { layout: { eyeX: 0.112, browX: 0.112, browY: 1.
 const OLD = merge(V2, { body: { head: { scale: 1 }, sculpt: { skull: { width: 0.249 }, faceBox: { on: 0 } } } });   // 案2にする前のモデル
 const V3 = merge(V2, { body: { sculpt: { faceBox: { cutFront: 0.215, sideX: 0.19, sideK: 0.06 } } } });   // 顔の正面と横を平らな面に
 const V4 = merge(V3, { face: { eyeSize: 1.42 } });   // 案3 + 目を大きく
-const PREV = { face: { earLine: { on: false } } };   // ひとつ前(耳の線を描く前)
-const NECK0 = merge(PREV, { body: { sculpt: { neck: { width: 1 } } } });   // 首を細くする前
-const ARCH = merge(NECK0, { hair: { sculpt: { corner: { a0: 0, a1: 95 } } }, body: { sculpt: { skullTop: { extra: 0.01 } } } });   // 生え際を丸いアーチ・頭の上を広げていた版
-const CORN0 = merge(NECK0, { hair: { sculpt: { corner: { a0: 35, a1: 92 }, backVolumeTop: null } } });   // 生え際を耳の上へ丸く下ろしていた版
+const PREV = { face: { earShade: { on: false }, earLine: { on: true } } };   // ひとつ前(耳の中を線で描いていた版)
+const NECK0 = merge(PREV, { face: { earLine: { on: false } } });   // 耳の線を描く前
+const NECK0b = merge(NECK0, { body: { sculpt: { neck: { width: 1 } } } });   // 首を細くする前
+const ARCH = merge(NECK0b, { hair: { sculpt: { corner: { a0: 0, a1: 95 } } }, body: { sculpt: { skullTop: { extra: 0.01 } } } });   // 生え際を丸いアーチ・頭の上を広げていた版
+const CORN0 = merge(NECK0b, { hair: { sculpt: { corner: { a0: 35, a1: 92 }, backVolumeTop: null } } });   // 生え際を耳の上へ丸く下ろしていた版
 const VOL0 = merge(CORN0, { hair: { sculpt: { backVolume: 0 } } });   // 後ろ頭側の髪のボリュームを足す前
 const SIDEBURN = { hair: { sculpt: { corner: { a0: 35, a1: 60, drop: 0.3 } } } };   // もみあげ(生え際が耳の前まで下りる。前髪のパターンとして)
 const TS0 = merge(VOL0, { hair: { sculpt: { corner: null, taperSides: null } } });   // 生え際を耳までつなげる・こめかみをへこませる前
@@ -287,7 +288,7 @@ const WIDE = merge(SHIFT0, { body: { sculpt: { skull: { width: 0.21 }, cheeks: {
 const STEP1 = merge(WIDE, { hair: { sculpt: { hairline: null, peak: { depth: 0 } } }, body: { sculpt: { skull: { height: 0.26, y: 1.128 }, crown: { y: 1.345 } } } });   // 案5+四角い生え際
 const V5 = merge(STEP1, { hair: { sculpt: { square: 0, corner: null } } });   // 案5(生え際がアーチのまま)
 const V7 = merge(STEP1, { body: { sculpt: { skull: { depth: 0.235 } } } });   // 案7: 前後を詰める(後頭部が出すぎないように)
-const HEAD_VARIANTS = [["いまの", null], ["ひとつ前", PREV], ["首の前", NECK0], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
+const HEAD_VARIANTS = [["いまの", null], ["ひとつ前(耳の線)", PREV], ["耳の線の前", NECK0], ["首の前", NECK0b], ["アーチ", ARCH], ["脇の前", CORN0], ["ボリュームの前", VOL0], ["もみあげ", SIDEBURN], ["こめかみの前", TS0], ["凹みの前", DENT1], ["耳の下の前", EB0], ["髪よけの前", GAP0], ["丸い耳の前", EAR0], ["福耳", FUKU], ["耳たぶの前", LOBE0], ["薄くする前", BV0], ["生え際の前", BLEND0], ["影の前", SHD0], ["一段出す前", LIFT0], ["引っこめる前", BACK0], ["鼻先の前", TIP0], ["凹みの前", DENT0], ["ずらす前", SHIFT0], ["幅を縮める前", WIDE], ["案5+生え際", STEP1], ["案5", V5], ["案7", V7], ["案6", V6], ["案2", V2], ["旧", OLD], ["案3", V3], ["案4", V4]];
 let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v) : null) === Q.get("o"))), pairI = 1;
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
