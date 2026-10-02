@@ -91,77 +91,9 @@ const low = matchMedia("(pointer: coarse)").matches || innerWidth < 820;
 // ============================================================
 //  形(符号つき距離)。身長 1.4、正面は +z、キャラの左手が +x
 // ============================================================
-const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
-function E(c, r, bone, k = 0.045, rot = 0) {   // rot: z軸の角度、または体の向きの軸3本 [[x軸],[y軸],[z軸]]
-  const M = Array.isArray(rot) ? rot.flat() : null, a = M ? 0 : rot;
-  return { t: 0, cx: c[0], cy: c[1], cz: c[2], rx: r[0], ry: r[1], rz: r[2], cr: Math.cos(a), sr: Math.sin(a), M, bone, k, bx0: c[0], by0: c[1], bz0: c[2], br: Math.max(...r) };
-}
-// 回転(x→y→zの順に回した軸3本)
-function axes(ax, ay = 0, az = 0) {
-  const rx = (v) => [v[0], v[1] * Math.cos(ax) - v[2] * Math.sin(ax), v[1] * Math.sin(ax) + v[2] * Math.cos(ax)];
-  const ry = (v) => [v[0] * Math.cos(ay) + v[2] * Math.sin(ay), v[1], -v[0] * Math.sin(ay) + v[2] * Math.cos(ay)];
-  const rz = (v) => [v[0] * Math.cos(az) - v[1] * Math.sin(az), v[0] * Math.sin(az) + v[1] * Math.cos(az), v[2]];
-  return [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map((v) => rz(ry(rx(v))));
-}
-const cut = (p) => Object.assign(p, { sub: true });   // 削る部品
-function G(list, k) {   // まとめて溶かした部品を、ひとかたまりとして扱う
-  const a = list.filter((p) => !p.sub), cx = a.reduce((s, p) => s + p.bx0, 0) / a.length, cy = a.reduce((s, p) => s + p.by0, 0) / a.length, cz = a.reduce((s, p) => s + p.bz0, 0) / a.length;
-  return { t: 2, f: blend(list), list, k, bx0: cx, by0: cy, bz0: cz, br: Math.max(...a.map((p) => Math.hypot(p.bx0 - cx, p.by0 - cy, p.bz0 - cz) + p.br)) };
-}
-function C(a, b, ra, rb, bone, k = 0.045, sx = 1) { const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], L = Math.hypot(bx, by, bz); return { t: 1, ax: a[0], ay: a[1], az: a[2], bx, by, bz, il: 1 / (L * L), ra, rb, sx, bone, k, bx0: a[0] + bx / 2, by0: a[1] + by / 2, bz0: a[2] + bz / 2, br: L / 2 + Math.max(ra, rb) }; }
-function dPrim(p, x, y, z) {
-  if (p.t === 2) return p.f(x, y, z);
-  if (p.t === 3) return p.f(x, y, z);   // 平面・曲面で削る用
-  if (p.t === 0) {   // 楕円体(近似。z軸まわりに回せる)
-    let dx = x - p.cx, dy = y - p.cy, dz = z - p.cz; if (p.M) { const M = p.M, u = M[0] * dx + M[1] * dy + M[2] * dz, v = M[3] * dx + M[4] * dy + M[5] * dz; dz = M[6] * dx + M[7] * dy + M[8] * dz; dx = u; dy = v; } else if (p.sr) { const u = dx * p.cr + dy * p.sr, v = -dx * p.sr + dy * p.cr; dx = u; dy = v; }
-    const qx = dx / p.rx, qy = dy / p.ry, qz = dz / p.rz, k0 = Math.sqrt(qx * qx + qy * qy + qz * qz), k1 = Math.sqrt((qx / p.rx) ** 2 + (qy / p.ry) ** 2 + (qz / p.rz) ** 2);
-    return k1 < 1e-9 ? -Math.min(p.rx, p.ry, p.rz) : k0 * (k0 - 1) / k1;
-  }
-  if (p.t === 4) {   // 毛束: 頭に沿って平たいカプセル
-    const qx = x - p.ax, qy = y - p.ay, qz = z - p.az, h = Math.min(1, Math.max(0, (qx * p.bx + qy * p.by + qz * p.bz) * p.il));
-    const vx = qx - p.bx * h, vy = qy - p.by * h, vz = qz - p.bz * h, vn = vx * p.n[0] + vy * p.n[1] + vz * p.n[2];
-    return Math.sqrt(vx * vx + vy * vy + vz * vz - vn * vn + (vn / p.flat) ** 2) - (p.ra + (p.rb - p.ra) * h);
-  }
-  const px = (x - p.ax) * p.sx, py = y - p.ay, pz = z - p.az;   // 太さの変わるカプセル(sx<1で横に太る)
-  const h = Math.min(1, Math.max(0, (px * p.bx + py * p.by + pz * p.bz) * p.il));
-  const dx = px - p.bx * h, dy = py - p.by * h, dz = pz - p.bz * h;
-  return Math.sqrt(dx * dx + dy * dy + dz * dz) - (p.ra + (p.rb - p.ra) * h);
-}
-// 溶け合わせ。遠い部品は計算を飛ばす(結果は変わらない)
-function blend(list) {
-  return (x, y, z) => {
-    let d = 1e9;
-    for (const p of list) {
-      const dx = x - p.bx0, dy = y - p.by0, dz = z - p.bz0, far = Math.sqrt(dx * dx + dy * dy + dz * dz) - p.br;
-      if (p.sub) { if (far >= p.k - d) continue; const di = dPrim(p, x, y, z); d = -smin(-d, di, p.k); continue; }   // 削る(なめらかに)
-      if (far >= d + p.k) continue; const di = dPrim(p, x, y, z); d = d > 1e8 ? di : smin(d, di, p.k);
-    }
-    return d;
-  };
-}
-
-
-// 速い溶け合わせ: 箱を小さなマスに分け、マスごとに「そこで効きうる部品」だけを先に選んでおく(結果はほぼ同じで、ずっと速い)
-//   効きうる = マスの中心で測った距離から、マスの大きさぶんの余裕を見ても、部品の外接球が届く範囲にあるもの。並び順はそのまま
-function blendFast(list, lo, hi, C = 0.04) {
-  const slow = blend(list), nx = Math.ceil((hi[0] - lo[0]) / C), ny = Math.ceil((hi[1] - lo[1]) / C), nz = Math.ceil((hi[2] - lo[2]) / C);
-  let cells = null;
-  const build = () => { cells = new Array(nx * ny * nz); const r = C * 0.866, M = 2.5 * r + 0.01;   // M: 距離の見積もりの余裕
-    for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-      const x = lo[0] + (i + 0.5) * C, y = lo[1] + (j + 0.5) * C, z = lo[2] + (k + 0.5) * C, d = slow(x, y, z);
-      cells[i + nx * (j + ny * k)] = list.filter((p) => { const far = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br - r; return p.sub ? far < p.k - d + M : far < d + p.k + M; });
-    } };
-  return (x, y, z) => {
-    const i = Math.floor((x - lo[0]) / C), j = Math.floor((y - lo[1]) / C), k = Math.floor((z - lo[2]) / C);
-    if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return slow(x, y, z);
-    if (!cells) build();
-    const L = cells[i + nx * (j + ny * k)]; let d = 1e9;
-    for (let n = 0; n < L.length; n++) { const p = L[n], dx = x - p.bx0, dy = y - p.by0, dz = z - p.bz0, far = Math.sqrt(dx * dx + dy * dy + dz * dz) - p.br;
-      if (p.sub) { if (far >= p.k - d) continue; const di = dPrim(p, x, y, z); d = -smin(-d, di, p.k); continue; }
-      if (far >= d + p.k) continue; const di = dPrim(p, x, y, z); d = d > 1e8 ? di : smin(d, di, p.k); }
-    return d > 1e8 ? slow(x, y, z) : d;
-  };
-}
+import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep } from "./src/sdf/prim.js";   // 形の部品・溶け合わせ
+import { grad, grad4, surfaceNets, gridSampler } from "./src/sdf/mesh.js";   // 網目にする
+import { ramp, toon, outlineMat, CLAY, clayMat } from "./src/materials.js";   // アニメ塗り・輪郭線・ねんど色
 
 // 関節(骨のつけ根)。寸法は見本から
 const FOOT_X = +(new URLSearchParams(location.search).get("fx") || 0.116);   // 足首の横位置(小さいほど内側に着く。がに股に見えないように)
@@ -215,7 +147,6 @@ const MOUTH_FREE = +(new URLSearchParams(location.search).get("mf") || 0.95);   
     f: (x, y, z) => Math.max(dPrim(c, x, y, z), ((z - zt) - (y - yt) * sl) / L) }; }
 CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
 CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
-const plane = (f, k) => cut({ t: 3, f, k, bx0: 0, by0: 0, bz0: 0, br: 1e9 });
 CUT.chin = plane((x, y) => (y - 0.835 + 0.014 * Math.exp(-x * x / 0.0032) - 0.95 * x * x) / Math.sqrt(1 + 4 * x * x), 0.015);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
 CUT.mouth = plane((x, y, z) => (0.222 + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
 CUT.crown = plane((x, y) => +(new URLSearchParams(location.search).get("crown") || 1.39) - y, +(new URLSearchParams(location.search).get("crk") || 0.02));   // 頭のてっぺんを少しだけ平たく
@@ -268,7 +199,6 @@ const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 
 const BODY = Object.entries(P).filter(([k]) => !/^(sleeve|leghole)/.test(k)).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
 const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose").map(([, v]) => v), ...Object.values(CUT), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
 // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
-const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - m * 0.128, dy = y - 0.995 - FACE_DY, ry = dy > 0 ? 0.088 : 0.105;
     if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
     else { const v = Math.abs(dy) / ry, t = dx * m / SOCK_BAND.len;   // 目じり側: 上下のふちは平行のまま、頭の横へ向かってなだらかに浅くなる(1点にすぼまらない)
@@ -386,77 +316,21 @@ function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(
 // ============================================================
 //  網目にする(サーフェスネッツ)
 // ============================================================
-function grad(sdf, x, y, z, e = 0.0012) { const gx = sdf(x + e, y, z) - sdf(x - e, y, z), gy = sdf(x, y + e, z) - sdf(x, y - e, z), gz = sdf(x, y, z + e) - sdf(x, y, z - e); const l = Math.hypot(gx, gy, gz) || 1; return [gx / l, gy / l, gz / l]; }
-// 傾きと値を4回の計算で(四面体の4点)。返り値 [nx, ny, nz, 距離]
-function grad4(sdf, x, y, z, e = 0.0012) { const a = sdf(x + e, y - e, z - e), b = sdf(x - e, y - e, z + e), c = sdf(x - e, y + e, z - e), d = sdf(x + e, y + e, z + e);
-  const gx = a - b - c + d, gy = -a - b + c + d, gz = -a + b - c + d, l = Math.hypot(gx, gy, gz) || 1; return [gx / l, gy / l, gz / l, (a + b + c + d) / 4]; }
 const PROJ = +(new URLSearchParams(location.search).get("proj") || 1);   // 表面へ寄せる回数
 const BAND = +(new URLSearchParams(location.search).get("band") || 6);   // 粗い格子で表面からこれだけ(×網目)離れていたら、細かく測らない
 // 体の距離は一度だけ測って取っておき、服を作るときは格子から読む(体の計算をやり直さない)
-let BODY_GRID = null;
-function bodyAt(x, y, z) { const G = BODY_GRID; if (G) { const fx = (x - G.lo[0]) / G.h, fy = (y - G.lo[1]) / G.h, fz = (z - G.lo[2]) / G.h, i = Math.floor(fx), j = Math.floor(fy), k = Math.floor(fz);
-    if (i >= 0 && j >= 0 && k >= 0 && i < G.nx - 1 && j < G.ny - 1 && k < G.nz - 1) { const V = G.V, nx = G.nx, nxy = G.nx * G.ny, o = i + nx * j + nxy * k, tx = fx - i, ty = fy - j, tz = fz - k, lim = 4 * G.h;
-      const a = V[o], b = V[o + 1], c = V[o + nx], d = V[o + nx + 1], e = V[o + nxy], f = V[o + nxy + 1], g = V[o + nxy + nx], hh = V[o + nxy + nx + 1];
-      if (Math.max(Math.abs(a), Math.abs(b), Math.abs(c), Math.abs(d), Math.abs(e), Math.abs(f), Math.abs(g), Math.abs(hh)) < lim) {
-        const ab = a + (b - a) * tx, cd = c + (d - c) * tx, ef = e + (f - e) * tx, gh = g + (hh - g) * tx, l0 = ab + (cd - ab) * ty, l1 = ef + (gh - ef) * ty; return l0 + (l1 - l0) * tz; } } }
-  return bodySdf(x, y, z); }
+let bodyAt = (x, y, z) => bodySdf(x, y, z);
 function mesh(sdf, lo, hi, h, bone1, only, fast = sdf) {   // fast: 格子で測るときに使う速い版(なければ sdf)   // bone1: 指定すると全部その骨だけに付ける(髪は頭の骨) / only: 重みを付けてよい骨(正規表現)
-  const T0 = performance.now(), tm = {};
-  const nx = Math.ceil((hi[0] - lo[0]) / h) + 1, ny = Math.ceil((hi[1] - lo[1]) / h) + 1, nz = Math.ceil((hi[2] - lo[2]) / h) + 1;
-  const V = new Float32Array(nx * ny * nz), id = (i, j, k) => i + nx * (j + ny * k);
-  // まず粗い格子で測って、表面から遠いところは細かく測らない(形は同じで、ずっと速い)
-  const S = 4, mx = Math.ceil((nx - 1) / S) + 1, my = Math.ceil((ny - 1) / S) + 1, mz = Math.ceil((nz - 1) / S) + 1, Cg = new Float32Array(mx * my * mz);
-  for (let k = 0; k < mz; k++) for (let j = 0; j < my; j++) for (let i = 0; i < mx; i++) Cg[i + mx * (j + my * k)] = fast(lo[0] + i * S * h, lo[1] + j * S * h, lo[2] + k * S * h);
-  // 中くらいの格子(2マスおき)を、粗い格子で表面に近いところだけ測る。細かく測るのは、中くらいの格子でも表面に近いところだけ
-  const qx = Math.ceil((nx - 1) / 2) + 1, qy = Math.ceil((ny - 1) / 2) + 1, Mg = new Float32Array(qx * qy * (Math.ceil((nz - 1) / 2) + 1)).fill(NaN);
-  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const dc = Cg[Math.round(i / S) + mx * (Math.round(j / S) + my * Math.round(k / S))];
-    if (Math.abs(dc) > BAND * h) { V[id(i, j, k)] = dc; continue; }
-    const mi = Math.round(i / 2), mj = Math.round(j / 2), mk = Math.round(k / 2), m = mi + qx * (mj + qy * mk);
-    let dm = Mg[m]; if (dm !== dm) dm = Mg[m] = fast(lo[0] + mi * 2 * h, lo[1] + mj * 2 * h, lo[2] + mk * 2 * h);
-    V[id(i, j, k)] = Math.abs(dm) > 3.5 * h ? dm : fast(lo[0] + i * h, lo[1] + j * h, lo[2] + k * h);
-  }
-  mesh.last = { V, lo, h, nx, ny, nz };   // 体の格子は服が使い回す
-  tm.sample = performance.now() - T0;
-  const cx = nx - 1, cy = ny - 1, cell = new Int32Array(cx * cy * (nz - 1)).fill(-1), cid = (i, j, k) => i + cx * (j + cy * k);
-  const CO = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
-  const ED = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
-  const pos = [], v8 = new Float32Array(8);
-  for (let k = 0; k < nz - 1; k++) for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
-    let neg = 0; for (let c = 0; c < 8; c++) { v8[c] = V[id(i + CO[c][0], j + CO[c][1], k + CO[c][2])]; if (v8[c] < 0) neg++; }
-    if (neg === 0 || neg === 8) continue;
-    let sx = 0, sy = 0, sz = 0, n = 0;
-    for (const [a, b] of ED) { const va = v8[a], vb = v8[b]; if ((va < 0) === (vb < 0)) continue; const t = va / (va - vb); sx += CO[a][0] + (CO[b][0] - CO[a][0]) * t; sy += CO[a][1] + (CO[b][1] - CO[a][1]) * t; sz += CO[a][2] + (CO[b][2] - CO[a][2]) * t; n++; }
-    cell[cid(i, j, k)] = pos.length / 3; pos.push(lo[0] + (i + sx / n) * h, lo[1] + (j + sy / n) * h, lo[2] + (k + sz / n) * h);
-  }
-  const nor = new Float32Array(pos.length);
-  for (let v = 0; v < pos.length; v += 3) {
-    let g = PROJ > 1 ? grad4(sdf, pos[v], pos[v + 1], pos[v + 2]) : null; if (g) { pos[v] -= g[0] * g[3]; pos[v + 1] -= g[1] * g[3]; pos[v + 2] -= g[2] * g[3]; }
-    g = grad4(sdf, pos[v], pos[v + 1], pos[v + 2]); pos[v] -= g[0] * g[3]; pos[v + 1] -= g[1] * g[3]; pos[v + 2] -= g[2] * g[3]; nor[v] = g[0]; nor[v + 1] = g[1]; nor[v + 2] = g[2];   // 2回で表面へ寄せ、2回目の向きをそのまま法線に
-  }
-  tm.project = performance.now() - T0 - tm.sample;
-  const idx = [];
-  const quad = (a, b, c, d) => {
-    if (a < 0 || b < 0 || c < 0 || d < 0) return;
-    const ax = pos[a * 3], ay = pos[a * 3 + 1], az = pos[a * 3 + 2];
-    const ux = pos[b * 3] - ax, uy = pos[b * 3 + 1] - ay, uz = pos[b * 3 + 2] - az, wx = pos[c * 3] - ax, wy = pos[c * 3 + 1] - ay, wz = pos[c * 3 + 2] - az;
-    const fx = uy * wz - uz * wy, fy = uz * wx - ux * wz, fz = ux * wy - uy * wx;
-    if (fx * (nor[a * 3] + nor[c * 3]) + fy * (nor[a * 3 + 1] + nor[c * 3 + 1]) + fz * (nor[a * 3 + 2] + nor[c * 3 + 2]) >= 0) idx.push(a, b, c, a, c, d); else idx.push(a, c, b, a, d, c);
-  };
-  for (let k = 1; k < nz - 1; k++) for (let j = 1; j < ny - 1; j++) for (let i = 1; i < nx - 1; i++) {
-    const v0 = V[id(i, j, k)] < 0;
-    if (v0 !== (V[id(i + 1, j, k)] < 0)) quad(cell[cid(i, j - 1, k - 1)], cell[cid(i, j, k - 1)], cell[cid(i, j, k)], cell[cid(i, j - 1, k)]);
-    if (v0 !== (V[id(i, j + 1, k)] < 0)) quad(cell[cid(i - 1, j, k - 1)], cell[cid(i, j, k - 1)], cell[cid(i, j, k)], cell[cid(i - 1, j, k)]);
-    if (v0 !== (V[id(i, j, k + 1)] < 0)) quad(cell[cid(i - 1, j - 1, k)], cell[cid(i, j - 1, k)], cell[cid(i, j, k)], cell[cid(i - 1, j, k)]);
-  }
+  const T0 = performance.now(), { pos, nor, idx, grid, time } = surfaceNets(sdf, lo, hi, h, { fast, band: BAND, proj: PROJ });
+  mesh.last = grid;   // 体の格子は服が使い回す
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setIndex(idx);
-  tm.w0 = performance.now();
+  const w0 = performance.now();
   const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
   for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
     for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } }
   g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4));
-  PROF.push({ verts: nv, ms: Math.round(performance.now() - T0), sample: Math.round(tm.sample), project: Math.round(tm.project), weights: Math.round(performance.now() - tm.w0) });
+  PROF.push({ verts: nv, ms: Math.round(performance.now() - T0), sample: Math.round(time.sample), project: Math.round(time.project), weights: Math.round(performance.now() - w0) });
   return g;
 }
 
@@ -476,9 +350,6 @@ const floor = new THREE.Mesh(new THREE.CircleGeometry(1.6, 48), new THREE.MeshTo
 function size() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 44 : 32; camera.updateProjectionMatrix(); }
 addEventListener("resize", size); size();
 
-const ramp = (() => { const d = new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
-const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: ramp });
-function outlineMat(w) { const m = new THREE.MeshBasicMaterial({ color: 0x3a2a3a, side: THREE.BackSide }); m.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace("#include <skinning_vertex>", `#include <skinning_vertex>\n  transformed += normalize(objectNormal) * ${w.toFixed(4)};`); }; return m; }
 
 // 骨
 const avatar = new THREE.Group(); scene.add(avatar);
@@ -489,8 +360,6 @@ const skeleton = new THREE.Skeleton(BONES.map((b) => bone[b]));
 const HIPS0 = bone.hips.position.clone();
 
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
-const CLAY = "#d6d6d4";
-const clayMat = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.62, metalness: 0 });
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)   // ねんど色: なめらかな陰影(見本と同じ見え方)
 function skinned(geo, color, ow = 0.005) {
   const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; avatar.add(m); m.bind(skeleton);
@@ -736,7 +605,7 @@ globalThis.sotaiFaceSheet = (mode = "skin") => {
 };
 function build() {
   const t0 = performance.now(), H = low ? 0.0095 : 0.0068;
-  BODY_GRID = null; body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); BODY_GRID = mesh.last;   // 体の格子を服に使い回す
+  bodyAt = (x, y, z) => bodySdf(x, y, z); body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); bodyAt = gridSampler(mesh.last, bodySdf);   // 体の格子を服に使い回す
   addShadeNormals(body.m.geometry); body.m.material.dispose(); body.m.material = body.toonMat = shadeToon(SKINS[skinI]);
   shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * +(new URLSearchParams(location.search).get("shr") || 0.75), null, /^(hips|spine|chest|upperChest|neck|upperArm)/, FAST.shirt), "#7fb6e8");
   pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, FAST.pants), "#5a4f7a");
