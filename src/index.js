@@ -8,7 +8,8 @@
 import * as THREE from "three";
 import { sstep } from "./sdf/prim.js";
 import { surfaceNets, gridSampler } from "./sdf/mesh.js";
-import { toon, outlineMat } from "./materials.js";
+import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
+import { shaded, SHADINGS, outlineMat } from "./materials.js";
 import { DEFAULTS, resolveOptions } from "./options.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
@@ -17,19 +18,40 @@ import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 
-export { DEFAULTS, POSES, resolveOptions };
+export { DEFAULTS, POSES, SHADINGS, resolveOptions };
 export { BODY_TYPES } from "./body/types.js";
 
 /**
  * Build an avatar.
  * options:  see DEFAULTS (src/options.js); anything left out uses the default.
- * settings: { quality: "high" | "low" — mesh density,
+ * settings: { quality: "game" (default) | "high" | "low" — mesh density (cell size 13.6 / 6.8 / 9.5 mm).
+ *               "game" is about 3x faster to build and 4x lighter to draw than "high"; only hair tips and hems get slightly rougher.
+ *             cell: a cell size in metres, instead of quality,
+ *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Needs the "meshoptimizer" package in your import map,
+ *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
+ *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
+ *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             debug: { slow, oldSock, faceWrap } — checking aids, normally unused }
  */
-export async function createAvatar(options = {}, { quality = "high", debug = {} } = {}) {
+// options without the parts that only change colors, the outline, the shading or the blush (the geometry is the same, so the cache can reuse it)
+function shapeOnly(OPT) {
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor)$/.test(k)) r[k] = strip(v); return r; };
+  const { colors, outline, shading, ...rest } = OPT, { blush, ...face } = OPT.face; return { ...rest, face, outfit: strip(OPT.outfit) };
+}
+
+export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const OPT = resolveOptions(options);
-  const H = quality === "low" ? 0.0095 : 0.0068;   // mesh cell size
+  const H = cell || { game: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  let MS = null;   // meshoptimizer's simplifier, only when asked for
+  if (simplify < 1) {
+    try { MS = (await import("meshoptimizer")).MeshoptSimplifier; await MS.ready; }
+    catch (e) { throw new Error('settings.simplify needs the "meshoptimizer" package: add "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.module.js" to your import map (or npm install meshoptimizer). ' + e.message); }
+  }
+  // meshes remembered from an earlier visit (same options, same generator code)
+  const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
+  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
+  const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
 
   // shapes
   const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
@@ -41,22 +63,38 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   // shape → skinned mesh
   const PROF = [];   // per mesh: vertex count and build time (ms)
   let bodyAt = (x, y, z) => bodySdf(x, y, z);   // body distance; after the body is meshed, read back from its grid (clothes don't recompute the body)
-  function mesh(sdf, lo, hi, h, bone1, only, fast = sdf) {   // fast: cheaper sdf for grid sampling / bone1: bind everything to this bone / only: RegExp of bones allowed
-    const T0 = performance.now(), { pos, nor, idx, grid, time } = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project });
-    mesh.last = grid;
+  // name: which part (the cache key inside this character) / fast: cheaper sdf for grid sampling / bone1: bind everything to this bone / only: RegExp of bones allowed
+  function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf) {
+    const T0 = performance.now(); let rec = hit?.[name], time = null;
+    mesh.last = null;
+    if (!rec) {
+      const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
+      let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
+      if (MS) ({ pos, nor, idx } = simplified(pos, nor, idx));
+      const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
+      for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
+        for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } }
+      rec = fresh[name] = { pos, nor, idx, si, sw };
+    }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setIndex(idx);
-    const w0 = performance.now();
-    const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
-    for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
-      for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } }
-    g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4));
-    PROF.push({ verts: nv, ms: Math.round(performance.now() - T0), sample: Math.round(time.sample), project: Math.round(time.project), weights: Math.round(performance.now() - w0) });
+    g.setAttribute("position", new THREE.BufferAttribute(rec.pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(rec.nor, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
+    g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(rec.si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(rec.sw, 4));
+    PROF.push({ part: name, verts: rec.pos.length / 3, ms: Math.round(performance.now() - T0), cached: !time, sample: time ? Math.round(time.sample) : 0, project: time ? Math.round(time.project) : 0 });
     return g;
   }
-  function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton
-    const m = new THREE.SkinnedMesh(geo, toon(color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
-    const o = new THREE.SkinnedMesh(geo, outlineMat(ow)); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
+  // keep `simplify` of the triangles (meshoptimizer), then drop the vertices nothing uses any more
+  function simplified(pos, nor, idx) {
+    const [out] = MS.simplify(idx, pos, 3, Math.max(3, Math.floor(idx.length * simplify / 3) * 3), 1, []);   // error 1 = let the triangle count decide
+    const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3);
+    for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; } }
+    for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
+    return { pos: P, nor: N, idx: out };
+  }
+  function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1)
+    const m = new THREE.SkinnedMesh(geo, shaded(OPT.shading.style, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
+    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
+    const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
     return { m, o, on: true };
   }
 
@@ -89,22 +127,22 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
   }
-  const shadeToon = (c) => { const m = toon(c); m.onBeforeCompile = (sh) => {
+  const shadeToon = (c) => { const m = shaded(OPT.shading.style, c); m.onBeforeCompile = (sh) => {
     sh.vertexShader = "attribute vec3 shadeN;\nattribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
     sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return m; };
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
-  parts.body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), OPT.colors.skin); bodyAt = gridSampler(mesh.last, bodySdf);
+  parts.body = skinned(mesh("body", bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), OPT.colors.skin); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   addShadeNormals(parts.body.m.geometry); addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
-  parts.shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * OPT.quality.shirtCell, null, /^(hips|spine|chest|upperChest|neck|upperArm)/, fast.shirt), OPT.outfit.shirt.color);
-  parts.pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, fast.pants), OPT.outfit.pants.color);
-  parts.shoes = skinned(mesh(shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), OPT.outfit.shoes.color);
-  parts.soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), OPT.outfit.shoes.soleColor);
-  parts.socks = skinned(mesh(sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, fast.sock), OPT.outfit.socks.color, 0.003);
+  parts.shirt = skinned(mesh("shirt", shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * OPT.quality.shirtCell, null, /^(hips|spine|chest|upperChest|neck|upperArm)/, fast.shirt), OPT.outfit.shirt.color);
+  parts.pants = skinned(mesh("pants", pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, fast.pants), OPT.outfit.pants.color);
+  parts.shoes = skinned(mesh("shoes", shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), OPT.outfit.shoes.color);
+  parts.soles = skinned(mesh("soles", soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), OPT.outfit.shoes.soleColor);
+  parts.socks = skinned(mesh("socks", sockSdf, [-0.22, -0.01, -0.12], [0.22, 0.17, 0.14], H * 0.7, null, /^(foot|lowerLeg)/, fast.sock), OPT.outfit.socks.color, 0.003);
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
-  const makeHair = (h) => skinned(mesh(HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.4, hairPick.back === "long" ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);   // long hair reaches down the back
+  const makeHair = (h) => skinned(mesh("hair:" + JSON.stringify(hairPick), HT.wrap(hairKit.hairSdfOf(hairPick)), [-0.4, hairPick.back === "long" ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38], h * OPT.quality.hairCell, "head"), OPT.colors.hair, 0.004);   // long hair reaches down the back
   parts.hair = makeHair(H);
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
@@ -130,6 +168,24 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
   }
   buildFaceLayer();
 
+  // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index
+  // (the outline shares the geometry). They never show, and skipping them makes drawing lighter. Follows each garment's .m.visible,
+  // so taking a garment off (or a clay view) brings the body back. Socks are left alone: the leg sits only ~2 mm inside them.
+  const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeSdf]], COVER_DEPTH = 0.006;   // m inside the garment
+  const bodyGeo = parts.body.m.geometry, fullIdx = bodyGeo.index, coverIdx = new Map();
+  let coverBits = null, coverSig = -1;
+  if (cull) { const Pa = bodyGeo.attributes.position.array; coverBits = new Uint8Array(Pa.length / 3);
+    COVER.forEach(([, f], b) => { for (let v = 0; v < coverBits.length; v++) if (f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -COVER_DEPTH) coverBits[v] |= 1 << b; }); }
+  function syncCover() {
+    if (!coverBits) return;
+    let sig = 0; COVER.forEach(([k], b) => { if (parts[k].m.visible) sig |= 1 << b; });
+    if (sig === coverSig) return; coverSig = sig;
+    if (!coverIdx.has(sig)) { const I = fullIdx.array, out = [];
+      for (let i = 0; i < I.length; i += 3) if (!((coverBits[I[i]] & sig) && (coverBits[I[i + 1]] & sig) && (coverBits[I[i + 2]] & sig))) out.push(I[i], I[i + 1], I[i + 2]);
+      coverIdx.set(sig, new THREE.BufferAttribute(new Uint32Array(out), 1)); }
+    bodyGeo.setIndex(sig ? coverIdx.get(sig) : fullIdx);
+  }
+
   // motion
   const playPose = createPosePlayer({ bone, BONES, HIPS0 });
   let poseName = "aPose", time = 0, lastPose = { b: {} };
@@ -145,6 +201,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
 
     /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose. */
     update(dt, { t, instant = false, pose } = {}) {
+      syncCover();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
@@ -165,6 +222,22 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
       if (skin) parts.body.toonMat.color.set(skin);
       for (const [k, c] of Object.entries({ hair, shirt, pants, shoes, soles, socks })) if (c) parts[k].m.material.color.set(c);
     },
+    /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
+    setOutline({ on, width, color } = {}) {
+      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+    },
+    /** Shading style (instant, no rebuild): "toon" | "smooth" | "flat" (see SHADINGS). Keeps the current colors. */
+    setShading(style) {
+      if (!SHADINGS.includes(style)) throw new Error(`Unknown shading "${style}". Available: ${SHADINGS.join(", ")}`);
+      OPT.shading.style = style;
+      for (const [k, x] of Object.entries(parts)) {
+        if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
+        const old = x.m.material; x.m.material = shaded(style, old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
+      }
+    },
+    /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
+    setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). */
     setHair(pick) {
       Object.assign(hairPick, pick);
@@ -188,5 +261,7 @@ export async function createAvatar(options = {}, { quality = "high", debug = {} 
     dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); root.removeFromParent(); },
   };
   avatar.drawFace();
+  syncCover();
+  if (useCache && Object.keys(fresh).length) cachePut(cacheKey, fresh);   // not awaited: storing happens after the avatar is already on screen
   return avatar;
 }

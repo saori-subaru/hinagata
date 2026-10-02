@@ -101,6 +101,15 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0025, "#e8607e"); for (let i = -1; i <= 1; i++) { fctx.beginPath(); fctx.moveTo(px(x + i * 0.011 + 0.004), py(y + 0.007)); fctx.lineTo(px(x + i * 0.011 - 0.003), py(y - 0.007)); fctx.stroke(); } },
     },
   };
+  // ほっぺと鼻先の「ほわっ」とした赤み(OPT.face.blush)。表情とは別で、いちばん下に塗る。線は描かない(線つきの「ぽっ」は表情の cheeks)
+  const soft = (x, y, r, sy, col, a) => { const c = col.slice(0, 7), A = Math.round(Math.max(0, Math.min(1, a)) * 255).toString(16).padStart(2, "0"), g = fctx.createRadialGradient(px(x), py(y), 0, px(x), py(y), pu(r));
+    g.addColorStop(0, c + A); g.addColorStop(0.55, c + Math.round(parseInt(A, 16) * 0.45).toString(16).padStart(2, "0")); g.addColorStop(1, c + "00");
+    fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(1, sy); fctx.translate(-px(x), -py(y)); fctx.fillStyle = g; fctx.fillRect(px(x - r), py(y + r), pu(r * 2), pu(r * 2)); fctx.restore(); };
+  function drawBlush() {
+    const B = OPT.face.blush; if (!B) return;
+    if (B.cheeks.on) for (const m of [1, -1]) soft(m * B.cheeks.x, B.cheeks.y, B.cheeks.size, 0.68, B.cheeks.color, B.cheeks.strength);
+    if (B.nose.on) soft(0, 0.929 + OPT.body.sculpt.nose.lift - FACE.dy, B.nose.size, 0.85, B.nose.color, B.nose.strength);   // 鼻先(頭の座標。body/index.js の鼻の先端と同じ高さ)
+  }
   const SLOTS = ["nose", "brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
   const SIDED = { eyes: true, brows: true, cheeks: true };
   const PRESETS = { "ふつう": { eyes: "まる目", brows: "ふつう", mouth: "にこ", cheeks: "なし" }, "絵": { eyes: "絵の目", brows: "絵の眉", mouth: "絵の口", cheeks: "なし" }, "ふつう(前)": { eyes: "まる目(前)", brows: "ふつう(前)", mouth: "にこ", cheeks: "なし" }, "にこっ": { eyes: "にっこり", brows: "ふつう", mouth: "あーん", cheeks: "ぽっ" },
@@ -108,6 +117,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   /** Draw a face: sel = { eyes, brows, mouth, cheeks } (names in PARTS). blinking swaps open eyes for closed ones. */
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+    drawBlush();
     for (const slot of SLOTS) { const name = slot === "eyes" && blinking && /まる|ジト|びっくり|絵/.test(sel.eyes) ? "とじ目" : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       if (SIDED[slot]) for (const m of [1, -1]) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
       else draw(1); }

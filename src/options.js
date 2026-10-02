@@ -6,6 +6,14 @@ export const DEFAULTS = {
     "skin": "#ffe0c8",
     "hair": "#6a4a30"
   },
+  "outline": {
+    "on": true,
+    "width": 1,
+    "color": "#3a2a3a"
+  },
+  "shading": {
+    "style": "toon"
+  },
   "body": {
     "head": {
       "scale": 0.9,
@@ -430,6 +438,22 @@ export const DEFAULTS = {
       "backZ": -0.02,
       "neckY": [0.74, 0.8, 0.84, 0.86],
       "neckX": [0.03, 0.07]
+    },
+    "blush": {
+      "cheeks": {
+        "on": false,
+        "color": "#ff8a73",
+        "strength": 0.45,
+        "size": 0.042,
+        "x": 0.15,
+        "y": 0.93
+      },
+      "nose": {
+        "on": false,
+        "color": "#ff8a73",
+        "strength": 0.4,
+        "size": 0.016
+      }
     },
     "noseShadow": {
       "on": false,

@@ -69,6 +69,11 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tCmp" type="button" aria-pressed="false">三面図で見本とくらべる</button>
     <button class="btn" id="tRef" type="button" aria-pressed="true" hidden>見本を重ねる</button>
     <button class="btn" id="tClay" type="button" aria-pressed="false">ねんど色</button>
+    <button class="btn" id="tShade" type="button">塗り: アニメ</button>
+    <button class="btn" id="tLine" type="button" aria-pressed="true">輪郭線</button>
+    <button class="btn" id="tBlushC" type="button" aria-pressed="false">ほっぺの赤み</button>
+    <button class="btn" id="tBlushN" type="button" aria-pressed="false">鼻先の赤み</button>
+    <label class="btn pick">赤みの色 <input type="color" id="blushCol" aria-label="赤みの色" style="width:28px;height:20px;padding:0;border:0;background:none;cursor:pointer"></label>
     <button class="btn" id="tCloth" type="button" aria-pressed="true">服</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
@@ -121,7 +126,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { createAvatar, POSES } from "./src/index.js";
+import { createAvatar, POSES, SHADINGS } from "./src/index.js";
 import { clayMat, toon } from "./src/materials.js";
 import { fromQuery, merge } from "./src/options.js";
 import { BODY_TYPES } from "./src/body/types.js";
@@ -150,12 +155,14 @@ const chair = new THREE.Group(); { const wood = toon(0xc49a6c); const seat = new
 // ── 素体を作る ──
 const WRAP = { zc: -0.02, r: 0.24 };   // 顔の絵の貼り方: 頭のまわりに巻きつける(?wrap)
 let avatar, parts, I, face, helper = null, curPose = "aPose";
+const LOOK = { shade: "toon", line: true, cheeks: false, nose: false, blush: null };   // 塗り方・輪郭線・赤み(作り直しても引き継ぐ。blush: 選んだ赤みの色)
+const keepStyle = (av) => { if (LOOK.shade !== "toon") av.setShading(LOOK.shade); if (!LOOK.line) av.setOutline({ on: false }); if (LOOK.cheeks || LOOK.nose || LOOK.blush) av.setBlush({ cheeks: { on: LOOK.cheeks, ...(LOOK.blush ? { color: LOOK.blush } : {}) }, nose: { on: LOOK.nose, ...(LOOK.blush ? { color: LOOK.blush } : {}) } }); };
 async function makeAvatar(opts, quiet = false) {   // 作る(作り直すときは古いのを捨てる)。quiet: 画面を隠さず、上に小さく「作り直し中」
   $(quiet ? "busy" : "msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   if (avatar) avatar.dispose();
   const t0 = performance.now();
   avatar = await createAvatar(opts, { quality: low ? "low" : "high", debug: { slow: Q.has("slow"), oldSock: Q.has("oldsock"), faceWrap: Q.has("wrap") ? WRAP : null } });
-  scene.add(avatar.object);
+  scene.add(avatar.object); keepStyle(avatar);
   ({ parts, internals: I } = avatar); face = I.face;
   globalThis.sotai = { avatar, bodySdf: I.bodySdf, bodySdfSlow: I.bodySdfSlow, P: I.P, CUT: I.CUT, PROF: avatar.PROF, OPT: avatar.options };   // 確認用
   const nv = Object.values(parts).reduce((s, x) => s + x.m.geometry.attributes.position.count, 0);
@@ -245,7 +252,19 @@ toggle("tHair", (on) => { parts.hair.on = on; refreshLook(); });
 toggle("tClay", (on) => { clay = on; refreshLook(); });
 toggle("tCmp", (on) => { compare = on; $("tRef").hidden = !on; $("ref").hidden = !on || $("tRef").getAttribute("aria-pressed") !== "true"; $("poses").hidden = on; if (on && !clay) $("tClay").click(); refreshLook(); });
 toggle("tRef", (on) => { $("ref").hidden = !on; refreshLook(); });
-toggle("tBone", (on) => { helper.visible = on; for (const m of [clayMat, parts.body.toonMat, ...["shirt", "pants", "shoes", "soles", "socks", "hair"].map((k) => parts[k].m.material)]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } });
+const seeThrough = (on) => { for (const m of [clayMat, parts.body.toonMat, ...["shirt", "pants", "shoes", "soles", "socks", "hair"].map((k) => parts[k].m.material)]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } };
+toggle("tBone", (on) => { helper.visible = on; seeThrough(on); });
+// 塗り方(アニメ=3段の影 / なめらか / べた塗り)と輪郭線: 作り直さずにその場で切りかわる
+const SHADE_LABEL = { toon: "アニメ", smooth: "なめらか", flat: "べた塗り" };
+$("tShade").addEventListener("click", () => { LOOK.shade = SHADINGS[(SHADINGS.indexOf(LOOK.shade) + 1) % SHADINGS.length]; $("tShade").textContent = `塗り: ${SHADE_LABEL[LOOK.shade] ?? LOOK.shade}`;
+  for (const av of [avatar, twin].filter(Boolean)) av.setShading(LOOK.shade);
+  if ($("tBone").getAttribute("aria-pressed") === "true") seeThrough(true); refreshLook(); });
+toggle("tLine", (on) => { LOOK.line = on; for (const av of [avatar, twin].filter(Boolean)) av.setOutline({ on }); });
+// ほっぺ・鼻先の赤み(ほわっと塗る。表情の「ぽっ」とは別)
+toggle("tBlushC", (on) => { LOOK.cheeks = on; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ cheeks: { on } }); });
+toggle("tBlushN", (on) => { LOOK.nose = on; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ nose: { on } }); });
+$("blushCol").value = avatar.options.face.blush.cheeks.color.slice(0, 7);
+$("blushCol").addEventListener("input", (e) => { LOOK.blush = e.target.value; for (const av of [avatar, twin].filter(Boolean)) av.setBlush({ cheeks: { color: LOOK.blush }, nose: { color: LOOK.blush } }); });   // ほっぺと鼻先は同じ色
 toggle("tWire", (on) => { wire = on; refreshLook(); });
 $("tFace").addEventListener("click", () => { faceI = (faceI + 1) % FACES.length; avatar.setFace(face.PRESETS[FACES[faceI]]); faceLabels(); });
 const cyc = (id, slot) => $(id).addEventListener("click", () => { const k = Object.keys(face.PARTS[slot]); avatar.setFace({ [slot]: k[(k.indexOf(avatar.faceSel[slot]) + 1) % k.length] }); faceLabels(); });
@@ -327,7 +346,7 @@ async function makeTwin() {
   $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   twin?.dispose();
   twin = await createAvatar(merge(fromQuery(location.search), HEAD_VARIANTS[pairI][1] ?? {}), { quality: low ? "low" : "high" });
-  scene.add(twin.object); twin.play(curPose); twin.setFace({ ...avatar.faceSel, nose: twin.faceSel.nose }); twin.object.position.x = 0.48;
+  scene.add(twin.object); keepStyle(twin); twin.play(curPose); twin.setFace({ ...avatar.faceSel, nose: twin.faceSel.nose }); twin.object.position.x = 0.48;
   twin.setFaceLayout(face.getLayout());
   $("msg").hidden = true;
 }
