@@ -43,14 +43,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   P.chest = E([0, 0.68, 0.015], [0.13 * TO.chest, 0.1, 0.1 * TO.chest], "chest", 0.05);       // 胸は細め(脇の下を高くする)
-  // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, a little apart.
-  // Seen from the side: above, it rises out of the chest in a gentle hollow-then-round curve (like ノ, a wide blend); the most forward
-  // point is a little low; below, it turns back in quickly with a small blend, so there is a step to the belly.
-  // The part holds the chest itself so the blend width can change with height; joined to the body with almost no blend of its own.
-  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = 0.06 * Math.max(1, TO.chest), cy = 0.645, ru = r * 1.05, rd = r * 0.72, rz = r * 0.9, KU = 0.075, KD = 0.007;
+  // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
+  // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
+  // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
+  // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
+  // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
+  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = Math.max(0.06 * Math.max(1, TO.chest), r * 1.05), cy = 0.645, ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, KU = 0.03, KD = 0.007;
     const zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
-    const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + 0.035 ** 2) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored, rounded across the middle), so the shirt doesn't crease there
-    P.bust = { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; }
+    const part = (e) => { const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
+      return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; };
+    P.bust = Object.assign(part(0.01), { cloth: part(0.04) }); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly], [0.165 * TO.belly, 0.14, 0.115 * TO.belly], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   P.pelvis = E([0, 0.435, -0.005], [0.157 * TO.hips, 0.072, 0.1], "hips", 0.09);
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.215 - TO.waist), 0.575, 0], [0.05, 0.1, 0.14], "spine", 0.05));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
