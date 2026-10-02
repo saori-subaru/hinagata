@@ -309,7 +309,9 @@ export const DEFAULTS = {
       "shell": 0.028,
       "taper": 0.22,
       "taperBack": 0.18,
-      "backVolume": 0,
+      "backVolume": 0.02,
+      "backVolumeZ": [0.1, -0.06],
+      "backVolumeY": [0.98, 1.15],
       "earGap": {
         "gap": 0.012,
         "k": 0.02
