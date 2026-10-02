@@ -94,10 +94,12 @@ const low = matchMedia("(pointer: coarse)").matches || innerWidth < 820;
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep } from "./src/sdf/prim.js";   // 形の部品・溶け合わせ
 import { grad, grad4, surfaceNets, gridSampler } from "./src/sdf/mesh.js";   // 網目にする
 import { ramp, toon, outlineMat, CLAY, clayMat } from "./src/materials.js";   // アニメ塗り・輪郭線・ねんど色
+import { resolveOptions, fromQuery } from "./src/options.js";   // 設定(初期値はいまのキャラ)
+const OPT = resolveOptions(fromQuery(location.search));   // ?o=<JSON> や、調整用の短い名前(?nz=0.27 など)でも変えられる
 
 // 関節(骨のつけ根)。寸法は見本から
-const FOOT_X = +(new URLSearchParams(location.search).get("fx") || 0.116);   // 足首の横位置(小さいほど内側に着く。がに股に見えないように)
-const KNEE_X = +(new URLSearchParams(location.search).get("kx") || 0.108);   // 膝の横位置(足首を内側に寄せたのに合わせる)
+const FOOT_X = OPT.body.joints.footX;   // 足首の横位置(小さいほど内側に着く。がに股に見えないように)
+const KNEE_X = OPT.body.joints.kneeX;   // 膝の横位置(足首を内側に寄せたのに合わせる)
 const J = {
   hips: [0, 0.42, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.732, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
   "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
@@ -110,21 +112,21 @@ const BONES = Object.keys(PARENT);
 const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
 
 // 体の部品(見本の正面・横のシルエットに合わせた)
-const FOOT_H = +(new URLSearchParams(location.search).get("fh") || 0.029);   // 足の厚み(平たく)
-const SHOULDER_DROP = +(new URLSearchParams(location.search).get("sdrop") || 0.008);   // 肩の頂点を下げる量(なで肩に)
+const FOOT_H = OPT.body.sculpt.foot.thickness;   // 足の厚み(平たく)
+const SHOULDER_DROP = OPT.body.sculpt.shoulders.drop;   // 肩の頂点を下げる量(なで肩に)
 const P = {}, CUT = {};
 const FACE_DY = -0.015;   // 顔の絵と眼窩をまとめて上下にずらす量
 const WRAP = { zc: -0.02, r: 0.24 }; let FACE_WRAP = /[?&]wrap/.test(location.search) ? WRAP : null;   // 顔の絵の貼り方: null=正面からまっすぐ / { zc, r }=頭のまわりに巻きつける
 const SOCKET_OUT = 0.065;
-const TEMPLE_Z0 = +(new URLSearchParams(location.search).get("tz0") || 0.09);   // これより後ろ(顔の横)は前へ出さない
-const TEMPLE = { d: +(new URLSearchParams(location.search).get("td") || 0.006), x: +(new URLSearchParams(location.search).get("tx") || 0.19), y: +(new URLSearchParams(location.search).get("ty") || 0.98), w: 0.06, h: +(new URLSearchParams(location.search).get("th") || 0.13) };   // 目じりの横を前へ出す量 / 中心の横位置 / 横・縦の広がり
-const SIDE_TRIM = { d: +(new URLSearchParams(location.search).get("sd") || 0.008), x: +(new URLSearchParams(location.search).get("sx") || 0.2), y: +(new URLSearchParams(location.search).get("sy") || 0.9), w: +(new URLSearchParams(location.search).get("sw") || 0.05), h: +(new URLSearchParams(location.search).get("sh") || 0.08) };   // ほおの横を抑える量 / 位置 / 広がり
-const CHEEK_FILL = { d: +(new URLSearchParams(location.search).get("cf") || 0.008), x: +(new URLSearchParams(location.search).get("cfx") || 0.125), y: +(new URLSearchParams(location.search).get("cfy") || 0.905), w: +(new URLSearchParams(location.search).get("cfw") || 0.095), h: +(new URLSearchParams(location.search).get("cfh") || 0.06) };   // 目の下のほおを足す量 / 位置 / 広がり
-const EYE_UNDER = { d: +(new URLSearchParams(location.search).get("eud") || 0.01), x: +(new URLSearchParams(location.search).get("eux") || 0.105), y: +(new URLSearchParams(location.search).get("euy") || -0.032), wi: +(new URLSearchParams(location.search).get("euwi") || 0.05), wo: +(new URLSearchParams(location.search).get("euwo") || 0.032), h: +(new URLSearchParams(location.search).get("euh") || 0.035) };   // 目の下半分のうしろだけを沈める(眼窩の外側は触らない): 量 / 中心 / 目頭側・目じり側の広がり / 上下の広がり
-const SOCK_IN = { d: +(new URLSearchParams(location.search).get("sid") || 0.005), x: +(new URLSearchParams(location.search).get("six") || 0.075), w: +(new URLSearchParams(location.search).get("siw") || 0.055), h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
-const SOCK_BAND = { on: !/[?&]oldsock/.test(location.search), len: +(new URLSearchParams(location.search).get("blen") || 0.11), lift: +(new URLSearchParams(location.search).get("blift") || 0.6) };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
-const SOCKET_LOW = { d: +(new URLSearchParams(location.search).get("low") || 0.014), y: 0.035, w: 0.085, h: 0.06, hu: +(new URLSearchParams(location.search).get("lhu") || 0.11) };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
-const EAR = { flare: 0.7, tilt: 0.3, x: 0.24, y: +(new URLSearchParams(location.search).get("eary") || 0.983), lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
+const TEMPLE_Z0 = OPT.body.sculpt.temple.minZ;   // これより後ろ(顔の横)は前へ出さない
+const TEMPLE = { d: OPT.body.sculpt.temple.depth, x: OPT.body.sculpt.temple.x, y: OPT.body.sculpt.temple.y, w: 0.06, h: OPT.body.sculpt.temple.height };   // 目じりの横を前へ出す量 / 中心の横位置 / 横・縦の広がり
+const SIDE_TRIM = { d: OPT.body.sculpt.cheekTrim.depth, x: OPT.body.sculpt.cheekTrim.x, y: OPT.body.sculpt.cheekTrim.y, w: OPT.body.sculpt.cheekTrim.width, h: OPT.body.sculpt.cheekTrim.height };   // ほおの横を抑える量 / 位置 / 広がり
+const CHEEK_FILL = { d: OPT.body.sculpt.cheekFill.depth, x: OPT.body.sculpt.cheekFill.x, y: OPT.body.sculpt.cheekFill.y, w: OPT.body.sculpt.cheekFill.width, h: OPT.body.sculpt.cheekFill.height };   // 目の下のほおを足す量 / 位置 / 広がり
+const EYE_UNDER = { d: OPT.body.sculpt.underEye.depth, x: OPT.body.sculpt.underEye.x, y: OPT.body.sculpt.underEye.y, wi: OPT.body.sculpt.underEye.widthInner, wo: OPT.body.sculpt.underEye.widthOuter, h: OPT.body.sculpt.underEye.height };   // 目の下半分のうしろだけを沈める(眼窩の外側は触らない): 量 / 中心 / 目頭側・目じり側の広がり / 上下の広がり
+const SOCK_IN = { d: OPT.body.sculpt.socketInner.depth, x: OPT.body.sculpt.socketInner.x, w: OPT.body.sculpt.socketInner.width, h: 0.065 };   // 眼窩の目頭側を引っこめる量 / 位置 / 広がり
+const SOCK_BAND = { on: !/[?&]oldsock/.test(location.search), len: OPT.body.sculpt.socketBand.length, lift: OPT.body.sculpt.socketBand.lift };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
+const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: 0.035, w: 0.085, h: 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
+const EAR = { flare: 0.7, tilt: 0.3, x: 0.24, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
 P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057, 0.056, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
 P.trap = E([0, 0.77, -0.016], [0.12, 0.03, 0.056], "chest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
 P.chest = E([0, 0.68, 0.015], [0.13, 0.1, 0.1], "chest", 0.05);       // 胸は細め(脇の下を高くする)
@@ -135,21 +137,21 @@ P.skull = E([0, 1.137, -0.005], [0.249, 0.26, 0.262], "head", 0.06);   // 頭(�
 P.occiput = E([0, 1.0, -0.07], [0.17, 0.09, 0.14], "head", 0.08);   // 後頭部の下(首の上まで丸くふくらむ)
 P.face = E([0, 0.935, 0.08], [0.2, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
 P.jaw = E([0, 0.868, 0.094], [0.112, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
-P.muzzle = E([0, +(new URLSearchParams(location.search).get("my") || 0.925), 0.17], [0.075, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
+P.muzzle = E([0, OPT.body.sculpt.muzzle.y, 0.17], [0.075, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
 const NOSE_DY = -0.035;
-const NOSE_Z = +(new URLSearchParams(location.search).get("nz") || 0.267);   // 鼻先の前後(前は0.273。少し内側へ)
-const LIP_CURVE = +(new URLSearchParams(location.search).get("pb") || 45);   // 鼻の下〜あご: 鼻先から1本のなめらかな弧になるよう、上ほど前へ反らせる
-P.muzzle2 = E([0, +(new URLSearchParams(location.search).get("m2y") || 0.905), 0.243], [0.035, 0.045, 0.04], "head", 0.03);   // その弧の下地(前を削る面で形が決まる)
-const NOSE_UNDER = { dent: +(new URLSearchParams(location.search).get("nd") || 0), dy: +(new URLSearchParams(location.search).get("ndy") || 0.915), y: +(new URLSearchParams(location.search).get("ny") || -0.002), slope: +(new URLSearchParams(location.search).get("ns") || 0.5) };   // 鼻の下側を切る線: 先端からの下がり / 傾き(奥へ)
-const MOUTH_FREE = +(new URLSearchParams(location.search).get("mf") || 0.95);   // 鼻の下を削る面を、この高さより上では前へ逃がす   // 鼻(鼻筋・付け根の凹みごと)を顔の絵の鼻の点に合わせて下げる量
-{ const c = C([0, 0.976 + NOSE_DY, 0.238], [0, 0.964 + NOSE_DY, NOSE_Z], 0.012, +(new URLSearchParams(location.search).get("nr") || 0.0045), "head"), yt = 0.964 + NOSE_DY - NOSE_UNDER.y, zt = NOSE_Z + 0.007, sl = NOSE_UNDER.slope, L = Math.hypot(1, sl);
-  P.nose = { t: 3, k: +(new URLSearchParams(location.search).get("nk") || 0.02), bone: "head", bx0: c.bx0, by0: c.by0, bz0: c.bz0, br: c.br,   // 鼻: 付け根から急に立ち上がって、先が尖る。下側は先端からまっすぐ奥へ切る(先端をひとつに)
+const NOSE_Z = OPT.body.sculpt.nose.tipZ;   // 鼻先の前後(前は0.273。少し内側へ)
+const LIP_CURVE = OPT.body.sculpt.mouth.curve;   // 鼻の下〜あご: 鼻先から1本のなめらかな弧になるよう、上ほど前へ反らせる
+P.muzzle2 = E([0, OPT.body.sculpt.muzzle.baseY, 0.243], [0.035, 0.045, 0.04], "head", 0.03);   // その弧の下地(前を削る面で形が決まる)
+const NOSE_UNDER = { dent: OPT.body.sculpt.nose.under.dent, dy: OPT.body.sculpt.nose.under.dentY, y: OPT.body.sculpt.nose.under.y, slope: OPT.body.sculpt.nose.under.slope };   // 鼻の下側を切る線: 先端からの下がり / 傾き(奥へ)
+const MOUTH_FREE = OPT.body.sculpt.mouth.free;   // 鼻の下を削る面を、この高さより上では前へ逃がす   // 鼻(鼻筋・付け根の凹みごと)を顔の絵の鼻の点に合わせて下げる量
+{ const c = C([0, 0.976 + NOSE_DY, 0.238], [0, 0.964 + NOSE_DY, NOSE_Z], 0.012, OPT.body.sculpt.nose.tipRadius, "head"), yt = 0.964 + NOSE_DY - NOSE_UNDER.y, zt = NOSE_Z + 0.007, sl = NOSE_UNDER.slope, L = Math.hypot(1, sl);
+  P.nose = { t: 3, k: OPT.body.sculpt.nose.blend, bone: "head", bx0: c.bx0, by0: c.by0, bz0: c.bz0, br: c.br,   // 鼻: 付け根から急に立ち上がって、先が尖る。下側は先端からまっすぐ奥へ切る(先端をひとつに)
     f: (x, y, z) => Math.max(dPrim(c, x, y, z), ((z - zt) - (y - yt) * sl) / L) }; }
 CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
 CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
 CUT.chin = plane((x, y) => (y - 0.835 + 0.014 * Math.exp(-x * x / 0.0032) - 0.95 * x * x) / Math.sqrt(1 + 4 * x * x), 0.015);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
 CUT.mouth = plane((x, y, z) => (0.222 + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / 0.014) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
-CUT.crown = plane((x, y) => +(new URLSearchParams(location.search).get("crown") || 1.39) - y, +(new URLSearchParams(location.search).get("crk") || 0.02));   // 頭のてっぺんを少しだけ平たく
+CUT.crown = plane((x, y) => OPT.body.sculpt.crown.y - y, OPT.body.sculpt.crown.blend);   // 頭のてっぺんを少しだけ平たく
 CUT.nape = plane((x, y, z) => (z + 0.15 + 3.5 * (y - 0.89)) / 3.64, 0.018);   // 後頭部の下は首の手前で内側へ巻き込む(首の後ろとの間にくびれ)
 for (const [s, m] of [["L", 1], ["R", -1]]) {
   const j = (n) => J[`${n}.${s}`];
@@ -158,17 +160,17 @@ for (const [s, m] of [["L", 1], ["R", -1]]) {
   const eu = nrm([m * EAR.flare, 0, -1]), ev0 = [m * EAR.tilt, 1, 0], ev = nrm(ev0.map((c, i) => c - dot(ev0, eu) * eu[i]));
   const ew = [eu[1] * ev[2] - eu[2] * ev[1], eu[2] * ev[0] - eu[0] * ev[2], eu[0] * ev[1] - eu[1] * ev[0]].map((c) => c * m), ec = [m * EAR.x, EAR.y, -0.022];   // ew: 耳の表(前・外向き)
   { const c = Math.cos(EAR.lean), sn = Math.sin(EAR.lean), u = eu.slice(), v = ev.slice(); for (let i = 0; i < 3; i++) { eu[i] = u[i] * c - v[i] * sn; ev[i] = v[i] * c + u[i] * sn; } }   // 上を後ろへ倒す(横から見て上が広い形に)
-  { const e0 = E(ec, [0.062, 0.067, 0.019], "head", 0.02, [eu, ev, ew]), ta = +(new URLSearchParams(location.search).get("eta") || 0.35), tc = +(new URLSearchParams(location.search).get("etc") || 0.04), n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
+  { const e0 = E(ec, [0.062, 0.067, 0.019], "head", 0.02, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
     P[`ear.${s}`] = { ...e0, t: 3, f: (x, y, z) => -smin(-dPrim(e0, x, y, z), -(n[0] * (x - ec[0]) + n[1] * (y - ec[1]) + n[2] * (z - ec[2]) - tc), 0.012) }; }   // 耳の後ろの下側をななめに落として、下へ細くとがらせる
   CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + ew[i] * 0.025 + eu[i] * 0.024), [0.026, 0.042, 0.011], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
   P[`butt.${s}`] = E([m * 0.07, 0.452, -0.05], [0.08, 0.066, 0.075], "hips", 0.05);
   P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054, 0.045 - SHOULDER_DROP * 0.6, 0.048], `upperArm.${s}`, 0.04);   // なで肩
   P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
-  P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, +(new URLSearchParams(location.search).get("far") || 0.032), `lowerArm.${s}`, +(new URLSearchParams(location.search).get("ek") || 0.01));   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
-  { const a = j("lowerArm"), b = j("hand"), t = +(new URLSearchParams(location.search).get("fbt") || 0.3), L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;   // ひじの下の前腕のふくらみ: 下寄りにふくらませ(上側は控えめ)、手首へ細くなりながらなめらかにつなぐ
-    const nd = [m * uy, -m * ux], od = +(new URLSearchParams(location.search).get("fbo") || 0.004), c = [a[0] + (b[0] - a[0]) * t + nd[0] * od, a[1] + (b[1] - a[1]) * t + nd[1] * od, a[2] + (b[2] - a[2]) * t];
-    P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], +(new URLSearchParams(location.search).get("fbr") || 0.0445), +(new URLSearchParams(location.search).get("fbe") || 0.041), `lowerArm.${s}`, +(new URLSearchParams(location.search).get("fbk") || 0.03));
-    Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: +(new URLSearchParams(location.search).get("ffl") || 0.64) }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
+  P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
+  { const a = j("lowerArm"), b = j("hand"), t = OPT.body.sculpt.forearm.bulge.start, L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;   // ひじの下の前腕のふくらみ: 下寄りにふくらませ(上側は控えめ)、手首へ細くなりながらなめらかにつなぐ
+    const nd = [m * uy, -m * ux], od = OPT.body.sculpt.forearm.bulge.offset, c = [a[0] + (b[0] - a[0]) * t + nd[0] * od, a[1] + (b[1] - a[1]) * t + nd[1] * od, a[2] + (b[2] - a[2]) * t];
+    P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], OPT.body.sculpt.forearm.bulge.radius, OPT.body.sculpt.forearm.bulge.radiusEnd, `lowerArm.${s}`, OPT.body.sculpt.forearm.bulge.blend);
+    Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: OPT.body.sculpt.forearm.bulge.flat }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
   // 手: Aポーズで手のひらが下を向く。指4本(少し開く)+親指
   const w = j("hand"), D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];   // D=指の向き N=手のひらの向き S=親指の側
   const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
@@ -181,12 +183,12 @@ for (const [s, m] of [["L", 1], ["R", -1]]) {
   const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
   P[`thumb.${s}`] = C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013, 0.011, `hand.${s}`, 0.012);
   P[`thigh.${s}`] = C(j("upperLeg"), j("lowerLeg"), 0.08, 0.066, `upperLeg.${s}`, 0.05);
-  P[`thighB.${s}`] = E([m * 0.11, +(new URLSearchParams(location.search).get("tby") || 0.335), +(new URLSearchParams(location.search).get("tbz") || -0.045)], [0.058, +(new URLSearchParams(location.search).get("tbh") || 0.055), +(new URLSearchParams(location.search).get("tbd") || 0.046)], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
-  P[`thighF.${s}`] = E([m * 0.11, +(new URLSearchParams(location.search).get("tfy") || 0.33), +(new URLSearchParams(location.search).get("tfz") || 0.035)], [+(new URLSearchParams(location.search).get("tfw") || 0.055), +(new URLSearchParams(location.search).get("tfh") || 0.125), +(new URLSearchParams(location.search).get("tfd") || 0.06)], `upperLeg.${s}`, +(new URLSearchParams(location.search).get("tfk") || 0.05));   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
-  P[`thighIn.${s}`] = E([m * +(new URLSearchParams(location.search).get("tix") || 0.062), +(new URLSearchParams(location.search).get("tiy") || 0.34), 0.002], [+(new URLSearchParams(location.search).get("tiw") || 0.042), +(new URLSearchParams(location.search).get("tih") || 0.06), 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
-  P[`calfO.${s}`] = E([m * (FOOT_X + +(new URLSearchParams(location.search).get("cox") || 0.018)), +(new URLSearchParams(location.search).get("coy") || 0.175), -0.008], [+(new URLSearchParams(location.search).get("cow") || 0.036), +(new URLSearchParams(location.search).get("coh") || 0.06), 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
+  P[`thighB.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.back.y, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
+  P[`thighF.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.front.y, OPT.body.sculpt.thigh.front.z], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
+  P[`thighIn.${s}`] = E([m * OPT.body.sculpt.thigh.inner.x, OPT.body.sculpt.thigh.inner.y, 0.002], [OPT.body.sculpt.thigh.inner.width, OPT.body.sculpt.thigh.inner.height, 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
+  P[`calfO.${s}`] = E([m * (FOOT_X + OPT.body.sculpt.calf.outer.x), OPT.body.sculpt.calf.outer.y, -0.008], [OPT.body.sculpt.calf.outer.width, OPT.body.sculpt.calf.outer.height, 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
   P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.057, `lowerLeg.${s}`, 0.05);
-  P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, +(new URLSearchParams(location.search).get("cbz") || -0.017)], [+(new URLSearchParams(location.search).get("cbw") || 0.055), 0.068, +(new URLSearchParams(location.search).get("cbd") || 0.058)], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
+  P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, OPT.body.sculpt.calf.back.z], [OPT.body.sculpt.calf.back.width, 0.068, OPT.body.sculpt.calf.back.depth], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
   P[`foot.${s}`] = E([m * (FOOT_X - 0.002), -0.003 + FOOT_H, 0.015], [0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
   // 服用: 半分の長さの袖・すそ
   const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
@@ -210,37 +212,37 @@ const socket = (x, y) => { let d = 0; for (const m of [1, -1]) { const dx = x - 
 const temple = (x, y, z) => { if (z < -0.02) return 0; let d = 0, trim = 0; for (const m of [1, -1]) { const dx = (x - m * TEMPLE.x) / TEMPLE.w, dy = (y - TEMPLE.y) / TEMPLE.h, r = dx * dx + dy * dy; if (r < 1) d += TEMPLE.d * (1 - r) ** 2; } for (const m of [1, -1]) { const dx = (x - m * CHEEK_FILL.x) / CHEEK_FILL.w, dy = (y - CHEEK_FILL.y) / CHEEK_FILL.h, r = dx * dx + dy * dy; if (r < 1) d += CHEEK_FILL.d * (1 - r) ** 2; }   // 目の下〜鼻の横のほお(上から見てこけないように)
   for (const m of [1, -1]) { const dx = (x - m * SIDE_TRIM.x) / SIDE_TRIM.w, dy = (y - SIDE_TRIM.y) / SIDE_TRIM.h, r = dx * dx + dy * dy; if (r < 1) trim += SIDE_TRIM.d * (1 - r) ** 2; }   // ほおの横のでっぱりを少し抑える(上・斜めから見て角ばらないように)
   return d * Math.min(1, Math.max(0, (z - TEMPLE_Z0) / 0.06)) - trim; };   // 前を向いた面だけ前へ出す(横には広げない)
-if (!new URLSearchParams(location.search).has("slow")) HEAD.f = blendFast(HEAD.list, [-0.32, 0.7, -0.34], [0.32, 1.44, 0.4], +(new URLSearchParams(location.search).get("hc") || 0.025));   // 頭の部品も速い版で
+if (!new URLSearchParams(location.search).has("slow")) HEAD.f = blendFast(HEAD.list, [-0.32, 0.7, -0.34], [0.32, 1.44, 0.4], OPT.quality.headCell);   // 頭の部品も速い版で
 { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y) - temple(x, y, z); }
-const CROTCH = cut(E([0, +(new URLSearchParams(location.search).get("cry") || 0.29), 0], [+(new URLSearchParams(location.search).get("crw") || 0.025), +(new URLSearchParams(location.search).get("crh") || 0.075), 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
-const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + +(new URLSearchParams(location.search).get("kox") || 0.088)), +(new URLSearchParams(location.search).get("koy") || 0.25), 0], [+(new URLSearchParams(location.search).get("kow") || 0.012), +(new URLSearchParams(location.search).get("koh") || 0.03), 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
-const KNEE_IN = cut(E([0, +(new URLSearchParams(location.search).get("kiy") || 0.22), 0], [+(new URLSearchParams(location.search).get("kix") || 0.035), +(new URLSearchParams(location.search).get("kih") || 0.1), 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
+const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
+const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
+const KNEE_IN = cut(E([0, OPT.body.sculpt.knee.inner.y, 0], [OPT.body.sculpt.knee.inner.width, OPT.body.sculpt.knee.inner.height, 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
 const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, HEAD];
-const bodySdfSlow = blend(BODY_LIST), bodySdf = new URLSearchParams(location.search).has("slow") ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], +(new URLSearchParams(location.search).get("bc") || 0.04));   // ?slow で元の遅い版(確認用)
+const bodySdfSlow = blend(BODY_LIST), bodySdf = new URLSearchParams(location.search).has("slow") ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
 const PROF = [];   // 確認用: 部品ごとの生成時間と頂点数
-globalThis.sotai = { bodySdf, bodySdfSlow, P, CUT, blend, PROF };   // 確認用
+globalThis.sotai = { bodySdf, bodySdfSlow, P, CUT, blend, PROF, OPT };   // 確認用
 const pick = (...names) => names.flatMap((n) => [P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);
 const shirtCore = blendFast(pick("chest", "belly", "pelvis", "neck", "trap", "shoulder", "sleeve"), [-0.36, 0.4, -0.25], [0.36, 0.95, 0.27]);   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
-const COLLAR = { y: +(new URLSearchParams(location.search).get("cy") || 0.764), bowl: +(new URLSearchParams(location.search).get("cbw") || 2.2), tilt: +(new URLSearchParams(location.search).get("ctl") || 0.3), front: +(new URLSearchParams(location.search).get("cfr") || 0.35), fwd: +(new URLSearchParams(location.search).get("cfw") || 0.01) };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
-const SHOULDER_FIT = { x0: +(new URLSearchParams(location.search).get("sfx") || 0), xw: +(new URLSearchParams(location.search).get("sfw") || 0.13), off: +(new URLSearchParams(location.search).get("sfo") || 0.006), y0: +(new URLSearchParams(location.search).get("sf0") || 0.67), y1: +(new URLSearchParams(location.search).get("sf1") || 0.75) };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
+const COLLAR = { y: OPT.outfit.shirt.collar.y, bowl: OPT.outfit.shirt.collar.bowl, tilt: OPT.outfit.shirt.collar.tilt, front: OPT.outfit.shirt.collar.front, fwd: OPT.outfit.shirt.collar.forward };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
+const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
 const shirtSdf = (x, y, z, B = bodySdf) => {   // B: 体の距離(服を作るときは格子から読む速い版を渡す)
   const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nx = x, nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;   // 首の柱(少し前に傾く)からの位置
   const neck = y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (nx * nx + rz * rz));   // えりぐり: 首から離れるほど高くなるおわん形の面で切る(首に沿う布と平行にならないので、ふちがガタつかない)
   const sm = (a, b) => -smin(-a, -b, 0.012);   // 角を丸めて切る
   const fit = y > SHOULDER_FIT.y0 ? B(x, y, z) - SHOULDER_FIT.off - 0.3 * (1 - sstep(SHOULDER_FIT.y0, SHOULDER_FIT.y1, y) * sstep(SHOULDER_FIT.x0, SHOULDER_FIT.x0 + SHOULDER_FIT.xw, Math.abs(x))) : -1;   // 肩の上は体から離れすぎないように(怒り肩にしない)。首のまわりは効かせない
   return Math.max(sm(sm(shirtCore(x, y, z) - 0.014, neck), fit), 0.455 - y); };   // すそはズボンの中に入れる
-const PANTS_HEM = +(new URLSearchParams(location.search).get("hem") || 0.3);   // ズボンのすその高さ
+const PANTS_HEM = OPT.outfit.pants.hem;   // ズボンのすその高さ
 const pantsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn"), CROTCH]);   // ズボンを着せる範囲
-const PANTS_OFF = +(new URLSearchParams(location.search).get("pao") || 0.016), PANTS_TOP = +(new URLSearchParams(location.search).get("pat") || 0.505), PANTS_TILT = +(new URLSearchParams(location.search).get("ptl") || 0.25);   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
+const PANTS_OFF = OPT.outfit.pants.offset, PANTS_TOP = OPT.outfit.pants.top, PANTS_TILT = OPT.outfit.pants.tilt;   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
 const pantsCore = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) + 0.024 - PANTS_OFF, pantsMask(x, y, z) - 0.03);   // 体の形にそって着せる(横から見て分厚くならないように)
 const pantsSdf = (x, y, z, B = bodySdf) => Math.max(pantsCore(x, y, z, B) - 0.024, y - (PANTS_TOP - PANTS_TILT * z), PANTS_HEM - y);   // シャツより少し外側。上の口は後ろ上がり
 // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
-const SHOE = { off: +(new URLSearchParams(location.search).get("sof") || 0.012), top: +(new URLSearchParams(location.search).get("stop") || 0.095), tilt: +(new URLSearchParams(location.search).get("stl") || 0.25), sole: +(new URLSearchParams(location.search).get("ssh") || 0.02), rim: +(new URLSearchParams(location.search).get("srm") || 0.008) };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
+const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
 const shoeCore = blend(pick("foot", "calf")), soleCore = blend(pick("foot"));
 const shoeSdf = (x, y, z) => Math.max(shoeCore(x, y, z) - SHOE.off, y - (SHOE.top - SHOE.tilt * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる
 const soleSdf = (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);
 // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
-const SOCK_TOP = +(new URLSearchParams(location.search).get("skt") || 0.15);   // 靴下のはき口の高さ
+const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
 const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
 const FAST = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };   // 格子で測るとき用
 // ============================================================
@@ -281,7 +283,7 @@ const BANGS = {
   "ぱっつん": () => [{ t: 3, k: 0.02, bx0: 0, by0: 1.13, bz0: 0.07, br: 0.3, f: (x, y, z) => smax(dPrim(HELMET, x, y, z), 1.072 + 0.9 * x * x - y, 0.012) }],
 };
 // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
-const BACKS = { "ショート": { r: [0.282, 0.292, 0.29], side: 0.965, back: +(new URLSearchParams(location.search).get("hb") || 0.86), top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "ボブ": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
+const BACKS = { "ショート": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "ボブ": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03 } };
 function backBlock(o) {
   const e = E([0, 1.125, -0.02], o.r, "head");
   return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {
@@ -316,8 +318,8 @@ function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(
 // ============================================================
 //  網目にする(サーフェスネッツ)
 // ============================================================
-const PROJ = +(new URLSearchParams(location.search).get("proj") || 1);   // 表面へ寄せる回数
-const BAND = +(new URLSearchParams(location.search).get("band") || 6);   // 粗い格子で表面からこれだけ(×網目)離れていたら、細かく測らない
+const PROJ = OPT.quality.project;   // 表面へ寄せる回数
+const BAND = OPT.quality.band;   // 粗い格子で表面からこれだけ(×網目)離れていたら、細かく測らない
 // 体の距離は一度だけ測って取っておき、服を作るときは格子から読む(体の計算をやり直さない)
 let bodyAt = (x, y, z) => bodySdf(x, y, z);
 function mesh(sdf, lo, hi, h, bone1, only, fast = sdf) {   // fast: 格子で測るときに使う速い版(なければ sdf)   // bone1: 指定すると全部その骨だけに付ける(髪は頭の骨) / only: 重みを付けてよい骨(正規表現)
@@ -381,12 +383,12 @@ const INK = "#3a2632", MOUTH = "#b8475e";
 const EYE_SIZE = 1.25;   // 目の大きさ
 const EYE_COL = ["#2c3858", "#4f6a9a", "#8aa3cc", "#cfdcef"];   // 虹彩の色(上の暗い色 → 下の明るい色)
 // 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
-const EYE = { x: 0.112, y: 0.998 }, BROW = { x: 0.112, y: +(new URLSearchParams(location.search).get("by") || 1.09) }, MOUTHP = { x: 0, y: 0.896 }, CHEEK = { x: 0.152, y: 0.955 };
+const EYE = { x: 0.112, y: 0.998 }, BROW = { x: 0.112, y: OPT.face.layout.browY }, MOUTHP = { x: 0, y: 0.896 }, CHEEK = { x: 0.152, y: 0.955 };
 const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
 const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
 const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
 // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
-const PART_IMG = { eye: { src: "img/parts/eye.png", w: +(new URLSearchParams(location.search).get("iew") || 0), dx: +(new URLSearchParams(location.search).get("iex") || 0.004), dy: +(new URLSearchParams(location.search).get("iey") || 0.004) }, brow: { src: "img/parts/brow.png", w: +(new URLSearchParams(location.search).get("ibw") || 0), dx: +(new URLSearchParams(location.search).get("ibx") || 0.004), dy: +(new URLSearchParams(location.search).get("iby") || 0) }, mouth: { src: "img/parts/mouth.png", w: +(new URLSearchParams(location.search).get("imw") || 0), dx: 0, dy: +(new URLSearchParams(location.search).get("imy") || 0) } };
+const PART_IMG = { eye: { src: "img/parts/eye.png", w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, brow: { src: "img/parts/brow.png", w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: "img/parts/mouth.png", w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy } };
 for (const k in PART_IMG) { const im = new Image(); im.onload = () => { PART_IMG[k].img = im; if (typeof drawFace === "function") drawFace(); }; im.src = PART_IMG[k].src; }
 const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
 const PARTS = {
@@ -573,14 +575,14 @@ function refreshLook() {
   for (const x of all()) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
   faceLayer.visible = !clay; floor.visible = !compare;
 }
-const hairMesh = (H) => skinned(mesh(hairSdf, [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], H * +(new URLSearchParams(location.search).get("hr") || 0.85), "head"), "#6a4a30", 0.004);
+const hairMesh = (H) => skinned(mesh(hairSdf, [-0.34, 0.8, -0.36], [0.34, 1.48, 0.38], H * OPT.quality.hairCell, "head"), "#6a4a30", 0.004);
 function makeHair(H) { const h = hairMesh(H); $("tBangs").textContent = `前髪: ${HAIR_PICK.bangs}`; $("tBack").textContent = `後ろ髪: ${HAIR_PICK.back}`; return h; }
 function rebuildHair() {   // 髪だけ作り直す
   const on = hair.on; for (const m of [hair.m, hair.o]) { avatar.remove(m); m.geometry.dispose(); }
   hairSdf = hairSdfOf(); hair = makeHair(low ? 0.0095 : 0.0068); hair.on = on; refreshLook();
 }
 // 顔の陰: 陰を計算するときの面の向きだけを、なめらかな楕円(頭と顔の丸み)から借りる。形はそのままで、アニメ塗りの境目がガタつかない(ねんど色は本当の向きのまま)
-const FACE_SHADE = { w: +(new URLSearchParams(location.search).get("fsw") || 1), c: [0, +(new URLSearchParams(location.search).get("fsy") || 1.04), +(new URLSearchParams(location.search).get("fsz") || -0.02)], r: [0.25, +(new URLSearchParams(location.search).get("fsry") || 0.31), +(new URLSearchParams(location.search).get("fsrz") || 0.2)] };   // 借りる強さ / 楕円の中心 / 半径
+const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };   // 借りる強さ / 楕円の中心 / 半径
 function addShadeNormals(geo) {
   const P = geo.attributes.position.array, N = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
   for (let i = 0; i < P.length; i += 3) { const x = P[i], y = P[i + 1], z = P[i + 2];
@@ -607,7 +609,7 @@ function build() {
   const t0 = performance.now(), H = low ? 0.0095 : 0.0068;
   bodyAt = (x, y, z) => bodySdf(x, y, z); body = skinned(mesh(bodySdf, [-0.47, -0.02, -0.3], [0.47, 1.43, 0.34], H), SKINS[skinI]); bodyAt = gridSampler(mesh.last, bodySdf);   // 体の格子を服に使い回す
   addShadeNormals(body.m.geometry); body.m.material.dispose(); body.m.material = body.toonMat = shadeToon(SKINS[skinI]);
-  shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * +(new URLSearchParams(location.search).get("shr") || 0.75), null, /^(hips|spine|chest|upperChest|neck|upperArm)/, FAST.shirt), "#7fb6e8");
+  shirt = skinned(mesh(shirtSdf, [-0.3, 0.33, -0.2], [0.3, 0.86, 0.22], H * OPT.quality.shirtCell, null, /^(hips|spine|chest|upperChest|neck|upperArm)/, FAST.shirt), "#7fb6e8");
   pants = skinned(mesh(pantsSdf, [-0.28, 0.2, -0.2], [0.28, 0.55, 0.22], H * 1.2, null, /^(hips|spine|upperLeg|lowerLeg)/, FAST.pants), "#5a4f7a");
   shoes = skinned(mesh(shoeSdf, [-0.22, -0.01, -0.12], [0.22, 0.13, 0.14], H * 0.7, null, /^(foot|lowerLeg)/), "#c8564b");
   soles = skinned(mesh(soleSdf, [-0.22, -0.01, -0.12], [0.22, 0.03, 0.14], H * 0.6, null, /^foot/), "#f4f1ea");
