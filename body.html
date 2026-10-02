@@ -81,6 +81,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tCloth" type="button" aria-pressed="true">服</button>
     <button class="btn" id="tSleeve" type="button">袖: 半袖</button>
     <button class="btn" id="tShirtLen" type="button">シャツの丈: 入れる</button>
+    <button class="btn" id="tPantsKind" type="button">下: ズボン</button>
     <button class="btn" id="tPantsLen" type="button">ズボンの丈: 短パン</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
@@ -528,7 +529,7 @@ for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
 $("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
 // 服の形: 袖・シャツの丈・ズボンの丈(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
 const OUTFIT = { outfit: { shirt: {}, pants: {} } };
-const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }]];
+const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }], ["tPantsKind", "pants", "kind", "下", { pants: "ズボン", skirt: "スカート" }]];
 for (const [id, g, k, label, names] of OUTFIT_KINDS) {
   const cur = () => OUTFIT.outfit[g][k] ?? avatar.options.outfit[g][k], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit[g][k] = ks[(ks.indexOf(cur()) + 1) % ks.length]; show(); rebuildBody(); });
