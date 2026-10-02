@@ -1,0 +1,146 @@
+# Avatar library — design (draft)
+
+Goal: turn `body.html` (one 800-line page: sculpt + clothes + hair + face + motion + UI) into a small library that a person — or an AI coding agent — can call with one line, plus a playground page built on top of it.
+
+```js
+import { createAvatar } from "./src/index.js";
+const avatar = await createAvatar({ hair: { back: "short" }, outfit: { shoes: { color: "#c8564b" } } });
+scene.add(avatar.object);
+avatar.play("walk");
+// each frame: avatar.update(dt)
+```
+
+## Principles
+
+- **Plain ES modules, no build step.** Works from a CDN import map and from npm. `three` (>= 0.160) is a peer dependency.
+- **Options are plain JSON.** Everything that defines a character is one serializable object. The playground can copy it as code, save it, and load it back; an agent can read and write it.
+- **Every option has a default.** `createAvatar()` with no arguments gives today's character.
+- **Async from day one.** `createAvatar` returns a Promise, so generation can move to a Web Worker later without changing the API.
+- **Cheap changes stay cheap.** Colors, face parts and motion never regenerate geometry. Only shape, hair and clothing geometry do.
+
+## Folder layout
+
+```
+site/avatar/
+  src/
+    index.js            createAvatar, defaults, presets (public entry)
+    options.js          defaults, deep merge, validation against the schema
+    sdf/
+      prim.js           smin, E (ellipsoid), C (capsule), G (group), cut, plane, dPrim
+      blend.js          blend, blendFast (spatial culling)
+      mesh.js           surface nets, grad4, body distance grid reuse
+    rig.js              joints, bones, skeleton, skin weights
+    body/
+      parts.js          builds the body part list from options.body (today's P / CUT / BODY_LIST)
+      head.js           skull, nose, ears, eye sockets, temple / cheek displacement
+      limbs.js          arms, legs, hands, feet
+    clothes/            shirt.js, pants.js, socks.js, shoes.js (each: sdf from options + body)
+    hair/               index.js (bangs / back / ahoge system), presets.js
+    face/
+      layer.js          face texture layer (front-projected head mesh), shading normals
+      draw.js           code-drawn parts (round eyes, brows, mouths, ...)
+      images.js         image parts (eye / brow / mouth PNGs, facekit layout)
+    motion/             index.js (pose player, blending), presets.js (idle, walk, wave, sit, ...)
+    materials.js        toon ramp, outline, clay
+    export.js           GLB export (A-pose, outlines off)
+  presets/              JSON files: bodies, hairstyles, faces, outfits (templates for agents)
+  playground/           index.html + playground.js (the UI; imports src/)
+  tools/
+    shoot.mjs           render front / side / 3-4 / back PNGs from options (for agents to check their work)
+  facekit/              (as now)
+  docs/
+    AGENTS.md           how to use and extend, for coding agents
+    options.schema.json every option: type, range, default, rebuild yes/no
+  examples/             copy-paste examples (one character, a crowd of NPCs, walking, export)
+```
+
+## API
+
+```ts
+createAvatar(options?: AvatarOptions, settings?: { quality?: "high" | "low", onProgress?: (p: number) => void }): Promise<Avatar>
+
+interface Avatar {
+  object: THREE.Group          // add to your scene; contains the skinned meshes and the skeleton
+  options: AvatarOptions       // fully resolved options (defaults filled in)
+  bones: Record<BoneName, THREE.Bone>
+  update(dt: number): void     // advance motion and blinking
+  play(motion: string, opts?: { fade?: number }): void
+  setColors(colors: Partial<Colors>): void          // instant
+  setFace(face: Partial<FaceOptions>): Promise<void> // instant (redraws the face texture)
+  rebuild(options: Partial<AvatarOptions>): Promise<void>  // regenerates only what changed
+  exportGLB(): Promise<ArrayBuffer>
+  dispose(): void
+}
+```
+
+## Options
+
+Two tiers, so the common knobs stay short and the sculpt details stay out of the way.
+
+**Public** (documented with ranges, shown as sliders in the playground):
+
+```jsonc
+{
+  "colors": { "skin": "#ffe0c8", "hair": "#6a4a30", "eyes": "#4f6a9a" },
+  "face": {
+    "eyes": "image", "brows": "image", "mouth": "image",   // or code-drawn: "round", "smile", "closed", ...
+    "images": { "eye": "img/parts/eye.png", "brow": "img/parts/brow.png", "mouth": "img/parts/mouth.png" },
+    "cheeks": "none"
+  },
+  "hair": { "bangs": "none", "back": "short", "ahoge": false },
+  "outfit": {
+    "shirt": { "color": "#7fb6e8" },                        // null = no shirt
+    "pants": { "color": "#5a4f7a", "hem": 0.3 },
+    "socks": { "color": "#f7f3ea", "top": 0.15 },
+    "shoes": { "color": "#c8564b", "sole": "#f4f1ea" }
+  },
+  "body": { "headSize": 1, "chubby": 0, "legLength": 1, "shoulderDrop": 0.008 }   // a few broad sliders (new)
+}
+```
+
+**Advanced** (`body.sculpt`, `outfit.*.sculpt`): today's ~130 tuning values, renamed into nested, readable keys. For example:
+
+| today (URL) | advanced key |
+|---|---|
+| `nz` | `body.sculpt.nose.tipZ` |
+| `eta`, `etc` | `body.sculpt.ears.trimAngle`, `body.sculpt.ears.trimDepth` |
+| `kix`, `kiy`, `kih` | `body.sculpt.knee.inner.depth / y / height` |
+| `cy`, `ctl`, `cbw`, `cfr` | `outfit.shirt.sculpt.collar.y / tilt / bowl / front` |
+
+Renaming also fixes two collisions in the current URL names (`cbw` and `cfw` each mean two different things).
+
+The playground keeps reading URL parameters, but as `?o=<options JSON>` for sharing, plus `?view=` / `?pose=` / `?t=` for checking.
+
+## What regenerates what
+
+| change | cost |
+|---|---|
+| colors, face parts, motion | instant |
+| hair style | hair only (~0.5 s) |
+| outfit on/off, outfit shape | that garment only |
+| body shape | body + clothes + hair (a few seconds) |
+
+## Playground
+
+- 3D view on the left, panel on the right: Body / Face / Hair / Outfit / Motion.
+- Panel generated from `options.schema.json` (public tier). An "Advanced" section shows sculpt values.
+- Buttons: Copy as code (only the values that differ from the defaults), Save / Load JSON, Export GLB, Save PNG.
+- "Generating…" indicator while geometry is rebuilt. Works on phones.
+- English UI, Japanese toggle.
+- Developer drawer (collapsed): clay, wireframe, bones, compare with reference sheet, face sheet export.
+
+## Migration plan (each step keeps the character pixel-identical)
+
+1. Move pure code (sdf, mesh, rig, materials) into modules; `body.html` imports them.
+2. Move body / clothes / hair / face / motion into modules that read an options object instead of URL parameters. Write `defaults` from today's values.
+3. Wrap it in `createAvatar` and the `Avatar` object.
+4. Build the playground on `createAvatar`; retire `body.html` (keep a redirect).
+5. `tools/shoot.mjs`, then presets, then docs.
+
+After each step: same vertex counts, and screenshots from fixed views compared against the previous step.
+
+## Open questions
+
+- Package name.
+- Which broad body sliders to offer first (head size, chubbiness, leg length?). Head-to-body ratio needs joint positions to become relative, so it comes later.
+- Whether to keep the code-drawn face as the default (no image files needed) or the image parts.
