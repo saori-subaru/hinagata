@@ -16,7 +16,13 @@ export const POSES = {
     return { b: { "shoulder.L": [0, 0, 0.22 + k * 0.06], "shoulder.R": [0, 0, -0.22 - k * 0.06],   // 腕を頭上へ上げる時は肩ごと持ち上げる(腕の付け根だけで回すと肩の線が折れる)
       "upperArm.L": [-0.15, 0, 1.28 + k * 0.19], "upperArm.R": [-0.15, 0, -1.28 - k * 0.19], "lowerArm.L": [0, 0, 0.55], "lowerArm.R": [0, 0, -0.55], "upperLeg.L": [-0.5 * squat - 0.1 * k, 0, 0.08], "upperLeg.R": [-0.5 * squat - 0.1 * k, 0, -0.08], "lowerLeg.L": [0.9 * squat + 0.35 * k, 0, 0], "lowerLeg.R": [0.9 * squat + 0.35 * k, 0, 0], "foot.L": [-0.4 * squat + 0.3 * k, 0, 0], "foot.R": [-0.4 * squat + 0.3 * k, 0, 0], head: [-0.15 * k, 0, 0], spine: [0.2 * squat, 0, 0] }, y: k * 0.15 - squat * 0.05 }; },
   "sitChair": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
-      "upperArm.L": [-0.45, 0, -0.35], "upperArm.R": [-0.45, 0, 0.35], "lowerArm.L": [-0.75, 0, 0], "lowerArm.R": [-0.75, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true }),
+      // 腕は横へ下ろして、手は太ももの外・座面の少し上(腕が短いので座面までは届かない)
+      "upperArm.L": [-0.1, 0, -0.36], "upperArm.R": [-0.1, 0, 0.36], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true }),
+  // いすに座る(内股): 膝をとじてつま先を内へ、すねは外へ開く。少し前かがみで、手は膝の上
+  "sitChairGirl": (t) => ({ b: { "upperLeg.L": [-1.57, 0, -0.24], "upperLeg.R": [-1.57, 0, 0.24], "lowerLeg.L": [1.5, 0, 0.45], "lowerLeg.R": [1.5, 0, -0.45], "foot.L": [0.05 + sin(t * 1.4) * 0.08, -0.4, 0], "foot.R": [0.05 - sin(t * 1.4) * 0.08, 0.4, 0],
+      spine: [0.25, 0, 0], "shoulder.L": [0, -0.15, -0.05], "shoulder.R": [0, 0.15, 0.05],
+      "upperArm.L": [-0.54, -0.57, -0.7], "upperArm.R": [-0.54, 0.57, 0.7], "lowerArm.L": [-1.2, 0, 0], "lowerArm.R": [-1.2, 0, 0], "hand.L": [0.5, 0, 0], "hand.R": [0.5, 0, 0],
+      head: [-0.065, sin(t * 0.5) * 0.12, 0.08 + sin(t * 0.7) * 0.04] }, y: -0.118, chair: true }),
   "sitFloor": (t) => ({ b: { "upperLeg.L": [-1.5, 0, 0.14], "upperLeg.R": [-1.5, 0, -0.14], "lowerLeg.L": [0.05, 0, 0], "lowerLeg.R": [0.05, 0, 0], "foot.L": [0.25 + sin(t * 3) * 0.2, 0, 0], "foot.R": [0.25 - sin(t * 3) * 0.2, 0, 0],
       // 手は腰の少しうしろ横で床につく(肩を少し落とし、手首を外へ折って指先を床へ)
       "shoulder.L": [0, 0, -0.31], "shoulder.R": [0, 0, 0.31], "upperArm.L": [0.41, 0, -0.19], "upperArm.R": [0.41, 0, 0.19], "lowerArm.L": [0, 0, 0], "lowerArm.R": [0, 0, 0], "hand.L": [-0.2, 0, 0.7], "hand.R": [-0.2, 0, -0.7],

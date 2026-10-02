@@ -206,6 +206,7 @@ async function makeAvatar(opts, quiet = false) {   // 作る(作り直すとき�
 }
 await makeAvatar(fromQuery(location.search));
 globalThis.sotaiChecksum = () => avatar.checksum();
+globalThis.sotaiSetCam = (v) => { camera.position.set(v[0], v[1], v[2]); if (v.length > 3) controls.target.set(v[3], v[4], v[5]); };   // 確認用: カメラを置く
 
 // ── 表示の切りかえ(ねんど色・網目・見本と比べる) ──
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
@@ -353,7 +354,7 @@ function renderCompare() {
 }
 
 // ── ボタン ──
-const POSE_LABEL = { aPose: "Aポーズ", tPose: "Tポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitFloor: "床に座る", hugKnees: "体育座り" };   // ボタンの表示名
+const POSE_LABEL = { aPose: "Aポーズ", tPose: "Tポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitChairGirl: "いすに座る(内股)", sitFloor: "床に座る", hugKnees: "体育座り" };   // ボタンの表示名
 const toggle = (id, fn) => { const b = $(id); b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on)); fn(on); }); };
 toggle("tCloth", (on) => { parts.shirt.on = parts.pants.on = on; refreshLook(); });
 toggle("tShoe", (on) => { parts.shoes.on = parts.soles.on = on; refreshLook(); });
