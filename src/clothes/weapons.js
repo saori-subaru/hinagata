@@ -8,9 +8,13 @@ import { sub, dot, norm, cross, slice, sell } from "./armor.js";
 const add = (a, ...t) => a.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
 const capsule = (p, a, b, r) => { const ab = sub(b, a), ap = sub(p, a), h = Math.max(0, Math.min(1, dot(ap, ab) / dot(ab, ab))); return Math.hypot(ap[0] - ab[0] * h, ap[1] - ab[1] * h, ap[2] - ab[2] * h) - r; };
 
-/** The hand's frame (A-pose): D = toward the fingers, N = the palm's side, S = the thumb's side (forward); G = where a fist holds a grip. */
-export function handFrame(J, s) {
-  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`], D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];
+/** The hand's frame (A-pose): D = toward the fingers, N = the palm's side, S = the thumb's side; G = where a fist holds a grip.
+ *  hold: the wrist turned for holding a weapon — the fist's knuckles forward, thumb up, palm toward the body, so the grip runs
+ *  up and down through the fist (a spear or staff stands straight through it). Otherwise the A-pose hand: fingers down and out, palm down. */
+export function handFrame(J, s, hold = false) {
+  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`];
+  let [D, N, S] = hold ? [[0, -0.25, 0.968], [-m, 0, 0], [0, 0.968, 0.25]] : [[m * 0.876, -0.483, 0], [-0.483 * m, -0.876, 0], [0, 0, 1]];
+  if (hold) { const k = D, t = 0.3 * m, c = Math.cos(t), sn = Math.sin(t), r = (v) => { const kv = cross(k, v), kd = dot(k, v); return v.map((x, i) => x * c + kv[i] * sn + k[i] * kd * (1 - c)); }; N = r(N); S = r(S); }   // tipped in a little: with the arms hanging (idle, walk) the grip stands about straight
   const palm = add(w, [D, 0.03], [N, 0.002]);
   return { m, w, D, N, S, palm, G: add(palm, [N, 0.03], [D, 0.004]) };
 }
@@ -18,10 +22,9 @@ export function handFrame(J, s) {
 export function buildWeapons(OPT, { J, bodySdf }) {
   const WO = OPT.outfit.weapon ?? {}, R = WO.right ?? "none", L = WO.left ?? "none";
   const none = null;
-  // ── right hand: the item's axis A comes out of the fist forward, tipped up toward straight up by theta (a staff or spear stands nearly upright);
-  //    W across it (its blade's width), T its thickness ──
-  const H = handFrame(J, "R"), tilt = { sword: 0.6, axe: 0.8, spear: 1.25, staff: 1.35 }[R] ?? 0;
-  const A = norm(add([0, 0, 0], [H.S, Math.cos(tilt)], [[0, 1, 0], Math.sin(tilt)])), W = norm(add(H.D, [A, -dot(H.D, A)])), T = cross(A, W);
+  // ── right hand: the item's axis A runs through the fist (up, the wrist turned: see handFrame); W across it (its blade's width, toward the knuckles), T its thickness ──
+  const H = handFrame(J, "R", true), lean = { sword: 0.35, axe: 0.25 }[R] ?? 0;   // a spear or staff stands straight up through the fist; a sword or axe leans forward a little
+  const A = norm(add([0, 0, 0], [H.S, Math.cos(lean)], [H.D, Math.sin(lean)])), W = norm(add(H.D, [A, -dot(H.D, A)])), T = cross(A, W);
   const loc = (x, y, z) => { const q = [x - H.G[0], y - H.G[1], z - H.G[2]]; return [dot(q, A), dot(q, W), dot(q, T)]; };   // (along, across, thickness)
   const at = (a, w = 0) => add(H.G, [A, a], [W, w]);
   let rMetal = none, rOther = none;
@@ -84,7 +87,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   const box = (c, axes) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];   // axes: [vector, from, to] ×3
     for (const s0 of [1, 2]) for (const s1 of [1, 2]) for (const s2 of [1, 2]) { const p = add(c, [axes[0][0], axes[0][s0]], [axes[1][0], axes[1][s1]], [axes[2][0], axes[2][s2]]); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } }
     return { lo: lo.map((v) => v - 0.02), hi: hi.map((v) => v + 0.02) }; };
-  const reach = { sword: [-0.1, 0.53], axe: [-0.1, 0.46], spear: [-0.45, 1.0], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
+  const reach = { sword: [-0.1, 0.53], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
   const boxR = R === "none" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
   return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL };
 }

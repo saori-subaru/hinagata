@@ -1,4 +1,5 @@
 // The body: joints (bones) and the signed-distance parts that make the naked body, head and face sculpt.
+import { handFrame } from "../clothes/weapons.js";
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
 
 /**
@@ -135,12 +136,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], OPT.body.sculpt.forearm.bulge.radius, OPT.body.sculpt.forearm.bulge.radiusEnd, `lowerArm.${s}`, OPT.body.sculpt.forearm.bulge.blend);
       Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: OPT.body.sculpt.forearm.bulge.flat }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
     // 手: Aポーズで手のひらが下を向く。指4本(少し開く)+親指
-    const w = j("hand"), D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];   // D=指の向き N=手のひらの向き S=親指の側
+    // 何か持つ手(outfit.weapon)は握りこぶし。右手(武器)は手首をひねって拳を前へ・親指を上へ(握った柄が縦に通る)。左手(盾)はそのまま
+    const fist = ((OPT.outfit?.weapon ?? {})[s === "L" ? "left" : "right"] ?? "none") !== "none";
+    const { w, D, N, S } = handFrame(J, s, fist && s === "R");   // D=指の向き N=手のひらの向き S=親指の側
     const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
     const palm = at(w, [D, 0.03], [N, 0.002]);
     P[`palm.${s}`] = E(palm, [0.034, 0.05, 0.019], `hand.${s}`, 0.02, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
-    // 何か持つ手(outfit.weapon)は握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
-    const fist = ((OPT.outfit?.weapon ?? {})[s === "L" ? "left" : "right"] ?? "none") !== "none";
+    // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
       const fd = D.map((v, k) => v * Math.cos(sp) + S[k] * Math.sin(sp)), b0 = at(palm, [D, 0.022], [S, o * (fist ? 0.85 : 1)]);
       if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125, 0.012, `hand.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012, 0.011, `hand.${s}`, 0.006); return; }
