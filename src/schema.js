@@ -22,6 +22,8 @@ import { PART_LABELS, partIds } from "./face/names.js";
              | "hair" | "clothes" | "body" (body, clothes and hair)
    apply     the avatar method that applies it without a rebuild ("setColors" …), or null (needs a new build for now)
    alsoShapes  set when an instant change also moves a shape on the next build (eye position → eye sockets)
+   order     main values: their place in the editor's panels
+   when      { path: value, … }: the value only matters (and an editor only shows it) when those other values are set so
  }
 */
 
@@ -36,8 +38,8 @@ const MAIN = [
   ["colors.hair", L("髪の色", "Hair"), { group: "hair", section: L("色", "Colors"), apply: "setColors" }],
   ["colors.eyes", L("瞳の色", "Eyes"), { group: "face", section: L("色", "Colors"), apply: "setColors", help: L("この1色から虹彩のグラデーションを作る", "The iris gradient is made from this one color") }],
   ["outline.on", L("輪郭線", "Outline"), { apply: "setOutline" }],
-  ["outline.width", L("輪郭線の太さ", "Outline width"), { min: 0, max: 3, step: 0.05, apply: "setOutline" }],
-  ["outline.color", L("輪郭線の色", "Outline color"), { apply: "setOutline" }],
+  ["outline.width", L("輪郭線の太さ", "Outline width"), { when: { "outline.on": true }, min: 0, max: 3, step: 0.05, apply: "setOutline" }],
+  ["outline.color", L("輪郭線の色", "Outline color"), { when: { "outline.on": true }, apply: "setOutline" }],
   ["shading.style", L("塗り", "Shading"), { options: opts({ toon: ["アニメ", "Toon"], smooth: ["なめらか", "Smooth"], flat: ["べた塗り", "Flat"] }), apply: "setShading" }],
 
   // body
@@ -70,15 +72,15 @@ const MAIN = [
   ["face.layout.browY", L("眉の高さ", "Brow height"), { min: 1.02, max: 1.14, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout" }],
   ["face.layout.mouthY", L("口の高さ", "Mouth height"), { min: 0.86, max: 0.95, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout" }],
   ["face.blush.cheeks.on", L("ほっぺの赤み", "Cheek blush"), { section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.cheeks.color", L("ほっぺの色", "Cheek color"), { section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.cheeks.strength", L("ほっぺの濃さ", "Cheek strength"), { min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.cheeks.size", L("ほっぺの大きさ", "Cheek size"), { min: 0.02, max: 0.07, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.cheeks.x", L("ほっぺの間隔", "Cheek spacing"), { min: 0.1, max: 0.19, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.cheeks.y", L("ほっぺの高さ", "Cheek height"), { min: 0.9, max: 1.0, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.color", L("ほっぺの色", "Cheek color"), { when: { "face.blush.cheeks.on": true }, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.strength", L("ほっぺの濃さ", "Cheek strength"), { when: { "face.blush.cheeks.on": true }, min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.size", L("ほっぺの大きさ", "Cheek size"), { when: { "face.blush.cheeks.on": true }, min: 0.02, max: 0.07, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.x", L("ほっぺの間隔", "Cheek spacing"), { when: { "face.blush.cheeks.on": true }, min: 0.1, max: 0.19, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.y", L("ほっぺの高さ", "Cheek height"), { when: { "face.blush.cheeks.on": true }, min: 0.9, max: 1.0, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.nose.on", L("鼻先の赤み", "Nose blush"), { section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.nose.color", L("鼻先の色", "Nose blush color"), { section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.nose.strength", L("鼻先の濃さ", "Nose blush strength"), { min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],
-  ["face.blush.nose.size", L("鼻先の大きさ", "Nose blush size"), { min: 0.008, max: 0.03, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.nose.color", L("鼻先の色", "Nose blush color"), { when: { "face.blush.nose.on": true }, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.nose.strength", L("鼻先の濃さ", "Nose blush strength"), { when: { "face.blush.nose.on": true }, min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.nose.size", L("鼻先の大きさ", "Nose blush size"), { when: { "face.blush.nose.on": true }, min: 0.008, max: 0.03, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.noseShadow.on", L("鼻の下の影", "Nose shadow"), { section: L("影と線", "Shadows and lines") }],
   ["face.jawShadow.on", L("あごの影", "Jaw shadow"), { section: L("影と線", "Shadows and lines") }],
   ["face.earLine.on", L("耳の線", "Ear line"), { section: L("影と線", "Shadows and lines") }],
@@ -92,33 +94,38 @@ const MAIN = [
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
-  ["hair.sculpt.ahogeSize", L("アホ毛の大きさ", "Ahoge size"), { min: 0.6, max: 1.6, step: 0.01, section: L("髪型", "Style") }],
-  ["hair.sculpt.ahogeDir", L("アホ毛の向き(度)", "Ahoge direction (°)"), { min: -180, max: 180, step: 5, section: L("髪型", "Style"), help: L("0 = 前 / 90 = キャラの左", "0 = forward, 90 = toward the character's left") }],
+  ["hair.sculpt.ahogeSize", L("アホ毛の大きさ", "Ahoge size"), { when: { "hair.ahoge": true }, min: 0.6, max: 1.6, step: 0.01, section: L("髪型", "Style") }],
+  ["hair.sculpt.ahogeDir", L("アホ毛の向き(度)", "Ahoge direction (°)"), { when: { "hair.ahoge": true }, min: -180, max: 180, step: 5, section: L("髪型", "Style"), help: L("0 = 前 / 90 = キャラの左", "0 = forward, 90 = toward the character's left") }],
   ["hair.paint.strands.on", L("髪の筋", "Strands"), { section: L("塗り", "Paint") }],
-  ["hair.paint.strands.count", L("筋の本数", "Strand count"), { min: 10, max: 60, step: 1, section: L("塗り", "Paint") }],
-  ["hair.paint.strands.strength", L("筋の濃さ", "Strand strength"), { min: 0, max: 0.6, step: 0.01, section: L("塗り", "Paint") }],
+  ["hair.paint.strands.count", L("筋の本数", "Strand count"), { when: { "hair.paint.strands.on": true }, min: 10, max: 60, step: 1, section: L("塗り", "Paint") }],
+  ["hair.paint.strands.strength", L("筋の濃さ", "Strand strength"), { when: { "hair.paint.strands.on": true }, min: 0, max: 0.6, step: 0.01, section: L("塗り", "Paint") }],
   ["hair.paint.ring.on", L("天使の輪", "Angel ring"), { section: L("塗り", "Paint") }],
-  ["hair.paint.ring.color", L("天使の輪の色", "Ring color"), { nullable: true, section: L("塗り", "Paint"), help: L("null = 髪の色から自動", "null = from the hair color") }],
-  ["hair.paint.ring.strength", L("天使の輪の濃さ", "Ring strength"), { min: 0, max: 1, step: 0.01, section: L("塗り", "Paint") }],
+  ["hair.paint.ring.color", L("天使の輪の色", "Ring color"), { when: { "hair.paint.ring.on": true },  nullable: true, section: L("塗り", "Paint"), help: L("null = 髪の色から自動", "null = from the hair color") }],
+  ["hair.paint.ring.strength", L("天使の輪の濃さ", "Ring strength"), { when: { "hair.paint.ring.on": true }, min: 0, max: 1, step: 0.01, section: L("塗り", "Paint") }],
 
   // outfit
-  ["outfit.shirt.on", L("シャツを着る", "Shirt"), { section: L("シャツ", "Shirt"), apply: "setWorn" }],
+  ["outfit.shirt.on", L("着る", "Wear"), { section: L("シャツ", "Shirt"), apply: "setWorn" }],
   ["outfit.shirt.color", L("シャツの色", "Shirt color"), { section: L("シャツ", "Shirt"), apply: "setColors" }],
   ["outfit.shirt.sleeve", L("袖", "Sleeves"), { options: opts({ short: ["半袖", "Short"], none: ["そでなし", "None"], long: ["長袖", "Long"] }), section: L("シャツ", "Shirt") }],
   ["outfit.shirt.length", L("丈", "Length"), { options: opts({ tuck: ["入れる", "Tucked in"], out: ["出す", "Out"], crop: ["短い", "Cropped"] }), section: L("シャツ", "Shirt") }],
   ["outfit.shirt.underarm", L("わきの下", "Underarm"), { options: opts({ fit: ["ぴったり", "Fitted"], loose: ["ゆったり", "Loose"] }), section: L("シャツ", "Shirt") }],
-  ["outfit.pants.on", L("ズボンをはく", "Pants"), { section: L("ズボン", "Pants"), apply: "setWorn" }],
+  ["outfit.pants.on", L("はく", "Wear"), { section: L("ズボン", "Pants"), apply: "setWorn" }],
   ["outfit.pants.color", L("ズボンの色", "Pants color"), { section: L("ズボン", "Pants"), apply: "setColors" }],
   ["outfit.pants.kind", L("ズボン / スカート", "Pants or skirt"), { options: opts({ pants: ["ズボン", "Pants"], skirt: ["スカート", "Skirt"] }), section: L("ズボン", "Pants") }],
-  ["outfit.pants.length", L("丈", "Length"), { options: opts({ shorts: ["短パン", "Shorts"], knee: ["ひざ下", "Below the knee"], long: ["長ズボン", "Long"] }), section: L("ズボン", "Pants") }],
-  ["outfit.pants.hem", L("短パンの裾の高さ", "Shorts hem height"), { min: 0.22, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("丈が「短パン」のときだけ", "Only for shorts") }],
-  ["outfit.pants.skirt.hem", L("スカートの裾の高さ", "Skirt hem height"), { min: 0.2, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
-  ["outfit.pants.skirt.flare", L("スカートの広がり", "Skirt flare"), { min: 0, max: 0.8, step: 0.01, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
-  ["outfit.pants.skirt.pleats", L("プリーツの数", "Pleats"), { min: 0, max: 32, step: 1, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
-  ["outfit.socks.on", L("靴下をはく", "Socks"), { section: L("靴下", "Socks"), apply: "setWorn" }],
+  ["outfit.pants.length", L("丈", "Length"), { when: { "outfit.pants.kind": "pants" }, options: opts({ shorts: ["短パン", "Shorts"], knee: ["ひざ下", "Below the knee"], long: ["長ズボン", "Long"] }), section: L("ズボン", "Pants") }],
+  ["outfit.pants.hem", L("短パンの裾の高さ", "Shorts hem height"), { when: { "outfit.pants.kind": "pants", "outfit.pants.length": "shorts" }, min: 0.22, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("丈が「短パン」のときだけ", "Only for shorts") }],
+  ["outfit.pants.tilt", L("ウエストの後ろ上がり", "Waist rise at the back"), { min: 0, max: 0.4, step: 0.01, section: L("ズボン", "Pants"), help: L("ズボンとスカートの上端の傾き。0 = 水平", "How much the top of the pants or skirt rises toward the back. 0 = level") }],
+  ["outfit.pants.skirt.hem", L("スカートの裾の高さ", "Skirt hem height"), { when: { "outfit.pants.kind": "skirt" }, min: 0.2, max: 0.4, step: 0.005, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
+  ["outfit.pants.skirt.flare", L("スカートの広がり", "Skirt flare"), { when: { "outfit.pants.kind": "skirt" }, min: 0, max: 0.8, step: 0.01, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
+  ["outfit.pants.skirt.pleats", L("プリーツの数", "Pleats"), { when: { "outfit.pants.kind": "skirt" }, min: 0, max: 32, step: 1, section: L("ズボン", "Pants"), help: L("スカートのときだけ", "Only for the skirt") }],
+  ["outfit.armor.on", L("着る", "Wear"), { section: L("鎧", "Armor"), apply: "setWorn" }],
+  ["outfit.armor.color", L("鎧の色", "Armor color"), { section: L("鎧", "Armor"), apply: "setColors" }],
+  ["outfit.armor.gap", L("体からの浮き", "Gap from the body"), { min: 0.01, max: 0.05, step: 0.001, section: L("鎧", "Armor") }],
+  ["outfit.armor.thick", L("板の厚み", "Plate thickness"), { min: 0.004, max: 0.02, step: 0.001, section: L("鎧", "Armor") }],
+  ["outfit.socks.on", L("はく", "Wear"), { section: L("靴下", "Socks"), apply: "setWorn" }],
   ["outfit.socks.color", L("靴下の色", "Socks color"), { section: L("靴下", "Socks"), apply: "setColors" }],
   ["outfit.socks.top", L("靴下の高さ", "Socks height"), { min: 0.06, max: 0.3, step: 0.005, section: L("靴下", "Socks") }],
-  ["outfit.shoes.on", L("靴をはく", "Shoes"), { section: L("靴", "Shoes"), apply: "setWorn" }],
+  ["outfit.shoes.on", L("はく", "Wear"), { section: L("靴", "Shoes"), apply: "setWorn" }],
   ["outfit.shoes.color", L("靴の色", "Shoes color"), { section: L("靴", "Shoes"), apply: "setColors" }],
   ["outfit.shoes.soleColor", L("靴底の色", "Sole color"), { section: L("靴", "Shoes"), apply: "setColors" }],
 ];
@@ -152,7 +159,7 @@ const typeOf = (v, ex) => ex?.options ? "enum" : /\.src$/.test(ex?.path ?? "") ?
   : typeof v === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v) ? "color" : typeof v === "string" ? "enum" : "json";
 
 function build() {
-  const S = {}, main = new Map(MAIN.map(([path, label, ex]) => [path, { label, ...ex }]));
+  const S = {}, main = new Map(MAIN.map(([path, label, ex], i) => [path, { label, ...ex, order: i }]));
   const walk = (o, pre) => { for (const [k, v] of Object.entries(o)) { const path = pre ? `${pre}.${k}` : k;
     if (v && typeof v === "object" && !Array.isArray(v)) { walk(v, path); continue; }
     const ex = main.get(path), at = place(path);
@@ -162,8 +169,9 @@ function build() {
     const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? null };
     if (type === "number") Object.assign(e, ex && ex.min != null ? { min: ex.min, max: ex.max, step: ex.step } : { ...guessRange(v ?? 0), soft: true });
     if (ex?.options) e.options = ex.options;
+    if (ex) e.order = ex.order;   // the editor lists main values in this order
     if (ex?.nullable || v === null) e.nullable = true;
-    for (const k of ["section", "help", "alsoShapes"]) if (ex?.[k]) e[k] = ex[k];
+    for (const k of ["section", "help", "alsoShapes", "when"]) if (ex?.[k]) e[k] = ex[k];
     if (!ex) e.section = { en: human(path.split(".").slice(0, -1).join(".")) || path };
     S[path] = e; } };
   walk(DEFAULTS, "");

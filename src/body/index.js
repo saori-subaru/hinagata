@@ -23,6 +23,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
   const PARENT = { hips: null, spine: "hips", chest: "spine", upperChest: "chest", neck: "upperChest", head: "neck" };
   for (const s of ["L", "R"]) Object.assign(PARENT, { [`shoulder.${s}`]: "upperChest", [`upperArm.${s}`]: `shoulder.${s}`, [`lowerArm.${s}`]: `upperArm.${s}`, [`hand.${s}`]: `lowerArm.${s}`, [`upperLeg.${s}`]: "hips", [`lowerLeg.${s}`]: `upperLeg.${s}`, [`foot.${s}`]: `lowerLeg.${s}` });
+  // スカートの前の骨(左右): ウエストの前、太ももの上の高さで回る。太ももの回転を写す(motion)=座ると前の布が太ももの上へ倒れる(股関節で回すと前の裾がお腹へはね上がる)
+  for (const s of ["L", "R"]) { J[`skirt.${s}`] = [(s === "L" ? 1 : -1) * 0.08, HIP_Y + 0.08, 0.09]; PARENT[`skirt.${s}`] = "hips"; }
   const BONES = Object.keys(PARENT);
   const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
 

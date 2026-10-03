@@ -14,6 +14,8 @@ const json = JSON.stringify({
     cost: "what a change rebuilds: instant | paint (materials or painted attributes) | hair | clothes | body (body, clothes and hair)",
     apply: "the avatar method that applies it without a rebuild, or null",
     alsoShapes: "an instant change that also moves a shape on the next build",
+    order: "main values: their place in the editor's panels",
+    when: "{ path: value }: the value only matters when those other values are set so",
   },
   options: SCHEMA,
 }, null, 1) + "\n";
