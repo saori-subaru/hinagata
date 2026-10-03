@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { sstep } from "./sdf/prim.js";
 import { surfaceNets, gridSampler } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
-import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR } from "./parts.js";
+import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat } from "./materials.js";
 import { DEFAULTS, resolveOptions, diff } from "./options.js";
@@ -40,7 +40,7 @@ export { BODY_TYPES } from "./body/types.js";
  */
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|on)$/.test(k)) r[k] = strip(v); return r; };
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
 }
 
@@ -64,7 +64,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
@@ -145,7 +145,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor, weapons } };
   if (workers && !MS) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H };
     const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
@@ -193,8 +193,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
-  const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
+  const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   for (const k of ARMOR) { parts[k] = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, AO.color); } }   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
+  const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : WO.color;
+  for (const k of WEAPONS) { parts[k] = skinned(meshPart(k), weaponColor(k), 0.004); if (k === "weaponR" || k === "weaponL") { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, WO.color); } }   // in the hands (clothes/weapons.js)
   lap("shadeAndClothes");
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004);
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
@@ -311,13 +313,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
-    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor } = {}) {
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield } = {}) {
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
       if (hair) { OPT.colors.hair = hair; const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { parts[k].m.material.color.set(c); OPT.outfit[k].color = c; }
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
       if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
+      for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip"], "gripColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }
     },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },

@@ -4986,6 +4986,160 @@
     "en": "Armor"
    }
   },
+  "outfit.weapon.right": {
+   "path": "outfit.weapon.right",
+   "type": "enum",
+   "default": "none",
+   "label": {
+    "ja": "右手に持つもの",
+    "en": "Right hand"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "none",
+     "label": {
+      "ja": "なし",
+      "en": "None"
+     }
+    },
+    {
+     "value": "sword",
+     "label": {
+      "ja": "剣",
+      "en": "Sword"
+     }
+    },
+    {
+     "value": "axe",
+     "label": {
+      "ja": "斧",
+      "en": "Axe"
+     }
+    },
+    {
+     "value": "spear",
+     "label": {
+      "ja": "槍",
+      "en": "Spear"
+     }
+    },
+    {
+     "value": "staff",
+     "label": {
+      "ja": "杖",
+      "en": "Staff"
+     }
+    }
+   ],
+   "order": 86,
+   "section": {
+    "ja": "武器",
+    "en": "Weapons"
+   },
+   "help": {
+    "ja": "持つ手は握りこぶしになる",
+    "en": "A hand that holds something makes a fist"
+   }
+  },
+  "outfit.weapon.left": {
+   "path": "outfit.weapon.left",
+   "type": "enum",
+   "default": "none",
+   "label": {
+    "ja": "左手に持つもの",
+    "en": "Left hand"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "none",
+     "label": {
+      "ja": "なし",
+      "en": "None"
+     }
+    },
+    {
+     "value": "shield",
+     "label": {
+      "ja": "盾",
+      "en": "Shield"
+     }
+    },
+    {
+     "value": "round",
+     "label": {
+      "ja": "丸い盾",
+      "en": "Round shield"
+     }
+    }
+   ],
+   "order": 87,
+   "section": {
+    "ja": "武器",
+    "en": "Weapons"
+   }
+  },
+  "outfit.weapon.color": {
+   "path": "outfit.weapon.color",
+   "type": "color",
+   "default": "#c9d0da",
+   "label": {
+    "ja": "金属の色",
+    "en": "Metal color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 88,
+   "section": {
+    "ja": "武器",
+    "en": "Weapons"
+   }
+  },
+  "outfit.weapon.gripColor": {
+   "path": "outfit.weapon.gripColor",
+   "type": "color",
+   "default": "#7a5236",
+   "label": {
+    "ja": "柄の色",
+    "en": "Grip color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 89,
+   "section": {
+    "ja": "武器",
+    "en": "Weapons"
+   }
+  },
+  "outfit.weapon.shieldColor": {
+   "path": "outfit.weapon.shieldColor",
+   "type": "color",
+   "default": "#3f63b8",
+   "label": {
+    "ja": "盾の色",
+    "en": "Shield color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 90,
+   "section": {
+    "ja": "武器",
+    "en": "Weapons"
+   }
+  },
   "outfit.shoes.on": {
    "path": "outfit.shoes.on",
    "type": "boolean",
@@ -4998,7 +5152,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 89,
+   "order": 94,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5016,7 +5170,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 90,
+   "order": 95,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5034,7 +5188,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 91,
+   "order": 96,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5147,7 +5301,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 86,
+   "order": 91,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5165,7 +5319,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 87,
+   "order": 92,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5186,7 +5340,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 88,
+   "order": 93,
    "section": {
     "ja": "靴下",
     "en": "Socks"

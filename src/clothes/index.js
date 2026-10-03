@@ -3,6 +3,7 @@
 import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
+import { buildWeapons } from "./weapons.js";
 
 export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const pick = (...names) => names.flatMap((n) => [P[n]?.cloth ?? P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);   // .cloth: a part's own shape for clothes (the bust: joined across the middle)
@@ -65,5 +66,6 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
   const armor = (OPT.outfit.armor.style === "full" ? buildPlate : buildArmor)(OPT, { P, J, HT, bodySdf });   // 鎧: 体にそわせず、かんたんな形をかぶせた硬い部品(軽鎧 armor.js / 全身鎧 plate.js)
-  return { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor };
+  const weapons = buildWeapons(OPT, { J });   // 武器: 手に持つ硬い部品(weapons.js)
+  return { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor, weapons };
 }

@@ -86,6 +86,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tArmor" type="button">鎧: なし</button>
     <button class="btn" id="tHelm" type="button" hidden>兜: バケツ</button>
     <button class="btn" id="tDeco" type="button" hidden>兜の飾り: なし</button>
+    <button class="btn" id="tWeapR" type="button">右手: なし</button>
+    <button class="btn" id="tWeapL" type="button">左手: なし</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
@@ -216,13 +218,14 @@ const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
 let clay = false, wire = false, compare = false, twin = null;   // twin: 横に並べる案2
 const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // 鎧の部品(後ろの6つは全身鎧だけ)
-const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair, ...ARMOR.map((k) => parts[k])];
+const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace"];   // 手に持つもの
+const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair, ...ARMOR.map((k) => parts[k]), ...WEAPONS.map((k) => parts[k])];
 function refreshLook() {
   for (const av of [avatar, twin].filter(Boolean)) {
     const P = av.parts, body = P.body;
     body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
     if (av === twin) for (const k of ["shirt", "pants", "socks", "shoes", "soles", "hair", ...ARMOR]) P[k].on = parts[k].on;   // 並べたほうも同じ着せ方
-    for (const x of [P.body, P.shirt, P.pants, P.socks, P.shoes, P.soles, P.hair, ...ARMOR.map((k) => P[k])]) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
+    for (const x of [P.body, P.shirt, P.pants, P.socks, P.shoes, P.soles, P.hair, ...ARMOR.map((k) => P[k]), ...WEAPONS.map((k) => P[k])]) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
     av.faceLayer.visible = !clay; if (av.earLine) av.earLine.visible = !clay && !wire;
   }
   floor.visible = !compare;
@@ -534,8 +537,9 @@ for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
 }
 $("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
 // 服の形: 袖・シャツの丈・ズボンの丈(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
-const OUTFIT = { outfit: { shirt: {}, pants: {} } };
-const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }], ["tPantsKind", "pants", "kind", "下", { pants: "ズボン", skirt: "スカート" }]];
+const OUTFIT = { outfit: { shirt: {}, pants: {}, weapon: {} } };
+const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }], ["tPantsKind", "pants", "kind", "下", { pants: "ズボン", skirt: "スカート" }],
+  ["tWeapR", "weapon", "right", "右手", { none: "なし", sword: "剣", axe: "斧", spear: "槍", staff: "杖" }], ["tWeapL", "weapon", "left", "左手", { none: "なし", shield: "盾", round: "丸い盾" }]];   // 持つ手は握りこぶしになる
 for (const [id, g, k, label, names] of OUTFIT_KINDS) {
   const cur = () => OUTFIT.outfit[g][k] ?? avatar.options.outfit[g][k], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit[g][k] = ks[(ks.indexOf(cur()) + 1) % ks.length]; show(); rebuildBody(); });

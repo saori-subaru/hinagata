@@ -5,7 +5,8 @@
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
-export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", ...ARMOR];
+export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace"];   // in the hands: metal and the rest, per hand
+export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", ...ARMOR, ...WEAPONS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 
 export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
@@ -37,6 +38,10 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
       if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42, 0.36, -0.1], hi: [0.42, 0.6, 0.12], h: H * 0.7, only: /^(hand|lowerArm)/ };
       if (name === "armorFeet") return { sdf: A.footSdf, lo: [-0.24, -0.01, -0.14], hi: [0.24, 0.14, 0.16], h: H * 0.8, only: /^(foot|lowerLeg)/ };
       return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47, -0.02, -0.3], hi: [0.47, 0.82, 0.34], h: H * 1.2 }; }
+    // weapons (clothes/weapons.js): each bound to one bone (the right hand; the shield to the left forearm)
+    case "weaponR": case "weaponRGrip": case "weaponL": case "weaponLFace": { const Wp = C.weapons, r = name.startsWith("weaponR"), f = { weaponR: Wp.rMetal, weaponRGrip: Wp.rOther, weaponL: Wp.lMetal, weaponLFace: Wp.lFace }[name], b = r ? Wp.boxR : Wp.boxL;
+      if (!f || !b) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      return { sdf: f, lo: b.lo, hi: b.hi, h: H * 0.5, bone1: r ? "hand.R" : "lowerArm.L" }; }
     case "socks": return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, 0.17, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
   }
   if (name.startsWith("hair:")) {   // long hair reaches down the back

@@ -371,6 +371,13 @@ export const DEFAULTS = {
       "gap": 0.022,
       "thick": 0.009
     },
+    "weapon": {
+      "right": "none",
+      "left": "none",
+      "color": "#c9d0da",
+      "gripColor": "#7a5236",
+      "shieldColor": "#3f63b8"
+    },
     "shoes": {
       "on": true,
       "color": "#c8564b",

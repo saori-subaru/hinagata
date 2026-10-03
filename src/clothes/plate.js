@@ -137,7 +137,7 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
   const armSdf = side(ARM);
 
   // ── gauntlets: the hand puffed up (fingers and all) ──
-  const hand = blend(pick("palm", "finger0", "finger1", "finger2", "finger3", "thumb"));
+  const hand = blend(pick("palm", "finger0", "finger1", "finger2", "finger3", "fingerTip0", "fingerTip1", "fingerTip2", "fingerTip3", "thumb"));
   const handSdf = (x, y, z) => hand(x, y, z) - 0.008;
 
   // ── legs: thigh tube, knee cop (all round), greave; sabatons ──
