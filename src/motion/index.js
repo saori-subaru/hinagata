@@ -1,6 +1,7 @@
 // Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
+// sharp: a fast pose (a jump) — after it has blended in, the bones follow it exactly each frame instead of easing toward it (easing slowed the drop just before landing).
 // Bones not listed rest in the A-pose (the bind pose).
 import * as THREE from "three";
 
@@ -16,21 +17,23 @@ const WAVE = (() => {
   const qz = new THREE.Quaternion(), q = new THREE.Quaternion(), e = new THREE.Euler(), Z = new THREE.Vector3(0, 0, 1);
   return { sh, chest, ua, hand, amp, mid, fore: (a) => { qz.setFromAxisAngle(Z, a); q.copy(upInv).multiply(qz).multiply(up).multiply(la0); e.setFromQuaternion(q); return [e.x, e.y, e.z]; } };   // a > 0: the hand toward the outside
 })();
-// ばんざいジャンプの時間割(1回 CHEER.T 秒)。u = 1回の中の位置(0〜1)
-//   0.10〜0.36 しゃがんで、ためる(腕は下ろして曲げる) / 0.36〜0.44 一気に伸びて跳ぶ / 0.42〜0.65 上がる(頂点に近いほどゆっくり)
-//   0.65〜0.80 落ちる(はじめはゆっくり、あとは速く = ストン) / 0.80〜 ひざで受けて、立ち直る
-// 腰の高さ: しゃがんだ分だけ下げる(太もも・すねの長さから計算 = 足の裏が床から浮かない/めり込まない)。空中の高さは足の裏の高さ
+// ばんざいジャンプの時間割(1回 CHEER.T 秒)。u = 1回の中の位置(0〜1)。立ち止まらず、着地からそのまま次のためへつながる
+//   0.78 つま先から着地(脚は伸び切ったまま) → かかとを下ろしながら、ひざを曲げて受ける(はじめは速く、深くなるほどゆっくり = ため)
+//   0.26〜0.34 一気に伸びて、つま先で床をけって跳ぶ / 0.34〜0.57 上がる(頂点に近いほどゆっくり = 少し浮く) / 0.57〜0.78 落ちる(だんだん速く = ストン)
+// 腰の高さ: しゃがんだ分だけ下げ(太もも・すねの長さから計算)、つま先立ちの分だけ上げる = 床についている足が浮かない/めり込まない
+// ⚠️ポーズの切りかえの「なめらかに寄せる」をこのポーズでは途中から切る(sharp)。寄せると着地の直前で遅くなり、ストンと落ちなくなる
 const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
-const CHEER = { T: 1.5, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165,
+const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, point: 0.4, toe: 0.077,   // toe: つま先までの長さ(つま先立ちで足首が上がる分 = toe × sin(角度)。測った値)
   up: { sh: [0, 0, 0.28], ua: [-0.64, -0.38, 1.35], la: [0, -0.04, 0.15], hand: [-0.54, 0.54, -0.25] },   // 頂点: 腕をまっすぐ上へ、手のひらは正面(ひねりは計算で選んだ)
   low: { sh: [0, 0, 0.04], ua: [-0.35, -0.2, 0.55], la: [0, -0.04, 0.95], hand: [-0.2, 0.2, -0.1] },   // ため: 腕を下ろして肘を曲げる(手は肩の高さあたり)
-  at(t) { const u = ((t / this.T) % 1 + 1) % 1;
-    const crouch = ss(0.1, 0.36, u) * (1 - ss(0.36, 0.44, u));
-    const rise = u >= 0.42 && u < 0.65 ? 1 - (1 - (u - 0.42) / 0.23) ** 2.6 : 0, fall = u >= 0.65 && u < 0.8 ? 1 - ((u - 0.65) / 0.15) ** 2.6 : 0;
-    const prep = 0.3 * ss(0.7, 0.8, u) * (u < 0.8 ? 1 : 0), land = u >= 0.8 ? (u < 0.84 ? 0.3 + 0.3 * ss(0.8, 0.84, u) : 0.6 * (1 - ss(0.84, 1, u))) : 0;
-    const bend = Math.max(crouch, prep, land), stretch = ss(0.38, 0.47, u) * (1 - ss(0.62, 0.78, u));
+  at(t) { const u = ((t / this.T) % 1 + 1) % 1, LAND = 0.78, OFF = 0.26, UP = 0.34, TOP = 0.57;
+    const d = (u - LAND + 1) % 1, sink = OFF + 1 - LAND;   // d: 着地してからの時間 / sink: 着地から伸び始めるまで
+    const bend = d < sink ? 1 - (1 - d / sink) ** 2 : 1 - ss(OFF, UP, u);   // 着地〜ため: 受けて沈む / けり出し: 一気に伸びる
+    const air = u >= UP && u < LAND, rise = u < TOP ? 1 - (1 - (u - UP) / (TOP - UP)) ** 2.6 : 1 - ((u - TOP) / (LAND - TOP)) ** 2.6;
+    const pt = u >= LAND ? 1 - ss(LAND, LAND + 0.05, u) : ss(OFF + 0.02, UP + 0.02, u);   // つま先の向き: けり出しで下へ、着地したらかかとを下ろす
+    const stretch = u >= LAND ? 1 - ss(LAND, LAND + 0.12, u) : ss(OFF + 0.02, UP + 0.04, u);
     const drop = this.LT * (1 - cos(this.thigh * bend)) + this.LS * (1 - cos((this.knee - this.thigh) * bend));
-    return { bend, stretch, arms: 1 - Math.max(crouch, 0.3 * land / 0.6), y: this.H * (rise + fall) - drop }; },
+    return { bend, stretch, point: pt, arms: 1 - bend, y: (air ? this.H * rise : 0) + this.toe * Math.sin(this.point * pt) - drop }; },
 };
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
@@ -45,8 +48,8 @@ export const POSES = {
   "cheer": (t) => { const J = CHEER.at(t), q = J.bend, e = J.stretch, a = J.arms, L = (u, d) => u.map((v, i) => v + (d[i] - v) * a), aL = (k) => L(CHEER.low[k], CHEER.up[k]), aR = (k) => aL(k).map((v, i) => i ? -v : v);
     return { b: { "shoulder.L": aL("sh"), "shoulder.R": aR("sh"), "upperArm.L": aL("ua"), "upperArm.R": aR("ua"), "lowerArm.L": aL("la"), "lowerArm.R": aR("la"), "hand.L": aL("hand"), "hand.R": aR("hand"),
       "upperLeg.L": [-CHEER.thigh * q, 0, 0.08], "upperLeg.R": [-CHEER.thigh * q, 0, -0.08], "lowerLeg.L": [CHEER.knee * q, 0, 0], "lowerLeg.R": [CHEER.knee * q, 0, 0],
-      "foot.L": [-(CHEER.knee - CHEER.thigh) * q + 0.4 * e, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + 0.4 * e, 0, 0],   // しゃがむ間は足の裏を床に平らに。空中で伸び切るとつま先が下を向く
-      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, y: J.y }; },
+      "foot.L": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0],   // しゃがむ間は足の裏を床に平らに。けり出し〜空中〜着地の瞬間はつま先が下を向く
+      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, y: J.y, sharp: true }; },
   "sitChair": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
       // 腕は横へ下ろして、手は太ももの外・座面の少し上(腕が短いので座面までは届かない)
       "upperArm.L": [-0.1, 0, -0.36], "upperArm.R": [-0.1, 0, 0.36], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true, seat: 0.2, seatFront: 0.1 }),
@@ -106,8 +109,10 @@ export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
+  let cur = null, held = 0;   // いまのポーズと、それに切りかえてからの時間
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
-    let P0 = POSES[name](t); const k = instant ? 1 : 1 - Math.exp(-dt * 9);
+    if (name !== cur) { cur = name; held = 0; } else held += dt;
+    let P0 = POSES[name](t); const k = instant || (P0.sharp && held > 0.35) ? 1 : 1 - Math.exp(-dt * 9);   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
     if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
