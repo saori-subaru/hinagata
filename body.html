@@ -83,6 +83,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tShirtLen" type="button">シャツの丈: 入れる</button>
     <button class="btn" id="tPantsKind" type="button">下: ズボン</button>
     <button class="btn" id="tPantsLen" type="button">ズボンの丈: 短パン</button>
+    <button class="btn" id="tArmor" type="button" aria-pressed="false">鎧</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
@@ -205,6 +206,7 @@ async function makeAvatar(opts, quiet = false) {   // 作る(作り直すとき�
   onAvatar?.();
 }
 await makeAvatar(fromQuery(location.search));
+$("tArmor").setAttribute("aria-pressed", String(!!avatar.options.outfit.armor.on));   // ?o= で鎧を着せて開いたとき
 globalThis.sotaiChecksum = () => avatar.checksum();
 globalThis.sotaiSetCam = (v) => { camera.position.set(v[0], v[1], v[2]); if (v.length > 3) controls.target.set(v[3], v[4], v[5]); };   // 確認用: カメラを置く
 
@@ -212,13 +214,14 @@ globalThis.sotaiSetCam = (v) => { camera.position.set(v[0], v[1], v[2]); if (v.l
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
 let clay = false, wire = false, compare = false, twin = null;   // twin: 横に並べる案2
-const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair];
+const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs"];   // 鎧の部品
+const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair, ...ARMOR.map((k) => parts[k])];
 function refreshLook() {
   for (const av of [avatar, twin].filter(Boolean)) {
     const P = av.parts, body = P.body;
     body.toonMat.color.set(SKINS[skinI]); body.m.material = compare && $("tRef").getAttribute("aria-pressed") === "true" ? cmpMat : clay ? clayMat : body.toonMat;
-    if (av === twin) for (const k of ["shirt", "pants", "socks", "shoes", "soles", "hair"]) P[k].on = parts[k].on;   // 並べたほうも同じ着せ方
-    for (const x of [P.body, P.shirt, P.pants, P.socks, P.shoes, P.soles, P.hair]) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
+    if (av === twin) for (const k of ["shirt", "pants", "socks", "shoes", "soles", "hair", ...ARMOR]) P[k].on = parts[k].on;   // 並べたほうも同じ着せ方
+    for (const x of [P.body, P.shirt, P.pants, P.socks, P.shoes, P.soles, P.hair, ...ARMOR.map((k) => P[k])]) { x.m.visible = x === body || (x.on && !clay); x.m.material.wireframe = wire; x.o.visible = x.m.visible && !clay && !wire; }
     av.faceLayer.visible = !clay; if (av.earLine) av.earLine.visible = !clay && !wire;
   }
   floor.visible = !compare;
@@ -358,12 +361,13 @@ const POSE_LABEL = { aPose: "Aポーズ", tPose: "Tポーズ", idle: "立つ", w
 const toggle = (id, fn) => { const b = $(id); b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on)); fn(on); }); };
 toggle("tCloth", (on) => { parts.shirt.on = parts.pants.on = on; refreshLook(); });
 toggle("tShoe", (on) => { parts.shoes.on = parts.soles.on = on; refreshLook(); });
+toggle("tArmor", (on) => { for (const k of ARMOR) parts[k].on = on; refreshLook(); });
 toggle("tSock", (on) => { parts.socks.on = on; refreshLook(); });
 toggle("tHair", (on) => { parts.hair.on = on; refreshLook(); });
 toggle("tClay", (on) => { clay = on; refreshLook(); });
 toggle("tCmp", (on) => { compare = on; $("tRef").hidden = !on; $("ref").hidden = !on || $("tRef").getAttribute("aria-pressed") !== "true"; $("poses").hidden = on; if (on && !clay) $("tClay").click(); refreshLook(); });
 toggle("tRef", (on) => { $("ref").hidden = !on; refreshLook(); });
-const seeThrough = (on) => { for (const m of [clayMat, parts.body.toonMat, ...["shirt", "pants", "shoes", "soles", "socks", "hair"].map((k) => parts[k].m.material)]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } };
+const seeThrough = (on) => { for (const m of [clayMat, parts.body.toonMat, ...["shirt", "pants", "shoes", "soles", "socks", "hair", ...ARMOR].map((k) => parts[k].m.material)]) { m.transparent = on; m.opacity = on ? 0.45 : 1; } };
 toggle("tBone", (on) => { helper.visible = on; seeThrough(on); });
 // 塗り方(アニメ=3段の影 / なめらか / べた塗り)と輪郭線: 作り直さずにその場で切りかわる
 const SHADE_LABEL = { toon: "アニメ", smooth: "なめらか", flat: "べた塗り" };
@@ -455,7 +459,7 @@ let headI = Math.max(0, HEAD_VARIANTS.findIndex(([, v]) => (v ? JSON.stringify(v
 // 頭の案: プルダウンで直接選ぶ(並べているときは右のキャラ)
 for (const [i, [name]] of HEAD_VARIANTS.entries()) { const o = document.createElement("option"); o.value = i; o.textContent = name; $("headPick").append(o); }
 const headLabel = () => { $("headPickL").textContent = twin ? "右:" : "頭:"; $("headPick").value = twin ? pairI : headI; $("tPair").textContent = twin ? "並べるのをやめる" : "案を横に並べる"; };
-const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed") === "true"; av.parts.shirt.on = av.parts.pants.on = on("tCloth"); av.parts.shoes.on = av.parts.soles.on = on("tShoe"); av.parts.socks.on = on("tSock"); av.parts.hair.on = on("tHair"); };
+const keepLook = (av) => { const on = (id) => $(id).getAttribute("aria-pressed") === "true"; av.parts.shirt.on = av.parts.pants.on = on("tCloth"); av.parts.shoes.on = av.parts.soles.on = on("tShoe"); av.parts.socks.on = on("tSock"); av.parts.hair.on = on("tHair"); for (const k of ARMOR) av.parts[k].on = on("tArmor"); };
 async function makeTwin() {
   $("msg").hidden = false; await new Promise((r) => requestAnimationFrame(() => r()));
   twin?.dispose();

@@ -4693,6 +4693,84 @@
     "en": "How much the top of the pants or skirt rises toward the back. 0 = level"
    }
   },
+  "outfit.armor.on": {
+   "path": "outfit.armor.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "着る",
+    "en": "Wear"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setWorn",
+   "order": 76,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   }
+  },
+  "outfit.armor.color": {
+   "path": "outfit.armor.color",
+   "type": "color",
+   "default": "#b9c2ce",
+   "label": {
+    "ja": "鎧の色",
+    "en": "Armor color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 77,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   }
+  },
+  "outfit.armor.gap": {
+   "path": "outfit.armor.gap",
+   "type": "number",
+   "default": 0.022,
+   "label": {
+    "ja": "体からの浮き",
+    "en": "Gap from the body"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.01,
+   "max": 0.05,
+   "step": 0.001,
+   "order": 78,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   }
+  },
+  "outfit.armor.thick": {
+   "path": "outfit.armor.thick",
+   "type": "number",
+   "default": 0.009,
+   "label": {
+    "ja": "板の厚み",
+    "en": "Plate thickness"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.004,
+   "max": 0.02,
+   "step": 0.001,
+   "order": 79,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   }
+  },
   "outfit.shoes.on": {
    "path": "outfit.shoes.on",
    "type": "boolean",
@@ -4705,7 +4783,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 79,
+   "order": 83,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -4723,7 +4801,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 80,
+   "order": 84,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -4741,7 +4819,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 81,
+   "order": 85,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -4854,7 +4932,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 76,
+   "order": 80,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -4872,7 +4950,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 77,
+   "order": 81,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -4893,7 +4971,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 78,
+   "order": 82,
    "section": {
     "ja": "靴下",
     "en": "Socks"
