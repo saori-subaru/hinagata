@@ -60,12 +60,21 @@ export const POSES = {
 const ARMED = { idle: true, walk: true };
 const armedArm = (P0) => ({ "upperArm.R": [-0.116 + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), 0.034, 0.466], "lowerArm.R": [-1.138, 0.253, 0.679] });   // the grip leans a little forward and out (straight up looked stiff)
 
-/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). armed: something is held in the right hand */
-export function createPosePlayer({ bone, BONES, HIPS0, armed = false }) {
+// The guard's weapon arm depends on the weapon (the pose itself has the sword's): a spear is held low at the side, the head forward
+// and a little up (ready to thrust); a staff is raised in front, slanting up and forward. Solved like the rest (straight wrist).
+const GUARD_R = {
+  spear: { "upperArm.R": [0.385,  -0.208,  0.407], "lowerArm.R": [-0.985,  0.347,  1.208] },
+  staff: { "upperArm.R": [-0.972, 0.27, 0.444], "lowerArm.R": [-0.279, -0.316, 0.878] },
+};
+
+/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon: what the right hand holds ("none", "sword", ...) */
+export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none" }) {
+  const armed = weapon !== "none";
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
     let P0 = POSES[name](t); const k = instant ? 1 : 1 - Math.exp(-dt * 9);
     if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0) } };
+    if (name === "guard" && GUARD_R[weapon]) P0 = { ...P0, b: { ...P0.b, ...GUARD_R[weapon] } };
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
