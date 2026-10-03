@@ -45,9 +45,9 @@ export const POSES = {
   "guard": (t) => { const br = sin(t * 2.2) * 0.02;
     return { b: { spine: [0.06 + br * 0.5, 0, 0], chest: [0.02, 0, 0], head: [-0.04, 0, 0],
       "upperLeg.L": [-0.35, 0, 0.1], "lowerLeg.L": [0.4, 0, 0], "foot.L": [-0.05, 0, 0], "upperLeg.R": [0.22, 0, -0.1], "lowerLeg.R": [0.32, 0, 0], "foot.R": [-0.5, 0, 0],
-      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘を外へ上げ、前腕を前へ寝かせて、刃は頭の右上へ立てる(正面から頭に隠れない)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
-      "upperArm.L": [1.194, -1.16, 1.112], "lowerArm.L": [3.141, 0.047, -0.649],
-      "upperArm.R": [2.386,  -0.144,  -0.325], "lowerArm.R": [2.305,  -0.242,  0.949] }, y: -0.03 + br * 0.3 }; },
+      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値。上腕のひねりは、肩とひじの回る量がいちばん小さくなるように選ぶ(大きく回すと、構えに入るときに腕が後ろへ回り込む)(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘を外へ上げ、前腕を前へ寝かせて、刃は頭の右上へ立てる(正面から頭に隠れない)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
+      "upperArm.L": [-0.979, 0.68, -0.329], "lowerArm.L": [-0.53, 0.454, -2.131],
+      "upperArm.R": [-1.935, 0.448, -0.881], "lowerArm.R": [0.931, -0.108, 2.253] }, y: -0.03 + br * 0.3 }; },
   "hugKnees": (t) => ({ b: { "upperLeg.L": [-2.35, 0, 0.1], "upperLeg.R": [-2.35, 0, -0.1], "lowerLeg.L": [2.45, 0, 0], "lowerLeg.R": [2.45, 0, 0], "foot.L": [-0.1, 0, 0], "foot.R": [-0.1, 0, 0],
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
       // 丸まった背中: 背中の3か所を少しずつ曲げ、肩を前へ巻く。顔は起こして前を見る
@@ -56,9 +56,9 @@ export const POSES = {
 
 // Holding a weapon in the right hand (outfit.weapon.right), standing and walking bend that arm: the elbow at the side, the forearm
 // forward, the back of the hand out and the thumb up — then the grip (across the fist) stands up, so a spear or staff is held upright
-// with the wrist straight. Solved from those directions; walking swings it a little.
+// with the wrist straight (leaning a little forward and out). Solved from those directions; walking swings it a little.
 const ARMED = { idle: true, walk: true };
-const armedArm = (P0) => ({ "upperArm.R": [-0.097 + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), 0.094, 0.463], "lowerArm.R": [-1.195, 0.447, 0.62] });
+const armedArm = (P0) => ({ "upperArm.R": [-0.116 + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), 0.034, 0.466], "lowerArm.R": [-1.138, 0.253, 0.679] });   // the grip leans a little forward and out (straight up looked stiff)
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). armed: something is held in the right hand */
 export function createPosePlayer({ bone, BONES, HIPS0, armed = false }) {
