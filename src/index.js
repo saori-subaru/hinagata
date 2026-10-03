@@ -231,8 +231,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   let faceLayer = null;
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HT.identity ? null : HT.toHead);
+    const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
-    faceLayer = new THREE.SkinnedMesh(g, face.faceMat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
   }
   buildFaceLayer();
 
@@ -337,6 +338,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
         const old = x.m.material; x.m.material = (k === "hair" ? hairMat : isMetal(k) ? (c) => metal(style, c) : (c) => shaded(style, c))(old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
       }
+      { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style); old.dispose(); }   // 顔の絵も同じ陰影に
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },

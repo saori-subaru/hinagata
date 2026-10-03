@@ -3,6 +3,7 @@
 import * as THREE from "three";
 
 import { PART_LABELS, EXPRESSIONS, partIds, expressionId } from "./names.js";
+import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
@@ -29,7 +30,9 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const faceCanvas = document.createElement("canvas"); faceCanvas.width = (FACE.x1 - FACE.x0) * FACE.S; faceCanvas.height = (FACE.y1 - FACE.y0) * FACE.S;
   const fctx = faceCanvas.getContext("2d");
   const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
-  const faceMat = new THREE.MeshBasicMaterial({ map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  // 顔の絵も体と同じ陰影で(光を無視すると暗い場所で目だけ光って見える)。setShading で作り直す
+  const faceMatFor = (style) => Object.assign(shaded(style, 0xffffff), { map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const faceMat = faceMatFor(OPT.shading.style);
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";
   const LAY = { eyeSize: OPT.face.eyeSize };   // 目の大きさ(コードで描く目)。あとから setLayout で変えられる
@@ -145,12 +148,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     faceTex.needsUpdate = true;
   }
   function faceLayerGeometry(src, FACE_WRAP, toHead = null) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled)
-    const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
+    const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, NS = src.attributes.shadeN?.array ?? N0, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
     const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
     const ok = (v) => { const [x, y, z] = H(v); return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.05 && N0[v * 3 + 2] > 0.3; };
     const map = new Map(), pos = [], nor = [], uv = [], si = [], sw = [], idx = [];
     const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
-      pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(N0[v * 3], N0[v * 3 + 1], N0[v * 3 + 2]);
+      pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で
       const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
       uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - FACE.y0) / (FACE.y1 - FACE.y0));
       for (let q = 0; q < 4; q++) { si.push(SI[v * 4 + q]); sw.push(SW[v * 4 + q]); } map.set(v, n); return n; };
@@ -167,5 +170,5 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   }
   const setEyeColor = (c) => { EYE_COL.splice(0, 4, ...irisColors(c)); };
   const getLayout = () => ({ eyeX: EYE.x, eyeY: EYE.y, eyeSize: LAY.eyeSize, browX: BROW.x, browY: BROW.y, mouthY: MOUTHP.y });
-  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
+  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, faceMatFor, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, drawParts, faceLayerGeometry };
 }
