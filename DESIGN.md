@@ -312,6 +312,22 @@ Checked: the open hand looks the same as before (about 1% of pixels change in a 
 
 Name tables for retargeting: VRM and Mixamo have three bones per finger; `fingers.*` ↔ the four fingers' first joints, `fingerTips.*` ↔ their second (and third) joints, `thumb.*` ↔ the thumb's first joint.
 
+### The skirt as cloth (2026-10-03, Saori; done)
+
+Saori: sitting on the floor, the thighs poked out of the skirt, and weighting couldn't fix it. Skin weights alone can't: the thighs turn ~90° inside one piece of cloth, so weighting the skirt to them tears its sides open (a flap stood up from the front) and weighting it to the hips lets them poke through.
+
+Done (`src/cloth.js`, only for `outfit.pants.kind = "skirt"`): each frame the skirt is moved as simple position-based cloth.
+- The target is where the usual skinning puts each point (the skirt's weights are unchanged). Points are pulled toward it, fully at the waistband (pinned), loosely toward the hem, keeping a little of their motion (a soft sway).
+- Two rounds of: edges longer than built are pulled back (the cloth doesn't stretch; it may bunch), points inside a thigh or shin are pushed out (capsules from the bones, radii measured off the body: the thigh is ~0.1 m at its root and fuller in front), points under the floor or the chair's seat are lifted onto it.
+- A thigh turned up past ~55° (sitting, crouching) pushes the front of the skirt over itself, not under (the nearest way tucked part of it beneath the thigh, which then showed through a hole); the back of the skirt stays under (you sit on it). A walking thigh uses the plain push.
+- Points already inside a capsule when standing (the skirt's top over the thigh's root) keep clear of it.
+- Only the outer side of the 1-2 cm shell is moved; the inner side rides on the nearest outer point. When nothing has moved for 40 frames it stops computing.
+- Drawn as the same skinned mesh: the cloth's points and normals are turned back through each point's blended bone matrix into rest positions, so the GPU's skinning puts them where the cloth is. Where the cloth sits on its target the built mesh is used unchanged: a standing skirt renders pixel-identical to before. (A separate plain mesh drawn instead shaded differently — a dark band on a standing skirt that we couldn't trace — so this way.) `cloth.rest()` puts the built mesh back for the glTF export.
+
+Cost: ~2.5-4 ms per moving frame on the test machine (3-4× slower than a desktop): about 1 ms on a desktop.
+
+Not yet: hug-knees still shows a little of the back of the thighs at the side; the space between the legs under a short skirt when sitting on the floor.
+
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
 
 With the standard humanoid names (see "Motions written for any humanoid skeleton"), motions made for other characters can be loaded:

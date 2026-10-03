@@ -20,6 +20,7 @@ import { buildHair } from "./hair/index.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
+import { createCloth } from "./cloth.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
@@ -190,6 +191,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   addShadeNormals(parts.body.m.geometry); addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
   parts.shirt = skinned(meshPart("shirt"), OPT.outfit.shirt.color);
   parts.pants = skinned(meshPart("pants"), OPT.outfit.pants.color);
+  // a skirt drapes as cloth (cloth.js): it stays over the thighs when they turn up (sitting) instead of tearing open or letting them poke through
+  const PT = OPT.outfit.pants, THK = OPT.body.thickness, CM = 0.006;   // CM: the cloth's margin off the leg. The radii: measured off the body (the thigh is ~0.1 m at its root, fuller in front)
+  const cloth = PT.kind === "skirt" ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: PT.top, hem: PT.skirt?.hem ?? 0.3,
+    legs: ["L", "R"].map((s) => ({ hip: `upperLeg.${s}`, knee: `lowerLeg.${s}`, foot: `foot.${s}`, t0: 0.12, front: 0.01, rThigh: 0.094 * (THK.thighTop ?? THK.thigh ?? 1) + CM, rKnee: 0.078 * (THK.thigh ?? 1) + CM, rCalf: 0.062 * (THK.calf ?? 1) + CM, rAnkle: 0.057 * (THK.calf ?? 1) + CM })) }) : null;
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
@@ -273,7 +278,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     return lo; }
 
   const avatar = {
-    object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine,
+    object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, cloth,
     /** internals for tools and checking (shapes, face texture, joints) */
     internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, bodySdfRaw, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
@@ -289,6 +294,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
       else seatAdj *= instant ? 0 : Math.exp(-dt * 9);
+      cloth?.update(dt, instant, lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
@@ -351,6 +357,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     async exportGLB() {
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       const outs = []; root.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
+      cloth?.rest();   // the skirt as built (not as the cloth has it now)
       const saved = BONES.map((b) => bone[b].quaternion.clone()), hy = bone.hips.position.y;
       BONES.forEach((b) => bone[b].quaternion.identity()); bone.hips.position.copy(HIPS0);
       const restore = () => { outs.forEach((o) => { o.visible = true; }); BONES.forEach((b, i) => bone[b].quaternion.copy(saved[i])); bone.hips.position.y = hy; };
