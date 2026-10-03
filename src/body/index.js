@@ -136,9 +136,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], OPT.body.sculpt.forearm.bulge.radius, OPT.body.sculpt.forearm.bulge.radiusEnd, `lowerArm.${s}`, OPT.body.sculpt.forearm.bulge.blend);
       Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: OPT.body.sculpt.forearm.bulge.flat }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
     // 手: Aポーズで手のひらが下を向く。指4本(少し開く)+親指
-    // 何か持つ手(outfit.weapon)は握りこぶし。右手(武器)は手首をひねって拳を前へ・親指を上へ(握った柄が縦に通る)。左手(盾)はそのまま
+    // 何か持つ手(outfit.weapon)は握りこぶし(手首はまっすぐのまま。柄は親指の側へ抜ける)
     const fist = ((OPT.outfit?.weapon ?? {})[s === "L" ? "left" : "right"] ?? "none") !== "none";
-    const { w, D, N, S } = handFrame(J, s, fist && s === "R");   // D=指の向き N=手のひらの向き S=親指の側
+    const { w, D, N, S } = handFrame(J, s);   // D=指の向き N=手のひらの向き S=親指の側
     const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
     const palm = at(w, [D, 0.03], [N, 0.002]);
     P[`palm.${s}`] = E(palm, [0.034, 0.05, 0.019], `hand.${s}`, 0.02, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)

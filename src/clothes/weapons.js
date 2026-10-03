@@ -8,13 +8,11 @@ import { sub, dot, norm, cross, slice, sell } from "./armor.js";
 const add = (a, ...t) => a.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
 const capsule = (p, a, b, r) => { const ab = sub(b, a), ap = sub(p, a), h = Math.max(0, Math.min(1, dot(ap, ab) / dot(ab, ab))); return Math.hypot(ap[0] - ab[0] * h, ap[1] - ab[1] * h, ap[2] - ab[2] * h) - r; };
 
-/** The hand's frame (A-pose): D = toward the fingers, N = the palm's side, S = the thumb's side; G = where a fist holds a grip.
- *  hold: the wrist turned for holding a weapon — the fist's knuckles forward, thumb up, palm toward the body, so the grip runs
- *  up and down through the fist (a spear or staff stands straight through it). Otherwise the A-pose hand: fingers down and out, palm down. */
-export function handFrame(J, s, hold = false) {
-  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`];
-  let [D, N, S] = hold ? [[0, -0.25, 0.968], [-m, 0, 0], [0, 0.968, 0.25]] : [[m * 0.876, -0.483, 0], [-0.483 * m, -0.876, 0], [0, 0, 1]];
-  if (hold) { const k = D, t = 0.3 * m, c = Math.cos(t), sn = Math.sin(t), r = (v) => { const kv = cross(k, v), kd = dot(k, v); return v.map((x, i) => x * c + kv[i] * sn + k[i] * kd * (1 - c)); }; N = r(N); S = r(S); }   // tipped in a little: with the arms hanging (idle, walk) the grip stands about straight
+/** The hand's frame (A-pose): D = toward the fingers, N = the palm's side, S = the thumb's side (forward); G = where a fist holds a grip.
+ *  A fist holds a grip along S: across the hand, square to the forearm (the wrist stays straight). To stand a spear or staff up,
+ *  the arm bends instead (motion/index.js: ARMED). */
+export function handFrame(J, s) {
+  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`], D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];
   const palm = add(w, [D, 0.03], [N, 0.002]);
   return { m, w, D, N, S, palm, G: add(palm, [N, 0.03], [D, 0.004]) };
 }
@@ -22,9 +20,9 @@ export function handFrame(J, s, hold = false) {
 export function buildWeapons(OPT, { J, bodySdf }) {
   const WO = OPT.outfit.weapon ?? {}, R = WO.right ?? "none", L = WO.left ?? "none";
   const none = null;
-  // ── right hand: the item's axis A runs through the fist (up, the wrist turned: see handFrame); W across it (its blade's width, toward the knuckles), T its thickness ──
-  const H = handFrame(J, "R", true), lean = { sword: 0.35, axe: 0.25 }[R] ?? 0;   // a spear or staff stands straight up through the fist; a sword or axe leans forward a little
-  const A = norm(add([0, 0, 0], [H.S, Math.cos(lean)], [H.D, Math.sin(lean)])), W = norm(add(H.D, [A, -dot(H.D, A)])), T = cross(A, W);
+  // ── right hand: the item's axis A runs straight through the fist (S); W across it (its blade's width, toward the knuckles), T its thickness ──
+  const H = handFrame(J, "R");
+  const A = H.S, W = norm(add(H.D, [A, -dot(H.D, A)])), T = cross(A, W);
   const loc = (x, y, z) => { const q = [x - H.G[0], y - H.G[1], z - H.G[2]]; return [dot(q, A), dot(q, W), dot(q, T)]; };   // (along, across, thickness)
   const at = (a, w = 0) => add(H.G, [A, a], [W, w]);
   let rMetal = none, rOther = none;

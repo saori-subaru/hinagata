@@ -45,20 +45,27 @@ export const POSES = {
   "guard": (t) => { const br = sin(t * 2.2) * 0.02;
     return { b: { spine: [0.06 + br * 0.5, 0, 0], chest: [0.02, 0, 0], head: [-0.04, 0, 0],
       "upperLeg.L": [-0.35, 0, 0.1], "lowerLeg.L": [0.4, 0, 0], "foot.L": [-0.05, 0, 0], "upperLeg.R": [0.22, 0, -0.1], "lowerLeg.R": [0.32, 0, 0], "foot.R": [-0.5, 0, 0],
-      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘を外へ上げ、拳は頭の横、刃は肩の後ろへ)
+      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘を外へ上げ、前腕を前へ寝かせて、刃は頭の右上へ立てる(正面から頭に隠れない)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
       "upperArm.L": [1.194, -1.16, 1.112], "lowerArm.L": [3.141, 0.047, -0.649],
-      "upperArm.R": [2.893,  0.116,  -0.265], "lowerArm.R": [-0.052,  0.003,  1.028], "hand.R": [1.941,  -0.752,  0.377] }, y: -0.03 + br * 0.3 }; },
+      "upperArm.R": [2.386,  -0.144,  -0.325], "lowerArm.R": [2.305,  -0.242,  0.949] }, y: -0.03 + br * 0.3 }; },
   "hugKnees": (t) => ({ b: { "upperLeg.L": [-2.35, 0, 0.1], "upperLeg.R": [-2.35, 0, -0.1], "lowerLeg.L": [2.45, 0, 0], "lowerLeg.R": [2.45, 0, 0], "foot.L": [-0.1, 0, 0], "foot.R": [-0.1, 0, 0],
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
       // 丸まった背中: 背中の3か所を少しずつ曲げ、肩を前へ巻く。顔は起こして前を見る
       spine: [0.2, 0, 0], chest: [0.2, 0, 0], upperChest: [0.25, 0, 0], "shoulder.L": [0, -0.3, -0.06], "shoulder.R": [0, 0.3, 0.06], neck: [0.04, 0, 0], head: [-0.22 + sin(t * 1.2) * 0.04, 0, 0.12] }, y: -0.31 }),
 };
 
-/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). */
-export function createPosePlayer({ bone, BONES, HIPS0 }) {
+// Holding a weapon in the right hand (outfit.weapon.right), standing and walking bend that arm: the elbow at the side, the forearm
+// forward, the back of the hand out and the thumb up — then the grip (across the fist) stands up, so a spear or staff is held upright
+// with the wrist straight. Solved from those directions; walking swings it a little.
+const ARMED = { idle: true, walk: true };
+const armedArm = (P0) => ({ "upperArm.R": [-0.097 + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), 0.094, 0.463], "lowerArm.R": [-1.195, 0.447, 0.62] });
+
+/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). armed: something is held in the right hand */
+export function createPosePlayer({ bone, BONES, HIPS0, armed = false }) {
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
-    const P0 = POSES[name](t), k = instant ? 1 : 1 - Math.exp(-dt * 9);
+    let P0 = POSES[name](t); const k = instant ? 1 : 1 - Math.exp(-dt * 9);
+    if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0) } };
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
