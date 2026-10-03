@@ -41,6 +41,7 @@ site/avatar/
       draw.js           code-drawn parts (round eyes, brows, mouths, ...)
       images.js         image parts (eye / brow / mouth PNGs, facekit layout)
     motion/             index.js (pose player, blending), presets.js (idle, walk, wave, sit, ...)
+                        ik.js (two-bone IK), climb.js (climb / jump / fall poses, the climbing gait, body and stride measures)
     materials.js        toon ramp, outline, clay
     export.js           GLB export (A-pose, outlines off)
   presets/              JSON files: bodies, hairstyles, faces, outfits (templates for agents)
@@ -329,6 +330,19 @@ Done (`src/cloth.js`, only for `outfit.pants.kind = "skirt"`): each frame the sk
 Cost on the test machine (3-4× slower than a desktop), girl body, whole avatar update: 1.5 ms per frame without the body-surface step, 2.7 ms with it (walking, cheering). Sitting still, the cloth sleeps.
 
 Not yet: hugging the knees shows the tops of the thighs (as a real skirt would); the space between the legs under a short skirt when sitting on the floor; the glTF export has the built skirt, not the cloth's motion.
+
+### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
+
+Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").
+
+- `src/motion/ik.js`: `ik2(bones, LIMBS["hand.L"], target, pole)` — two-bone IK in world space after `avatar.update` (wrist / ankle onto a point, the elbow / knee toward the pole). `LIMBS`: the four limbs as bone chains with their side. `aim(bone, from, to)`.
+- `src/motion/climb.js`: poses `jumpAir`, `jumpLand` (two frames of the cheer jump; the game's physics makes the height), `fall`, `hardLand` (the cheer wind-up crouch), `climb` (the base: arms up, knees open like a frog's; `sharp` so last frame's IK doesn't leak into the blend), `climbOver` (crouched on the edge after pulling up).
+- `measureBody(avatar)`: shoulder and hip positions, arm and leg length (reach differs by body type). `measureStride(avatar, pose, period)`: how far a walk cycle carries the feet; play the walk at speed / stride and planted feet don't slide (the forest's feet slid at a third of the right cadence before).
+- `climbLimbs(avatar, { body, phase, step, dir, right, out, place })`: the hands and feet, one at a time (right hand → left foot → left hand → right foot). Each holds still on the surface for 3/4 of the cycle while the body moves past it, then reaches to the next hold. The game drives `phase` by distance climbed / step (like the walk) and gives `place(lateral, up, lift)` = a point on its surface (the forest: a cylinder).
+- Hands hold at chin height: the arms are too short to go over the big head. On a 0.86 m body, steps of 0.7 × arm at 3.2 cycles a second climb about 0.4 m/s.
+- Exported from `src/index.js`. The editor lists the new poses (`climb` alone shows the base pose: the IK needs a surface).
+
+Not yet: a pull-up with a foot on the edge (the forest's pull-up is the body sliding up and over, then a crouch); hanging by the hands; running.
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
 

@@ -24,6 +24,8 @@ import { createCloth } from "./cloth.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
+export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
+export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 
 /**
  * Build an avatar.
