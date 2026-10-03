@@ -46,7 +46,7 @@ export const POSES = {
     return { b: { spine: [0.06 + br * 0.5, 0, 0], chest: [0.02, 0, 0], head: [-0.04, 0, 0],
       "upperLeg.L": [-0.35, 0, 0.1], "lowerLeg.L": [0.4, 0, 0], "foot.L": [-0.05, 0, 0], "upperLeg.R": [0.22, 0, -0.1], "lowerLeg.R": [0.32, 0, 0], "foot.R": [-0.5, 0, 0],
       // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値。上腕のひねりは、肩とひじの回る量がいちばん小さくなるように選ぶ(大きく回すと、構えに入るときに腕が後ろへ回り込む)(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘は肩より下で外・前へ、前腕を前へ出して、刃は内側(頭の方)へ少し倒して立てる(肘を上げすぎると肩がつぶれた)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
-      "upperArm.L": [-0.979, 0.68, -0.329], "lowerArm.L": [-0.53, 0.454, -2.131],
+      "shoulder.L": [0, -0.25, 0], "upperArm.L": [-1.617, 0.734, -0.057], "lowerArm.L": [-0.368, 0.379, -1.77],
       "upperArm.R": [-0.955, 0.123, -0.03], "lowerArm.R": [-0.633, -0.005, 1.029] }, y: -0.03 + br * 0.3 }; },
   "hugKnees": (t) => ({ b: { "upperLeg.L": [-2.35, 0, 0.1], "upperLeg.R": [-2.35, 0, -0.1], "lowerLeg.L": [2.45, 0, 0], "lowerLeg.R": [2.45, 0, 0], "foot.L": [-0.1, 0, 0], "foot.R": [-0.1, 0, 0],
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
@@ -68,7 +68,8 @@ const armedArm = (P0, A) => ({ ...A, "upperArm.R": [A["upperArm.R"][0] + 0.35 * 
 
 // The guard's arms depend on what each hand holds (the pose itself has the sword's and the straight shield's): a spear is held low at
 // the side, the head forward and a little up (ready to thrust); a staff is raised in front, slanting up and forward. A diagonal shield
-// (shieldMount) raises the forearm slantwise across the front, so the shield stands upright. Empty hands (or fists) take a fighter's
+// (shieldMount) raises the forearm slantwise across the front, so the shield stands upright. With a shield, the shoulder rolls forward and
+// the elbow comes up in front (the arms are short: else the shield sat against the chin, and a big helm stuck out in front of it). Empty hands (or fists) take a fighter's
 // guard: the lead (left) fist out in front at chin height, the rear (right) fist by the chin, both elbows down. Solved like the rest.
 const GUARD_R = {
   spear: { "upperArm.R": [0.385,  -0.208,  0.407], "lowerArm.R": [-0.985,  0.347,  1.208] },
@@ -76,8 +77,8 @@ const GUARD_R = {
   bare: { "upperArm.R": [-0.896, 0.131, 0.461], "lowerArm.R": [-1.508, 0.312, 0.927] },
 };
 const GUARD_L = {
-  diagonal: { "upperArm.L": [-1.005, 0.226, -0.572], "lowerArm.L": [-0.415, 0.301, -2.108] },
-  bare: { "upperArm.L": [-1.104, -0.186, -0.562], "lowerArm.L": [-1.091, -0.307, -0.612] },
+  diagonal: { "shoulder.L": [0, -0.25, 0], "upperArm.L": [-1.575, 0.55, -0.265], "lowerArm.L": [0.043, 0.23, -1.976] },
+  bare: { "shoulder.L": [0, 0, 0], "upperArm.L": [-1.104, -0.186, -0.562], "lowerArm.L": [-1.091, -0.307, -0.612] },
 };
 const BARE = { none: true, fist: true };
 

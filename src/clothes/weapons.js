@@ -62,7 +62,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], Vf = norm(sub(h, e)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [Vf, -dot(O0, Vf)])), Hf = cross(Vf, O).map((v) => -v);   // Vf toward the hand = the shield's top (guarding: elbow down, forearm up, the shield upright), O its face: out of the back of the forearm (a little forward)
   // shieldMount "diagonal": the shield turned 45° on the arm (about its face), its top toward the elbow's outer side — the guard then raises the forearm slantwise (hand in, elbow out) and the shield stands upright
   const tilt = WO.shieldMount === "diagonal" ? -Math.PI / 4 : 0, V = norm(add([0, 0, 0], [Vf, Math.cos(tilt)], [Hf, Math.sin(tilt)])), Hz = cross(V, O).map((v) => -v);
-  const SC = add(e.map((v, i) => (v + h[i]) / 2), [O, 0.07]);   // on the outside of the forearm
+  const SC = add(e.map((v, i) => (v + h[i]) / 2), [O, 0.085]);   // on the outside of the forearm, standing off it a little (guarding, it then comes out in front of a big helm)
   const sl = (x, y, z) => { const q = [x - SC[0], y - SC[1], z - SC[2]]; return [dot(q, Hz), dot(q, V), dot(q, O)]; };   // (across, up, out)
   let lFace = none, lMetal = none, lOther = none;
   if (L === "shield" || L === "round") {
