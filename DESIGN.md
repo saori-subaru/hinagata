@@ -302,6 +302,16 @@ Done when:
 
 Name tables for retargeting: `shoulder.L` ↔ VRM `leftShoulder` ↔ Mixamo `LeftShoulder` (and `.R`).
 
+### Finger bones and the fist (2026-10-03, Saori; done)
+
+Saori wanted the cheer jump's wind-up to close the hands into fists. A weapon's fist (outfit.weapon) is built into the hand's shape, so a pose can't open or close it: the fingers were parts on `hand.*` with no bones of their own.
+
+Done: three bones per hand (28 bones now, with the skirt's two) — `fingers.*` at the knuckles (the four fingers bend as one), `fingerTips.*` at the fingers' middle (child of `fingers.*`), `thumb.*` at the thumb's root. Each open finger is now two capsules (base on `fingers`, tip on `fingerTips`; the joint blends narrowly so it doesn't swell); a weapon's built fist binds its parts the same way. A pose says `grip: { L, R }` (0 = open, 1 = a fist): the motion player turns those bones about axes made from the hand's frame (`HANDS`: D toward the fingers, N the palm, S the thumb's side, from the body), angles in `GRIP`. A hand that holds something is already a fist and is left alone. Gauntlets (`armorHands`) follow the finger bones.
+
+Checked: the open hand looks the same as before (about 1% of pixels change in a close view); build time and per-frame cost unchanged within noise (bone update ~0.01 ms). Cheer: fists in front of the chin while crouching, open hands up top.
+
+Name tables for retargeting: VRM and Mixamo have three bones per finger; `fingers.*` ↔ the four fingers' first joints, `fingerTips.*` ↔ their second (and third) joints, `thumb.*` ↔ the thumb's first joint.
+
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
 
 With the standard humanoid names (see "Motions written for any humanoid skeleton"), motions made for other characters can be loaded:

@@ -1,6 +1,8 @@
 // Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
+// grip?: { L, R } — how far each hand closes into a fist (0 = open, 1 = a fist): the finger bones curl toward the palm and the thumb folds
+//   over them (gripHand below). A hand that holds something (outfit.weapon) is already a fist in its shape and is left alone.
 // sharp: a fast pose (a jump) — after it has blended in, the bones follow it exactly each frame instead of easing toward it (easing slowed the drop just before landing).
 // Bones not listed rest in the A-pose (the bind pose).
 import * as THREE from "three";
@@ -51,7 +53,7 @@ export const POSES = {
     return { b: { "shoulder.L": aL("sh"), "shoulder.R": aR("sh"), "upperArm.L": aL("ua"), "upperArm.R": aR("ua"), "lowerArm.L": aL("la"), "lowerArm.R": aR("la"), "hand.L": aL("hand"), "hand.R": aR("hand"),
       "upperLeg.L": [-CHEER.thigh * q, 0, 0.08], "upperLeg.R": [-CHEER.thigh * q, 0, -0.08], "lowerLeg.L": [CHEER.knee * q, 0, 0], "lowerLeg.R": [CHEER.knee * q, 0, 0],
       "foot.L": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0],   // しゃがむ間は足の裏を床に平らに。けり出し〜空中〜着地の瞬間はつま先が下を向く
-      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, y: J.y, sharp: true }; },
+      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, grip: { L: 1 - a, R: 1 - a }, y: J.y, sharp: true }; },   // ためでは手をグーに、上げると開く
   "sitChair": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
       // 腕は横へ下ろして、手は太ももの外・座面の少し上(腕が短いので座面までは届かない)
       "upperArm.L": [-0.1, 0, -0.36], "upperArm.R": [-0.1, 0, 0.36], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true, seat: 0.2, seatFront: 0.1 }),
@@ -106,11 +108,24 @@ const GUARD_L = {
 };
 const BARE = { none: true, fist: true };
 
+// グー(grip): 指の付け根と中ほどを手のひらの側へ曲げ、親指を指の前へたたむ。回す軸は手の向き(HANDS: D=指 N=手のひら S=親指の側。体から)から作る
+//   (骨は休みの姿勢で回っていないので、休みの向きの軸で回せばそのまま骨の回転になる)
+const GRIP = { fingers: 1.6, fingerTips: 0.95, thumb: [1.1, 0.5] };   // 曲げる角度(ラジアン)。親指: 手のひらの側へ / 指の側へ
+function gripHand(H) {
+  const v = (a) => new THREE.Vector3(...a), D = v(H.D), N = v(H.N), S = v(H.S);
+  const curl = new THREE.Vector3().crossVectors(D, N).normalize(), fold = new THREE.Vector3().crossVectors(S, N).normalize(), lean = new THREE.Vector3().crossVectors(S, D).normalize();   // curl: 指を手のひらへ / fold: 親指を手のひらへ / lean: 親指を指の側へ
+  const Qa = (ax, a) => new THREE.Quaternion().setFromAxisAngle(ax, a);
+  const full = { fingers: Qa(curl, GRIP.fingers), fingerTips: Qa(curl, GRIP.fingerTips), thumb: Qa(fold, GRIP.thumb[0]).multiply(Qa(lean, GRIP.thumb[1])) };
+  const q = new THREE.Quaternion(), e = new THREE.Euler(), I = new THREE.Quaternion();
+  return (k, g) => { q.slerpQuaternions(I, full[k], g); e.setFromQuaternion(q); return [e.x, e.y, e.z]; };
+}
+
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal" */
-export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "none", shieldMount = "diagonal" }) {
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal" }) {
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
+  const HOLD = { L: left !== "none", R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
   let cur = null, held = 0;   // いまのポーズと、それに切りかえてからの時間
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
     if (name !== cur) { cur = name; held = 0; } else held += dt;
@@ -119,6 +134,7 @@ export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "
     if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
       P0 = { ...P0, b }; }
+    if (P0.grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = P0.grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
