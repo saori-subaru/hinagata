@@ -25,7 +25,9 @@ const WAVE = (() => {
 const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, point: 0.4, toe: 0.077,   // toe: つま先までの長さ(つま先立ちで足首が上がる分 = toe × sin(角度)。測った値)
   up: { sh: [0, 0, 0.28], ua: [-0.64, -0.38, 1.35], la: [0, -0.04, 0.15], hand: [-0.54, 0.54, -0.25] },   // 頂点: 腕をまっすぐ上へ、手のひらは正面(ひねりは計算で選んだ)
-  low: { sh: [0, 0, 0.04], ua: [-0.35, -0.2, 0.55], la: [0, -0.04, 0.95], hand: [-0.2, 0.2, -0.1] },   // ため: 腕を下ろして肘を曲げる(手は肩の高さあたり)
+  low: { sh: [0, 0, 0.04], ua: [-0.65, -1.18, -0.2], la: [-1.84, -0.55, -0.05], hand: [-0.22, 0.17, -0.28] },   // ため: 肘を曲げて、手を顔の前(あごの前)へ。腕が短いのでここまで(頬の横より前へは届かない)
+  arm(k, a) { const q = this._q ??= {}, e = this._e ??= new THREE.Euler(); if (!q[k]) { const Qe = (v) => new THREE.Quaternion().setFromEuler(new THREE.Euler(...v)); q[k] = [Qe(this.low[k]), Qe(this.up[k]), new THREE.Quaternion()]; }
+    const [lo, hi, m] = q[k]; m.slerpQuaternions(lo, hi, a); e.setFromQuaternion(m); return [e.x, e.y, e.z]; },   // 下ろした腕と上げた腕のあいだ(角度をそのまま混ぜると途中で腕が変に回るので、回転として混ぜる)
   at(t) { const u = ((t / this.T) % 1 + 1) % 1, LAND = 0.78, OFF = 0.26, UP = 0.34, TOP = 0.57;
     const d = (u - LAND + 1) % 1, sink = OFF + 1 - LAND;   // d: 着地してからの時間 / sink: 着地から伸び始めるまで
     const bend = d < sink ? 1 - (1 - d / sink) ** 2 : 1 - ss(OFF, UP, u);   // 着地〜ため: 受けて沈む / けり出し: 一気に伸びる
@@ -45,7 +47,7 @@ export const POSES = {
   // 手をふる: 腕を上げて止め、肘から先を左右に振る(WAVE)。手のひらは正面の相手へ。手首は曲げない(振ると前腕とずれて見えた)
   "wave": (t) => ({ b: { "upperArm.L": [0.18, 0, -0.18], "lowerArm.L": [0, 0.4, -0.08], "shoulder.R": WAVE.sh, "upperArm.R": WAVE.ua, "lowerArm.R": WAVE.fore(WAVE.mid + sin(t * 8) * WAVE.amp), "hand.R": WAVE.hand, head: [0.04, -0.15, -0.14], chest: WAVE.chest }, y: 0 }),
   // ばんざいジャンプ: 腕を下ろしてしゃがみ(ため) → 跳ね上がって頂点で伸び切り、少し浮く → ストンと落ちてひざで受ける。手のひらは正面へ(CHEER)
-  "cheer": (t) => { const J = CHEER.at(t), q = J.bend, e = J.stretch, a = J.arms, L = (u, d) => u.map((v, i) => v + (d[i] - v) * a), aL = (k) => L(CHEER.low[k], CHEER.up[k]), aR = (k) => aL(k).map((v, i) => i ? -v : v);
+  "cheer": (t) => { const J = CHEER.at(t), q = J.bend, e = J.stretch, a = J.arms, aL = (k) => CHEER.arm(k, a), aR = (k) => aL(k).map((v, i) => i ? -v : v);
     return { b: { "shoulder.L": aL("sh"), "shoulder.R": aR("sh"), "upperArm.L": aL("ua"), "upperArm.R": aR("ua"), "lowerArm.L": aL("la"), "lowerArm.R": aR("la"), "hand.L": aL("hand"), "hand.R": aR("hand"),
       "upperLeg.L": [-CHEER.thigh * q, 0, 0.08], "upperLeg.R": [-CHEER.thigh * q, 0, -0.08], "lowerLeg.L": [CHEER.knee * q, 0, 0], "lowerLeg.R": [CHEER.knee * q, 0, 0],
       "foot.L": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0],   // しゃがむ間は足の裏を床に平らに。けり出し〜空中〜着地の瞬間はつま先が下を向く
