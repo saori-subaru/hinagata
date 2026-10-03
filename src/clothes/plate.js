@@ -30,19 +30,49 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     sx = A * k; sf = z0 + Bz * k; sb = z0 - Bz * k; }
   const hg = 0.014, zc = (sf + sb) / 2, HR = [sx + hg, 0, (sf - sb) / 2 + hg + 0.004], bottom = chin - 0.035, yc = top - (top - bottom) * 0.45;   // the dome's center: the walls run straight below it
   HR[1] = top + hg - yc; const HC = [0, yc, zc];
+  // helm (outfit.armor.helm): "great" = a closed bucket with an eye slit / "visor" = the same, the eyes behind a dark visor and the mouth open
+  //   / "open" = a rounder helm open around the face, with a nose guard. The open ones are cut through: the face behind is the character's own
+  const HELM = AR.helm ?? "great", round = HELM === "open";
   const helmOuter = (x, y, z) => { const rho = Math.hypot(x, (z - zc) * HR[0] / HR[2]);   // round from above (an ellipse, scaled to a circle)
-    if (y < yc) return rho - HR[0] * (1 - 0.06 * ((yc - y) / (yc - bottom)) ** 2);   // straight walls, a little in toward the bottom
-    return sell(rho, y - yc, HR[0], HR[1], 2.4); };
-  const slit = (x, y, z) => Math.max(Math.abs(y - eyeY) - 0.011, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
+    if (y < yc) return rho - HR[0] * (1 - (round ? 0.1 : 0.06) * ((yc - y) / (yc - bottom)) ** 2);   // straight walls, a little in toward the bottom
+    return sell(rho, y - yc, HR[0], HR[1], round ? 2.05 : 2.4); };
+  const fx = (hx) => HT.fromHead(hx, 1, 0)[0], eyeX = OPT.face.layout.eyeX ?? 0.1;
+  const slitH = HELM === "visor" ? 0.024 : 0.011;   // the visor: a wider dark band over the eyes
+  const slit = (x, y, z) => Math.max(Math.abs(y - eyeY) - slitH, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
+  // the opening: an oval through the front of the helm (front half only)
+  const OPEN = HELM === "visor" ? { y0: chin - 0.06, y1: eyeY - slitH - 0.022, w: fx(0.1), n: 2.6 } : HELM === "open" ? { y0: chin - 0.06, y1: eyeY + 0.06, w: fx(eyeX + 0.078), n: 2.3 } : null;
+  const opening = OPEN ? (x, y, z) => { const ym = (OPEN.y0 + OPEN.y1) / 2, hy = (OPEN.y1 - OPEN.y0) / 2; return Math.max(sell(x, y - ym, OPEN.w, hy, OPEN.n), zc + 0.02 - z); } : null;
+  const nasal = (x, y, z) => Math.max(Math.abs(x) - 0.011, y - (eyeY + 0.07), eyeY - 0.045 - y, helmOuter(x, y, z), -helmOuter(x, y, z) - 0.009, zc - z);   // a strip down the front, over the nose
   const helmSdf = (x, y, z) => {
     let d = helmOuter(x, y, z);
     d = smax(d, bottom - y, 0.006);
-    d = groove(d, y, eyeY + 0.034, 0.005, 0.003); d = groove(d, y, eyeY - 0.03, 0.004, 0.002);   // the visor's edges
-    d = smax(d, -slit(x, y, z), 0.003);
-    const fin = Math.max(Math.abs(x) - 0.009, helmOuter(x, y - 0.024, z) - 0.002, yc + HR[1] * 0.15 - y);   // a crest from front to back
-    if (z > zc) for (const [hx, hy] of [[-0.07, -0.05], [-0.045, -0.05], [-0.07, -0.072], [-0.045, -0.072]]) d = smax(d, 0.0055 - Math.hypot(x - hx, y - eyeY - hy), 0.002);   // breaths on the right cheek (front only)
-    return Math.min(d, fin); };
-  const visorSdf = (x, y, z) => Math.max(Math.abs(y - eyeY) - 0.015, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
+    if (!round) { d = groove(d, y, eyeY + slitH + 0.023, 0.005, 0.003); if (HELM === "great") d = groove(d, y, eyeY - 0.03, 0.004, 0.002); d = smax(d, -slit(x, y, z), 0.003); }   // the visor's edges and the slit
+    else d = groove(d, y, OPEN.y1 + 0.018, 0.005, 0.003);   // a band above the face
+    if (opening) d = smax(d, -opening(x, y, z), 0.006);
+    if (HELM === "great" && z > zc) for (const [hx, hy] of [[-0.07, -0.05], [-0.045, -0.05], [-0.07, -0.072], [-0.045, -0.072]]) d = smax(d, 0.0055 - Math.hypot(x - hx, y - eyeY - hy), 0.002);   // breaths on the right cheek (front only)
+    if (round) d = Math.min(d, nasal(x, y, z));
+    if (!round && (AR.deco ?? "none") === "none") d = Math.min(d, Math.max(Math.abs(x) - 0.009, helmOuter(x, y - 0.024, z) - 0.002, yc + HR[1] * 0.15 - y));   // a crest from front to back (unless something sits on top)
+    return d; };
+  const visorSdf = round ? null : (x, y, z) => Math.max(Math.abs(y - eyeY) - slitH - 0.004, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
+
+  // ── on the helm (outfit.armor.deco, its own color): "plume" = a brush of feathers front to back / "horns" / "wings" ──
+  const DECO = AR.deco ?? "none";
+  const capsule2 = (p, a, b, ra, rb) => { const ab = sub(b, a), ap = sub(p, a), h = Math.max(0, Math.min(1, dot(ap, ab) / dot(ab, ab))); return Math.hypot(ap[0] - ab[0] * h, ap[1] - ab[1] * h, ap[2] - ab[2] * h) - (ra + (rb - ra) * h); };
+  const bez = (p0, p1, p2, t) => p0.map((v, i) => (1 - t) ** 2 * v + 2 * (1 - t) * t * p1[i] + t * t * p2[i]);
+  const ellipsoidAlong = (p, c, u, w, r) => { const q = sub(p, c), n = norm([u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]); return (Math.hypot(dot(q, u) / r[0], dot(q, w) / r[1], dot(q, n) / r[2]) - 1) * Math.min(...r); };
+  let decoSdf = null;
+  if (DECO === "plume") decoSdf = (x, y, z) => {   // in the helm's own oval: phi = 0 on top, + toward the front
+    const u = (z - zc) / HR[2], v = (y - yc) / HR[1], rho = Math.hypot(u, v), phi = Math.atan2(u, v), P0 = -1.35, P1 = 0.55;
+    const t = Math.min(1, Math.max(0, (phi - P0) / (P1 - P0))), h = 0.095 * Math.sin(Math.PI * t) ** 0.45 * (1 - 0.15 * Math.abs(Math.sin(phi * 14)));   // a brush over the top, tallest in the middle, feathery edge
+    return Math.max(Math.abs(x) - (0.022 - 0.1 * Math.max(0, (rho - 1) * HR[1])), (rho - 1) * HR[1] - h, (0.94 - rho) * HR[1], (phi - P1) * HR[1], (P0 - phi) * HR[1]); };
+  if (DECO === "horns") { const H2 = [1, -1].map((m) => { const p0 = [m * HR[0] * 0.8, yc + 0.03, zc + 0.01], p1 = [m * (HR[0] + 0.1), yc + 0.02, zc + 0.03], p2 = [m * (HR[0] + 0.13), yc + 0.17, zc + 0.05], N = 12;
+      const pts = Array.from({ length: N + 1 }, (_, i) => bez(p0, p1, p2, i / N));
+      return (x, y, z) => { let d = 1e9; for (let i = 0; i < N; i++) d = Math.min(d, capsule2([x, y, z], pts[i], pts[i + 1], 0.034 * (1 - i / N) ** 0.8 + 0.004, 0.034 * (1 - (i + 1) / N) ** 0.8 + 0.004)); return d; }; });
+    decoSdf = (x, y, z) => H2[x > 0 ? 0 : 1](x, y, z); }
+  if (DECO === "wings") { const W2 = [1, -1].map((m) => { const base = [m * (HR[0] - 0.005), yc - 0.01, zc - 0.02];
+      const lobes = [[0.32, 0.19], [0.75, 0.16], [1.15, 0.12]].map(([a, L]) => { const u = norm([m * 0.35, Math.cos(a), -Math.sin(a)]), w = norm([0, Math.sin(a), Math.cos(a)]); return { c: base.map((v, i) => v + u[i] * L * 0.55), u, w, r: [L * 0.6, 0.032, 0.009] }; });
+      return (x, y, z) => { let d = 1e9; for (const o of lobes) d = Math.min(d, ellipsoidAlong([x, y, z], o.c, o.u, o.w, o.r)); return d; }; });
+    decoSdf = (x, y, z) => W2[x > 0 ? 0 : 1](x, y, z); }
 
   // ── cuirass: slices of the torso from the hips to the collar (n 2.3), the faulds flaring out below the waist ──
   const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap", "butt"));
@@ -105,5 +135,5 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
   // ── mail: the body, 3 mm out, below the helm ──
   const mailSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.003, y - 0.8);
 
-  return { chestSdf, shoulderSdf, armSdf, legSdf, helmSdf, visorSdf, handSdf, footSdf, mailSdf };
+  return { chestSdf, shoulderSdf, armSdf, legSdf, helmSdf, visorSdf, decoSdf, handSdf, footSdf, mailSdf };
 }

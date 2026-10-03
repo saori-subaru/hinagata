@@ -4775,7 +4775,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 79,
+   "order": 82,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4797,10 +4797,130 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
+   "order": 83,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   }
+  },
+  "outfit.armor.helm": {
+   "path": "outfit.armor.helm",
+   "type": "enum",
+   "default": "great",
+   "label": {
+    "ja": "兜の形",
+    "en": "Helm"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "great",
+     "label": {
+      "ja": "バケツ(目のすき間だけ)",
+      "en": "Great helm (eye slit)"
+     }
+    },
+    {
+     "value": "visor",
+     "label": {
+      "ja": "目元が黒・口が見える",
+      "en": "Visor (mouth shows)"
+     }
+    },
+    {
+     "value": "open",
+     "label": {
+      "ja": "顔が見える丸い兜",
+      "en": "Open (face shows)"
+     }
+    }
+   ],
+   "order": 79,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   },
+   "help": {
+    "ja": "全身鎧のとき",
+    "en": "Full plate"
+   }
+  },
+  "outfit.armor.deco": {
+   "path": "outfit.armor.deco",
+   "type": "enum",
+   "default": "none",
+   "label": {
+    "ja": "兜の飾り",
+    "en": "Helm decoration"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "none",
+     "label": {
+      "ja": "なし",
+      "en": "None"
+     }
+    },
+    {
+     "value": "plume",
+     "label": {
+      "ja": "羽飾り",
+      "en": "Plume"
+     }
+    },
+    {
+     "value": "horns",
+     "label": {
+      "ja": "角",
+      "en": "Horns"
+     }
+    },
+    {
+     "value": "wings",
+     "label": {
+      "ja": "翼",
+      "en": "Wings"
+     }
+    }
+   ],
    "order": 80,
    "section": {
     "ja": "鎧",
     "en": "Armor"
+   },
+   "help": {
+    "ja": "全身鎧のとき",
+    "en": "Full plate"
+   }
+  },
+  "outfit.armor.decoColor": {
+   "path": "outfit.armor.decoColor",
+   "type": "color",
+   "default": null,
+   "label": {
+    "ja": "飾りの色",
+    "en": "Decoration color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 81,
+   "nullable": true,
+   "section": {
+    "ja": "鎧",
+    "en": "Armor"
+   },
+   "help": {
+    "ja": "null = 飾りごとの色(羽は赤・角は象牙・翼は白)",
+    "en": "null = its own color (red plume, ivory horns, white wings)"
    }
   },
   "outfit.armor.gap": {
@@ -4818,7 +4938,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 81,
+   "order": 84,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4839,7 +4959,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 82,
+   "order": 85,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4857,7 +4977,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 86,
+   "order": 89,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -4875,7 +4995,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 87,
+   "order": 90,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -4893,7 +5013,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 88,
+   "order": 91,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5006,7 +5126,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 83,
+   "order": 86,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5024,7 +5144,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 84,
+   "order": 87,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5045,7 +5165,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 85,
+   "order": 88,
    "section": {
     "ja": "靴下",
     "en": "Socks"
