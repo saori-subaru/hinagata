@@ -45,9 +45,9 @@ export const POSES = {
   "guard": (t) => { const br = sin(t * 2.2) * 0.02;
     return { b: { spine: [0.06 + br * 0.5, 0, 0], chest: [0.02, 0, 0], head: [-0.04, 0, 0],
       "upperLeg.L": [-0.35, 0, 0.1], "lowerLeg.L": [0.4, 0, 0], "foot.L": [-0.05, 0, 0], "upperLeg.R": [0.22, 0, -0.1], "lowerLeg.R": [0.32, 0, 0], "foot.R": [-0.5, 0, 0],
-      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値。上腕のひねりは、肩とひじの回る量がいちばん小さくなるように選ぶ(大きく回すと、構えに入るときに腕が後ろへ回り込む)(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘を外へ上げ、前腕を前へ寝かせて、刃は頭の右上へ立てる(正面から頭に隠れない)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
+      // 腕の角度は、ねらった向き(上腕・前腕の方向と手の甲の向き)から解いた値。上腕のひねりは、肩とひじの回る量がいちばん小さくなるように選ぶ(大きく回すと、構えに入るときに腕が後ろへ回り込む)(盾の腕: 肘は下・少し外、前腕を立てて手の甲=盾を正面へ。盾の上は手首の側 / 武器の腕: 肘は肩より下で外・前へ、前腕を前へ出して、刃は内側(頭の方)へ少し倒して立てる(肘を上げすぎると肩がつぶれた)。手首はまっすぐ: 柄は前腕と直角に拳を抜ける)
       "upperArm.L": [-0.979, 0.68, -0.329], "lowerArm.L": [-0.53, 0.454, -2.131],
-      "upperArm.R": [-1.935, 0.448, -0.881], "lowerArm.R": [0.931, -0.108, 2.253] }, y: -0.03 + br * 0.3 }; },
+      "upperArm.R": [-0.955, 0.123, -0.03], "lowerArm.R": [-0.633, -0.005, 1.029] }, y: -0.03 + br * 0.3 }; },
   "hugKnees": (t) => ({ b: { "upperLeg.L": [-2.35, 0, 0.1], "upperLeg.R": [-2.35, 0, -0.1], "lowerLeg.L": [2.45, 0, 0], "lowerLeg.R": [2.45, 0, 0], "foot.L": [-0.1, 0, 0], "foot.R": [-0.1, 0, 0],
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
       // 丸まった背中: 背中の3か所を少しずつ曲げ、肩を前へ巻く。顔は起こして前を見る
@@ -82,7 +82,7 @@ const GUARD_L = {
 const BARE = { none: true, fist: true };
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal" */
-export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "none", shieldMount = "straight" }) {
+export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "none", shieldMount = "diagonal" }) {
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();

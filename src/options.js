@@ -374,7 +374,7 @@ export const DEFAULTS = {
     "weapon": {
       "right": "none",
       "left": "none",
-      "shieldMount": "straight",
+      "shieldMount": "diagonal",
       "color": "#c9d0da",
       "gripColor": "#7a5236",
       "shieldColor": "#3f63b8"

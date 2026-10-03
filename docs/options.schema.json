@@ -5103,7 +5103,7 @@
   "outfit.weapon.shieldMount": {
    "path": "outfit.weapon.shieldMount",
    "type": "enum",
-   "default": "straight",
+   "default": "diagonal",
    "label": {
     "ja": "盾のつけ方",
     "en": "Shield mount"
