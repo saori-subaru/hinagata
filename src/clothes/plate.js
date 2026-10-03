@@ -19,16 +19,22 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
   // fitted to the whole head (ears and cheeks too): the widest it gets across, forward and back, over the head's height
   const top = (() => { const c = HT.fromHead(0, 1.1, 0); let r = 0.05; for (; r < 0.5; r += 0.003) if (bodySdf(c[0], c[1] + r, c[2]) > 0) break; return c[1] + r; })();
   const chin = HT.fromHead(0, OPT.body.sculpt.chin?.y ?? 0.835, 0)[1], eyeY = HT.fromHead(0, OPT.face.layout.eyeY ?? 1.0, 0)[1];
-  let sx = 0, sf = -1, sb = 1;
+  let sx = 0, sf = -1, sb = 1; const HEAD_PTS = [];
   for (let y = chin + 0.02; y < top - 0.03; y += 0.015) { const c = HT.fromHead(0, HT.toHead(0, y, 0)[1], 0);
     const out = (d) => { let r = 0.02; for (; r < 0.5; r += 0.003) if (bodySdf(c[0] + d[0] * r, y, c[2] + d[2] * r) > 0) break; return r; };
     sx = Math.max(sx, out([1, 0, 0]), out([-1, 0, 0]), out(norm([1, 0, 1])) * 0.9, out(norm([1, 0, -1])) * 0.9); sf = Math.max(sf, c[2] + out([0, 0, 1])); sb = Math.min(sb, c[2] - out([0, 0, -1])); }
-  { const A = sx, Bz = (sf - sb) / 2, z0 = (sf + sb) / 2; let k = 1;   // then grow the oval until every point around the head is inside it (the ears stick out backward)
-    for (let y = chin + 0.02; y < top - 0.03; y += 0.015) { const c = HT.fromHead(0, HT.toHead(0, y, 0)[1], 0);
-      for (let i = 0; i < 32; i++) { const th = i / 32 * Math.PI * 2, d = [Math.cos(th), 0, Math.sin(th)]; let r = 0.02; for (; r < 0.5; r += 0.003) if (bodySdf(c[0] + d[0] * r, y, c[2] + d[2] * r) > 0) break;
-        k = Math.max(k, Math.hypot((c[0] + d[0] * r) / A, (c[2] + d[2] * r - z0) / Bz)); } }
-    sx = A * k; sf = z0 + Bz * k; sb = z0 - Bz * k; }
-  const hg = 0.014, zc = (sf + sb) / 2, HR = [sx + hg, 0, (sf - sb) / 2 + hg + 0.004], bottom = chin - 0.035, yc = top - (top - bottom) * 0.45;   // the dome's center: the walls run straight below it
+  { const pts = [];   // then the smallest oval (by area) that holds every point around the head: the ears stick out to the sides and back,
+    // and growing the oval evenly to take them in left a lot of room at the face and the back of the head (the helm looked thick)
+    for (let y = chin + 0.02; y < top - 0.005; y += 0.015) { const c = HT.fromHead(0, HT.toHead(0, y, 0)[1], 0);
+      for (let i = 0; i < 48; i++) { const th = i / 48 * Math.PI * 2, d = [Math.cos(th), 0, Math.sin(th)]; let r = 0.02; for (; r < 0.5; r += 0.003) if (bodySdf(c[0] + d[0] * r, y, c[2] + d[2] * r) > 0) break;
+        pts.push([Math.abs(c[0] + d[0] * r), c[2] + d[2] * r, y]); } }
+    const ax = Math.max(...pts.map((q) => q[0])), zf = Math.max(...pts.map((q) => q[1])), zb = Math.min(...pts.map((q) => q[1]));
+    let best = null;
+    for (let A = ax; A < ax * 1.6; A += 0.002) for (let z0 = (zf + zb) / 2 - 0.03; z0 <= (zf + zb) / 2 + 0.03; z0 += 0.0025) {
+      let B = 0; for (const [x, z] of pts) B = Math.max(B, Math.abs(z - z0) / Math.sqrt(Math.max(1e-4, 1 - (x / A) ** 2)));
+      if (!best || A * B < best.A * best.B) best = { A, B, z0 }; }
+    sx = best.A; sf = best.z0 + best.B; sb = best.z0 - best.B; HEAD_PTS.push(...pts); }
+  const hg = 0.01, zc = (sf + sb) / 2, HR = [sx + hg, 0, (sf - sb) / 2 + hg + 0.002], bottom = chin - 0.035, yc = top - (top - bottom) * 0.45;   // the dome's center: the walls run straight below it
   HR[1] = top + hg - yc; const HC = [0, yc, zc];
   // helm (outfit.armor.helm) — told apart by the silhouette:
   //   "great"  = a closed bucket, flat-sided, with an eye slit          "visor" = the same, a wide dark band over the eyes and the mouth open
@@ -50,9 +56,12 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     const b = beakAt(y);
     if (b > 0) { const tz = zc + HR[2] + b, w = Math.max(BA[0] * x + BA[1] * (z - tz), -BA[0] * x + BA[1] * (z - tz)); d = smin(d, smax(Math.max(w, zc - z), Math.abs(x) - HR[0] * 0.97, 0.01), 0.012); }   // the beak: a wedge out of the front
     return d; };
+  // the oval was fitted to the head's outline from above; a round dome curves in sooner than the head does toward the top of the back, so widen
+  // the helm (about its center) until every point of the head is inside it by a few mm (the flat-topped bucket needs no more room)
+  for (let i = 0; i < 30; i++) { let worst = -1; for (const [x, z, y] of HEAD_PTS) worst = Math.max(worst, helmOuter(x, y, z) + hg * 0.6); if (worst <= 0) break; HR[0] *= 1.01; HR[2] *= 1.01; }
   const fx = (hx) => HT.fromHead(hx, 1, 0)[0], eyeX = OPT.face.layout.eyeX ?? 0.1;
   const [slitY, slitH] = ST.slit ?? [eyeY, 0];
-  const slit = (x, y, z) => Math.max(Math.abs(y - slitY) - slitH, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
+  const slit = (x, y, z) => Math.max(Math.abs(y - slitY) - slitH, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.009);   // the slit: 9 mm deep along the front (the face is 1.2 cm in)
   // the opening: an oval through the front of the helm (front half only)
   const OPEN = HELM === "visor" ? { y0: chin - 0.06, y1: eyeY - slitH - 0.022, w: fx(0.1), n: 2.6 } : HELM === "open" || HELM === "kettle" ? { y0: chin - 0.06, y1: eyeY + 0.06, w: fx(eyeX + 0.078), n: 2.3 } : null;
   const opening = OPEN ? (x, y, z) => { const ym = (OPEN.y0 + OPEN.y1) / 2, hy = (OPEN.y1 - OPEN.y0) / 2; return Math.max(sell(x, y - ym, OPEN.w, hy, OPEN.n), zc + 0.02 - z); } : null;
@@ -73,7 +82,7 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     if (ST.beak) for (const m of [1, -1]) d = Math.min(d, Math.hypot(x - m * HR[0] * 0.99, y - slitY, z - zc - 0.01) - 0.013);   // the visor's pivots
     if (ST.crest && (AR.deco ?? "none") === "none") d = Math.min(d, Math.max(Math.abs(x) - (ST.crest > 0.03 ? 0.011 : 0.009), helmOuter(x, y - ST.crest, z) - 0.002, yc + HR[1] * 0.15 - y));   // a crest (comb) from front to back (unless something sits on top)
     return d; };
-  const visorSdf = !slitH ? null : (x, y, z) => Math.max(Math.abs(y - slitY) - slitH - 0.004, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
+  const visorSdf = !slitH ? null : (x, y, z) => Math.max(Math.abs(y - slitY) - slitH - 0.004, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0105) - 0.0035);   // the dark slab at the slit's floor
 
   // ── on the helm (outfit.armor.deco, its own color): "plume" = a brush of feathers front to back / "horns" / "wings" ──
   const DECO = AR.deco ?? "none";
