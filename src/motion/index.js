@@ -25,7 +25,7 @@ const WAVE = (() => {
 // 腰の高さ: しゃがんだ分だけ下げ(太もも・すねの長さから計算)、つま先立ちの分だけ上げる = 床についている足が浮かない/めり込まない
 // ⚠️ポーズの切りかえの「なめらかに寄せる」をこのポーズでは途中から切る(sharp)。寄せると着地の直前で遅くなり、ストンと落ちなくなる
 const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
-const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, point: 0.4, toe: 0.077,   // toe: つま先までの長さ(つま先立ちで足首が上がる分 = toe × sin(角度)。測った値)
+const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, point: 0.4, toe: 0.077, armLag: 0.03,   // toe: つま先までの長さ(つま先立ちで足首が上がる分 = toe × sin(角度)。測った値)
   up: { sh: [0, 0, 0.28], ua: [-0.64, -0.38, 1.35], la: [0, -0.04, 0.15], hand: [-0.54, 0.54, -0.25] },   // 頂点: 腕をまっすぐ上へ、手のひらは正面(ひねりは計算で選んだ)
   low: { sh: [0, 0, 0.04], ua: [-0.65, -1.18, -0.2], la: [-1.84, -0.55, -0.05], hand: [-0.22, 0.17, -0.28] },   // ため: 肘を曲げて、手を顔の前(あごの前)へ。腕が短いのでここまで(頬の横より前へは届かない)
   arm(k, a) { const q = this._q ??= {}, e = this._e ??= new THREE.Euler(); if (!q[k]) { const Qe = (v) => new THREE.Quaternion().setFromEuler(new THREE.Euler(...v)); q[k] = [Qe(this.low[k]), Qe(this.up[k]), new THREE.Quaternion()]; }
@@ -37,7 +37,8 @@ const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, po
     const pt = u >= LAND ? 1 - ss(LAND, LAND + 0.05, u) : ss(OFF + 0.02, UP + 0.02, u);   // つま先の向き: けり出しで下へ、着地したらかかとを下ろす
     const stretch = u >= LAND ? 1 - ss(LAND, LAND + 0.12, u) : ss(OFF + 0.02, UP + 0.04, u);
     const drop = this.LT * (1 - cos(this.thigh * bend)) + this.LS * (1 - cos((this.knee - this.thigh) * bend));
-    return { bend, stretch, point: pt, arms: 1 - bend, y: (air ? this.H * rise : 0) + this.toe * Math.sin(this.point * pt) - drop }; },
+    const arms = d < sink ? 1 - bend : ss(OFF + this.armLag, UP + this.armLag + 0.03, u);   // 腕: 着地からは脚と一緒に下ろし、けり出しでは脚より少し遅れて上がる(同時だと速すぎた)
+    return { bend, stretch, point: pt, arms, y: (air ? this.H * rise : 0) + this.toe * Math.sin(this.point * pt) - drop }; },
 };
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
