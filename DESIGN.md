@@ -390,6 +390,8 @@ When the face editor is built for real (beyond the check page's 枠つきPNGを�
 - The name is also registered as an expression preset: choosing「にっこり笑顔」in the expressions sets every slot that has a part by that name (slots without one keep what they have).
 - So one drawing = one expression, and its parts can still be mixed with other expressions'.
 
+**Closed eye (2026-10-03, done)**: a drawn closed eye has its own fixed slot (`face.images.eyeClosed`), apart from named expressions, because the engine itself needs it: drawn eyes (`image`) blink with it (before, they blinked with the code-drawn closed eye, which didn't match the drawing), and the eye part `imageClosed` (絵のとじ目) shows it. On the framed template it is drawn in the frame on the other eye (where the dashed "don't draw" frame was), so both eyes are drawn in place; reading flips it to the side the face draws. Without a closed-eye drawing, blinking stays code-drawn. Not yet in `facekit/` (the PSD template and `cut_face_parts.py`). The same kind of fixed slot will be needed for an open mouth if characters talk.
+
 ## Decisions
 
 Decided: working name "Hinagata" (check npm before publishing); code-drawn face is the default; first body sliders are head size, chubbiness and leg length; chibi proportions only.

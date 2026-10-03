@@ -589,6 +589,12 @@ export const DEFAULTS = {
         "dx": 0.004,
         "dy": 0.004
       },
+      "eyeClosed": {
+        "src": null,
+        "width": 0,
+        "dx": 0.004,
+        "dy": 0.004
+      },
       "brow": {
         "src": null,
         "width": 0,

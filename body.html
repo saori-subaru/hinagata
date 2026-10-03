@@ -260,9 +260,9 @@ function loadFaceImg(src, anchor) { const im = new Image(); im.onload = () => { 
     avatar.drawFace(); }; im.src = src; }
 // 顔のテンプレ: 顔の絵(1024×768)とぴったり同じ範囲で、正面から撮った頭 + いまの顔(薄く) + 位置の目印
 //   kind "whole": 1枚絵用(目・眉・口・鼻の位置に十字) / "frames": パーツ用(目・眉・口の枠。facekit と同じ大きさの枠を、いまの位置に置く)
-const PART_FRAMES = { eye: { size: [340, 290], mirror: true, at: () => face.EYE, label: "目" }, brow: { size: [330, 110], mirror: true, at: () => face.BROW, label: "眉" }, mouth: { size: [260, 90], mirror: false, at: () => face.MOUTHP, label: "口" }, nose: { size: [120, 100], mirror: false, at: () => face.NOSEP, label: "鼻" } };
-const PART_SLOT = { eye: ["eyes", "image"], brow: ["brows", "image"], mouth: ["mouth", "image"], nose: ["nose", "image"] };   // 枠 → 顔のどこに、どの名前で付けるか
-const frameRect = (k) => { const F = PART_FRAMES[k], P = face.PART_IMG[k], A = F.at(), [w, h] = F.size; return [Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2), Math.round(face.py(A.y + (P.dy ?? 0)) - h / 2), w, h]; };   // 枠の真ん中 = パーツの絵の真ん中が来る点
+const PART_FRAMES = { eye: { size: [340, 290], at: () => face.EYE, label: "目" }, eyeClosed: { size: [340, 290], other: true, at: () => face.EYE, label: "とじ目" }, brow: { size: [330, 110], mirror: true, at: () => face.BROW, label: "眉" }, mouth: { size: [260, 90], mirror: false, at: () => face.MOUTHP, label: "口" }, nose: { size: [120, 100], mirror: false, at: () => face.NOSEP, label: "鼻" } };
+const PART_SLOT = { eyeClosed: null, eye: ["eyes", "image"], brow: ["brows", "image"], mouth: ["mouth", "image"], nose: ["nose", "image"] };   // 枠 → 顔のどこに、どの名前で付けるか
+const frameRect = (k) => { const F = PART_FRAMES[k], P = face.PART_IMG[k], A = F.at(), [w, h] = F.size, x = Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2); return [F.other ? face.faceCanvas.width - x - w : x, Math.round(face.py(A.y + (P.dy ?? 0)) - h / 2), w, h]; };   // other: the frame sits on the other eye (drawn there, read back mirrored)   // 枠の真ん中 = パーツの絵の真ん中が来る点
 function headShot() {   // 顔の絵と同じ範囲で、正面から頭(肌だけ)を撮る
   const { FACE, faceCanvas } = face, W = faceCanvas.width, Hc = faceCanvas.height, HT = I.HT;
   const [l, b] = HT.fromHead(FACE.x0, FACE.y0, 0.2), [r, t] = HT.fromHead(FACE.x1, FACE.y1, 0.2);   // 顔の絵は頭の座標で貼られるので、頭の大きさに合わせて撮る範囲を決める
@@ -294,7 +294,7 @@ function faceTemplate(kind) {
 }
 const TPL_TEXT = {
   whole: ["顔のテンプレ(1枚絵用・1024×768)", "これを下に敷いて、別の透明レイヤーに目・眉・口・鼻を描く。そのレイヤーだけを同じ大きさ(1024×768)のPNGで書き出して「PNGを読む」で読むと、描いた位置のままぴったり貼られる(大きさが違っても縦横の比が4:3なら合わせる)。薄く描いてある顔と十字は、いまの目・眉・口・鼻の位置の目安。1枚絵なので、まばたきや表情の切りかえはしない。横長でまっすぐな線の目は、上から見ると下の線が曲がって見えることがある: そのときは「目のまわり」を「なだらか」に。"],
-  frames: ["顔パーツのテンプレ(枠つき・1024×768)", "赤い枠の中に、目・眉・口・鼻を1つずつ描く(目と眉は右側の枠だけ。反対側は自動で左右反転)。枠の真ん中が、顔の上でパーツの真ん中になる。描かなかった枠は読まずに、いまのパーツのまま。透明な背景のPNG(1024×768、または4:3)で書き出して「枠つきPNGを読む」で読むと、切り分けて顔に付ける。まばたき・表情・位置スライダーもそのまま効く。背景を透明にできないときは、緑など1色のべた塗りで(自動で抜く)。横長でまっすぐな線の目は、上から見ると下の線が曲がって見えることがある: そのときは「目のまわり」を「なだらか」に切りかえる(縦長の大きな目は「深い」のほうが立体的)。"],
+  frames: ["顔パーツのテンプレ(枠つき・1024×768)", "赤い枠の中に、目・眉・口・鼻を1つずつ描く。目は右側の枠に開いた目、左側の枠にとじ目(とじ目はまばたきと「絵のとじ目」に使う)。眉は右側の枠だけ。顔には片側の絵を左右反転して両側に付ける。枠の真ん中が、顔の上でパーツの真ん中になる。描かなかった枠は読まずに、いまのパーツのまま。透明な背景のPNG(1024×768、または4:3)で書き出して「枠つきPNGを読む」で読むと、切り分けて顔に付ける。まばたき・表情・位置スライダーもそのまま効く。背景を透明にできないときは、緑など1色のべた塗りで(自動で抜く)。横長でまっすぐな線の目は、上から見ると下の線が曲がって見えることがある: そのときは「目のまわり」を「なだらか」に切りかえる(縦長の大きな目は「深い」のほうが立体的)。"],
 };
 const showTpl = (kind) => { const url = faceTemplate(kind); $("tplTitle").textContent = TPL_TEXT[kind][0]; $("tplText").textContent = TPL_TEXT[kind][1]; $("tplImg").src = url; $("tplSave").href = url; $("tplSave").download = kind === "frames" ? "hinagata-face-parts-template.png" : "hinagata-face-template.png"; $("tplPanel").hidden = false; };
 $("fiTpl").addEventListener("click", () => showTpl("whole"));
@@ -317,14 +317,16 @@ function loadPartsImg(src) {
     const W = face.faceCanvas.width, Hc = face.faceCanvas.height, full = document.createElement("canvas"); full.width = W; full.height = Hc;
     const fg = full.getContext("2d"); fg.drawImage(im, 0, 0, W, Hc);   // 4:3 ならテンプレの大きさにそろえる
     const A = fg.getImageData(0, 0, W, Hc).data; let alpha = false; for (let i = 3; i < A.length; i += 4) if (A[i] < 255) { alpha = true; break; }
-    const sel = {};
-    for (const k of Object.keys(PART_FRAMES)) { const [x, y, w, h] = frameRect(k), c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(full, x, y, w, h, 0, 0, w, h);
+    const sel = {}; let got = 0;
+    for (const k of Object.keys(PART_FRAMES)) { const [x, y, w, h] = frameRect(k), c = document.createElement("canvas"); c.width = w; c.height = h; const cg = c.getContext("2d");
+      if (PART_FRAMES[k].other) { cg.translate(w, 0); cg.scale(-1, 1); }   // the closed eye is drawn on the other eye: flip it to the side the face draws
+      cg.drawImage(full, x, y, w, h, 0, 0, w, h);
       const part = alpha ? c : cutBackground(c), D = part.getContext("2d").getImageData(0, 0, w, h).data;
       let ink = 0; for (let i = 3; i < D.length; i += 4) if (D[i] > 24) ink++; if (ink < 20) continue;   // 何も描いていない枠は読まない(いまのパーツのまま)
       face.PART_IMG[k].img = part; face.PART_IMG[k].w = 0;   // 原寸(テンプレの1px = 顔の1px)
       PARTS_OPT.face.images[k] = { src: part.toDataURL("image/png"), width: 0 };   // 作り直しても同じ絵を使う
-      sel[PART_SLOT[k][0]] = PART_SLOT[k][1]; }
-    if (!Object.keys(sel).length) return;
+      got++; if (PART_SLOT[k]) sel[PART_SLOT[k][0]] = PART_SLOT[k][1]; }   // the closed eye isn't put on the face: blinking (and the eye part 絵のとじ目) use it
+    if (!got) return;
     if (FACE_IMG.on) $("tFaceImg").click();   // 1枚絵を貼っていたら外す
     avatar.setFace(sel); faceLabels();
   }; im.src = src;
