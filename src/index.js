@@ -40,7 +40,7 @@ export { BODY_TYPES } from "./body/types.js";
  */
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|on)$/.test(k)) r[k] = strip(v); return r; };
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|on)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
 }
 
@@ -64,7 +64,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor } = buildClothes(OPT, { P, J, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
@@ -193,7 +193,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
-  for (const k of ARMOR) { parts[k] = skinned(meshPart(k), OPT.outfit.armor.color, 0.004); parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, OPT.outfit.armor.color); }   // armor: hard pieces (clothes/armor.js), shiny
+  const AO = OPT.outfit.armor, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : AO.color, isMetal = (k) => ARMOR.includes(k) && k !== "armorMail" && k !== "armorVisor";
+  for (const k of ARMOR) { parts[k] = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, AO.color); } }   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
   lap("shadeAndClothes");
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004);
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
@@ -201,8 +202,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
   const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles"], armor: ARMOR };
-  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; } };
+  const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
+  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) show(k, on);
+    if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
+      if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes"]) for (const k of GARMENTS[h]) show(k, !plate && OPT.outfit[h].on !== false); show("hair", !plate); }
+      else if (plate) for (const k of GARMENTS[g]) show(k, false); } };
   for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
+  if (AO.on) wear("armor", true);
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
   if (EL.on) { earLine = new THREE.Group(); earLine.name = "earLine"; const mat = new THREE.MeshBasicMaterial({ color: EL.color }), deg = Math.PI / 180;
@@ -311,7 +317,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { parts[k].m.material.color.set(c); OPT.outfit[k].color = c; }
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
-      if (armor) { for (const k of ARMOR) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
+      if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
     },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
@@ -326,7 +332,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       OPT.shading.style = style;
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = (k === "hair" ? hairMat : ARMOR.includes(k) ? (c) => metal(style, c) : (c) => shaded(style, c))(old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = (k === "hair" ? hairMat : isMetal(k) ? (c) => metal(style, c) : (c) => shaded(style, c))(old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
       }
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */

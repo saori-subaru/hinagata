@@ -6,12 +6,13 @@
 //   linearly (a straight cone, like a metal plate), around the torso they follow the slices (smoothed).
 import { smin, blend, sstep } from "../sdf/prim.js";
 
-const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a) => { const l = Math.hypot(...a) || 1; return a.map((v) => v / l); };
-const smax = (a, b, k) => -smin(-a, -b, k);
+export const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+export const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+export const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+export const norm = (a) => { const l = Math.hypot(...a) || 1; return a.map((v) => v / l); };
+export const smax = (a, b, k) => -smin(-a, -b, k);
 // superellipse "distance" (n = 2: an ellipse; larger: squarer). Good near the curve, which is all a thin shell needs
-const sell = (u, v, a, b, n) => (Math.pow(Math.abs(u / a) ** n + Math.abs(v / b) ** n, 1 / n) - 1) * Math.min(a, b);
+export const sell = (u, v, a, b, n) => (Math.pow(Math.abs(u / a) ** n + Math.abs(v / b) ** n, 1 / n) - 1) * Math.min(a, b);
 
 // where a ray from o (inside f) first leaves f: march, then bisect
 function exitAt(f, o, d, rmax = 0.3) {
@@ -21,7 +22,7 @@ function exitAt(f, o, d, rmax = 0.3) {
   return (r0 + r1) / 2;
 }
 // one slice: the body's extent around o in the plane (e1, e2) → center offset (cu, cv) and half widths (a, b)
-function slice(f, o, e1, e2, N = 20) {
+export function slice(f, o, e1, e2, N = 20) {
   let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;
   for (let i = 0; i < N; i++) { const th = i / N * Math.PI * 2, c = Math.cos(th), s = Math.sin(th), d = [0, 1, 2].map((k) => e1[k] * c + e2[k] * s), r = exitAt(f, o, d);
     u0 = Math.min(u0, r * c); u1 = Math.max(u1, r * c); v0 = Math.min(v0, r * s); v1 = Math.max(v1, r * s); }
@@ -31,7 +32,7 @@ function slice(f, o, e1, e2, N = 20) {
 function frame(a, b) { const L = Math.hypot(...sub(b, a)), u = norm(sub(b, a)), z = [0, 0, 1], e2 = norm(sub(z, u.map((v) => v * dot(z, u)))), e1 = cross(e2, u); return { L, u, e1, e2 }; }
 
 /** A limb guard: a cone of ellipses around a→b from t0 to t1 (fractions of the bone), fitted to f, at gap, thick; rim: raised bands at the ends. */
-function guard(f, a, b, { t0, t1, gap, thick, rim = 0.003, rim0 = rim, flare = 0, ridge = 0, n = 2 }) {
+export function guard(f, a, b, { t0, t1, gap, thick, rim = 0.003, rim0 = rim, flare = 0, ridge = 0, n = 2 }) {
   const F = frame(a, b), ts = [], S = [];
   for (let i = 0; i <= 10; i++) { const t = t0 + (t1 - t0) * i / 10, o = [0, 1, 2].map((k) => a[k] + F.u[k] * F.L * t); if (f(...o) >= 0) continue; ts.push(t); S.push(slice(f, o, F.e1, F.e2)); }
   const lin = (key) => { const n_ = ts.length, mt = ts.reduce((s, t) => s + t, 0) / n_, mv = S.reduce((s, q) => s + q[key], 0) / n_;   // least squares line, then lifted to enclose every slice
@@ -46,7 +47,7 @@ function guard(f, a, b, { t0, t1, gap, thick, rim = 0.003, rim0 = rim, flare = 0
     return smax(smax(d - gap - thick - lift, (t0 - t) * F.L, 0.003), (t - t1) * F.L, 0.003); };
 }
 /** A solid ellipsoid around c (radii r). */
-const dome = (c, r) => (x, y, z) => (Math.hypot((x - c[0]) / r[0], (y - c[1]) / r[1], (z - c[2]) / r[2]) - 1) * Math.min(...r);
+export const dome = (c, r) => (x, y, z) => (Math.hypot((x - c[0]) / r[0], (y - c[1]) / r[1], (z - c[2]) / r[2]) - 1) * Math.min(...r);
 
 export function buildArmor(OPT, { P, J }) {
   const AR = { gap: 0.022, thick: 0.009, ...(OPT.outfit.armor ?? {}) };
