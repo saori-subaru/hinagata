@@ -365,6 +365,9 @@ export const DEFAULTS = {
       "color": "#b9c2ce",
       "mailColor": "#4b4d58",
       "visorColor": "#16141c",
+      "helm": "great",
+      "deco": "none",
+      "decoColor": null,
       "gap": 0.022,
       "thick": 0.009
     },

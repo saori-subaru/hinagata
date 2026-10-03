@@ -84,6 +84,8 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
     <button class="btn" id="tPantsKind" type="button">下: ズボン</button>
     <button class="btn" id="tPantsLen" type="button">ズボンの丈: 短パン</button>
     <button class="btn" id="tArmor" type="button">鎧: なし</button>
+    <button class="btn" id="tHelm" type="button" hidden>兜: バケツ</button>
+    <button class="btn" id="tDeco" type="button" hidden>兜の飾り: なし</button>
     <button class="btn" id="tShoe" type="button" aria-pressed="true">靴</button>
     <button class="btn" id="tSock" type="button" aria-pressed="true">靴下</button>
     <button class="btn" id="tHair" type="button" aria-pressed="true">髪</button>
@@ -213,7 +215,7 @@ globalThis.sotaiSetCam = (v) => { camera.position.set(v[0], v[1], v[2]); if (v.l
 const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI = 0;
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
 let clay = false, wire = false, compare = false, twin = null;   // twin: 横に並べる案2
-const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorHands", "armorFeet", "armorMail"];   // 鎧の部品(後ろの5つは全身鎧だけ)
+const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // 鎧の部品(後ろの6つは全身鎧だけ)
 const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair, ...ARMOR.map((k) => parts[k])];
 function refreshLook() {
   for (const av of [avatar, twin].filter(Boolean)) {
@@ -540,14 +542,19 @@ for (const [id, g, k, label, names] of OUTFIT_KINDS) {
 }
 // 鎧: なし → 軽鎧(服の上に胸当て・肩当て・小手・すね当て) → 全身鎧(兜まで。服と髪は隠れる)。軽鎧と全身鎧は形が違うので作り直す
 const ARMOR_STATE = { on: !!avatar.options.outfit.armor.on, style: avatar.options.outfit.armor.style };
-const armorLabel = () => { $("tArmor").textContent = `鎧: ${!ARMOR_STATE.on ? "なし" : ARMOR_STATE.style === "full" ? "全身鎧" : "軽鎧"}`; $("tArmor").setAttribute("aria-pressed", String(ARMOR_STATE.on)); };
+const armorLabel = () => { $("tArmor").textContent = `鎧: ${!ARMOR_STATE.on ? "なし" : ARMOR_STATE.style === "full" ? "全身鎧" : "軽鎧"}`; $("tArmor").setAttribute("aria-pressed", String(ARMOR_STATE.on)); $("tHelm").hidden = $("tDeco").hidden = !(ARMOR_STATE.on && ARMOR_STATE.style === "full"); };
 armorLabel();
 $("tArmor").addEventListener("click", async () => {
   const next = !ARMOR_STATE.on ? "light" : ARMOR_STATE.style === "light" ? "full" : null;
   ARMOR_STATE.on = !!next; if (next) ARMOR_STATE.style = next; armorLabel();
-  if (next && avatar.options.outfit.armor.style !== next) { OUTFIT.outfit.armor = { style: next }; await rebuildBody(); }
+  if (next && avatar.options.outfit.armor.style !== next) { OUTFIT.outfit.armor = { ...OUTFIT.outfit.armor, style: next }; await rebuildBody(); }
   else { avatar.setWorn({ armor: ARMOR_STATE.on }); twin?.setWorn({ armor: ARMOR_STATE.on }); refreshLook(); }
 });
+// 兜の形と飾り(全身鎧のとき): 押すたびに次へ。形が変わるので作り直す
+for (const [id, key, label, names] of [["tHelm", "helm", "兜", { great: "バケツ", visor: "目元が黒", open: "顔が見える" }], ["tDeco", "deco", "兜の飾り", { none: "なし", plume: "羽飾り", horns: "角", wings: "翼" }]]) {
+  const cur = () => OUTFIT.outfit.armor?.[key] ?? avatar.options.outfit.armor[key], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
+  show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit.armor = { ...OUTFIT.outfit.armor, [key]: ks[(ks.indexOf(cur()) + 1) % ks.length] }; show(); rebuildBody(); });
+}
 // 目のまわりの彫り: 深い = 縦長の大きな目(コードの目)向けの標準 / なだらか = 横長でまっすぐな線の目(上から見ても線が曲がりにくい) / 平ら = くぼみなし
 const EYE_AREA = [["深い", { socketScale: 1, underEye: { depth: 0.01 }, socketLow: { depth: 0.014, width: 0.085, height: 0.06, heightUp: 0.11 } }],
   ["なだらか", { socketScale: 1, underEye: { depth: 0 }, socketLow: { depth: 0.014, width: 0.16, height: 0.1, heightUp: 0.14 } }], ["平ら", { socketScale: 0 }]];

@@ -4,7 +4,7 @@
 //   kit:  { bodySdf, HT, hairKit, clothes } (from buildBody / buildHair / buildClothes)
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
-export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last five only in full plate)
+export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", ...ARMOR];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 
@@ -29,10 +29,11 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
       : { sdf: C.armor.armSdf, lo: [-0.38, 0.42, -0.11], hi: [0.38, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
     case "armorLegs": return C.armor.helmSdf ? { sdf: C.armor.legSdf, lo: [-0.26, 0.08, -0.15], hi: [0.26, 0.44, 0.17], h: H * 0.8, only: /^(upperLeg|lowerLeg)/ }
       : { sdf: C.armor.legSdf, lo: [-0.24, 0.08, -0.13], hi: [0.24, 0.34, 0.15], h: H * 0.8, only: /^lowerLeg/ };
-    case "armorHelm": case "armorVisor": case "armorHands": case "armorFeet": case "armorMail": { const A = C.armor, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor: nothing
+    case "armorHelm": case "armorVisor": case "armorDeco": case "armorHands": case "armorFeet": case "armorMail": { const A = C.armor, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor: nothing
       if (!A.helmSdf) return none;
       if (name === "armorHelm") return { sdf: A.helmSdf, lo: [-0.4, 0.7, -0.4], hi: [0.4, 1.52, 0.42], h: H * 0.85, bone1: "head" };
-      if (name === "armorVisor") return { sdf: A.visorSdf, lo: [-0.3, 0.85, -0.1], hi: [0.3, 1.2, 0.42], h: H * 0.6, bone1: "head" };
+      if (name === "armorVisor") return !A.visorSdf ? none : { sdf: A.visorSdf, lo: [-0.3, 0.85, -0.1], hi: [0.3, 1.2, 0.42], h: H * 0.6, bone1: "head" };
+      if (name === "armorDeco") return !A.decoSdf ? none : { sdf: A.decoSdf, lo: [-0.6, 0.9, -0.5], hi: [0.6, 1.85, 0.45], h: H * 0.8, bone1: "head" };
       if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42, 0.36, -0.1], hi: [0.42, 0.6, 0.12], h: H * 0.7, only: /^(hand|lowerArm)/ };
       if (name === "armorFeet") return { sdf: A.footSdf, lo: [-0.24, -0.01, -0.14], hi: [0.24, 0.14, 0.16], h: H * 0.8, only: /^(foot|lowerLeg)/ };
       return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47, -0.02, -0.3], hi: [0.47, 0.82, 0.34], h: H * 1.2 }; }

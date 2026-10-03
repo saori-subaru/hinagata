@@ -40,7 +40,7 @@ export { BODY_TYPES } from "./body/types.js";
  */
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|on)$/.test(k)) r[k] = strip(v); return r; };
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|on)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
 }
 
@@ -193,7 +193,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
-  const AO = OPT.outfit.armor, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : AO.color, isMetal = (k) => ARMOR.includes(k) && k !== "armorMail" && k !== "armorVisor";
+  const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   for (const k of ARMOR) { parts[k] = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, AO.color); } }   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
   lap("shadeAndClothes");
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004);
