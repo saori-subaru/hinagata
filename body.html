@@ -361,7 +361,7 @@ function renderCompare() {
 }
 
 // ── ボタン ──
-const POSE_LABEL = { aPose: "Aポーズ", tPose: "Tポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitChairGirl: "いすに座る(内股)", sitFloor: "床に座る", hugKnees: "体育座り" };   // ボタンの表示名
+const POSE_LABEL = { aPose: "Aポーズ", tPose: "Tポーズ", idle: "立つ", walk: "歩く", wave: "手をふる", cheer: "ばんざい", sitChair: "いすに座る", sitChairGirl: "いすに座る(内股)", sitFloor: "床に座る", hugKnees: "体育座り", guard: "構え" };   // ボタンの表示名
 const toggle = (id, fn) => { const b = $(id); b.addEventListener("click", () => { const on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(on)); fn(on); }); };
 toggle("tCloth", (on) => { parts.shirt.on = parts.pants.on = on; refreshLook(); });
 toggle("tShoe", (on) => { parts.shoes.on = parts.soles.on = on; refreshLook(); });
