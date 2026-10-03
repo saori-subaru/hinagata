@@ -52,8 +52,8 @@ export function buildWeapons(OPT, { J }) {
   }
 
   // ── left hand: a shield on the outside of the forearm (bound to the forearm), its face toward the back of the hand ──
-  const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], V = norm(sub(e, h)), O0 = norm(add([0, 0, 0], [HL.N, -0.5], [HL.S, 0.87])), O = norm(add(O0, [V, -dot(O0, V)])), Hz = cross(V, O).map((v) => -v);   // V up the arm (the shield's top), O its face: turned mostly forward (and a little out), Hz across it
-  const SC = add(e.map((v, i) => (v + h[i]) / 2), [HL.N, -0.035], [HL.S, 0.055]);   // in front of the forearm, a little to the outside
+  const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], V = norm(sub(e, h)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [V, -dot(O0, V)])), Hz = cross(V, O).map((v) => -v);   // V up the arm (the shield's top), O its face: out of the back of the forearm (a little forward). Strapped to the arm, it faces out while the arm hangs and forward only when the arm comes up (guarding)
+  const SC = add(e.map((v, i) => (v + h[i]) / 2), [HL.N, -0.06], [HL.S, 0.012]);   // on the outside of the forearm
   const sl = (x, y, z) => { const q = [x - SC[0], y - SC[1], z - SC[2]]; return [dot(q, Hz), dot(q, V), dot(q, O)]; };   // (across, up, out)
   let lFace = none, lMetal = none;
   if (L === "shield" || L === "round") {
