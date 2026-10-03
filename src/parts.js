@@ -4,7 +4,8 @@
 //   kit:  { bodySdf, HT, hairKit, clothes } (from buildBody / buildHair / buildClothes)
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
-export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks"];
+export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs"];   // the armor's pieces (one mesh each)
+export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", ...ARMOR];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 
 export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
@@ -20,6 +21,11 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
       return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "shoes": return { sdf: C.shoeSdf, lo: foot0, hi: [0.22, 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
     case "soles": return { sdf: C.soleSdf, lo: foot0, hi: [0.22, 0.03, 0.14], h: H * 0.6, only: /^foot/ };
+    // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
+    case "armorChest": return { sdf: C.armor.chestSdf, lo: [-0.26, 0.47, -0.22], hi: [0.26, 0.76, 0.26], h: H * 0.8, only: /^(spine|chest|upperChest)/ };
+    case "armorShoulders": return { sdf: C.armor.shoulderSdf, lo: [-0.27, 0.62, -0.14], hi: [0.27, 0.86, 0.14], h: H * 0.8, only: /^(shoulder|upperArm)/ };
+    case "armorArms": return { sdf: C.armor.armSdf, lo: [-0.38, 0.42, -0.11], hi: [0.38, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
+    case "armorLegs": return { sdf: C.armor.legSdf, lo: [-0.24, 0.08, -0.13], hi: [0.24, 0.34, 0.15], h: H * 0.8, only: /^lowerLeg/ };
     case "socks": return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, 0.17, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
   }
   if (name.startsWith("hair:")) {   // long hair reaches down the back

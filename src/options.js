@@ -359,6 +359,12 @@ export const DEFAULTS = {
       "top": 0.505,
       "tilt": 0.12
     },
+    "armor": {
+      "on": false,
+      "color": "#b9c2ce",
+      "gap": 0.022,
+      "thick": 0.009
+    },
     "shoes": {
       "on": true,
       "color": "#c8564b",
