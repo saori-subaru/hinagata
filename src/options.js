@@ -361,7 +361,10 @@ export const DEFAULTS = {
     },
     "armor": {
       "on": false,
+      "style": "light",
       "color": "#b9c2ce",
+      "mailColor": "#4b4d58",
+      "visorColor": "#16141c",
       "gap": 0.022,
       "thick": 0.009
     },

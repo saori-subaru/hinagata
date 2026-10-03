@@ -1,0 +1,109 @@
+// Full plate (outfit.armor.style "full"): a knight in armor head to toe — the character underneath does not show.
+// Same idea as the light armor (armor.js): simple hard shapes fitted once around the body, solid, on as few bones as they can.
+//   helm: a rounded great helm around the head (the hair is not worn), with a visor slit (a dark slab at its bottom) and a crest
+//   cuirass: the torso from the hips to a collar around the neck, flaring at the bottom into two bands (faulds)
+//   arms: big pauldrons (three lames), upper-arm tubes, elbow cops, forearm tubes, gauntlets (the hand puffed up)
+//   legs: thigh tubes, knee cops (all round), greaves, sabatons (the foot puffed up)
+//   mail: a dark layer just over the body (chain mail) — where the plates leave a gap at a joint, mail shows, not skin
+import { blend, sstep } from "../sdf/prim.js";
+import { guard, dome, slice, sell, smax, sub, dot, norm } from "./armor.js";
+
+export function buildPlate(OPT, { P, J, bodySdf, HT }) {
+  const AR = { gap: 0.022, thick: 0.009, ...(OPT.outfit.armor ?? {}) }, G = AR.gap * 0.7, T = AR.thick;
+  const pick = (...names) => names.flatMap((n) => [P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);
+  const TH = OPT.body.thickness ?? {};
+  const side = (f) => (x, y, z) => f[x > 0 ? 0 : 1](x, y, z);
+  const groove = (d, v, at, w = 0.004, depth = 0.0025) => { const b = Math.abs(v - at); return b < w ? d + depth * (1 - b / w) : d; };   // a line pressed into the plate (between lames)
+
+  // ── helm ──
+  // fitted to the whole head (ears and cheeks too): the widest it gets across, forward and back, over the head's height
+  const top = (() => { const c = HT.fromHead(0, 1.1, 0); let r = 0.05; for (; r < 0.5; r += 0.003) if (bodySdf(c[0], c[1] + r, c[2]) > 0) break; return c[1] + r; })();
+  const chin = HT.fromHead(0, OPT.body.sculpt.chin?.y ?? 0.835, 0)[1], eyeY = HT.fromHead(0, OPT.face.layout.eyeY ?? 1.0, 0)[1];
+  let sx = 0, sf = -1, sb = 1;
+  for (let y = chin + 0.02; y < top - 0.03; y += 0.015) { const c = HT.fromHead(0, HT.toHead(0, y, 0)[1], 0);
+    const out = (d) => { let r = 0.02; for (; r < 0.5; r += 0.003) if (bodySdf(c[0] + d[0] * r, y, c[2] + d[2] * r) > 0) break; return r; };
+    sx = Math.max(sx, out([1, 0, 0]), out([-1, 0, 0]), out(norm([1, 0, 1])) * 0.9, out(norm([1, 0, -1])) * 0.9); sf = Math.max(sf, c[2] + out([0, 0, 1])); sb = Math.min(sb, c[2] - out([0, 0, -1])); }
+  { const A = sx, Bz = (sf - sb) / 2, z0 = (sf + sb) / 2; let k = 1;   // then grow the oval until every point around the head is inside it (the ears stick out backward)
+    for (let y = chin + 0.02; y < top - 0.03; y += 0.015) { const c = HT.fromHead(0, HT.toHead(0, y, 0)[1], 0);
+      for (let i = 0; i < 32; i++) { const th = i / 32 * Math.PI * 2, d = [Math.cos(th), 0, Math.sin(th)]; let r = 0.02; for (; r < 0.5; r += 0.003) if (bodySdf(c[0] + d[0] * r, y, c[2] + d[2] * r) > 0) break;
+        k = Math.max(k, Math.hypot((c[0] + d[0] * r) / A, (c[2] + d[2] * r - z0) / Bz)); } }
+    sx = A * k; sf = z0 + Bz * k; sb = z0 - Bz * k; }
+  const hg = 0.014, zc = (sf + sb) / 2, HR = [sx + hg, 0, (sf - sb) / 2 + hg + 0.004], bottom = chin - 0.035, yc = top - (top - bottom) * 0.45;   // the dome's center: the walls run straight below it
+  HR[1] = top + hg - yc; const HC = [0, yc, zc];
+  const helmOuter = (x, y, z) => { const rho = Math.hypot(x, (z - zc) * HR[0] / HR[2]);   // round from above (an ellipse, scaled to a circle)
+    if (y < yc) return rho - HR[0] * (1 - 0.06 * ((yc - y) / (yc - bottom)) ** 2);   // straight walls, a little in toward the bottom
+    return sell(rho, y - yc, HR[0], HR[1], 2.4); };
+  const slit = (x, y, z) => Math.max(Math.abs(y - eyeY) - 0.011, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
+  const helmSdf = (x, y, z) => {
+    let d = helmOuter(x, y, z);
+    d = smax(d, bottom - y, 0.006);
+    d = groove(d, y, eyeY + 0.034, 0.005, 0.003); d = groove(d, y, eyeY - 0.03, 0.004, 0.002);   // the visor's edges
+    d = smax(d, -slit(x, y, z), 0.003);
+    const fin = Math.max(Math.abs(x) - 0.009, helmOuter(x, y - 0.024, z) - 0.002, yc + HR[1] * 0.15 - y);   // a crest from front to back
+    if (z > zc) for (const [hx, hy] of [[-0.07, -0.05], [-0.045, -0.05], [-0.07, -0.072], [-0.045, -0.072]]) d = smax(d, 0.0055 - Math.hypot(x - hx, y - eyeY - hy), 0.002);   // breaths on the right cheek (front only)
+    return Math.min(d, fin); };
+  const visorSdf = (x, y, z) => Math.max(Math.abs(y - eyeY) - 0.015, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
+
+  // ── cuirass: slices of the torso from the hips to the collar (n 2.3), the faulds flaring out below the waist ──
+  const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap", "butt"));
+  const Y0 = 0.4, Y1 = 0.78, NS = 30, SL = [];
+  for (let i = 0; i <= NS; i++) { const y = Y0 + (Y1 - Y0) * i / NS; SL.push(slice(torso, [0, y, -0.005], [1, 0, 0], [0, 0, 1], 24)); }
+  for (let pass = 0; pass < 2; pass++) for (const k of ["a", "b", "cv"]) { const v = SL.map((s) => s[k]); SL.forEach((s, i) => { s[k] = (v[Math.max(0, i - 1)] + 2 * v[i] + v[Math.min(NS, i + 1)]) / 4 + (k === "cv" ? 0 : 0.002); }); }
+  const at = (y, k) => { const f = Math.min(NS, Math.max(0, (y - Y0) / (Y1 - Y0) * NS)), i = Math.min(NS - 1, Math.floor(f)), t = f - i; return SL[i][k] * (1 - t) + SL[i + 1][k] * t; };
+  const WAIST = 0.475, armC = (s) => ({ a: J[`upperArm.${s}`], b: J[`lowerArm.${s}`], r: 0.047 * (TH.upperArm ?? 1) + 0.03 }), ARMS = [armC("L"), armC("R")];
+  const capsule = (x, y, z, c) => { const ab = sub(c.b, c.a), ap = [x - c.a[0], y - c.a[1], z - c.a[2]], h = Math.max(-0.6, Math.min(1, dot(ap, ab) / dot(ab, ab))); return Math.hypot(ap[0] - ab[0] * h, ap[1] - ab[1] * h, ap[2] - ab[2] * h) - c.r; };
+  const neckR = 0.062;
+  const chestSdf = (x, y, z) => {
+    const yc = Math.min(Y1, Math.max(Y0, y)), flare = 0.32 * Math.max(0, WAIST - y);   // the faulds open out like a short skirt of plates
+    let d = sell(x, z - at(yc, "cv"), at(yc, "a") + flare, at(yc, "b") + flare * 0.8, 2.3) - G - T - 0.005 * Math.exp(-((x / 0.016) ** 2)) * (z > 0 ? 1 : 0);   // a ridge down the front
+    d = groove(groove(d, y, WAIST, 0.005, 0.004), y, WAIST - 0.03, 0.005, 0.004);   // the lames of the faulds
+    const collar = Math.max(Math.hypot(x, (z + 0.005) / 0.95) - (neckR + 0.02), y - 0.8);   // a stand-up collar around the neck
+    d = Math.min(d, Math.max(collar, 0.7 - y));
+    d = smax(d, 0.026 + neckR * 0.55 - Math.hypot(x, (z + 0.005) / 0.95) - 0.012, 0.004);   // the neck hole (the helm hides it)
+    d = smax(d, y - 0.8, 0.004);
+    d = smax(d, Y0 - 0.01 + 0.02 * sstep(-0.02, 0.08, z) - y, 0.006);   // the bottom: a little higher in front (the thighs come up there when sitting)
+    d = smax(d, -Math.min(...ARMS.map((c) => capsule(x, y, z, c))), 0.008);   // armholes (the pauldrons cover them)
+    return d; };
+
+  // ── pauldrons: big domes over the shoulders, in three lames down the arm ──
+  const pauldron = (s) => { const m = s === "L" ? 1 : -1, a = J[`upperArm.${s}`], u = norm(sub(J[`lowerArm.${s}`], a)), out = norm([m * Math.abs(u[1]), Math.abs(u[0]), 0]);
+    const R = 0.047 * (TH.upperArm ?? 1) + G + T + 0.026, c = [a[0] + m * 0.006, a[1] + 0.006, a[2]], D = dome(c, [R * 1.1, R, R * 1.12]);
+    return (x, y, z) => { const p = [x - c[0], y - c[1], z - c[2]], v = dot(p, u);
+      let d = D(x, y, z) - 0.006 * sstep(0.0, 0.05, v);   // the lower lames stand out a little
+      d = smax(d, v - 0.07, 0.01);
+      d = smax(d, -dot(p, out) - 0.035, 0.012);
+      d = smax(d, 0.045 - m * x, 0.012);   // not into the collar
+      d = groove(groove(d, v, 0.02, 0.005, 0.004), v, 0.045, 0.005, 0.004);
+      return d; }; };
+  const shoulderSdf = side([pauldron("L"), pauldron("R")]);
+
+  // ── arms: upper-arm tube, elbow cop, forearm tube ──
+  const upper = blend(pick("upperArm")), fore = blend(pick("foreArm", "foreBulge"));
+  const ARM = ["L", "R"].map((s) => { const a = J[`upperArm.${s}`], e = J[`lowerArm.${s}`], h = J[`hand.${s}`];
+    const ua = guard(upper, a, e, { t0: 0.35, t1: 0.92, gap: G * 0.8, thick: T, rim: 0.002, n: 2.1 });
+    const fa = guard(fore, e, h, { t0: 0.08, t1: 0.92, gap: G * 0.8, thick: T, rim0: 0, flare: 0.012, n: 2.1 });
+    const cop = dome(e, [0.06, 0.06, 0.06].map((v) => v * Math.max(1, TH.forearm ?? 1)));
+    return (x, y, z) => Math.min(ua(x, y, z), fa(x, y, z), cop(x, y, z)); });
+  const armSdf = side(ARM);
+
+  // ── gauntlets: the hand puffed up (fingers and all) ──
+  const hand = blend(pick("palm", "finger0", "finger1", "finger2", "finger3", "thumb"));
+  const handSdf = (x, y, z) => hand(x, y, z) - 0.008;
+
+  // ── legs: thigh tube, knee cop (all round), greave; sabatons ──
+  const thigh = blend(pick("thigh", "thighF", "thighB", "thighIn")), shin = blend(pick("calf", "calfO", "calfB"));
+  const LEG = ["L", "R"].map((s) => { const hp = J[`upperLeg.${s}`], k = J[`lowerLeg.${s}`], f = J[`foot.${s}`], t1 = (k[1] - 0.075) / (k[1] - f[1]);   // down over the ankle, into the sabaton
+   
+    const cu = guard(thigh, hp, k, { t0: 0.14, t1: 0.9, gap: G * 0.7, thick: T, rim: 0.002, n: 2.1 });
+    const gr = guard(shin, k, f, { t0: 0.1, t1, gap: G * 0.7, thick: T, rim0: 0, flare: 0.01, ridge: 0.008, n: 2.1 });
+    const cop = dome([k[0], k[1] + 0.006, k[2] + 0.012], [0.075, 0.066, 0.075].map((v) => v * Math.max(1, TH.calf ?? 1)));
+    return (x, y, z) => Math.min(cu(x, y, z), gr(x, y, z), cop(x, y, z)); });
+  const legSdf = side(LEG);
+  const foot = blend(pick("foot"));
+  const footSdf = (x, y, z) => Math.max(foot(x, y, z) - 0.014, y - 0.125, -0.002 - y);
+
+  // ── mail: the body, 3 mm out, below the helm ──
+  const mailSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.003, y - 0.8);
+
+  return { chestSdf, shoulderSdf, armSdf, legSdf, helmSdf, visorSdf, handSdf, footSdf, mailSdf };
+}

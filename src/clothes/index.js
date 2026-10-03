@@ -2,8 +2,9 @@
 // Functions taking B (the body distance) can be given a faster lookup of the same body while meshing.
 import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
 import { buildArmor } from "./armor.js";
+import { buildPlate } from "./plate.js";
 
-export function buildClothes(OPT, { P, J, CROTCH, bodySdf, ARMPIT = [] }) {
+export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const pick = (...names) => names.flatMap((n) => [P[n]?.cloth ?? P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);   // .cloth: a part's own shape for clothes (the bust: joined across the middle)
   // shirt.sleeve: "short" (to the middle of the upper arm) | "none" (cut off at the armhole) | "long" (to the wrist)
   // shirt.length: "tuck" (hem inside the pants) | "out" (hem over the pants) | "crop" (above the navel)
@@ -63,6 +64,6 @@ export function buildClothes(OPT, { P, J, CROTCH, bodySdf, ARMPIT = [] }) {
   // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
   const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
-  const armor = buildArmor(OPT, { P, J });   // 鎧: 体にそわせず、かんたんな形をかぶせた硬い部品(armor.js)
+  const armor = (OPT.outfit.armor.style === "full" ? buildPlate : buildArmor)(OPT, { P, J, HT, bodySdf });   // 鎧: 体にそわせず、かんたんな形をかぶせた硬い部品(軽鎧 armor.js / 全身鎧 plate.js)
   return { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor };
 }
