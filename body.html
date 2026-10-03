@@ -218,7 +218,7 @@ const SKINS = ["#ffe0c8", "#f6d0b0", "#e8c8a8", "#c89a78", "#8a5f45"]; let skinI
 const cmpMat = new THREE.MeshBasicMaterial({ color: 0x6fa8ff });   // 三面図で見本と重ねるときは、べた塗りの青(ずれが見分けやすい)
 let clay = false, wire = false, compare = false, twin = null;   // twin: 横に並べる案2
 const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // 鎧の部品(後ろの6つは全身鎧だけ)
-const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace"];   // 手に持つもの
+const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // 手に持つもの
 const all = () => [parts.body, parts.shirt, parts.pants, parts.socks, parts.shoes, parts.soles, parts.hair, ...ARMOR.map((k) => parts[k]), ...WEAPONS.map((k) => parts[k])];
 function refreshLook() {
   for (const av of [avatar, twin].filter(Boolean)) {
