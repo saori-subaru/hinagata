@@ -253,6 +253,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // motion
   const playPose = createPosePlayer({ bone, BONES, HIPS0 });
   let poseName = "aPose", time = 0, lastPose = { b: {} };
+  // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
+  // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)
+  const SEAT_PROBE = ["body", "pants"].map((k) => { const m = parts[k].m, A = m.geometry.attributes.position, idx = [];
+    for (let i = 0; i < A.count; i++) { const x = A.getX(i), y = A.getY(i), z = A.getZ(i); if (Math.abs(x) < 0.17 && y > 0.22 && y < 0.5 && z > -0.16 && z < 0.12) idx.push(i); }
+    const step = Math.max(1, Math.ceil(idx.length / 500)); return { m, idx: idx.filter((_, j) => j % step === 0) }; });
+  const seatV = new THREE.Vector3(); let seatAdj = 0;
+  function seatLow(front) { root.updateMatrixWorld(true); let lo = Infinity;   // front: the seat's front edge (z); the thighs beyond it are not on the seat
+    for (const { m, idx } of SEAT_PROBE) { if (!m.visible) continue; for (const i of idx) { m.getVertexPosition(i, seatV); seatV.applyMatrix4(m.matrixWorld); root.worldToLocal(seatV); if (seatV.z < front && seatV.y < lo) lo = seatV.y; } }
+    return lo; }
 
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine,
@@ -267,7 +276,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     update(dt, { t, instant = false, pose } = {}) {
       syncCover();
       time = t ?? time + dt;
-      lastPose = playPose(pose ?? poseName, time, dt, instant);
+      lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
+      if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly
+        const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
+      else seatAdj *= instant ? 0 : Math.exp(-dt * 9);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
