@@ -26,6 +26,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   for (const s of ["L", "R"]) Object.assign(PARENT, { [`shoulder.${s}`]: "upperChest", [`upperArm.${s}`]: `shoulder.${s}`, [`lowerArm.${s}`]: `upperArm.${s}`, [`hand.${s}`]: `lowerArm.${s}`, [`upperLeg.${s}`]: "hips", [`lowerLeg.${s}`]: `upperLeg.${s}`, [`foot.${s}`]: `lowerLeg.${s}` });
   // スカートの前の骨(左右): ウエストの前、太ももの上の高さで回る。太ももの回転を写す(motion)=座ると前の布が太ももの上へ倒れる(股関節で回すと前の裾がお腹へはね上がる)
   for (const s of ["L", "R"]) { J[`skirt.${s}`] = [(s === "L" ? 1 : -1) * 0.08, HIP_Y + 0.08, 0.09]; PARENT[`skirt.${s}`] = "hips"; }
+  // 指の骨(左右に3本): 4本の指の付け根(fingers)・指の中ほど(fingerTips)・親指の付け根(thumb)。ポーズで指を曲げてグーにする(motion の grip)
+  //   指4本は1本の骨でまとめて曲げる(1本ずつは動かさない)。手の向き(D=指の向き N=手のひら S=親指の側)は weapons.js の handFrame と同じ
+  const HANDS = {};
+  for (const s of ["L", "R"]) { const H = handFrame(J, s), at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0)); HANDS[s] = { D: H.D, N: H.N, S: H.S };
+    J[`fingers.${s}`] = at(H.palm, [H.D, 0.022]); J[`fingerTips.${s}`] = at(H.palm, [H.D, 0.042], [H.N, 0.003]); J[`thumb.${s}`] = at(H.palm, [H.S, 0.04], [H.D, -0.008], [H.N, 0.006]);
+    Object.assign(PARENT, { [`fingers.${s}`]: `hand.${s}`, [`fingerTips.${s}`]: `fingers.${s}`, [`thumb.${s}`]: `hand.${s}` }); }
   const BONES = Object.keys(PARENT);
   const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
 
@@ -145,11 +151,14 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
       const fd = D.map((v, k) => v * Math.cos(sp) + S[k] * Math.sin(sp)), b0 = at(palm, [D, 0.022], [S, o * (fist ? 0.85 : 1)]);
-      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125, 0.012, `hand.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012, 0.011, `hand.${s}`, 0.006); return; }
-      P[`finger${i}.${s}`] = C(b0, at(b0, [fd, len], [N, 0.006]), 0.0125, 0.0115, `hand.${s}`, 0.008);   // 指の股はくっきり
+      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125, 0.012, `fingers.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012, 0.011, `fingerTips.${s}`, 0.006); return; }
+      // 開いた指: 付け根側(fingers の骨)と先側(fingerTips の骨)の2本に分ける = 中ほどで曲がる。つなぎ目は溶かす幅を小さく(同じ太さの継ぎ目がふくらまないように)
+      const mid = at(b0, [fd, len * 0.48], [N, 0.003]);
+      P[`finger${i}.${s}`] = C(b0, mid, 0.0125, 0.012, `fingers.${s}`, 0.008);   // 指の股はくっきり
+      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len], [N, 0.006]), 0.012, 0.0115, `fingerTips.${s}`, 0.002);
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
-    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013, 0.011, `hand.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013, 0.011, `hand.${s}`, 0.012);
+    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013, 0.011, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013, 0.011, `thumb.${s}`, 0.012);
     { const a = j("upperLeg"), b = j("lowerLeg"), d = OPT.body.sculpt.thigh.topDrop ?? 0, L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);   // topDrop: 太ももの肉の上端だけを脚の向きに下げる(股関節=骨の回る点は動かさない)。外側の付け根の張り出しが下がり、くびれから腰へのカーブがゆるくなる
       P[`thigh.${s}`] = C(a.map((v, i) => v + (b[i] - v) * d / L), b, 0.08, 0.066, `upperLeg.${s}`, 0.05); }
     P[`thighB.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
@@ -235,7 +244,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, HEAD];
   const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
 /**

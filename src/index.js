@@ -63,7 +63,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
 
   lap("cache");
   // shapes
-  const { J, PARENT, BONES, BI, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
@@ -260,7 +260,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
 
   lap("cover");
   // motion
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
+  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
   let poseName = "aPose", time = 0, lastPose = { b: {} };
   // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
   // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)

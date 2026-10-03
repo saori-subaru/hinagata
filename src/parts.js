@@ -35,7 +35,7 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
       if (name === "armorHelm") return { sdf: A.helmSdf, lo: [-0.4, 0.7, -0.4], hi: [0.4, 1.52, 0.42], h: H * 0.85, bone1: "head" };
       if (name === "armorVisor") return !A.visorSdf ? none : { sdf: A.visorSdf, lo: [-0.3, 0.85, -0.1], hi: [0.3, 1.2, 0.42], h: H * 0.6, bone1: "head" };
       if (name === "armorDeco") return !A.decoSdf ? none : { sdf: A.decoSdf, lo: [-0.6, 0.9, -0.5], hi: [0.6, 1.85, 0.45], h: H * 0.8, bone1: "head" };
-      if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42, 0.36, -0.1], hi: [0.42, 0.6, 0.12], h: H * 0.7, only: /^(hand|lowerArm)/ };
+      if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42, 0.36, -0.1], hi: [0.42, 0.6, 0.12], h: H * 0.7, only: /^(hand|fingers|fingerTips|thumb|lowerArm)/ };
       if (name === "armorFeet") return { sdf: A.footSdf, lo: [-0.24, -0.01, -0.14], hi: [0.24, 0.14, 0.16], h: H * 0.8, only: /^(foot|lowerLeg)/ };
       return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47, -0.02, -0.3], hi: [0.47, 0.82, 0.34], h: H * 1.2 }; }
     // weapons (clothes/weapons.js): each bound to one bone (the right hand; the shield to the left forearm)

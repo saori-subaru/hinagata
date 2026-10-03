@@ -1,6 +1,9 @@
 // Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
+// grip?: { L, R } — how far each hand closes into a fist (0 = open, 1 = a fist): the finger bones curl toward the palm and the thumb folds
+//   over them (gripHand below). A hand that holds something (outfit.weapon) is already a fist in its shape and is left alone.
+// sharp: a fast pose (a jump) — after it has blended in, the bones follow it exactly each frame instead of easing toward it (easing slowed the drop just before landing).
 // Bones not listed rest in the A-pose (the bind pose).
 import * as THREE from "three";
 
@@ -16,6 +19,27 @@ const WAVE = (() => {
   const qz = new THREE.Quaternion(), q = new THREE.Quaternion(), e = new THREE.Euler(), Z = new THREE.Vector3(0, 0, 1);
   return { sh, chest, ua, hand, amp, mid, fore: (a) => { qz.setFromAxisAngle(Z, a); q.copy(upInv).multiply(qz).multiply(up).multiply(la0); e.setFromQuaternion(q); return [e.x, e.y, e.z]; } };   // a > 0: the hand toward the outside
 })();
+// ばんざいジャンプの時間割(1回 CHEER.T 秒)。u = 1回の中の位置(0〜1)。立ち止まらず、着地からそのまま次のためへつながる
+//   0.78 つま先から着地(脚は伸び切ったまま) → かかとを下ろしながら、ひざを曲げて受ける(はじめは速く、深くなるほどゆっくり = ため)
+//   0.26〜0.34 一気に伸びて、つま先で床をけって跳ぶ / 0.34〜0.57 上がる(頂点に近いほどゆっくり = 少し浮く) / 0.57〜0.78 落ちる(だんだん速く = ストン)
+// 腰の高さ: しゃがんだ分だけ下げ(太もも・すねの長さから計算)、つま先立ちの分だけ上げる = 床についている足が浮かない/めり込まない
+// ⚠️ポーズの切りかえの「なめらかに寄せる」をこのポーズでは途中から切る(sharp)。寄せると着地の直前で遅くなり、ストンと落ちなくなる
+const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, point: 0.4, toe: 0.077, armLag: 0.03,   // toe: つま先までの長さ(つま先立ちで足首が上がる分 = toe × sin(角度)。測った値)
+  up: { sh: [0, 0, 0.28], ua: [-0.64, -0.38, 1.35], la: [0, -0.04, 0.15], hand: [-0.54, 0.54, -0.25] },   // 頂点: 腕をまっすぐ上へ、手のひらは正面(ひねりは計算で選んだ)
+  low: { sh: [0, 0, 0.04], ua: [-0.65, -1.18, -0.2], la: [-1.84, -0.55, -0.05], hand: [-0.22, 0.17, -0.28] },   // ため: 肘を曲げて、手を顔の前(あごの前)へ。腕が短いのでここまで(頬の横より前へは届かない)
+  arm(k, a) { const q = this._q ??= {}, e = this._e ??= new THREE.Euler(); if (!q[k]) { const Qe = (v) => new THREE.Quaternion().setFromEuler(new THREE.Euler(...v)); q[k] = [Qe(this.low[k]), Qe(this.up[k]), new THREE.Quaternion()]; }
+    const [lo, hi, m] = q[k]; m.slerpQuaternions(lo, hi, a); e.setFromQuaternion(m); return [e.x, e.y, e.z]; },   // 下ろした腕と上げた腕のあいだ(角度をそのまま混ぜると途中で腕が変に回るので、回転として混ぜる)
+  at(t) { const u = ((t / this.T) % 1 + 1) % 1, LAND = 0.78, OFF = 0.26, UP = 0.34, TOP = 0.57;
+    const d = (u - LAND + 1) % 1, sink = OFF + 1 - LAND;   // d: 着地してからの時間 / sink: 着地から伸び始めるまで
+    const bend = d < sink ? 1 - (1 - d / sink) ** 2 : 1 - ss(OFF, UP, u);   // 着地〜ため: 受けて沈む / けり出し: 一気に伸びる
+    const air = u >= UP && u < LAND, rise = u < TOP ? 1 - (1 - (u - UP) / (TOP - UP)) ** 2.6 : 1 - ((u - TOP) / (LAND - TOP)) ** 2.6;
+    const pt = u >= LAND ? 1 - ss(LAND, LAND + 0.05, u) : ss(OFF + 0.02, UP + 0.02, u);   // つま先の向き: けり出しで下へ、着地したらかかとを下ろす
+    const stretch = u >= LAND ? 1 - ss(LAND, LAND + 0.12, u) : ss(OFF + 0.02, UP + 0.04, u);
+    const drop = this.LT * (1 - cos(this.thigh * bend)) + this.LS * (1 - cos((this.knee - this.thigh) * bend));
+    const arms = d < sink ? 1 - bend : ss(OFF + this.armLag, UP + this.armLag + 0.03, u);   // 腕: 着地からは脚と一緒に下ろし、けり出しでは脚より少し遅れて上がる(同時だと速すぎた)
+    return { bend, stretch, point: pt, arms, y: (air ? this.H * rise : 0) + this.toe * Math.sin(this.point * pt) - drop }; },
+};
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
   "tPose": () => ({ b: { "shoulder.L": [0, 0, 0.15], "shoulder.R": [0, 0, -0.15], "upperArm.L": [0, 0, 0.65], "upperArm.R": [0, 0, -0.65] }, y: 0 }),   // arms straight out to the sides (the A-pose arm is about 46° down). The shoulders take a little of the lift (else the seam by the neck stretches into a step)
@@ -25,9 +49,12 @@ export const POSES = {
       "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
   // 手をふる: 腕を上げて止め、肘から先を左右に振る(WAVE)。手のひらは正面の相手へ。手首は曲げない(振ると前腕とずれて見えた)
   "wave": (t) => ({ b: { "upperArm.L": [0.18, 0, -0.18], "lowerArm.L": [0, 0.4, -0.08], "shoulder.R": WAVE.sh, "upperArm.R": WAVE.ua, "lowerArm.R": WAVE.fore(WAVE.mid + sin(t * 8) * WAVE.amp), "hand.R": WAVE.hand, head: [0.04, -0.15, -0.14], chest: WAVE.chest }, y: 0 }),
-  "cheer": (t) => { const k = mx(0, sin(t * 5.2)), squat = mx(0, -sin(t * 5.2));
-    return { b: { "shoulder.L": [0, 0, 0.22 + k * 0.06], "shoulder.R": [0, 0, -0.22 - k * 0.06],   // 腕を頭上へ上げる時は肩ごと持ち上げる(腕の付け根だけで回すと肩の線が折れる)
-      "upperArm.L": [-0.15, 0, 1.28 + k * 0.19], "upperArm.R": [-0.15, 0, -1.28 - k * 0.19], "lowerArm.L": [0, 0, 0.55], "lowerArm.R": [0, 0, -0.55], "upperLeg.L": [-0.5 * squat - 0.1 * k, 0, 0.08], "upperLeg.R": [-0.5 * squat - 0.1 * k, 0, -0.08], "lowerLeg.L": [0.9 * squat + 0.35 * k, 0, 0], "lowerLeg.R": [0.9 * squat + 0.35 * k, 0, 0], "foot.L": [-0.4 * squat + 0.3 * k, 0, 0], "foot.R": [-0.4 * squat + 0.3 * k, 0, 0], head: [-0.15 * k, 0, 0], spine: [0.2 * squat, 0, 0] }, y: k * 0.15 - squat * 0.05 }; },
+  // ばんざいジャンプ: 腕を下ろしてしゃがみ(ため) → 跳ね上がって頂点で伸び切り、少し浮く → ストンと落ちてひざで受ける。手のひらは正面へ(CHEER)
+  "cheer": (t) => { const J = CHEER.at(t), q = J.bend, e = J.stretch, a = J.arms, aL = (k) => CHEER.arm(k, a), aR = (k) => aL(k).map((v, i) => i ? -v : v);
+    return { b: { "shoulder.L": aL("sh"), "shoulder.R": aR("sh"), "upperArm.L": aL("ua"), "upperArm.R": aR("ua"), "lowerArm.L": aL("la"), "lowerArm.R": aR("la"), "hand.L": aL("hand"), "hand.R": aR("hand"),
+      "upperLeg.L": [-CHEER.thigh * q, 0, 0.08], "upperLeg.R": [-CHEER.thigh * q, 0, -0.08], "lowerLeg.L": [CHEER.knee * q, 0, 0], "lowerLeg.R": [CHEER.knee * q, 0, 0],
+      "foot.L": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + CHEER.point * J.point, 0, 0],   // しゃがむ間は足の裏を床に平らに。けり出し〜空中〜着地の瞬間はつま先が下を向く
+      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, grip: { L: 1 - a, R: 1 - a }, y: J.y, sharp: true }; },   // ためでは手をグーに、上げると開く
   "sitChair": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
       // 腕は横へ下ろして、手は太ももの外・座面の少し上(腕が短いので座面までは届かない)
       "upperArm.L": [-0.1, 0, -0.36], "upperArm.R": [-0.1, 0, 0.36], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true, seat: 0.2, seatFront: 0.1 }),
@@ -82,17 +109,33 @@ const GUARD_L = {
 };
 const BARE = { none: true, fist: true };
 
+// グー(grip): 指の付け根と中ほどを手のひらの側へ曲げ、親指を指の前へたたむ。回す軸は手の向き(HANDS: D=指 N=手のひら S=親指の側。体から)から作る
+//   (骨は休みの姿勢で回っていないので、休みの向きの軸で回せばそのまま骨の回転になる)
+const GRIP = { fingers: 1.6, fingerTips: 0.95, thumb: [1.1, 0.5] };   // 曲げる角度(ラジアン)。親指: 手のひらの側へ / 指の側へ
+function gripHand(H) {
+  const v = (a) => new THREE.Vector3(...a), D = v(H.D), N = v(H.N), S = v(H.S);
+  const curl = new THREE.Vector3().crossVectors(D, N).normalize(), fold = new THREE.Vector3().crossVectors(S, N).normalize(), lean = new THREE.Vector3().crossVectors(S, D).normalize();   // curl: 指を手のひらへ / fold: 親指を手のひらへ / lean: 親指を指の側へ
+  const Qa = (ax, a) => new THREE.Quaternion().setFromAxisAngle(ax, a);
+  const full = { fingers: Qa(curl, GRIP.fingers), fingerTips: Qa(curl, GRIP.fingerTips), thumb: Qa(fold, GRIP.thumb[0]).multiply(Qa(lean, GRIP.thumb[1])) };
+  const q = new THREE.Quaternion(), e = new THREE.Euler(), I = new THREE.Quaternion();
+  return (k, g) => { q.slerpQuaternions(I, full[k], g); e.setFromQuaternion(q); return [e.x, e.y, e.z]; };
+}
+
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal" */
-export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "none", shieldMount = "diagonal" }) {
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal" }) {
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
+  const HOLD = { L: left !== "none", R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
+  let cur = null, held = 0;   // いまのポーズと、それに切りかえてからの時間
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
-    let P0 = POSES[name](t); const k = instant ? 1 : 1 - Math.exp(-dt * 9);
+    if (name !== cur) { cur = name; held = 0; } else held += dt;
+    let P0 = POSES[name](t); const k = instant || (P0.sharp && held > 0.35) ? 1 : 1 - Math.exp(-dt * 9);   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
     if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
       P0 = { ...P0, b }; }
+    if (P0.grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = P0.grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
