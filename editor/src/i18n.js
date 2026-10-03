@@ -56,7 +56,7 @@ const T = {
 const POSE = {
   aPose: ["A-pose", "Aポーズ"], tPose: ["T-pose", "Tポーズ"], idle: ["Idle", "立つ"], walk: ["Walk", "歩く"], wave: ["Wave", "手をふる"], cheer: ["Cheer", "ばんざい"],
   sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"],
-  run: ["Run", "走る"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
+  run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
 };
 const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], kid: ["Kid", "子ども"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
 

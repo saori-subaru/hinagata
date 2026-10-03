@@ -1,35 +1,26 @@
-// Climbing, jumping and falling (2026-10-03, from the forest game). No clips: a base pose plus IK (ik.js) that puts the hands and feet
+// Climbing (2026-10-03, from the forest game). No clips: a base pose plus IK (ik.js) that puts the hands and feet
 // on the surface being climbed. The game knows the surface (a trunk, a wall); this file knows the body:
 //   measureBody(avatar)   the body's sizes (shoulders, hips, arm and leg length) — reach depends on the body type
 //   measureStride(avatar) how far a walk cycle carries the feet: play the walk at speed / stride and the planted foot doesn't slide
 //   climbLimbs(avatar, …) each frame while climbing: the hands and feet, one at a time (right hand, left foot, left hand, right foot);
 //                         each holds still on the surface for 3/4 of the cycle (the body moves past it), then reaches to the next hold.
 //                         Drive `phase` by the distance climbed / step (like the walk), so the holds don't slide.
-// Poses (added to POSES): jumpAir / jumpLand (two frames of the cheer jump), fall, hardLand, climb (the base for climbLimbs; sharp),
-// climbOver (crouched on the edge after pulling up).
+// Poses (added to POSES): climb (the base for climbLimbs; sharp), climbOver (crouched on the edge after pulling up).
+// Jumping, landing and falling are in jump.js.
 // The arms of a big-headed body are short (the default: 0.18 of 0.86 m): the hands can't reach over the head, so holds are at chin height.
 import * as THREE from "three";
 import { POSES } from "./index.js";
 import { LIMBS, ik2 } from "./ik.js";
 
-const CHEER_T = 1.4;   // the cheer jump's cycle (motion/index.js CHEER.T)
-const cheerArms = () => POSES.cheer(0.57 * CHEER_T).b;   // the arms at the top of the jump: straight up
+// the arms raised (the climbing base; the IK then puts the hands on the surface). The same turns as the top of the cheer jump, own copy
+const UP_ARMS = (() => { const m = (v) => [v[0], -v[1], -v[2]], L = { "shoulder.L": [0, 0, 0.28], "upperArm.L": [-0.64, -0.38, 1.35], "lowerArm.L": [0, -0.04, 0.15], "hand.L": [-0.54, 0.54, -0.25] };
+  return { ...L, "shoulder.R": m(L["shoulder.L"]), "upperArm.R": m(L["upperArm.L"]), "lowerArm.R": m(L["lowerArm.L"]), "hand.R": m(L["hand.L"]) }; })();
 
 Object.assign(POSES, {
-  // in the air: the top of the cheer jump (legs straight, arms up). The game's physics makes the height, so no hip lift
-  jumpAir: () => ({ ...POSES.cheer(0.57 * CHEER_T), y: 0 }),
-  // just landed: the knees give a little
-  jumpLand: () => POSES.cheer(0.84 * CHEER_T),
-  // falling: arms up and apart, flapping; the legs a little bent, kicking in turn
-  fall: (t) => { const a = cheerArms(), w = Math.sin(t * 11), la = a["lowerArm.L"], ra = a["lowerArm.R"];
-    return { b: { ...a, "lowerArm.L": [la[0] + 0.3 * w, la[1], la[2]], "lowerArm.R": [ra[0] - 0.3 * w, ra[1], ra[2]],
-      "upperLeg.L": [-0.35 - 0.3 * w, 0, 0.06], "upperLeg.R": [-0.35 + 0.3 * w, 0, -0.06], "lowerLeg.L": [0.6 + 0.2 * w, 0, 0], "lowerLeg.R": [0.6 - 0.2 * w, 0, 0], head: [-0.15, 0, 0] }, y: 0 }; },
-  // a hard landing: deep in the knees, fists in front of the chin (the cheer jump's wind-up)
-  hardLand: () => POSES.cheer(0.2 * CHEER_T),
   // climbing (the base): arms up, thighs up and open, knees bent, looking up. climbLimbs puts the hands and feet on the surface
-  climb: () => ({ b: { ...cheerArms(), "upperLeg.L": [-1.1, 0, 0.35], "upperLeg.R": [-1.1, 0, -0.35], "lowerLeg.L": [1.5, 0, 0], "lowerLeg.R": [1.5, 0, 0], "foot.L": [-0.2, 0, 0], "foot.R": [-0.2, 0, 0], head: [-0.25, 0, 0] }, y: 0, sharp: true, grip: { L: 0.8, R: 0.8 } }),
-  // over the edge after pulling up: crouched (then the game goes to idle or walk)
-  climbOver: () => POSES.cheer(0.2 * CHEER_T),
+  climb: () => ({ b: { ...UP_ARMS, "upperLeg.L": [-1.1, 0, 0.35], "upperLeg.R": [-1.1, 0, -0.35], "lowerLeg.L": [1.5, 0, 0], "lowerLeg.R": [1.5, 0, 0], "foot.L": [-0.2, 0, 0], "foot.R": [-0.2, 0, 0], head: [-0.25, 0, 0] }, y: 0, sharp: true, grip: { L: 0.8, R: 0.8 } }),
+  // over the edge after pulling up: crouched (motion/jump.js), then the game goes to idle or walk
+  climbOver: () => POSES.crouch(),
 });
 
 /** The body's sizes in the avatar's own units (avatar.object's space: multiply by its scale for metres):

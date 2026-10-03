@@ -27,6 +27,7 @@ export { BODY_TYPES } from "./body/types.js";
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
+import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 
 /**
  * Build an avatar.
