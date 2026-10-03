@@ -347,6 +347,12 @@ Saori wanted the forest game's character to climb giant trees and fall properly,
 **Jumping apart from the banzai** (2026-10-03, Saori: 「バンザイとジャンプを分離したら？」; `src/motion/jump.js`): the forest had borrowed frames of the cheer jump, so every jump threw both arms straight up and a hard landing crouched with fists at the chin. The jump now has its own poses: `jumpRise` (legs straight, toes down, arms swung forward and up — they carry the jump), `jumpAir` (knees tucked a little, arms out for balance), `jumpLand` / `hardLand` (the knees take it, soles flat with the hips lowered by the legs' geometry, leaning in, arms reaching forward), `fall` (arms up and out, flapping), `crouch`. The banzai is its own pose too: `banzai` (both arms up and down, standing; the cheer jump's arms without the jump). `cheer` (the banzai jump) is unchanged. The climbing base keeps the raised arms as its own copy, so nothing here depends on the cheer jump except `banzai`.
 - Arm turns, for writing poses: z turns first (from the A-pose's 46° out; negative brings the arm down to the side), then x (negative swings it forward). An arm reaching forward is `[-x, 0, -0.75]`; with z left near 0, a big x swings it out to the side instead.
 
+**The jump's wind-up, the running jump, crouching and crawling** (2026-10-03, the forest's first phase: the body's moves):
+- `jumpCrouch`: a quick dip with the arms pulled back (the forest holds it 0.08 s between the key and the take-off). `jumpLeap`: a running jump — legs split front and back, the arm opposite the front leg reaching forward.
+- `sneak` (`src/motion/crawl.js`): walking crouched (knees bent, hips low, leaning in; `sharp`). Its no-slide speed comes from `measureGait`.
+- `crawl` + `crawlLimbs(avatar, { body, phase, step, fwd, right, ground })`: on hands and knees, built the same way as the climbing — a base pose (the hips tip the body forward 1.25 rad, thighs hang to the knees, shins lie back along the ground, the head looks ahead) and IK putting the hands and the ankles on the ground, one limb at a time, each holding still for 3/4 of the cycle. It is the climbing gait with the ground as the surface.
+- Heights (default body): standing 0.86 m, crouched about 0.62, crawling about 0.4. The game decides what fits under what (the forest: a log 0.48 m off the ground needs a crawl).
+
 Not yet: a pull-up with a foot on the edge (the forest's pull-up is the body sliding up and over, then a crouch); hanging by the hands; running.
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)

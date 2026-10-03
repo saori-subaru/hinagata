@@ -1,6 +1,8 @@
 // Jumping and landing, apart from the banzai (2026-10-03, Saori: 「バンザイとジャンプを分離したら？」). The forest had borrowed frames
 // of the cheer jump, so every jump threw both arms up and a hard landing crouched with fists at the chin. Here the jump has its own body:
+//   jumpCrouch the wind-up: a quick dip, arms pulled back
 //   jumpRise   taking off and rising: legs straight, toes pointed down, arms swung forward and up (they carry the jump)
+//   jumpLeap   a running jump: legs split front and back, arms opposite
 //   jumpAir    the top and a short fall: knees tucked a little, arms out to the sides for balance
 //   jumpLand   just landed: the knees take it (soles flat, hips lowered by the legs' geometry), leaning in, arms forward
 //   hardLand   landed from high up: deep in the knees, leaning far in, arms reaching down in front
@@ -27,6 +29,11 @@ Object.assign(POSES, {
   jumpRise: () => ({ b: { ...legs(0, 0.45, 0.04), spine: [-0.08, 0, 0], head: [-0.15, 0, 0], ...arms([-2.1, 0, -0.75], [-0.3, 0, 0]) }, y: 0 }),
   jumpAir: () => ({ b: { ...legs(0, 0.2, 0.08), "upperLeg.L": [-0.6, 0, 0.08], "upperLeg.R": [-0.6, 0, -0.08], "lowerLeg.L": [0.9, 0, 0], "lowerLeg.R": [0.9, 0, 0],
     spine: [0.05, 0, 0], head: [-0.05, 0, 0], ...arms([-0.45, 0, 0.6], [-0.35, 0, 0]) }, y: 0 }),
+  // the wind-up before taking off: a quick dip, arms pulled back (they swing forward and up into jumpRise)
+  jumpCrouch: () => crouch(0.35, { spine: [0.3, 0, 0], ...arms([0.6, 0, -0.75], [-0.2, 0, 0]) }),
+  // a running jump (a leap): legs split front and back, the arm opposite the front leg reaching forward, the other back
+  jumpLeap: () => ({ b: { "upperLeg.L": [-1.0, 0, 0.05], "lowerLeg.L": [0.5, 0, 0], "foot.L": [0.2, 0, 0], "upperLeg.R": [0.55, 0, -0.05], "lowerLeg.R": [1.0, 0, 0], "foot.R": [0.45, 0, 0],
+    "upperArm.R": [-1.7, 0, 0.75], "lowerArm.R": [-0.3, 0, 0], "upperArm.L": [0.7, 0, -0.6], "lowerArm.L": [-0.3, 0, 0], spine: [0.15, 0, 0], head: [-0.15, 0, 0] }, y: 0 }),
   jumpLand: () => crouch(0.45),
   hardLand: () => crouch(0.95, { head: [0.1, 0, 0], ...arms([-1.1, 0, -0.6], [-0.15, 0, 0]) }),
   crouch: () => crouch(0.8),
