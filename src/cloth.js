@@ -16,8 +16,10 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /** m, o: the skinned skirt and its outline. top / hem: the skirt's waist and hem heights (rest).
- *  legs: [{ hip, knee, foot, t0, rThigh, rKnee, rCalf, rAnkle }] bone names, where the thigh starts (0-1 from hip to knee) and radii (with a margin for the cloth). */
-export function createCloth({ m, o, skeleton, root, top, hem, legs }) {
+ *  colliders: [{ bone, a, b, ra, rb, thigh }] capsules in the rest pose (root space, radii with a margin for the cloth), each turning with its bone;
+ *  thigh: a thigh's piece (the skirt's front goes over it when it turns up).
+ *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up). */
+export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null }) {
   const g0 = m.geometry, GP = g0.attributes.position.array, GN = g0.attributes.normal.array, R = Float32Array.from(GP), SI = g0.attributes.skinIndex.array, SW = g0.attributes.skinWeight.array, n = R.length / 3;   // GP / GN: what is drawn; R / NR: the built mesh (kept)
   // the skirt is a shell 1-2 cm thick: only its outer side is moved as cloth; each point of the inner side rides along with the nearest outer
   // point (keeping its offset from it, as skinned). Half the points and edges: the cost is about halved and the look is the same
@@ -35,16 +37,15 @@ export function createCloth({ m, o, skeleton, root, top, hem, legs }) {
   for (let e = 0; e < EL.length; e++) { const a = EA[e * 2] * 3, b = EA[e * 2 + 1] * 3; EL[e] = Math.hypot(R[a] - R[b], R[a + 1] - R[b + 1], R[a + 2] - R[b + 2]); }
   // how firmly each point follows its target per frame: 1 at the waistband (pinned) → PULL_HEM at the hem
   const PULL_HEM = 0.18, A = new Float32Array(n), W = new Float32Array(n);   // W: 0 = pinned (doesn't move for the edges), 1 = free
-  for (let v = 0; v < n; v++) { const u = (top - R[v * 3 + 1]) / (top - hem); A[v] = 1 - (1 - PULL_HEM) * sstep(0.08, 0.7, u); W[v] = A[v] > 0.97 || !OUT[v] ? 0 : 1; }   // inner points: placed after (ride)
+  for (let v = 0; v < n; v++) { const u = (top - R[v * 3 + 1]) / (top - hem); A[v] = 1 - (1 - PULL_HEM) * sstep(0.02, 0.7, u); W[v] = u < 0.02 || !OUT[v] ? 0 : 1; }   // pinned: only the waistband's top edge (a wider pinned band
+  //   couldn't give way where the hip bulges when sitting: the cloth just below it was pushed out and the band folded open over the body). Inner points: placed after (ride)
   const T = new Float32Array(R.length), TN = new Float32Array(R.length), X = new Float32Array(R), P = new Float32Array(R);   // TN: the skinned normals
   const FR = new Uint8Array(n); for (let v = 0; v < n; v++) FR[v] = R[v * 3 + 2] > 0.02 ? 1 : 0;   // the front of the skirt (rest)
   const bones = skeleton.bones, BM = new Float32Array(bones.length * 16), inv = new THREE.Matrix4(), tmp = new THREE.Matrix4();
-  // each leg: the thigh from t0 (0-1 from the hip toward the knee) to the knee, moved forward by `front` (the thigh is fuller in front), and the shin.
-  // The ends are kept in the bones' own space, so the capsules turn with the bones
+  // the capsules' ends kept in their bones' own space (the bones rest unturned), so they turn with the bones
   root.updateMatrixWorld(true);
-  const LEG = legs.map((L) => { const b = [L.hip, L.knee, L.foot].map((nm) => bones.find((x) => x.name === nm)), w = b.map((x) => x.getWorldPosition(new THREE.Vector3())), f = new THREE.Vector3(0, 0, L.front ?? 0);
-    const tA = w[1].clone().sub(w[0]).multiplyScalar(L.t0 ?? 0).add(f), tB = w[1].clone().sub(w[0]).add(f), sA = new THREE.Vector3(), sB = w[2].clone().sub(w[1]);   // in the bones' frames (they rest unturned)
-    return { ...L, b, ends: [[b[0], tA], [b[0], tB], [b[1], sA], [b[1], sB]] }; }), wp = new THREE.Vector3();
+  const COL = colliders.map((c) => { const b = bones.find((x) => x.name === c.bone), w = b.getWorldPosition(new THREE.Vector3());
+    return { ...c, b, oa: new THREE.Vector3(...c.a).sub(w), ob: new THREE.Vector3(...c.b).sub(w) }; }), wp = new THREE.Vector3();
   let first = true;
 
   function targets() {   // the usual skinning (the same as the GPU does), into root space
@@ -58,15 +59,51 @@ export function createCloth({ m, o, skeleton, root, top, hem, legs }) {
       for (let q = 0; q < 4; q++) { const w = SW[v * 4 + q]; if (!w) continue; const e = SI[v * 4 + q] * 16; sx += w * (BM[e] * nx + BM[e + 4] * ny + BM[e + 8] * nz); sy += w * (BM[e + 1] * nx + BM[e + 5] * ny + BM[e + 9] * nz); sz += w * (BM[e + 2] * nx + BM[e + 6] * ny + BM[e + 10] * nz); }
       TN[v * 3] = sx; TN[v * 3 + 1] = sy; TN[v * 3 + 2] = sz; }
   }
-  function capsules() {   // thighs and shins now (root space): [ax, ay, az, bx, by, bz, ra, rb, thigh?]
-    const out = [], at = ([b, v]) => root.worldToLocal(b.localToWorld(wp.copy(v))).toArray();
-    for (const L of LEG) { const e = L.ends.map(at); out.push([...e[0], ...e[1], L.rThigh, L.rKnee, 1], [...e[2], ...e[3], L.rCalf, L.rAnkle, 0]); }   // last: 1 = a thigh (the skirt's front goes over it)
-    return out;
+  function capsules() {   // the capsules now (root space): [ax, ay, az, bx, by, bz, ra, rb, thigh?]
+    const at = (b, v) => root.worldToLocal(b.localToWorld(wp.copy(v))).toArray();
+    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0]);
   }
-  // a point of the skirt already inside a capsule when standing (the skirt's top over the thigh's root) keeps clear of that capsule: bit ci set = skip
-  const SKIP = new Uint8Array(n);
+  // a point of the skirt already inside a capsule when standing (the skirt's top over the thigh's root) may stay as close to its axis as it was
+  // then, but no closer: KEEP[v * NC + ci] = the share of the radius it must keep (1 = all of it). Before, such points ignored that capsule
+  // altogether, and sitting the root of the thigh bulged out through them (most on the girl's body)
+  const NC = COL.length, KEEP = new Float32Array(n * NC).fill(1);
   { const C0 = capsules(); for (let v = 0; v < n; v++) C0.forEach((c, ci) => { const x = R[v * 3], y = R[v * 3 + 1], z = R[v * 3 + 2], bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / (bx * bx + by * by + bz * bz)));
-      if (Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t) < c[6] + (c[7] - c[6]) * t) SKIP[v] |= 1 << ci; }); }
+      const d = Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t), r = c[6] + (c[7] - c[6]) * t; if (d < r) KEEP[v * NC + ci] = d / r; }); }
+  // ── the body's surface (hips, bottom, thighs): a third of its points there, skinned each frame with their normals; a skirt point that comes
+  //    closer to the nearest of them than it was standing (at most MB) is pushed back out along that point's normal. The capsules can't follow
+  //    the flesh of the hip and the thigh's root, which bulges out when the thigh turns up (it showed through the skirt, most on the girl's body)
+  const MB = 0.004, HC = 0.04, HT_N = 8192;   // margin / grid cell (m) / hash table size
+  const BD = body && (() => { const g = body.geometry, P0 = Float32Array.from(g.attributes.position.array), N0 = Float32Array.from(g.attributes.normal.array), bi = g.attributes.skinIndex.array, bw = g.attributes.skinWeight.array;
+    const ok = new Set(["hips", "spine", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"].map((nm) => bones.findIndex((x) => x.name === nm)));
+    const ids = []; for (let v = 0; v < P0.length / 3; v += 3) { const x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2]; if (Math.abs(x) > 0.32 || y < 0.05 || y > 0.58 || z < -0.26 || z > 0.28) continue;
+      let top = 0; for (let q = 1; q < 4; q++) if (bw[v * 4 + q] > bw[v * 4 + top]) top = q; if (ok.has(bi[v * 4 + top])) ids.push(v); }   // not the arms and hands (they hang beside the hips)
+    const k = ids.length; return { ids: Uint32Array.from(ids), P0, N0, bi, bw, Q: new Float32Array(k * 3), QN: new Float32Array(k * 3), cnt: new Int32Array(HT_N + 1), items: new Int32Array(k), hs: new Int32Array(k) }; })();
+  const hashOf = (ix, iy, iz) => ((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) & (HT_N - 1);
+  function bodySkin() {   // skin the body's points (positions and normals) and file them in the grid
+    const { ids, P0, N0, bi, bw, Q, QN, cnt, items, hs } = BD; cnt.fill(0);
+    for (let j = 0; j < ids.length; j++) { const v = ids[j], x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2], nx = N0[v * 3], ny = N0[v * 3 + 1], nz = N0[v * 3 + 2]; let tx = 0, ty = 0, tz = 0, sx = 0, sy = 0, sz = 0;
+      for (let q = 0; q < 4; q++) { const w = bw[v * 4 + q]; if (!w) continue; const e = bi[v * 4 + q] * 16;
+        tx += w * (BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]); ty += w * (BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]); tz += w * (BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]);
+        sx += w * (BM[e] * nx + BM[e + 4] * ny + BM[e + 8] * nz); sy += w * (BM[e + 1] * nx + BM[e + 5] * ny + BM[e + 9] * nz); sz += w * (BM[e + 2] * nx + BM[e + 6] * ny + BM[e + 10] * nz); }
+      const l = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1; Q[j * 3] = tx; Q[j * 3 + 1] = ty; Q[j * 3 + 2] = tz; QN[j * 3] = sx / l; QN[j * 3 + 1] = sy / l; QN[j * 3 + 2] = sz / l;
+      const h = hashOf(Math.floor(tx / HC), Math.floor(ty / HC), Math.floor(tz / HC)); hs[j] = h; cnt[h + 1]++; }
+    for (let h = 0; h < HT_N; h++) cnt[h + 1] += cnt[h];   // counting sort: items of cell h are items[cnt[h] .. cnt[h+1])
+    const fill = cnt.slice(0, HT_N); for (let j = 0; j < ids.length; j++) items[fill[hs[j]]++] = j;
+  }
+  function bodyDist(x, y, z) {   // signed distance to the body's surface near (x, y, z) (from the nearest body point within a cell: along its normal), or Infinity
+    const { Q, QN, cnt, items } = BD, fx = x / HC, fy = y / HC, fz = z / HC, gx = Math.floor(fx), gy = Math.floor(fy), gz = Math.floor(fz), ox = fx - gx < 0.5 ? -1 : 0, oy = fy - gy < 0.5 ? -1 : 0, oz = fz - gz < 0.5 ? -1 : 0; let best = -1, bd = HC * HC * 0.25;
+    for (let i = ox; i <= ox + 1; i++) for (let j = oy; j <= oy + 1; j++) for (let k = oz; k <= oz + 1; k++) { const h = hashOf(gx + i, gy + j, gz + k);   // the 2×2×2 cells around the point (it is at least half a cell from their edge)
+      for (let a = cnt[h]; a < cnt[h + 1]; a++) { const q = items[a] * 3, dx = x - Q[q], dy = y - Q[q + 1], dz = z - Q[q + 2], d2 = dx * dx + dy * dy + dz * dz; if (d2 < bd) { bd = d2; best = q; } } }
+    if (best < 0) return Infinity; LASTN = best; return (x - Q[best]) * QN[best] + (y - Q[best + 1]) * QN[best + 1] + (z - Q[best + 2]) * QN[best + 2];
+  }
+  let LASTN = -1;
+  const KEEPB = new Float32Array(n).fill(MB);   // how close each skirt point may come (standing, some sit closer than MB: they may stay so)
+  if (BD) { root.updateMatrixWorld(true); bones.forEach((b, k) => { tmp.copy(b.matrixWorld).multiply(skeleton.boneInverses[k]); BM.set(tmp.elements, k * 16); }); bodySkin();
+    for (let v = 0; v < n; v++) { const d = bodyDist(R[v * 3], R[v * 3 + 1], R[v * 3 + 2]); if (d < MB) KEEPB[v] = Math.max(-0.02, d); } }
+  function collideBody() {
+    for (let v = 0; v < n; v++) { if (!OUT[v]) continue; const i = v * 3, d = bodyDist(X[i], X[i + 1], X[i + 2]); if (d >= KEEPB[v] - 0.001) continue;   // pinned points too: the hip's flesh bulges right under the waistband   // (within 1 mm: the nearest-point estimate wobbles that much from frame to frame)
+      const q = LASTN, k = KEEPB[v] - d; X[i] += BD.QN[q] * k; X[i + 1] += BD.QN[q + 1] * k; X[i + 2] += BD.QN[q + 2] * k; }
+  }
   // up: for each capsule, the direction across it that is closest to straight up — only for a thigh turned up past ~55° (sitting, crouching).
   // A walking thigh (up to ~30°) is left to the plain push: there "up across it" points forward and flipped the skirt's inner side out
   const UP = (c) => { const bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], L = Math.hypot(bx, by, bz), ay = by / L; if (Math.abs(ay) > 0.57) return null;
@@ -75,9 +112,9 @@ export function createCloth({ m, o, skeleton, root, top, hem, legs }) {
     const U = C.map((c) => c[8] ? UP(c) : null), BX = C.map((c) => { const r = Math.max(c[6], c[7]); return [Math.min(c[0], c[3]) - r, Math.max(c[0], c[3]) + r, Math.min(c[1], c[4]) - r, Math.max(c[1], c[4]) + r, Math.min(c[2], c[5]) - r, Math.max(c[2], c[5]) + r]; });   // each capsule's box (most points are far from most capsules)
     for (let v = 0; v < n; v++) { if (!W[v]) continue; const i = v * 3; let x = X[i], y = X[i + 1], z = X[i + 2];
       for (let ci = 0; ci < C.length; ci++) {   // push out of each capsule (radius changes along it)
-        if (SKIP[v] & (1 << ci)) continue; const B = BX[ci]; if (x < B[0] || x > B[1] || y < B[2] || y > B[3] || z < B[4] || z > B[5]) continue;
+        const B = BX[ci]; if (x < B[0] || x > B[1] || y < B[2] || y > B[3] || z < B[4] || z > B[5]) continue;
         const c = C[ci], bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], L2 = bx * bx + by * by + bz * bz, t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / L2));
-        const px = c[0] + bx * t, py = c[1] + by * t, pz = c[2] + bz * t, r = c[6] + (c[7] - c[6]) * t; let dx = x - px, dy = y - py, dz = z - pz; const d2 = dx * dx + dy * dy + dz * dz;
+        const px = c[0] + bx * t, py = c[1] + by * t, pz = c[2] + bz * t, r = (c[6] + (c[7] - c[6]) * t) * KEEP[v * NC + ci]; let dx = x - px, dy = y - py, dz = z - pz; const d2 = dx * dx + dy * dy + dz * dz;
         if (d2 >= r * r || d2 < 1e-12) continue; const d = Math.sqrt(d2);
         // a thigh turned up (sitting): the front of the skirt goes over it, not under (pushed the nearest way, the part under the thigh tucked
         // beneath it and the thigh showed through a hole). The back of the skirt stays under (you sit on it)
@@ -130,17 +167,20 @@ export function createCloth({ m, o, skeleton, root, top, hem, legs }) {
   function step(keep, iters, C, seat) {
     for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * A[v]; X[i] = W[v] ? x : T[i]; }
     for (let k = 0; k < iters; k++) { let t0 = now(); edges(); PROF.edges += now() - t0; t0 = now(); collide(C, seat); PROF.collide += now() - t0; }
+    { const t0 = now(); if (BD) collideBody(); PROF.collide += now() - t0; }   // the body's surface: once, after the rounds (it only nudges)
     for (let v = 0; v < n; v++) { const u = NE[v]; if (u < 0) continue; for (let q = 0; q < 3; q++) X[v * 3 + q] = X[u * 3 + q] + T[v * 3 + q] - T[u * 3 + q]; }   // the inner side rides on the outer
   }
   return {
     prof: PROF,
+    /** For checking: skirt points (outer side) inside the body's surface now: count, deepest (m), and how many of those the search couldn't see. */
+    inside() { if (!BD) return null; let c = 0, deep = 0, pinned = 0; for (let v = 0; v < n; v++) { if (!OUT[v]) continue; const d = bodyDist(X[v * 3], X[v * 3 + 1], X[v * 3 + 2]); if (d < KEEPB[v] - 0.002) { c++; deep = Math.min(deep, d); if (!W[v]) pinned++; } } return { count: c, deep, pinned, keepMin: Math.min(...KEEPB) }; },
     /** For checking: how many points the cloth has moved off their targets now, and the farthest (m). */
     moved() { let c = 0, mx = 0; for (let v = 0, i = 0; v < n; v++, i += 3) { const d = Math.hypot(X[i] - T[i], X[i + 1] - T[i + 1], X[i + 2] - T[i + 2]); if (d > 1e-5) c++; if (d > mx) mx = d; } return { count: c, of: n, max: mx }; },
     /** Each frame after the pose is set. instant: settle at once (no sway carried over). seat: { y, front } when sitting on a chair. */
     update(dt, instant = false, seat = null) {
       if (!m.visible) { first = true; return; }
       for (const k in PROF) PROF[k] = 0; let t0 = now();
-      root.updateMatrixWorld(true); targets(); const C = capsules(); PROF.targets = now() - t0;
+      root.updateMatrixWorld(true); targets(); if (BD) bodySkin(); const C = capsules(); PROF.targets = now() - t0;
       let moved = 0; for (let i = 0; i < T.length; i++) { const d = Math.abs(T[i] - T0[i]); if (d > moved) moved = d; } T0.set(T);
       if (first || instant) { X.set(T); P.set(T); for (let s = 0; s < (first ? 30 : 10); s++) step(0, 2, C, seat); first = false; still = 0; }   // settle: no motion carried over
       else { still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do

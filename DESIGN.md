@@ -318,15 +318,17 @@ Saori: sitting on the floor, the thighs poked out of the skirt, and weighting co
 
 Done (`src/cloth.js`, only for `outfit.pants.kind = "skirt"`): each frame the skirt is moved as simple position-based cloth.
 - The target is where the usual skinning puts each point (the skirt's weights are unchanged). Points are pulled toward it, fully at the waistband (pinned), loosely toward the hem, keeping a little of their motion (a soft sway).
-- Two rounds of: edges longer than built are pulled back (the cloth doesn't stretch; it may bunch), points inside a thigh or shin are pushed out (capsules from the bones, radii measured off the body: the thigh is ~0.1 m at its root and fuller in front), points under the floor or the chair's seat are lifted onto it.
+- Two rounds of: edges longer than built are pulled back (the cloth doesn't stretch; it may bunch), points inside a thigh or shin are pushed out, points under the floor or the chair's seat are lifted onto it.
+- The thigh and shin capsules are measured off each built body (`legCols` in `src/index.js`): at several points from just below the hip joint to the knee, how far the body reaches, so a fuller thigh (the girl's) gets a fuller capsule. Fixed radii missed the girl's mid-thigh.
 - A thigh turned up past ~55° (sitting, crouching) pushes the front of the skirt over itself, not under (the nearest way tucked part of it beneath the thigh, which then showed through a hole); the back of the skirt stays under (you sit on it). A walking thigh uses the plain push.
-- Points already inside a capsule when standing (the skirt's top over the thigh's root) keep clear of it.
+- Points already inside a capsule when standing (the skirt's top over the thigh's root) may stay as close to its axis as they were then (not pushed out, not let further in).
+- Then once, against the body's own surface (2026-10-03, Saori: "椅子や床に座ると太ももの付け根がすこし浮き出ちゃう、女の子体型でわかりやすい"). Capsules are round; the flesh of the hip and the thigh's root is not, and it bulges out when the thigh turns up. A third of the body's points around the hips and legs (those following the hips, spine or legs) are skinned each frame and put in a hash grid (4 cm cells); a skirt point's distance to the body is taken along the nearest body point's normal. Each skirt point may stay as close as it was when standing (1 mm of slack, else the body's 1 mm noise makes it jitter). This includes the pinned waistband: only its top 2% (the waist seam) is fully pinned now. A wider pinned band couldn't give way to the hip and folded open over it.
 - Only the outer side of the 1-2 cm shell is moved; the inner side rides on the nearest outer point. When nothing has moved for 40 frames it stops computing.
 - Drawn as the same skinned mesh: the cloth's points and normals are turned back through each point's blended bone matrix into rest positions, so the GPU's skinning puts them where the cloth is. Where the cloth sits on its target the built mesh is used unchanged: a standing skirt renders pixel-identical to before. (A separate plain mesh drawn instead shaded differently — a dark band on a standing skirt that we couldn't trace — so this way.) `cloth.rest()` puts the built mesh back for the glTF export.
 
-Cost: ~2.5-4 ms per moving frame on the test machine (3-4× slower than a desktop): about 1 ms on a desktop.
+Cost on the test machine (3-4× slower than a desktop), girl body, whole avatar update: 1.5 ms per frame without the body-surface step, 2.7 ms with it (walking, cheering). Sitting still, the cloth sleeps.
 
-Not yet: hug-knees still shows a little of the back of the thighs at the side; the space between the legs under a short skirt when sitting on the floor.
+Not yet: hugging the knees shows the tops of the thighs (as a real skirt would); the space between the legs under a short skirt when sitting on the floor; the glTF export has the built skirt, not the cloth's motion.
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
 

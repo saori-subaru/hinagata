@@ -192,9 +192,18 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.shirt = skinned(meshPart("shirt"), OPT.outfit.shirt.color);
   parts.pants = skinned(meshPart("pants"), OPT.outfit.pants.color);
   // a skirt drapes as cloth (cloth.js): it stays over the thighs when they turn up (sitting) instead of tearing open or letting them poke through
-  const PT = OPT.outfit.pants, THK = OPT.body.thickness, CM = 0.006;   // CM: the cloth's margin off the leg. The radii: measured off the body (the thigh is ~0.1 m at its root, fuller in front)
-  const cloth = PT.kind === "skirt" ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: PT.top, hem: PT.skirt?.hem ?? 0.3,
-    legs: ["L", "R"].map((s) => ({ hip: `upperLeg.${s}`, knee: `lowerLeg.${s}`, foot: `foot.${s}`, t0: 0.12, front: 0.01, rThigh: 0.094 * (THK.thighTop ?? THK.thigh ?? 1) + CM, rKnee: 0.078 * (THK.thigh ?? 1) + CM, rCalf: 0.062 * (THK.calf ?? 1) + CM, rAnkle: 0.057 * (THK.calf ?? 1) + CM })) }) : null;
+  // The legs it keeps clear of: capsules measured off this body (rest pose), so every body type fits (a single thigh capsule from the root to the knee
+  // missed the girl's full mid-thigh). Along each thigh, at a few points from just below the hip joint to the knee: how far the body reaches
+  // forward, outward and forward-out from the bone's line (the inner side and the back run into the other leg and the bottom), and the shin likewise
+  const PT = OPT.outfit.pants, CM = 0.006;   // CM: the cloth's margin off the leg
+  const legReach = (c) => { let rm = 0; for (const d of [[1, 0, 0], [0, 0, 1], [0.7071, 0, 0.7071], [0.7071, 0, -0.7071]]) { const dx = d[0] * Math.sign(c[0] || 1), dz = d[2]; let r = 0.02;
+      for (; r < 0.16; r += 0.002) if (bodySdf(c[0] + dx * r, c[1], c[2] + dz * r) > 0) break; rm = Math.max(rm, r); } return rm; };
+  const legCols = (s) => { const h = J[`upperLeg.${s}`], k = J[`lowerLeg.${s}`], f = J[`foot.${s}`], at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), out = [];
+    const thigh = [0.12, 0.35, 0.6, 0.85, 1].map((t) => { const c = at(h, k, t); return [c, legReach(c) + CM]; }), shin = [0, 0.5, 0.9].map((t) => { const c = at(k, f, t); return [c, legReach(c) + CM]; });
+    for (let i = 0; i + 1 < thigh.length; i++) out.push({ bone: `upperLeg.${s}`, a: thigh[i][0], b: thigh[i + 1][0], ra: thigh[i][1], rb: thigh[i + 1][1], thigh: true });
+    for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false });
+    return out; };
+  const cloth = PT.kind === "skirt" ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: PT.top, hem: PT.skirt?.hem ?? 0.3, colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
