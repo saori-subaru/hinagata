@@ -41,6 +41,7 @@ export function createPosePlayer({ bone, BONES, HIPS0 }) {
     const P0 = POSES[name](t), k = instant ? 1 : 1 - Math.exp(-dt * 9);
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) - bone.hips.position.y) * k;
+    for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
     return P0;
   };
 }
