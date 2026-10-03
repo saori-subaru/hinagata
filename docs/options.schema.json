@@ -4836,6 +4836,27 @@
       "ja": "顔が見える丸い兜",
       "en": "Open (face shows)"
      }
+    },
+    {
+     "value": "close",
+     "label": {
+      "ja": "くちばしの面頬(クローズヘルム)",
+      "en": "Close helm (beaked visor)"
+     }
+    },
+    {
+     "value": "kettle",
+     "label": {
+      "ja": "つば付き(ケトルハット)",
+      "en": "Kettle hat (brimmed)"
+     }
+    },
+    {
+     "value": "sallet",
+     "label": {
+      "ja": "後ろが長い(サレット)",
+      "en": "Sallet (long tail)"
+     }
     }
    ],
    "order": 79,

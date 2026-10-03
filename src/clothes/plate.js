@@ -1,11 +1,11 @@
 // Full plate (outfit.armor.style "full"): a knight in armor head to toe — the character underneath does not show.
 // Same idea as the light armor (armor.js): simple hard shapes fitted once around the body, solid, on as few bones as they can.
-//   helm: a rounded great helm around the head (the hair is not worn), with a visor slit (a dark slab at its bottom) and a crest
+//   helm: fitted around the head (the hair is not worn) — six shapes told apart by their silhouettes (see "helm" below), and decorations
 //   cuirass: the torso from the hips to a collar around the neck, flaring at the bottom into two bands (faulds)
 //   arms: big pauldrons (three lames), upper-arm tubes, elbow cops, forearm tubes, gauntlets (the hand puffed up)
 //   legs: thigh tubes, knee cops (all round), greaves, sabatons (the foot puffed up)
 //   mail: a dark layer just over the body (chain mail) — where the plates leave a gap at a joint, mail shows, not skin
-import { blend, sstep } from "../sdf/prim.js";
+import { blend, smin, sstep } from "../sdf/prim.js";
 import { guard, dome, slice, sell, smax, sub, dot, norm } from "./armor.js";
 
 export function buildPlate(OPT, { P, J, bodySdf, HT }) {
@@ -30,30 +30,50 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     sx = A * k; sf = z0 + Bz * k; sb = z0 - Bz * k; }
   const hg = 0.014, zc = (sf + sb) / 2, HR = [sx + hg, 0, (sf - sb) / 2 + hg + 0.004], bottom = chin - 0.035, yc = top - (top - bottom) * 0.45;   // the dome's center: the walls run straight below it
   HR[1] = top + hg - yc; const HC = [0, yc, zc];
-  // helm (outfit.armor.helm): "great" = a closed bucket with an eye slit / "visor" = the same, the eyes behind a dark visor and the mouth open
-  //   / "open" = a rounder helm open around the face, with a nose guard. The open ones are cut through: the face behind is the character's own
-  const HELM = AR.helm ?? "great", round = HELM === "open";
-  const helmOuter = (x, y, z) => { const rho = Math.hypot(x, (z - zc) * HR[0] / HR[2]);   // round from above (an ellipse, scaled to a circle)
-    if (y < yc) return rho - HR[0] * (1 - (round ? 0.1 : 0.06) * ((yc - y) / (yc - bottom)) ** 2);   // straight walls, a little in toward the bottom
-    return sell(rho, y - yc, HR[0], HR[1], round ? 2.05 : 2.4); };
+  // helm (outfit.armor.helm) — told apart by the silhouette:
+  //   "great"  = a closed bucket, flat-sided, with an eye slit          "visor" = the same, a wide dark band over the eyes and the mouth open
+  //   "open"   = rounder, open around the face, a nose guard            "kettle" = the open one with a wide brim (a kettle hat)
+  //   "close"  = a round skull with a visor pointed like a beak, a comb on top, a flared rim at the neck (a close helm)
+  //   "sallet" = a round skull sweeping out into a long tail at the back, with an eye slit
+  //   The open ones are cut through: the face behind is the character's own.
+  const HELM = AR.helm ?? "great";
+  const ST = { great: { dome: 2.4, taper: 0.06, slit: [eyeY, 0.011], crest: 0.024 }, visor: { dome: 2.4, taper: 0.06, slit: [eyeY, 0.024], crest: 0.024 },
+    open: { dome: 2.05, taper: 0.1, nasal: true }, kettle: { dome: 2.05, taper: 0.1, brim: true },
+    close: { dome: 2.05, taper: 0.08, slit: [eyeY + 0.028, 0.006], crest: 0.04, beak: true, flare: true },
+    sallet: { dome: 2.1, taper: 0.04, slit: [eyeY, 0.01], crest: 0.016, tail: true } }[HELM] ?? {};
+  const yp = eyeY - 0.008, beakAt = (y) => ST.beak ? 0.085 * Math.max(0, 1 - Math.abs(y - yp) / (y > yp ? 0.08 : 0.13)) : 0;   // how far the beak stands out at y (most at the eyes)
+  const BA = [Math.cos(0.95), Math.sin(0.95)];   // the beak's sides: planes turned 54° off the front
+  const helmOuter = (x, y, z) => { const rho = Math.hypot(x, (z - zc) * HR[0] / HR[2]), u = Math.max(0, (yc - y) / (yc - bottom));   // round from above (an ellipse, scaled to a circle)
+    let d = y < yc ? rho - HR[0] * (1 - ST.taper * u * u) : sell(rho, y - yc, HR[0], HR[1], ST.dome);   // walls below the dome's center, a little in toward the bottom
+    if (ST.tail) d -= 0.11 * u ** 1.6 * Math.max(0, (zc - z) / HR[2]) ** 1.2;   // the sallet's tail: out at the back, more toward the bottom
+    if (ST.flare) d -= 0.028 * sstep(bottom + 0.05, bottom, y);   // a rim flaring out at the neck
+    const b = beakAt(y);
+    if (b > 0) { const tz = zc + HR[2] + b, w = Math.max(BA[0] * x + BA[1] * (z - tz), -BA[0] * x + BA[1] * (z - tz)); d = smin(d, smax(Math.max(w, zc - z), Math.abs(x) - HR[0] * 0.97, 0.01), 0.012); }   // the beak: a wedge out of the front
+    return d; };
   const fx = (hx) => HT.fromHead(hx, 1, 0)[0], eyeX = OPT.face.layout.eyeX ?? 0.1;
-  const slitH = HELM === "visor" ? 0.024 : 0.011;   // the visor: a wider dark band over the eyes
-  const slit = (x, y, z) => Math.max(Math.abs(y - eyeY) - slitH, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
+  const [slitY, slitH] = ST.slit ?? [eyeY, 0];
+  const slit = (x, y, z) => Math.max(Math.abs(y - slitY) - slitH, Math.abs(x) - HR[0] * 0.62, zc - z, -helmOuter(x, y, z) - 0.011);   // the slit: 1.1 cm deep along the front (the face is 1.4 cm in)
   // the opening: an oval through the front of the helm (front half only)
-  const OPEN = HELM === "visor" ? { y0: chin - 0.06, y1: eyeY - slitH - 0.022, w: fx(0.1), n: 2.6 } : HELM === "open" ? { y0: chin - 0.06, y1: eyeY + 0.06, w: fx(eyeX + 0.078), n: 2.3 } : null;
+  const OPEN = HELM === "visor" ? { y0: chin - 0.06, y1: eyeY - slitH - 0.022, w: fx(0.1), n: 2.6 } : HELM === "open" || HELM === "kettle" ? { y0: chin - 0.06, y1: eyeY + 0.06, w: fx(eyeX + 0.078), n: 2.3 } : null;
   const opening = OPEN ? (x, y, z) => { const ym = (OPEN.y0 + OPEN.y1) / 2, hy = (OPEN.y1 - OPEN.y0) / 2; return Math.max(sell(x, y - ym, OPEN.w, hy, OPEN.n), zc + 0.02 - z); } : null;
   const nasal = (x, y, z) => Math.max(Math.abs(x) - 0.011, y - (eyeY + 0.07), eyeY - 0.045 - y, helmOuter(x, y, z), -helmOuter(x, y, z) - 0.009, zc - z);   // a strip down the front, over the nose
+  const brimY = (OPEN?.y1 ?? eyeY) + 0.022;
+  const brim = (x, y, z) => { const r = Math.hypot(x, (z - zc) * HR[0] / HR[2]); return Math.max(Math.abs(y - (brimY - 0.3 * Math.max(0, r - HR[0]))) - 0.006, r - HR[0] - 0.07); };   // a wide brim, drooping a little toward its edge
   const helmSdf = (x, y, z) => {
     let d = helmOuter(x, y, z);
     d = smax(d, bottom - y, 0.006);
-    if (!round) { d = groove(d, y, eyeY + slitH + 0.023, 0.005, 0.003); if (HELM === "great") d = groove(d, y, eyeY - 0.03, 0.004, 0.002); d = smax(d, -slit(x, y, z), 0.003); }   // the visor's edges and the slit
-    else d = groove(d, y, OPEN.y1 + 0.018, 0.005, 0.003);   // a band above the face
-    if (opening) d = smax(d, -opening(x, y, z), 0.006);
+    if (HELM === "great" || HELM === "visor" || HELM === "sallet") { d = groove(d, y, eyeY + slitH + 0.023, 0.005, 0.003); if (HELM === "great") d = groove(d, y, eyeY - 0.03, 0.004, 0.002); }   // the visor's edges
+    if (HELM === "close") { d = groove(d, y, slitY + slitH + 0.012, 0.005, 0.003); d = groove(d, y, eyeY - 0.085, 0.005, 0.003); }   // the visor's top edge and the bevor below it
+    if (slitH) d = smax(d, -slit(x, y, z), 0.003);
+    if (OPEN) { d = smax(d, -opening(x, y, z), 0.006); d = groove(d, y, OPEN.y1 + 0.018, 0.005, 0.003); }
     if (HELM === "great" && z > zc) for (const [hx, hy] of [[-0.07, -0.05], [-0.045, -0.05], [-0.07, -0.072], [-0.045, -0.072]]) d = smax(d, 0.0055 - Math.hypot(x - hx, y - eyeY - hy), 0.002);   // breaths on the right cheek (front only)
-    if (round) d = Math.min(d, nasal(x, y, z));
-    if (!round && (AR.deco ?? "none") === "none") d = Math.min(d, Math.max(Math.abs(x) - 0.009, helmOuter(x, y - 0.024, z) - 0.002, yc + HR[1] * 0.15 - y));   // a crest from front to back (unless something sits on top)
+    if (HELM === "close" && z > zc) for (let i = 0; i < 4; i++) d = smax(d, -Math.max(Math.abs(x + 0.028 + 0.017 * i) - 0.0035, Math.abs(y - eyeY + 0.045) - 0.014, -helmOuter(x, y, z) - 0.008), 0.002);   // breaths: slots down the right side of the beak
+    if (ST.nasal) d = Math.min(d, nasal(x, y, z));
+    if (ST.brim) d = Math.min(d, brim(x, y, z));
+    if (ST.beak) for (const m of [1, -1]) d = Math.min(d, Math.hypot(x - m * HR[0] * 0.99, y - slitY, z - zc - 0.01) - 0.013);   // the visor's pivots
+    if (ST.crest && (AR.deco ?? "none") === "none") d = Math.min(d, Math.max(Math.abs(x) - (ST.crest > 0.03 ? 0.011 : 0.009), helmOuter(x, y - ST.crest, z) - 0.002, yc + HR[1] * 0.15 - y));   // a crest (comb) from front to back (unless something sits on top)
     return d; };
-  const visorSdf = round ? null : (x, y, z) => Math.max(Math.abs(y - eyeY) - slitH - 0.004, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
+  const visorSdf = !slitH ? null : (x, y, z) => Math.max(Math.abs(y - slitY) - slitH - 0.004, Math.abs(x) - HR[0] * 0.65, zc - z, Math.abs(helmOuter(x, y, z) + 0.0125) - 0.0035);   // the dark slab at the slit's floor
 
   // ── on the helm (outfit.armor.deco, its own color): "plume" = a brush of feathers front to back / "horns" / "wings" ──
   const DECO = AR.deco ?? "none";

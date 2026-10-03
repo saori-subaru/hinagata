@@ -551,7 +551,7 @@ $("tArmor").addEventListener("click", async () => {
   else { avatar.setWorn({ armor: ARMOR_STATE.on }); twin?.setWorn({ armor: ARMOR_STATE.on }); refreshLook(); }
 });
 // 兜の形と飾り(全身鎧のとき): 押すたびに次へ。形が変わるので作り直す
-for (const [id, key, label, names] of [["tHelm", "helm", "兜", { great: "バケツ", visor: "目元が黒", open: "顔が見える" }], ["tDeco", "deco", "兜の飾り", { none: "なし", plume: "羽飾り", horns: "角", wings: "翼" }]]) {
+for (const [id, key, label, names] of [["tHelm", "helm", "兜", { great: "バケツ", visor: "目元が黒", open: "顔が見える", close: "くちばし", kettle: "つば付き", sallet: "後ろが長い" }], ["tDeco", "deco", "兜の飾り", { none: "なし", plume: "羽飾り", horns: "角", wings: "翼" }]]) {
   const cur = () => OUTFIT.outfit.armor?.[key] ?? avatar.options.outfit.armor[key], show = () => { $(id).textContent = `${label}: ${names[cur()] ?? cur()}`; };
   show(); $(id).addEventListener("click", () => { const ks = Object.keys(names); OUTFIT.outfit.armor = { ...OUTFIT.outfit.armor, [key]: ks[(ks.indexOf(cur()) + 1) % ks.length] }; show(); rebuildBody(); });
 }

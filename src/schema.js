@@ -121,7 +121,7 @@ const MAIN = [
   ["outfit.armor.on", L("着る", "Wear"), { section: L("鎧", "Armor"), apply: "setWorn" }],
   ["outfit.armor.style", L("鎧の種類", "Armor style"), { options: opts({ light: ["軽鎧(服の上に)", "Light (over the clothes)"], full: ["全身鎧(兜まで)", "Full plate (with a helm)"] }), section: L("鎧", "Armor") }],
   ["outfit.armor.color", L("鎧の色", "Armor color"), { section: L("鎧", "Armor"), apply: "setColors" }],
-  ["outfit.armor.helm", L("兜の形", "Helm"), { options: opts({ great: ["バケツ(目のすき間だけ)", "Great helm (eye slit)"], visor: ["目元が黒・口が見える", "Visor (mouth shows)"], open: ["顔が見える丸い兜", "Open (face shows)"] }), section: L("鎧", "Armor"), help: L("全身鎧のとき", "Full plate") }],
+  ["outfit.armor.helm", L("兜の形", "Helm"), { options: opts({ great: ["バケツ(目のすき間だけ)", "Great helm (eye slit)"], visor: ["目元が黒・口が見える", "Visor (mouth shows)"], open: ["顔が見える丸い兜", "Open (face shows)"], close: ["くちばしの面頬(クローズヘルム)", "Close helm (beaked visor)"], kettle: ["つば付き(ケトルハット)", "Kettle hat (brimmed)"], sallet: ["後ろが長い(サレット)", "Sallet (long tail)"] }), section: L("鎧", "Armor"), help: L("全身鎧のとき", "Full plate") }],
   ["outfit.armor.deco", L("兜の飾り", "Helm decoration"), { options: opts({ none: ["なし", "None"], plume: ["羽飾り", "Plume"], horns: ["角", "Horns"], wings: ["翼", "Wings"] }), section: L("鎧", "Armor"), help: L("全身鎧のとき", "Full plate") }],
   ["outfit.armor.decoColor", L("飾りの色", "Decoration color"), { nullable: true, section: L("鎧", "Armor"), help: L("null = 飾りごとの色(羽は赤・角は象牙・翼は白)", "null = its own color (red plume, ivory horns, white wings)") }],
   ["outfit.armor.mailColor", L("鎖かたびらの色", "Mail color"), { section: L("鎧", "Armor"), help: L("全身鎧のとき、板のすき間に見える", "Full plate: shows between the plates") }],
