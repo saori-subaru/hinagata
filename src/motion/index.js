@@ -16,6 +16,22 @@ const WAVE = (() => {
   const qz = new THREE.Quaternion(), q = new THREE.Quaternion(), e = new THREE.Euler(), Z = new THREE.Vector3(0, 0, 1);
   return { sh, chest, ua, hand, amp, mid, fore: (a) => { qz.setFromAxisAngle(Z, a); q.copy(upInv).multiply(qz).multiply(up).multiply(la0); e.setFromQuaternion(q); return [e.x, e.y, e.z]; } };   // a > 0: the hand toward the outside
 })();
+// ばんざいジャンプの時間割(1回 CHEER.T 秒)。u = 1回の中の位置(0〜1)
+//   0.10〜0.36 しゃがんで、ためる(腕は下ろして曲げる) / 0.36〜0.44 一気に伸びて跳ぶ / 0.42〜0.65 上がる(頂点に近いほどゆっくり)
+//   0.65〜0.80 落ちる(はじめはゆっくり、あとは速く = ストン) / 0.80〜 ひざで受けて、立ち直る
+// 腰の高さ: しゃがんだ分だけ下げる(太もも・すねの長さから計算 = 足の裏が床から浮かない/めり込まない)。空中の高さは足の裏の高さ
+const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+const CHEER = { T: 1.5, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165,
+  up: { sh: [0, 0, 0.28], ua: [-0.64, -0.38, 1.35], la: [0, -0.04, 0.15], hand: [-0.54, 0.54, -0.25] },   // 頂点: 腕をまっすぐ上へ、手のひらは正面(ひねりは計算で選んだ)
+  low: { sh: [0, 0, 0.04], ua: [-0.35, -0.2, 0.55], la: [0, -0.04, 0.95], hand: [-0.2, 0.2, -0.1] },   // ため: 腕を下ろして肘を曲げる(手は肩の高さあたり)
+  at(t) { const u = ((t / this.T) % 1 + 1) % 1;
+    const crouch = ss(0.1, 0.36, u) * (1 - ss(0.36, 0.44, u));
+    const rise = u >= 0.42 && u < 0.65 ? 1 - (1 - (u - 0.42) / 0.23) ** 2.6 : 0, fall = u >= 0.65 && u < 0.8 ? 1 - ((u - 0.65) / 0.15) ** 2.6 : 0;
+    const prep = 0.3 * ss(0.7, 0.8, u) * (u < 0.8 ? 1 : 0), land = u >= 0.8 ? (u < 0.84 ? 0.3 + 0.3 * ss(0.8, 0.84, u) : 0.6 * (1 - ss(0.84, 1, u))) : 0;
+    const bend = Math.max(crouch, prep, land), stretch = ss(0.38, 0.47, u) * (1 - ss(0.62, 0.78, u));
+    const drop = this.LT * (1 - cos(this.thigh * bend)) + this.LS * (1 - cos((this.knee - this.thigh) * bend));
+    return { bend, stretch, arms: 1 - Math.max(crouch, 0.3 * land / 0.6), y: this.H * (rise + fall) - drop }; },
+};
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
   "tPose": () => ({ b: { "shoulder.L": [0, 0, 0.15], "shoulder.R": [0, 0, -0.15], "upperArm.L": [0, 0, 0.65], "upperArm.R": [0, 0, -0.65] }, y: 0 }),   // arms straight out to the sides (the A-pose arm is about 46° down). The shoulders take a little of the lift (else the seam by the neck stretches into a step)
@@ -25,9 +41,12 @@ export const POSES = {
       "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
   // 手をふる: 腕を上げて止め、肘から先を左右に振る(WAVE)。手のひらは正面の相手へ。手首は曲げない(振ると前腕とずれて見えた)
   "wave": (t) => ({ b: { "upperArm.L": [0.18, 0, -0.18], "lowerArm.L": [0, 0.4, -0.08], "shoulder.R": WAVE.sh, "upperArm.R": WAVE.ua, "lowerArm.R": WAVE.fore(WAVE.mid + sin(t * 8) * WAVE.amp), "hand.R": WAVE.hand, head: [0.04, -0.15, -0.14], chest: WAVE.chest }, y: 0 }),
-  "cheer": (t) => { const k = mx(0, sin(t * 5.2)), squat = mx(0, -sin(t * 5.2));
-    return { b: { "shoulder.L": [0, 0, 0.22 + k * 0.06], "shoulder.R": [0, 0, -0.22 - k * 0.06],   // 腕を頭上へ上げる時は肩ごと持ち上げる(腕の付け根だけで回すと肩の線が折れる)
-      "upperArm.L": [-0.15, 0, 1.28 + k * 0.19], "upperArm.R": [-0.15, 0, -1.28 - k * 0.19], "lowerArm.L": [0, 0, 0.55], "lowerArm.R": [0, 0, -0.55], "upperLeg.L": [-0.5 * squat - 0.1 * k, 0, 0.08], "upperLeg.R": [-0.5 * squat - 0.1 * k, 0, -0.08], "lowerLeg.L": [0.9 * squat + 0.35 * k, 0, 0], "lowerLeg.R": [0.9 * squat + 0.35 * k, 0, 0], "foot.L": [-0.4 * squat + 0.3 * k, 0, 0], "foot.R": [-0.4 * squat + 0.3 * k, 0, 0], head: [-0.15 * k, 0, 0], spine: [0.2 * squat, 0, 0] }, y: k * 0.15 - squat * 0.05 }; },
+  // ばんざいジャンプ: 腕を下ろしてしゃがみ(ため) → 跳ね上がって頂点で伸び切り、少し浮く → ストンと落ちてひざで受ける。手のひらは正面へ(CHEER)
+  "cheer": (t) => { const J = CHEER.at(t), q = J.bend, e = J.stretch, a = J.arms, L = (u, d) => u.map((v, i) => v + (d[i] - v) * a), aL = (k) => L(CHEER.low[k], CHEER.up[k]), aR = (k) => aL(k).map((v, i) => i ? -v : v);
+    return { b: { "shoulder.L": aL("sh"), "shoulder.R": aR("sh"), "upperArm.L": aL("ua"), "upperArm.R": aR("ua"), "lowerArm.L": aL("la"), "lowerArm.R": aR("la"), "hand.L": aL("hand"), "hand.R": aR("hand"),
+      "upperLeg.L": [-CHEER.thigh * q, 0, 0.08], "upperLeg.R": [-CHEER.thigh * q, 0, -0.08], "lowerLeg.L": [CHEER.knee * q, 0, 0], "lowerLeg.R": [CHEER.knee * q, 0, 0],
+      "foot.L": [-(CHEER.knee - CHEER.thigh) * q + 0.4 * e, 0, 0], "foot.R": [-(CHEER.knee - CHEER.thigh) * q + 0.4 * e, 0, 0],   // しゃがむ間は足の裏を床に平らに。空中で伸び切るとつま先が下を向く
+      spine: [0.3 * q - 0.06 * e, 0, 0], head: [0.1 * q - 0.15 * e, 0, 0] }, y: J.y }; },
   "sitChair": (t) => ({ b: { "upperLeg.L": [-1.57, 0, 0.05], "upperLeg.R": [-1.57, 0, -0.05], "lowerLeg.L": [1.5 + sin(t * 2) * 0.15, 0, 0], "lowerLeg.R": [1.5 - sin(t * 2) * 0.15, 0, 0], "foot.L": [0.05, 0, 0], "foot.R": [0.05, 0, 0],
       // 腕は横へ下ろして、手は太ももの外・座面の少し上(腕が短いので座面までは届かない)
       "upperArm.L": [-0.1, 0, -0.36], "upperArm.R": [-0.1, 0, 0.36], "lowerArm.L": [0.1, 0, 0], "lowerArm.R": [0.1, 0, 0], spine: [0.05, 0, 0], head: [0.06, sin(t * 0.6) * 0.2, sin(t * 0.9) * 0.1] }, y: -0.118, chair: true, seat: 0.2, seatFront: 0.1 }),
