@@ -6,6 +6,18 @@ import * as THREE from "three";
 
 const sin = Math.sin, cos = Math.cos, mx = Math.max;
 const ARMS_DOWN = { "upperArm.L": [0, 0, -0.45], "upperArm.R": [0, 0, 0.45], "lowerArm.L": [0, 0, -0.08], "lowerArm.R": [0, 0, 0.08] };
+// 手をふる腕の向き: 肩から先を、正面から見た角度 phi(真上から外へ)・前へ tilt だけ上げ、手のひらが正面(+z)を向くように腕ごとひねった向き。
+// 振るときは、この向きを体の正面の面で(z軸のまわりに)回す → 振っても手のひらは正面のまま、手は左右に動く(肘から先だけを回すと前後に振れて見えた)
+const WAVE = (() => {
+  const sh = [0, 0, -0.3], chest = [0, -0.08, -0.05], phi = 48 * Math.PI / 180, tilt = 22 * Math.PI / 180, amp = 0.32;
+  const rest = new THREE.Vector3(-0.698, -0.716, 0.03).normalize(), palm0 = new THREE.Vector3(0.51, -0.86, 0.08).normalize();   // A-pose: the right arm's direction / its palm (facing the thigh)
+  const dir = new THREE.Vector3(-Math.sin(phi) * Math.cos(tilt), Math.cos(phi) * Math.cos(tilt), Math.sin(tilt));
+  const qw = new THREE.Quaternion().setFromUnitVectors(rest, dir), qt = new THREE.Quaternion(), n = new THREE.Vector3();
+  let best = -2, bq = null; for (let k = 0; k < 360; k++) { qt.setFromAxisAngle(dir, k * Math.PI / 180).multiply(qw); n.copy(palm0).applyQuaternion(qt); if (n.z > best) { best = n.z; bq = qt.clone(); } }   // twist the arm about itself until the palm faces front
+  const parent = new THREE.Quaternion().setFromEuler(new THREE.Euler(...chest)).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...sh))), pinv = parent.clone().invert();
+  const qz = new THREE.Quaternion(), q = new THREE.Quaternion(), e = new THREE.Euler(), Z = new THREE.Vector3(0, 0, 1);
+  return { sh, chest, amp, arm: (a) => { qz.setFromAxisAngle(Z, a); q.copy(pinv).multiply(qz).multiply(bq); e.setFromQuaternion(q); return [e.x, e.y, e.z]; } };   // a > 0: toward the outside
+})();
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
   "tPose": () => ({ b: { "shoulder.L": [0, 0, 0.15], "shoulder.R": [0, 0, -0.15], "upperArm.L": [0, 0, 0.65], "upperArm.R": [0, 0, -0.65] }, y: 0 }),   // arms straight out to the sides (the A-pose arm is about 46° down). The shoulders take a little of the lift (else the seam by the neck stretches into a step)
@@ -13,7 +25,8 @@ export const POSES = {
   "walk": (t) => { const ph = t * 6.2, s = sin(ph), kL = 0.12 + 0.75 * mx(0, sin(ph + 1.9)), kR = 0.12 + 0.75 * mx(0, sin(ph + 1.9 + Math.PI));
     return { b: { hips: [0, s * 0.12, 0], spine: [0.05, -s * 0.08, 0], head: [0.02, -s * 0.05, 0], "upperLeg.L": [-0.5 * s, 0, 0], "upperLeg.R": [0.5 * s, 0, 0], "lowerLeg.L": [kL, 0, 0], "lowerLeg.R": [kR, 0, 0], "foot.L": [-0.25 * s - kL * 0.3, 0, 0], "foot.R": [0.25 * s - kR * 0.3, 0, 0],
       "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
-  "wave": (t) => ({ b: { "upperArm.L": [0, 0, -0.45], "lowerArm.L": [0, 0, -0.1], "upperArm.R": [-0.2, 0, -1.5], "lowerArm.R": [0, 0, -0.95 + sin(t * 9) * 0.45], "hand.R": [0, 0, sin(t * 9 - 0.6) * 0.3], head: [0.04, -0.15, -0.14], chest: [0, -0.08, -0.05] }, y: 0 }),
+  // 手をふる: 腕をほぼまっすぐ上げ(肩も持ち上げる)、肩を軸に体の正面の面で左右に大きく振る(WAVE)。手のひらは正面の相手へ向けたまま、手首は少し遅れて追う
+  "wave": (t) => { const s = sin(t * 7); return { b: { "upperArm.L": [0, 0, -0.45], "lowerArm.L": [0, 0, -0.1], "shoulder.R": WAVE.sh, "upperArm.R": WAVE.arm(s * WAVE.amp), "lowerArm.R": [0, 0, -0.12], "hand.R": [0, sin(t * 7 - 0.7) * 0.35, 0], head: [0.04, -0.15, -0.14], chest: WAVE.chest }, y: 0 }; },
   "cheer": (t) => { const k = mx(0, sin(t * 5.2)), squat = mx(0, -sin(t * 5.2));
     return { b: { "shoulder.L": [0, 0, 0.22 + k * 0.06], "shoulder.R": [0, 0, -0.22 - k * 0.06],   // 腕を頭上へ上げる時は肩ごと持ち上げる(腕の付け根だけで回すと肩の線が折れる)
       "upperArm.L": [-0.15, 0, 1.28 + k * 0.19], "upperArm.R": [-0.15, 0, -1.28 - k * 0.19], "lowerArm.L": [0, 0, 0.55], "lowerArm.R": [0, 0, -0.55], "upperLeg.L": [-0.5 * squat - 0.1 * k, 0, 0.08], "upperLeg.R": [-0.5 * squat - 0.1 * k, 0, -0.08], "lowerLeg.L": [0.9 * squat + 0.35 * k, 0, 0], "lowerLeg.R": [0.9 * squat + 0.35 * k, 0, 0], "foot.L": [-0.4 * squat + 0.3 * k, 0, 0], "foot.R": [-0.4 * squat + 0.3 * k, 0, 0], head: [-0.15 * k, 0, 0], spine: [0.2 * squat, 0, 0] }, y: k * 0.15 - squat * 0.05 }; },
