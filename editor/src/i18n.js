@@ -56,7 +56,7 @@ const T = {
 const POSE = {
   aPose: ["A-pose", "Aポーズ"], tPose: ["T-pose", "Tポーズ"], idle: ["Idle", "立つ"], walk: ["Walk", "歩く"], wave: ["Wave", "手をふる"], cheer: ["Cheer", "ばんざい"],
   sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"],
-  run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpCrouch: ["Jump (wind-up)", "跳ぶ(ため)"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpLeap: ["Running jump", "走って跳ぶ"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], sneak: ["Sneak (crouched walk)", "しのび足"], crawl: ["Crawl (base)", "はう構え"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
+  run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpCrouch: ["Jump (wind-up)", "跳ぶ(ため)"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpLeap: ["Running jump", "走って跳ぶ"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], sneak: ["Sneak (crouched walk)", "しのび足"], crawl: ["Crawl (base)", "はう構え"], mantleReach: ["Pull-up: reach", "よじ登る(手をかける)"], mantlePull: ["Pull-up: haul", "よじ登る(引き上げる)"], mantleKnee: ["Pull-up: knee on the edge", "よじ登る(ひざをかける)"], vault: ["Vault", "乗り越える"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
 };
 const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], kid: ["Kid", "子ども"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
 

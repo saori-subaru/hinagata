@@ -353,7 +353,9 @@ Saori wanted the forest game's character to climb giant trees and fall properly,
 - `crawl` + `crawlLimbs(avatar, { body, phase, step, fwd, right, ground })`: on hands and knees, built the same way as the climbing — a base pose (the hips tip the body forward 1.25 rad, thighs hang to the knees, shins lie back along the ground, the head looks ahead) and IK putting the hands and the ankles on the ground, one limb at a time, each holding still for 3/4 of the cycle. It is the climbing gait with the ground as the surface.
 - Heights (default body): standing 0.86 m, crouched about 0.62, crawling about 0.4. The game decides what fits under what (the forest: a log 0.48 m off the ground needs a crawl).
 
-Not yet: a pull-up with a foot on the edge (the forest's pull-up is the body sliding up and over, then a crouch); hanging by the hands; running.
+**Getting over things with weight** (2026-10-03, Saori: 「もう少し重力を感じる動きがいいな！よっこいしょとよじ登るみたいな。記号的な動きだと没入できない」; `src/motion/mantle.js`): the first pull-up slid the body up and over in one smooth move. Now it is steps, each its own pose; the game times them (longer for a higher edge) and keeps the hands on the edge with IK: `mantleReach` (hands up to the edge, knees giving), `mantlePull` (hauling: leaning in, one knee driven up, the other leg hanging), `mantleKnee` (one knee on the edge, chest over it), then `crouch` and standing up. Over something low: `vault` (weight on the hands, legs tucked and swung to one side, hips turned), then a landing in the knees. In the forest a 0.6 m log takes about 1.5 s to get onto (reach 0.22, haul 0.3 + 0.55 × height, knee 0.3, stand 0.34) and a 0.6 m root about 0.9 s to vault.
+
+Not yet: hanging by the hands; feet finding holds during the pull-up (the legs are posed, not placed).
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
 

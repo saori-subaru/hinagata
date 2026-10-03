@@ -29,6 +29,7 @@ export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   //
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
 import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and crawling (motion/crawl.js)
+import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
 
 /**
  * Build an avatar.
