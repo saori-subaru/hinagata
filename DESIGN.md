@@ -342,6 +342,8 @@ Saori wanted the forest game's character to climb giant trees and fall properly,
 - Hands hold at chin height: the arms are too short to go over the big head. On a 0.86 m body, steps of 0.7 × arm at 3.2 cycles a second climb about 0.4 m/s.
 - Exported from `src/index.js`. The editor lists the new poses (`climb` alone shows the base pose: the IK needs a surface).
 
+**Running** (2026-10-03, done; `src/motion/run.js`): the forest's Shift had been the walk played fast (feet spinning at 1.85 m/s). Pose `run`: a forward lean, thighs swinging wide, the knee folding hard while the leg swings forward (the heel comes up under the bottom) and nearly straight at the strike, elbows bent about 90° and pumping against the legs, loose fists, hips and shoulders counter-turning; both feet leave the ground between steps. `sharp`: eased, the fast swing came out smaller and the feet slid (40%); followed exactly, a planted foot moves 5% of the body's speed. `measureGait(avatar, pose, period)`: the no-slide speed for any gait, from whichever foot is on the ground (measureStride's half-cycle rule assumes a walk's long stance). On the default body: 1.41 m/s at playback 1; the forest plays it at 1.4× (4 steps a second, 1.98 m/s; the walk is 1.09).
+
 Not yet: a pull-up with a foot on the edge (the forest's pull-up is the body sliding up and over, then a crouch); hanging by the hands; running.
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
