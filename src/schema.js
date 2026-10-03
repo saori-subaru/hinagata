@@ -86,6 +86,7 @@ const MAIN = [
   ["face.earLine.on", L("耳の線", "Ear line"), { section: L("影と線", "Shadows and lines") }],
   ["face.earShade.on", L("耳の陰", "Ear shade"), { section: L("影と線", "Shadows and lines") }],
   ["face.images.eye.src", L("目の絵", "Eye picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/eye.png", "null = the bundled img/parts/eye.png") }],
+  ["face.images.eyeClosed.src", L("とじ目の絵", "Closed eye picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("描いた目のまばたきと、目の「絵のとじ目」に使う。null = なし(まばたきはコードのとじ目)", "Used when drawn eyes blink, and by the eye part \"Picture (closed)\". null = none (blinking uses the code-drawn closed eye)") }],
   ["face.images.brow.src", L("眉の絵", "Brow picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/brow.png", "null = the bundled img/parts/brow.png") }],
   ["face.images.mouth.src", L("口の絵", "Mouth picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/mouth.png", "null = the bundled img/parts/mouth.png") }],
   ["face.images.nose.src", L("鼻の絵", "Nose picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = なし", "null = none") }],

@@ -40,7 +40,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
   const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
-  const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
+  const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, eyeClosed: { src: OPT.face.images.eyeClosed?.src ?? null, w: OPT.face.images.eyeClosed?.width ?? 0, dx: OPT.face.images.eyeClosed?.dx ?? 0.004, dy: OPT.face.images.eyeClosed?.dy ?? 0.004 }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
     nose: { src: OPT.face.images.nose?.src ?? null, w: OPT.face.images.nose?.width ?? 0, dx: 0, dy: OPT.face.images.nose?.dy ?? 0 } };   // nose: no picture unless one is given
   const NOSEP = { x: 0, y: 0.929 + OPT.body.sculpt.nose.lift - FACE.dy };   // the nose tip on the face picture (head space, same as the tip in body/index.js)
   for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
@@ -48,6 +48,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const PARTS = {
     eyes: {
       image: () => imgPart("eye", EYE.x, EYE.y),
+      imageClosed: () => imgPart("eyeClosed", EYE.x, EYE.y),   // a drawn closed eye (also used for blinking drawn eyes)
       round: () => {   // アニメの目: 白目・虹彩(上が暗く下が明るい)・瞳・ハイライト・太い上まつげ(目じりで跳ねる)・二重の線・下まぶた
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));   // 大きさは LAY.eyeSize で
@@ -138,7 +139,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
     drawBlush();
-    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && BLINKS.has(sel.eyes) ? "closed" : sel[slot], draw = PARTS[slot][name] ?? (() => {});
+    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && BLINKS.has(sel.eyes) ? (sel.eyes === "image" && PART_IMG.eyeClosed.img ? "imageClosed" : "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       if (SIDED[slot]) for (const m of [1, -1]) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
       else draw(1); }
     faceTex.needsUpdate = true;
