@@ -54,27 +54,44 @@ export const POSES = {
       spine: [0.2, 0, 0], chest: [0.2, 0, 0], upperChest: [0.25, 0, 0], "shoulder.L": [0, -0.3, -0.06], "shoulder.R": [0, 0.3, 0.06], neck: [0.04, 0, 0], head: [-0.22 + sin(t * 1.2) * 0.04, 0, 0.12] }, y: -0.31 }),
 };
 
-// Holding a weapon in the right hand (outfit.weapon.right), standing and walking bend that arm: the elbow at the side, the forearm
-// forward, the back of the hand out and the thumb up — then the grip (across the fist) stands up, so a spear or staff is held upright
-// with the wrist straight (leaning a little forward and out). Solved from those directions; walking swings it a little.
+// Holding a weapon in the right hand (outfit.weapon.right), standing and walking change that arm (the elbow kept out from the side, not into it):
+//   spear / staff: the elbow bent, the forearm forward, the back of the hand out and the thumb up — the grip (across the fist) then stands
+//     nearly upright, with the wrist straight. sword / axe: the arm hangs loose, the blade pointing forward and a little down (the wrist
+//     turned in some ~35°: a straight wrist would hold the blade level, stiffly). Solved from those directions; walking swings it a little.
 const ARMED = { idle: true, walk: true };
-const armedArm = (P0) => ({ "upperArm.R": [-0.116 + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), 0.034, 0.466], "lowerArm.R": [-1.138, 0.253, 0.679] });   // the grip leans a little forward and out (straight up looked stiff)
+const ARMED_R = {
+  upright: { "upperArm.R": [-0.111, -0.041, 0.191], "lowerArm.R": [-1.215, 0.131, 0.749] },
+  hang: { "upperArm.R": [-0.013, 0.02, 0.304], "lowerArm.R": [-0.137, -0.068, 0.371], "hand.R": [0.407, -0.365, 0.41] },
+};
+const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang" };
+const armedArm = (P0, A) => ({ ...A, "upperArm.R": [A["upperArm.R"][0] + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), A["upperArm.R"][1], A["upperArm.R"][2]] });
 
-// The guard's weapon arm depends on the weapon (the pose itself has the sword's): a spear is held low at the side, the head forward
-// and a little up (ready to thrust); a staff is raised in front, slanting up and forward. Solved like the rest (straight wrist).
+// The guard's arms depend on what each hand holds (the pose itself has the sword's and the straight shield's): a spear is held low at
+// the side, the head forward and a little up (ready to thrust); a staff is raised in front, slanting up and forward. A diagonal shield
+// (shieldMount) raises the forearm slantwise across the front, so the shield stands upright. Empty hands (or fists) take a fighter's
+// guard: the lead (left) fist out in front at chin height, the rear (right) fist by the chin, both elbows down. Solved like the rest.
 const GUARD_R = {
   spear: { "upperArm.R": [0.385,  -0.208,  0.407], "lowerArm.R": [-0.985,  0.347,  1.208] },
   staff: { "upperArm.R": [-0.972, 0.27, 0.444], "lowerArm.R": [-0.279, -0.316, 0.878] },
+  bare: { "upperArm.R": [-0.896, 0.131, 0.461], "lowerArm.R": [-1.508, 0.312, 0.927] },
 };
+const GUARD_L = {
+  diagonal: { "upperArm.L": [-1.005, 0.226, -0.572], "lowerArm.L": [-0.415, 0.301, -2.108] },
+  bare: { "upperArm.L": [-1.104, -0.186, -0.562], "lowerArm.L": [-1.091, -0.307, -0.612] },
+};
+const BARE = { none: true, fist: true };
 
-/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon: what the right hand holds ("none", "sword", ...) */
-export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none" }) {
-  const armed = weapon !== "none";
+/** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal" */
+export function createPosePlayer({ bone, BONES, HIPS0, weapon = "none", left = "none", shieldMount = "straight" }) {
+  const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
+  const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
     let P0 = POSES[name](t); const k = instant ? 1 : 1 - Math.exp(-dt * 9);
-    if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0) } };
-    if (name === "guard" && GUARD_R[weapon]) P0 = { ...P0, b: { ...P0.b, ...GUARD_R[weapon] } };
+    if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
+    if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
+      if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
+      P0 = { ...P0, b }; }
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)

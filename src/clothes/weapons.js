@@ -1,4 +1,4 @@
-// Weapons (outfit.weapon): something in each hand — right: sword / axe / spear / staff, left: shield / round (a buckler).
+// Weapons (outfit.weapon): something in each hand — right: sword / axe / spear / staff, left: shield / round (a buckler). fist: nothing, the hand just closes.
 // Hard shapes made in the hand's own frame (the same D / N / S as the hand in body/index.js), each bound to one bone, so they
 // move exactly with the hand (or, for a shield, the forearm). A hand that holds something closes into a fist (body/index.js).
 //   Per hand: metal (blade, guard, axe head, spear head, rim, boss), the grip / shaft / the shield's straps (leather or wood), and the shield's face.
@@ -59,7 +59,9 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   }
 
   // ── left hand: a shield strapped to the outside of the forearm (bound to the forearm) by two leather bands ──
-  const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], V = norm(sub(h, e)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [V, -dot(O0, V)])), Hz = cross(V, O).map((v) => -v);   // V toward the hand = the shield's top (guarding: elbow down, forearm up, the shield upright), O its face: out of the back of the forearm (a little forward)
+  const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], Vf = norm(sub(h, e)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [Vf, -dot(O0, Vf)])), Hf = cross(Vf, O).map((v) => -v);   // Vf toward the hand = the shield's top (guarding: elbow down, forearm up, the shield upright), O its face: out of the back of the forearm (a little forward)
+  // shieldMount "diagonal": the shield turned 45° on the arm (about its face), its top toward the elbow's outer side — the guard then raises the forearm slantwise (hand in, elbow out) and the shield stands upright
+  const tilt = WO.shieldMount === "diagonal" ? -Math.PI / 4 : 0, V = norm(add([0, 0, 0], [Vf, Math.cos(tilt)], [Hf, Math.sin(tilt)])), Hz = cross(V, O).map((v) => -v);
   const SC = add(e.map((v, i) => (v + h[i]) / 2), [O, 0.07]);   // on the outside of the forearm
   const sl = (x, y, z) => { const q = [x - SC[0], y - SC[1], z - SC[2]]; return [dot(q, Hz), dot(q, V), dot(q, O)]; };   // (across, up, out)
   let lFace = none, lMetal = none, lOther = none;
@@ -73,11 +75,11 @@ export function buildWeapons(OPT, { J, bodySdf }) {
       const rim = Math.max(d2, -d2 - 0.016, Math.abs(off) - 0.013), boss = Math.max(Math.hypot(u, v - (L === "shield" ? 0.012 : 0), off) - 0.04, -off);
       return Math.min(rim, boss); };
     // the bands: two leather loops around the forearm (fitted to it), each joined to the back of the shield by a pad
-    const BANDS = [0.3, 0.7].map((t) => { const c = add(e, [sub(h, e), t]), S0 = slice(bodySdf, c, Hz, O, 16); return { c, t, ...S0, v: dot(sub(c, SC), V) }; });
+    const BANDS = [0.3, 0.7].map((t) => { const c = add(e, [sub(h, e), t]), S0 = slice(bodySdf, c, Hf, O, 16); return { c, t, ...S0, v: dot(sub(c, SC), Vf) }; });   // around the forearm (whichever way the shield is turned)
     lOther = (x, y, z) => { let d = 1e9; const p = [x, y, z];
-      for (const B of BANDS) { const q = sub(p, B.c), along = dot(q, V), u = dot(q, Hz) - B.cu, o = dot(q, O) - B.cv;
+      for (const B of BANDS) { const q = sub(p, B.c), along = dot(q, Vf), u = dot(q, Hf) - B.cu, o = dot(q, O) - B.cv;
         const ring = Math.max(Math.abs(sell(u, o, B.a + 0.006, B.b + 0.006, 2)) - 0.0045, Math.abs(along) - 0.011);
-        const [su, , so] = sl(x, y, z), pad = Math.max(Math.abs(su) - 0.016, Math.abs(dot(sub(p, SC), V) - B.v) - 0.011, so + 0.004, -(so - (B.cv + B.b - dot(sub(SC, B.c), O))) - 0.004);
+        const [, , so] = sl(x, y, z), pad = Math.max(Math.abs(dot(sub(p, SC), Hf)) - 0.016, Math.abs(dot(sub(p, SC), Vf) - B.v) - 0.011, so + 0.004, -(so - (B.cv + B.b - dot(sub(SC, B.c), O))) - 0.004);
         d = Math.min(d, ring, pad); }
       return d; };
   }
@@ -86,6 +88,6 @@ export function buildWeapons(OPT, { J, bodySdf }) {
     for (const s0 of [1, 2]) for (const s1 of [1, 2]) for (const s2 of [1, 2]) { const p = add(c, [axes[0][0], axes[0][s0]], [axes[1][0], axes[1][s1]], [axes[2][0], axes[2][s2]]); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } }
     return { lo: lo.map((v) => v - 0.02), hi: hi.map((v) => v + 0.02) }; };
   const reach = { sword: [-0.1, 0.53], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
-  const boxR = R === "none" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
+  const boxR = R === "none" || R === "fist" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" || L === "fist" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
   return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL };
 }
