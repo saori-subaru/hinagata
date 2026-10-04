@@ -772,6 +772,25 @@
     "en": "neck"
    }
   },
+  "body.sculpt.neck.top": {
+   "path": "body.sculpt.neck.top",
+   "type": "number",
+   "default": 0.95,
+   "label": {
+    "en": "neck › top"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.475,
+   "max": 1.425,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck"
+   }
+  },
   "body.sculpt.socketScale": {
    "path": "body.sculpt.socketScale",
    "type": "number",
@@ -1022,7 +1041,7 @@
   "body.sculpt.chin.backZ": {
    "path": "body.sculpt.chin.backZ",
    "type": "number",
-   "default": 0.16,
+   "default": 0.12,
    "label": {
     "en": "chin › back z"
    },
@@ -1030,8 +1049,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.08,
-   "max": 0.24,
+   "min": 0.06,
+   "max": 0.18,
    "step": 0.001,
    "soft": true,
    "section": {
@@ -1041,7 +1060,7 @@
   "body.sculpt.chin.backRise": {
    "path": "body.sculpt.chin.backRise",
    "type": "number",
-   "default": 0.5,
+   "default": 0.7,
    "label": {
     "en": "chin › back rise"
    },
@@ -1049,8 +1068,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.25,
-   "max": 0.75,
+   "min": 0.35,
+   "max": 1.05,
    "step": 0.01,
    "soft": true,
    "section": {
@@ -1060,7 +1079,7 @@
   "body.sculpt.chin.backMax": {
    "path": "body.sculpt.chin.backMax",
    "type": "number",
-   "default": 0.045,
+   "default": 0.07,
    "label": {
     "en": "chin › back max"
    },
@@ -1068,9 +1087,47 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.0225,
-   "max": 0.0675,
-   "step": 0.0001,
+   "min": 0.035,
+   "max": 0.105,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.napeY": {
+   "path": "body.sculpt.chin.napeY",
+   "type": "number",
+   "default": 0.95,
+   "label": {
+    "en": "chin › nape y"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.475,
+   "max": 1.425,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.napeZ": {
+   "path": "body.sculpt.chin.napeZ",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "en": "chin › nape z"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.05,
+   "max": 0.05,
+   "step": 0.001,
    "soft": true,
    "section": {
     "en": "chin"
@@ -1136,7 +1193,7 @@
   "body.sculpt.jawU.y": {
    "path": "body.sculpt.jawU.y",
    "type": "number",
-   "default": 0.9,
+   "default": 0.96,
    "label": {
     "en": "jaw u › y"
    },
@@ -1144,9 +1201,9 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.45,
-   "max": 1.35,
-   "step": 0.01,
+   "min": 0.48,
+   "max": 1.44,
+   "step": 0.001,
    "soft": true,
    "section": {
     "en": "jaw u"
@@ -1155,7 +1212,7 @@
   "body.sculpt.jawU.z0": {
    "path": "body.sculpt.jawU.z0",
    "type": "number",
-   "default": 0.06,
+   "default": 0.02,
    "label": {
     "en": "jaw u › z 0"
    },
@@ -1163,8 +1220,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.03,
-   "max": 0.09,
+   "min": 0.01,
+   "max": 0.03,
    "step": 0.001,
    "soft": true,
    "section": {
@@ -1174,7 +1231,7 @@
   "body.sculpt.jawU.open": {
    "path": "body.sculpt.jawU.open",
    "type": "number",
-   "default": 0.8,
+   "default": 1.5,
    "label": {
     "en": "jaw u › open"
    },
@@ -1182,8 +1239,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.4,
-   "max": 1.2,
+   "min": 0.75,
+   "max": 2.25,
    "step": 0.01,
    "soft": true,
    "section": {
@@ -1193,7 +1250,7 @@
   "body.sculpt.jawU.k": {
    "path": "body.sculpt.jawU.k",
    "type": "number",
-   "default": 0.06,
+   "default": 0.03,
    "label": {
     "en": "jaw u › k"
    },
@@ -1201,8 +1258,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.03,
-   "max": 0.09,
+   "min": 0.015,
+   "max": 0.045,
    "step": 0.001,
    "soft": true,
    "section": {

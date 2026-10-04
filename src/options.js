@@ -60,7 +60,8 @@ export const DEFAULTS = {
         "y": 1.108
       },
       "neck": {
-        "width": 0.85
+        "width": 0.85,
+        "top": 0.95
       },
       "socketScale": 1,
       "faceNarrow": {
@@ -82,18 +83,20 @@ export const DEFAULTS = {
         "y": 0.835,
         "curve": 0.95,
         "k": 0.007,
-        "backZ": 0.16,
-        "backRise": 0.5,
-        "backMax": 0.045
+        "backZ": 0.12,
+        "backRise": 0.7,
+        "backMax": 0.07,
+        "napeY": 0.95,
+        "napeZ": 0
       },
       "jawU": {
         "on": 1,
         "rx": 0.165,
         "ry": 0.12,
-        "y": 0.9,
-        "z0": 0.06,
-        "open": 0.8,
-        "k": 0.06
+        "y": 0.96,
+        "z0": 0.02,
+        "open": 1.5,
+        "k": 0.03
       },
       "noseGroove": {
         "depth": 0,
