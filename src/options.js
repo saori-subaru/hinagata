@@ -81,7 +81,7 @@ export const DEFAULTS = {
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.015,
+        "k": 0.007,
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07
@@ -666,6 +666,12 @@ export const DEFAULTS = {
     "drawn": [],
     "shading": {
       "weight": 1,
+      "chin": {
+        "on": true,
+        "y": [0.78, 0.82],
+        "down": [0.7, 0.86],
+        "z": [0.07, 0.12]
+      },
       "y": 0.96,
       "z": -0.02,
       "radiusY": 0.7,
