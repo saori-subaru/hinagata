@@ -96,7 +96,7 @@ export const DEFAULTS = {
         "backMax": 0.07,
         "napeY": 0.95,
         "napeZ": 0,
-        "napeDrop": 0.06
+        "napeDrop": 0
       },
       "jawU": {
         "on": 1,
