@@ -463,6 +463,8 @@ export const DEFAULTS = {
         "overlap": 1.25,
         "puff": 0.012,
         "lockStiff": 4,
+        "lockSpan": 13,
+        "lockRise": 0.03,
         "lockRoot": 70,
         "lockRootSpread": 0.45,
         "lockTaper": 0.08,

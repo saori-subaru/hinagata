@@ -5,6 +5,7 @@ import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sh
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
+import { createBangTool } from "./bangs.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -46,7 +47,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -70,6 +71,7 @@ function applyInstant(av, p, v) {
     case "setFaceLayout": av.setFaceLayout({ [last]: v }); return true;
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
+    case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
   }
   return false;
 }
@@ -81,11 +83,13 @@ store.subscribe((paths, why) => {
     if (av) { vp.lift(); for (const p of paths) if (SCHEMA[p]?.apply) { try { applyInstant(av, p, store.get(p)); } catch (e) { console.warn(e); } } vp.apply(); }
   }
   if (why !== "set" && paths.some(needsBuild)) rebuild();   // shapes rebuild when the gesture ends (slider released)
+  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) bangs.refresh();   // the tufts' dots follow the hair
   if (why === "set") { panel.renderFoot(); return; }
   panel.render(); persist(); syncUndo();
 });
 
 // ── inspector ──
+const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   // moving the bangs' tufts on the face (bangs.js)
 let imagePath = null;
 const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("diffCount"), resetEl: $("resetTab") }, {
   store, quality: () => prefs.quality,
@@ -93,6 +97,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into; $("fileTpl").click(); },
+  bangs,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう)

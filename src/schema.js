@@ -98,6 +98,10 @@ const MAIN = [
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
+  ["hair.sculpt.nendo.overlap", L("ふさの重なり", "Tuft overlap"), { when: { "hair.bangs": "nendo", "hair.sculpt.nendo.locks": true }, min: 0.8, max: 2, step: 0.01, section: L("前髪のふさ", "Bang tufts"), apply: "setBangs", help: L("ふさの幅(となりのふさとの間に対して)", "how wide a tuft is, for the gap to its neighbours") }],
+  ["hair.sculpt.nendo.lockSpan", L("ふさを分ける幅(度)", "Split tufts wider than (°)"), { when: { "hair.bangs": "nendo", "hair.sculpt.nendo.locks": true }, min: 6, max: 40, step: 0.5, section: L("前髪のふさ", "Bang tufts"), apply: "setBangs", help: L("これより広いふさは何本かの毛束に分かれる", "a tuft wider than this splits into several locks") }],
+  ["hair.sculpt.nendo.lockThick", L("ふさの厚み", "Tuft thickness"), { when: { "hair.bangs": "nendo", "hair.sculpt.nendo.locks": true }, min: 0.08, max: 0.6, step: 0.01, section: L("前髪のふさ", "Bang tufts"), apply: "setBangs", help: L("幅に対する厚さ", "thickness for the width") }],
+  ["hair.sculpt.nendo.puff", L("ふくらみ", "Puff"), { when: { "hair.bangs": "nendo", "hair.sculpt.nendo.locks": true }, min: 0, max: 0.04, step: 0.001, section: L("前髪のふさ", "Bang tufts"), apply: "setBangs", help: L("おでこからの浮き(m)", "how far the tufts stand off the forehead in the middle (m)") }],
   ["hair.sculpt.shortLocks.hang", L("後ろ髪をたらす", "Hang the back hair"), { when: { "hair.back": "short" }, section: L("髪型", "Style"), help: L("オン = 後頭部から垂らす(刈り上げが下からのぞく) / オフ = 頭にそわせる", "on = hanging from the back of the head (the nape shows under it) / off = lying along the head") }],
   ["hair.sculpt.ahogeSize", L("アホ毛の大きさ", "Ahoge size"), { when: { "hair.ahoge": true }, min: 0.6, max: 1.6, step: 0.01, section: L("髪型", "Style") }],
   ["hair.sculpt.ahogeDir", L("アホ毛の向き(度)", "Ahoge direction (°)"), { when: { "hair.ahoge": true }, min: -180, max: 180, step: 5, section: L("髪型", "Style"), help: L("0 = 前 / 90 = キャラの左", "0 = forward, 90 = toward the character's left") }],
@@ -153,6 +157,7 @@ function place(path) {
   if (top === "colors" || top === "outline" || top === "shading") return { group: "look", cost: "instant" };
   if (top === "quality") return { group: "quality", cost: "body" };
   if (top === "body") return { group: "body", cost: "body" };
+  if (path.startsWith("hair.sculpt.nendo.")) return { group: "hair", cost: "hair", apply: "setBangs" };   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
   if (top === "hair") return { group: "hair", cost: p[1] === "paint" ? "paint" : "hair" };
   if (top === "outfit") return { group: "outfit", cost: p[2] === "on" || /color$/i.test(p[2]) ? "instant" : "clothes" };
   if (top === "face") {   // drawn into the face picture → instant; painted onto the head mesh or built from it → paint
@@ -183,7 +188,7 @@ function build() {
     let type = typeOf(v, { ...ex, path });
     if (ex && v === null) type = /\.src$/.test(path) ? "image" : ex.options ? "enum" : /color/i.test(path) ? "color" : "number";   // described values whose default is null
     if (type === "enum" && !ex?.options) type = "json";   // an undescribed string: free value
-    const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? null };
+    const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? at.apply ?? null };
     if (type === "number") Object.assign(e, ex && ex.min != null ? { min: ex.min, max: ex.max, step: ex.step } : { ...guessRange(v ?? 0), soft: true });
     if (ex?.options) e.options = ex.options;
     if (ex) e.order = ex.order;   // the editor lists main values in this order

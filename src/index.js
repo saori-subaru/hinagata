@@ -17,7 +17,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
+import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -252,8 +252,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // over the short hair's block (hair/index.js leaves the long curtain out when hair.sculpt.long.locks is on). The nendo bangs: one lock
   // per tip of hair.sculpt.nendo.tips (with nendo.locks on), lying over the forehead
   const LOCK_PARTS = ["locks", "bangs"];
-  function makeLocks() {
-    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = hairPick.back === "long" && L.locks, shortOn = hairPick.back === "short" && SL?.on, bangsOn = hairKit.bangsAsLocks(hairPick);
+  // the surface the bang locks lie on (head space): the hair under them and the forehead
+  let bangKitMemo = null;   // the same until the hair under the bangs changes (setHair)
+  const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HT.fromHead(x, y, z), sx: HT.sx }; })();
+  function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
+    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && hairPick.back === "short" && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     if (!longOn && !shortOn && !bangsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HT.wrap(capRaw), c = HT.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
@@ -268,8 +271,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {
-      const B = OPT.hair.sculpt.nendo, SK = OPT.body.sculpt.skull, surf = (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z));   // head space: the hair under the bangs and the forehead
-      out.bangs = part(bangLocks(B, { surf, center: [0, SK.y, -0.005], toRoot: (x, y, z) => HT.fromHead(x, y, z), sx: HT.sx }), { coll: [], ell: null, stiff: B.lockStiff ?? 4, damping: 0.8 });
+      const B = OPT.hair.sculpt.nendo;
+      out.bangs = part(bangLocks(B, bangKit()), { coll: [], ell: null, stiff: B.lockStiff ?? 4, damping: 0.8 });
     }
     return out;
   }
@@ -423,12 +426,24 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). Kept in options.hair. */
     setHair(pick) {
-      Object.assign(hairPick, pick); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k];
+      Object.assign(hairPick, pick); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k]; bangKitMemo = null;
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks())) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = parts.hair.m.visible; }
     },
+
+    /** The nendo bangs: values into options.hair.sculpt.nendo ({ tips, overlap, lockThick, … }). Bangs made of locks rebuild only themselves
+     *  (fast enough to follow an editor's handles); otherwise, or when the hair under them changes too, the whole hair is rebuilt. */
+    setBangs(values) {
+      const N = OPT.hair.sculpt.nendo, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
+      if (!was || !hairKit.bangsAsLocks(hairPick) || ["locks", "lockTaper"].some((k) => k in values)) { avatar.setHair({}); return; }
+      const on = parts.hair.on, vis = parts.hair.m.visible;
+      if (parts.bangs) { for (const m of [parts.bangs.m, parts.bangs.o]) { root.remove(m); m.geometry.dispose(); } delete parts.bangs; }
+      const x = makeLocks(["bangs"]).bangs; if (x) { parts.bangs = x; x.on = on; x.m.visible = x.o.visible = vis; }
+    },
+    /** Where a tip of the nendo bangs is (avatar space, rest pose; just outside the hair): angle around the head (degrees, 0 = front), height (head space). */
+    bangTipAt(angle, y) { return bangTipAt(angle, y, bangKit()); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
     async exportGLB() {

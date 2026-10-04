@@ -27,7 +27,7 @@ const fmt = (v, step) => { const d = Math.max(0, Math.min(5, -Math.floor(Math.lo
 let uid = 0;
 
 /**
- * ctx: { store, quality, onQuality(q), onImage(path), onTemplate(kind), onReadTemplate() }
+ * ctx: { store, quality, onQuality(q), onImage(path), onTemplate(kind), onReadTemplate(), bangs (editor/src/bangs.js) }
  */
 export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const { store } = ctx;
@@ -162,6 +162,25 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       h("div", { class: "row add" }, nameIn, h("button", { class: "btn small", type: "button", onclick: add }, t("addExpr"))),
       h("div", { class: "help" }, t("tplHelp")));
   }
+  // moving the nendo bangs' tufts on the face (editor/src/bangs.js): the switch, adding / removing, and the picked tuft's own values
+  function bangsBlock() {
+    const B = ctx.bangs; if (!B) return null;
+    const head = h("div", { class: "sec-h" }, h("h2", {}, t("bangTufts")), h("span", { class: "cost" }, t("bangN", (store.get("hair.sculpt.nendo.tips") ?? []).length)));
+    if (!B.usable) return h("div", { class: "sec" }, head, h("div", { class: "note" }, t("bangNeedNendo")));
+    const kids = [head, h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(B.on), onclick: () => B.toggle() }, t("bangMove")))];
+    if (B.on) {
+      kids.push(h("div", { class: "help" }, t("bangHelp")),
+        h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => B.add() }, t("bangAdd")), h("button", { class: "btn small ghost", type: "button", disabled: B.selected < 0, onclick: () => B.remove() }, t("bangDel"))));
+      if (B.selected < 0) kids.push(h("div", { class: "note" }, t("bangPick")));
+      else for (const [k, key, min, max, step] of [[5, "bangSweep", -25, 25, 0.5], [6, "bangThick", -0.02, 0.03, 0.001]]) {   // the row's sweep and extra thickness
+        const id = `f${uid++}`, v = B.value(k), num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
+        const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
+        rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
+        rng.addEventListener("change", () => B.setValue(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) B.setValue(k, +num.value); });
+        kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
+    }
+    return h("div", { class: "sec" }, kids);
+  }
   function advanced(entries) {
     if (!entries.length) return null;
     const box = h("div", { class: "fold-in" });
@@ -188,6 +207,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
     if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
+    if (tab === "hair") { const b = bangsBlock(); if (b) panelEl.append(b); }
     const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced")]); if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });

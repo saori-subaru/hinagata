@@ -33,6 +33,9 @@ const T = {
     tplRead0: "Nothing was drawn in the frames", tplReadN: (n) => `Read ${n} part${n === 1 ? "" : "s"}`, tplBad: "That picture isn't a face template (4:3 or 2:1)",
     f_eye: "Eye", f_eyeClosed: "Closed", f_brow: "Brow", f_mouth: "Mouth", f_nose: "Nose", confirmClearDrawn: "Remove every drawn picture from this character? (the expressions stay)",
     pic: "Picture", normalPic: "Normal", exprName: "Expression name", newExpr: (n) => `Expression ${n}`, addExpr: "Add expression", flush: "Flush", blink: "Blinks", delExpr: "Remove",
+    bangTufts: "Moving the tufts", bangMove: "Move tufts on the face", bangHelp: "Drag a dot: left / right moves the tuft around the head, up / down moves its tip. Releasing it rebuilds the bangs.",
+    bangPick: "Click a dot to pick a tuft", bangAdd: "Add a tuft", bangDel: "Remove this tuft", bangNeedNendo: "Tufts can be moved with the “Clumps” bangs",
+    bangSweep: "Sweep (°)", bangThick: "Extra thickness", bangN: (n) => `${n} tufts`,
     confirmDelExpr: (n) => `Remove the expression “${n}” and its pictures?`, tplCount: "This template was made for a different number of expressions. Write it out again (or match the expressions) and redraw",
   },
   ja: {
@@ -66,6 +69,9 @@ const T = {
     tplRead0: "枠の中に何も描かれていなかった", tplReadN: (n) => `${n}個のパーツを読んだ`, tplBad: "顔のテンプレではない絵(4:3 か 2:1)",
     f_eye: "目", f_eyeClosed: "とじ目", f_brow: "眉", f_mouth: "口", f_nose: "鼻", confirmClearDrawn: "このキャラの描いた絵を全部外す?(表情は残る)",
     pic: "絵", normalPic: "ふつう", exprName: "表情の名前", newExpr: (n) => `表情${n}`, addExpr: "表情を足す", flush: "ぽっ", blink: "まばたき", delExpr: "消す",
+    bangTufts: "ふさを動かす", bangMove: "顔の上でふさを動かす", bangHelp: "玉を引っぱる: 左右 = 頭のまわりの位置 / 上下 = 毛先の高さ。離すと前髪を作り直す。",
+    bangPick: "玉を押すとふさを選べる", bangAdd: "ふさを足す", bangDel: "このふさを消す", bangNeedNendo: "前髪が「ふさ」のときに動かせる",
+    bangSweep: "流れ(度)", bangThick: "このふさの厚さ(足す)", bangN: (n) => `ふさ ${n}本`,
     confirmDelExpr: (n) => `表情「${n}」とその絵を消す?`, tplCount: "表情の数が違うキャラのテンプレ。書き出し直して(か、表情の数を合わせて)描き直して",
   },
 };

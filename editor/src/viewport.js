@@ -89,5 +89,5 @@ export function createViewport(canvas, stage) {
     return new Promise((ok) => canvas.toBlob((b) => { floor.visible = fv; if (helper) helper.visible = hv; chair.visible = cv; renderer.setPixelRatio(pr); size(); ok(b); }, "image/png"));
   }
 
-  return { view, display, background, setAvatar, lift, apply, snapshot, motion: M, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  return { view, display, background, setAvatar, lift, apply, snapshot, motion: M, camera, controls, canvas, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }

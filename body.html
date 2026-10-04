@@ -608,11 +608,8 @@ let bangSel = -1, bangDrag = null, bangCam = null, bangHome = null;
 const bangTips = () => avatar.options.hair.sculpt.nendo.tips;
 // 毛先が実際にある角度: 「流れ」(表の6番目=sw)を付けたふさは、毛先が sw だけ横へずれる(hair/index.js の nendo と同じ)
 const tipAngle = (t) => t[0] - (t[5] ?? 0);
-function tipPoint(a, y) {   // 頭の座標の (角度, 高さ) → 毛先のすぐ上の、髪の外側の表面(キャラの座標)
-  const f = I.hairKit.hairSdfOf(I.hairPick), sn = Math.sin(a * D2R), cs = Math.cos(a * D2R), yy = y + 0.006; let r = 0.42;
-  for (; r > 0.05; r -= 0.003) if (f(sn * r, yy, cs * r) < 0) break;
-  if (r <= 0.05) r = 0.3;   // そこに髪が無い(となりのふさに隠れた等): 頭の外側に置く(顔の中に埋もれないように)
-  return new THREE.Vector3(...I.HT.fromHead(sn * r, yy, cs * r));
+function tipPoint(a, y) {   // 頭の座標の (角度, 高さ) → 毛先のすぐ外(キャラの座標)。前髪が毛束でも、その下の髪とおでこの外側(エンジンの avatar.bangTipAt)
+  return new THREE.Vector3(...avatar.bangTipAt(a, y));
 }
 function bangBuild() {   // 玉を置き直す
   avatar.object.add(bangGrp); bangGrp.clear();

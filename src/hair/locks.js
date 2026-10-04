@@ -96,6 +96,13 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
   return out;
 }
 
+/** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
+ *  just outside the hair and the head there. For an editor's handles (the same surface the bang locks lie on). */
+export function bangTipAt(angle, y, { surf, center, toRoot }) {
+  const th = angle * Math.PI / 180, c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d) + 0.012;
+  return toRoot(c[0] + d[0] * t, y, c[2] + d[2] * t);
+}
+
 // hang one lock under gravity in the rest pose, against the same colliders it meets when moving (so the first frame doesn't jump)
 function drape(s, coll, ell, N = 12) {
   const seg = s.len / (N - 1), P = [];
