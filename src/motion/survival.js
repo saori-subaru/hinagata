@@ -5,7 +5,7 @@
 //           roll (a forward roll, also to take a fall) / hang, shimmy (hanging from an edge by the hands, moving sideways)
 //   water:  drink (kneeling, scooping water to the mouth) / dive (swimming under water, a frog kick)
 //   hands:  pickUp / carry, carryWalk (a log in both arms) / throw / push / chop (an axe, two hands) / eat / fireDrill (a hand drill) /
-//           sleep (on the side, curled)
+//           sleep (on the side, curled) / stab (a spear, two hands, thrust forward and down) / knockdown (knocked onto the back by a charge, then up again)
 // One-shot moves (stumble, roll, throw, pickUp) loop over their length (*.T s here as ONE_SHOT): the game plays from t = 0 and stops after one.
 import { POSES } from "./index.js";
 
@@ -31,7 +31,7 @@ const lerpArm = (a, b, k) => ({ sh: mix(a.sh, b.sh, k), ua: mix(a.ua, b.ua, k), 
 // the roll turns the body about the hips, so the hips go up and down to keep the lowest point (the back, the head) on the ground: measured, per a quarter turn
 const ROLL_YS = [0.01, 0.138, 0.449, 0.402, 0.086, -0.202, -0.217, -0.084, 0.009];
 const ROLL_Y = (a) => { const x = ((a / (2 * PI)) % 1) * 8, i = Math.floor(x), f = x - i; return ROLL_YS[i] + (ROLL_YS[Math.min(8, i + 1)] - ROLL_YS[i]) * f; };
-export const ONE_SHOT = { stumble: 0.9, roll: 1.0, throw: 1.1, pickUp: 1.6 };
+export const ONE_SHOT = { stumble: 0.9, roll: 1.0, throw: 1.1, pickUp: 1.6, stab: 0.9, knockdown: 2.4 };
 const once = (name, t) => Math.min(1, Math.max(0, (t % ONE_SHOT[name]) / ONE_SHOT[name]));
 
 Object.assign(POSES, {
@@ -154,6 +154,16 @@ Object.assign(POSES, {
     return { b: { ...KNEEL, spine: [0.55, 0, 0], chest: [0.15, 0, 0], head: [-0.2, 0, 0],
       "upperArm.L": [-0.9 + 0.2 * s, 0.2, -0.55 + 0.1 * dn], "lowerArm.L": [-0.35, 0, -0.75], "hand.L": [0, 0.3, 0],
       "upperArm.R": [-0.9 - 0.2 * s, -0.2, 0.55 - 0.1 * dn], "lowerArm.R": [-0.35, 0, 0.75], "hand.R": [0, -0.3, 0] }, y: KNEEL_Y, grip: { L: 0.1, R: 0.1 } }; },
+  // a spear thrust (two hands, the spear low at the right side): draw it back (elbows back, body turned right), drive it forward and down (into the water, at an animal), the knees giving, back
+  stab: (t) => { const u = once("stab", t), back = ss(0, 0.35, u) * (1 - ss(0.4, 0.5, u)), hit = ss(0.4, 0.52, u) * (1 - ss(0.7, 1, u));
+    const rest = { "upperArm.L": [-0.55, 0.25, -0.5], "lowerArm.L": [-1.0, 0, -0.4] }, pull = { "upperArm.L": [0.25, 0.3, -0.5], "lowerArm.L": [-1.6, 0, -0.35] }, out = { "upperArm.L": [-1.3, 0.1, -0.3], "lowerArm.L": [-0.15, 0, -0.15] };
+    const arm = (k) => mix(mix(rest[k], pull[k], back), out[k], hit);
+    return { b: { ...legs(0.2 + 0.3 * hit, 0.14), spine: [0.12 - 0.08 * back + 0.5 * hit, 0.35 * back - 0.15 * hit, 0], head: [-0.05 + 0.25 * hit, -0.25 * back, 0],
+      ...both({ "upperArm.L": arm("upperArm.L"), "lowerArm.L": arm("lowerArm.L") }) }, y: -drop(0.2 + 0.3 * hit), grip: { L: 1, R: 1 }, sharp: true }; },
+  // knocked down (a boar's charge, a bear's swipe): thrown onto the back, the arms flung up, lying a moment, then sitting up through a crouch and standing
+  knockdown: (t) => { const u = once("knockdown", t), fall = ss(0, 0.16, u), up = ss(0.55, 0.92, u), lie = fall * (1 - up), sit = ss(0.5, 0.7, u) * (1 - ss(0.8, 0.97, u));
+    return { b: { ...legs(0.25 * lie + 0.9 * sit, 0.12), hips: [-1.45 * lie, 0, 0], spine: [0.3 * lie + 0.35 * sit, 0, 0], head: [0.45 * lie - 0.2 * sit, 0, 0.12 * lie],
+      ...both({ "upperArm.L": [-1.3 * lie, 0, -0.45 - 0.5 * lie], "lowerArm.L": [-0.5 * lie - 0.3 * sit, 0, 0] }) }, y: -0.33 * lie - drop(0.9 * sit) * (1 - lie), grip: { L: 0, R: 0 }, sharp: true }; },
   // asleep: lying on the right side, curled, the head on the arm, breathing slowly
   sleep: (t) => { const b = sin(t * 1.3) * 0.02;
     return { b: { hips: [0, 0, PI / 2], spine: [0.3, 0, 0], chest: [0.15 + b, 0, 0], head: [0.15, 0, 0.25],
