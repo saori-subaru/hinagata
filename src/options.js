@@ -61,7 +61,15 @@ export const DEFAULTS = {
       },
       "neck": {
         "width": 0.85,
-        "top": 0.95
+        "nape": {
+          "on": true,
+          "y0": 0.78,
+          "y1": 0.96,
+          "z0": -0.035,
+          "z1": -0.06,
+          "r": 0.05,
+          "k": 0.04
+        }
       },
       "socketScale": 1,
       "faceNarrow": {
@@ -82,7 +90,7 @@ export const DEFAULTS = {
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.007,
+        "k": 0.015,
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
@@ -669,12 +677,6 @@ export const DEFAULTS = {
     "drawn": [],
     "shading": {
       "weight": 1,
-      "chin": {
-        "on": true,
-        "y": [0.78, 0.82],
-        "down": [0.7, 0.86],
-        "z": [0.07, 0.12]
-      },
       "y": 0.96,
       "z": -0.02,
       "radiusY": 0.7,

@@ -772,23 +772,133 @@
     "en": "neck"
    }
   },
-  "body.sculpt.neck.top": {
-   "path": "body.sculpt.neck.top",
-   "type": "number",
-   "default": 0.95,
+  "body.sculpt.neck.nape.on": {
+   "path": "body.sculpt.neck.nape.on",
+   "type": "boolean",
+   "default": true,
    "label": {
-    "en": "neck › top"
+    "en": "neck › nape › on"
    },
    "group": "body",
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.475,
-   "max": 1.425,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.y0": {
+   "path": "body.sculpt.neck.nape.y0",
+   "type": "number",
+   "default": 0.78,
+   "label": {
+    "en": "neck › nape › y 0"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.39,
+   "max": 1.17,
    "step": 0.001,
    "soft": true,
    "section": {
-    "en": "neck"
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.y1": {
+   "path": "body.sculpt.neck.nape.y1",
+   "type": "number",
+   "default": 0.96,
+   "label": {
+    "en": "neck › nape › y 1"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.48,
+   "max": 1.44,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.z0": {
+   "path": "body.sculpt.neck.nape.z0",
+   "type": "number",
+   "default": -0.035,
+   "label": {
+    "en": "neck › nape › z 0"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.0525,
+   "max": -0.0175,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.z1": {
+   "path": "body.sculpt.neck.nape.z1",
+   "type": "number",
+   "default": -0.06,
+   "label": {
+    "en": "neck › nape › z 1"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.09,
+   "max": -0.03,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.r": {
+   "path": "body.sculpt.neck.nape.r",
+   "type": "number",
+   "default": 0.05,
+   "label": {
+    "en": "neck › nape › r"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.025,
+   "max": 0.075,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.k": {
+   "path": "body.sculpt.neck.nape.k",
+   "type": "number",
+   "default": 0.04,
+   "label": {
+    "en": "neck › nape › k"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.02,
+   "max": 0.06,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
    }
   },
   "body.sculpt.socketScale": {
@@ -1022,7 +1132,7 @@
   "body.sculpt.chin.k": {
    "path": "body.sculpt.chin.k",
    "type": "number",
-   "default": 0.007,
+   "default": 0.015,
    "label": {
     "en": "chin › k"
    },
@@ -1030,8 +1140,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.0035,
-   "max": 0.0105,
+   "min": 0.0075,
+   "max": 0.0225,
    "step": 0.0001,
    "soft": true,
    "section": {
@@ -9777,75 +9887,6 @@
    "soft": true,
    "section": {
     "en": "shading"
-   }
-  },
-  "face.shading.chin.on": {
-   "path": "face.shading.chin.on",
-   "type": "boolean",
-   "default": true,
-   "label": {
-    "en": "shading › chin › on"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
-   "section": {
-    "en": "shading › chin"
-   }
-  },
-  "face.shading.chin.y": {
-   "path": "face.shading.chin.y",
-   "type": "json",
-   "default": [
-    0.78,
-    0.82
-   ],
-   "label": {
-    "en": "shading › chin › y"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
-   "section": {
-    "en": "shading › chin"
-   }
-  },
-  "face.shading.chin.down": {
-   "path": "face.shading.chin.down",
-   "type": "json",
-   "default": [
-    0.7,
-    0.86
-   ],
-   "label": {
-    "en": "shading › chin › down"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
-   "section": {
-    "en": "shading › chin"
-   }
-  },
-  "face.shading.chin.z": {
-   "path": "face.shading.chin.z",
-   "type": "json",
-   "default": [
-    0.07,
-    0.12
-   ],
-   "label": {
-    "en": "shading › chin › z"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
-   "section": {
-    "en": "shading › chin"
    }
   },
   "face.shading.y": {
