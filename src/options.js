@@ -484,11 +484,20 @@ export const DEFAULTS = {
         "count": 15,
         "span": 115,
         "width": 0.075,
-        "thick": 0.25,
+        "thick": 0.32,
+        "puff": 0.014,
+        "flick": 0.02,
         "ph": [64, 44],
         "below": 0.01,
         "vary": 0.15,
         "stiff": 3
+      },
+      "nape": {
+        "on": true,
+        "y0": 0.88,
+        "y1": 1.04,
+        "thin": 0.2,
+        "k": 0.06
       },
       "shortBack": 0.86,
       "shell": 0.036,

@@ -17,7 +17,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, bangLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
+import { longLocks, surfaceLocks, bangLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -263,8 +263,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(J, BI, bodySdf);
       if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
-      else { const B = hairKit.BACKS.short, bottom = (th) => HT.fromHead(0, B.side + (B.side - B.back) * Math.min(0, Math.cos(th)) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape)
-        out.locks = part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 }); }
+      else { const B = hairKit.BACKS.short, bottom = (th) => HT.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
+        out.locks = part(surfaceLocks(SL, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {
       const B = OPT.hair.sculpt.nendo, SK = OPT.body.sculpt.skull, surf = (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z));   // head space: the hair under the bangs and the forehead

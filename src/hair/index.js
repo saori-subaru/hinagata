@@ -77,9 +77,10 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   };
   Object.defineProperty(BANGS, "blunt", { value: BANGS.hime, enumerable: false });   // the old helmet-shaped "blunt" was replaced by hime
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
-  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0 }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03, coverEars: true },
+  const NAPE = OPT.hair.sculpt.nape;
+  const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0, nape: true }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03, coverEars: true },
     "flip": { r: [0.3, 0.3, 0.305], side: 0.9, back: 0.875, top: 1.215, arch: 0.3, tips: 0.04, teeth: 7, sharp: 2, flare: 0.01, flick: 0.06, flickH: 0.07, flickLift: 0.075, coverEars: true },   // 外はね: a bob whose ends flip out and up
-    "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long } };
+    "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long, nape: true } };
   if (KX !== 1) for (const b of Object.values(BACKS)) b.r = [b.r[0] * KX, b.r[1], b.r[2]];
   if (OPT.hair.sculpt.hairline != null) for (const b of Object.values(BACKS)) b.top = OPT.hair.sculpt.hairline;
   // how far the back hair stands off the skull: the short hair's, plus (the bob) a little more below the top of the head only,
@@ -130,8 +131,14 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       const thick = SHELL ? SHELL * tf
         + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
       // flick (the flip): near the hem the hair bends out sideways, and the further out, the higher its bottom edge, so the ends curl up and out
-      const base = dPrim(e, x, y, z), fk = o.flick ? o.flick * sstep(o.side + o.flickH, o.side - 0.01, y) : 0, hemF = o.flick ? hem + o.flickLift * Math.min(1, Math.max(0, (base - thick) / o.flick)) : hem;
-      const d = smax(base - thick - flare - fk - lumpOf(x, y, z), hemF - y, 0.012);
+      let base = dPrim(e, x, y, z), thk = thick;
+      // nape (the short hair): below the back of the skull the hair hugs the head and runs into the neck with an inward curve, getting thin
+      // toward the hem, like clipped hair. Before, the 3.6 cm shell kept its thickness around the bottom of the skull's ball: a round bulge
+      // over the neck (2026-10-04, Saori: "the clipped part bulges; it should curve the other way")
+      if (o.nape && NAPE?.on && SHELL) { const w = sstep(NAPE.y1, NAPE.y0, y) * sstep(0.02, -0.06, z);
+        if (w > 0) { const nb = smin(skullOnly(x, y, z), dPrim(P.neck, x, y, z), NAPE.k) - backOff(o, y); base += (nb - base) * w; thk = thick * (1 - (1 - NAPE.thin) * w); } }
+      const fk = o.flick ? o.flick * sstep(o.side + o.flickH, o.side - 0.01, y) : 0, hemF = o.flick ? hem + o.flickLift * Math.min(1, Math.max(0, (base - thick) / o.flick)) : hem;
+      const d = smax(base - thk - flare - fk - lumpOf(x, y, z), hemF - y, 0.012);
       return o.coverEars ? smin(d, Math.max(ear - 0.012, hem - y), 0.02) : smax(d, -ear, EAR_GAP.k);   // coverEars (the bob): the hair goes over the ears instead of around them (carving them out left little holes at the hem)
     } };
   }

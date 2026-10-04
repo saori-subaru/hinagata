@@ -13,7 +13,8 @@ import * as THREE from "three";
 
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
-const SUB = 3;   // drawn rings per link (a Catmull-Rom curve through the chain's points)
+const SUB = 3;
+const OWN = 0.5;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
  * Where the locks grow and how they hang (root space, rest pose): a ring of locks around the back and sides of the head, in two layers
@@ -35,6 +36,27 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, N = 12 }) {
     specs.push({ root, len, w, thick: L.thick ?? 0.3, layer, curl: (rnd() - 0.5) * 0.04 });
   }
   return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid, N) }));
+}
+/**
+ * Short hair: locks that lie along the hair underneath (root space), from near the crown down to the hem, following its shape (into the
+ * nape's inward curve) instead of hanging from the back of the skull (draped short locks fell straight from its widest point: a boxy
+ * outline over the neck). L: as ringLocks, plus flick (m: the tips lift off a little) / bottom(th): the hem's height at this angle
+ */
+export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
+  const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 15)), span = L.span ?? 115, PH = L.ph ?? [64, 44];
+  let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
+    const u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u) * deg, ph = PH[layer] * deg;
+    const rd = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], root = rd.map((v, k) => center[k] + v * (surfaceAlong(cap, center, rd) - 0.01));
+    const ty = bottom(th) - (L.vary ?? 0.15) * 0.1 * rnd(), c = [center[0], ty, center[2]], hd = [Math.sin(th), 0, Math.cos(th)], tip = hd.map((v, k) => c[k] + v * surfaceAlong(cap, c, hd));
+    const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1), thick = L.thick ?? 0.25, puff = (L.puff ?? 0.008) * rnd(), pts = [];   // puff: some locks stand a little off the others
+    for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, k) => v + (tip[k] - v) * t), d = p.map((v, k) => v - center[k]), dl = Math.hypot(...d), e = d.map((v) => v / dl);
+      const off = q ? 0.5 * w * thick * width(t) + 0.002 + (layer ? 0 : 0.005) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3 : -0.008, at = surfaceAlong(cap, center, e) + off;   // the outer layer over the inner one
+      pts.push(e.map((v, k) => center[k] + v * at)); }
+    let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+    specs.push({ root: pts[0], pts, len, w, thick, layer, curl: (rnd() - 0.5) * 0.03 });
+  }
+  return specs;
 }
 // long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
 export const longLocks = (L, kit) => ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });
@@ -188,7 +210,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
           toRest(pos, v, x, y, z, false);
           let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w; const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
           toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
-          const io = s.layer ? 0.1 : 0.7, sx = ox * io + nx / nl * 0.3, sy = oy * io + ny / nl * 0.3, sz = oz * io + nz / nl * 0.3, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
+          const io = s.layer ? 0.1 : 0.6, sx = ox * io + nx / nl * OWN, sy = oy * io + ny / nl * OWN, sz = oz * io + nz / nl * OWN, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
           toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } } }
     for (const a of ["position", "normal", "shadeN"]) g.attributes[a].needsUpdate = true;
     g.computeBoundingSphere();
