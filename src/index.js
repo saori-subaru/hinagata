@@ -256,7 +256,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   let bangKitMemo = null;   // the same until the hair under the bangs changes (setHair)
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HT.fromHead(x, y, z), sx: HT.sx }; })();
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
-    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && hairPick.back === "short" && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
+    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && (hairPick.back === "short" || hairPick.back === "hang") && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     if (!longOn && !shortOn && !bangsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HT.wrap(capRaw), c = HT.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
@@ -265,9 +265,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(J, BI, bodySdf);
-      if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HT.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
       else { const B = hairKit.BACKS.short, bottom = (th) => HT.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
-        out.locks = SL.hang ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
+        out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {

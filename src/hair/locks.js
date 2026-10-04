@@ -23,7 +23,7 @@ const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its 
  * bottom(th): the height the lock reaches at this angle around the head (0 = front) / cap(x, y, z): the hair under the locks (distance, root space)
  * center: the head's center (root space) / coll: the colliders (see colliders()) / ellipsoid: the head for the drape
  */
-export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, N = 12 }) {
+export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null, N = 12 }) {
   const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, PH = L.ph ?? [52, 30];
   let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // the same small differences every build
   for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
@@ -35,7 +35,7 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, N = 12 }) {
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1);
     specs.push({ root, len, w, thick: L.thick ?? 0.3, layer, curl: (rnd() - 0.5) * 0.04, rise: true });   // rise: it gets its thickness gently (no ridge at the root)
   }
-  return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid, N) }));
+  return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid, N, hugY) }));
 }
 /**
  * Short hair: locks that lie along the hair underneath (root space), from near the crown down to the hem, following its shape (into the
@@ -59,7 +59,7 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
   return specs;
 }
 // long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
-export const longLocks = (L, kit) => ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });
+export const longLocks = (L, kit) => ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });   // kit.hugY: see drape
 
 /** How far from c along the unit direction d the surface of f is (c inside it): halving the range, inside → outside. */
 export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
@@ -104,7 +104,10 @@ export function bangTipAt(angle, y, { surf, center, toRoot }) {
 }
 
 // hang one lock under gravity in the rest pose, against the same colliders it meets when moving (so the first frame doesn't jump)
-function drape(s, coll, ell, N = 12) {
+// hugY (root space, or null): above this height the lock lies on the head (held onto the ellipsoid, not just kept out of it), so it follows
+// the head's shape, curving in below its widest part, and only hangs free below: the outline of the long block it replaced (2026-10-04,
+// Saori: "it used to follow the head, dent in a little, then fall; now it falls straight from the top")
+function drape(s, coll, ell, N = 12, hugY = null) {
   const seg = s.len / (N - 1), P = [];
   for (let i = 0; i < N; i++) P.push([s.root[0], s.root[1] - seg * i, s.root[2]]);
   const r = (i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003;
@@ -112,7 +115,7 @@ function drape(s, coll, ell, N = 12) {
     for (let i = 2; i < N; i++) P[i][1] -= 0.002;
     for (let k = 0; k < 3; k++) {
       for (let i = 1; i < N; i++) { const a = P[i - 1], b = P[i], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...d) || 1; for (let q = 0; q < 3; q++) b[q] = a[q] + d[q] * seg / l; }   // from the root down: the root stays
-      for (let i = 1; i < N; i++) { pushOutEllipsoid(P[i], ell.c, ell.r, r(i)); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r(i)); }
+      for (let i = 1; i < N; i++) { if (hugY != null && P[i][1] > hugY) onEllipsoid(P[i], ell.c, ell.r, r(i)); else pushOutEllipsoid(P[i], ell.c, ell.r, r(i)); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r(i)); }
     }
   }
   return P;
@@ -125,6 +128,8 @@ const rise = (t, off) => -0.006 + (off + 0.006) * sstep(0, 0.33, t);
 export const width = (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - t * t * t), 0.8);
 
 function pushOutSphere(p, c, r) { const dx = p[0] - c[0], dy = p[1] - c[1], dz = p[2] - c[2], d = Math.hypot(dx, dy, dz); if (d >= r || d < 1e-9) return; const k = r / d; p[0] = c[0] + dx * k; p[1] = c[1] + dy * k; p[2] = c[2] + dz * k; }
+// onto an ellipsoid (grown by m), from inside or outside
+function onEllipsoid(p, c, r, m) { const qx = (p[0] - c[0]) / (r[0] + m), qy = (p[1] - c[1]) / (r[1] + m), qz = (p[2] - c[2]) / (r[2] + m), d = Math.hypot(qx, qy, qz); if (d < 1e-9) return; p[0] = c[0] + qx / d * (r[0] + m); p[1] = c[1] + qy / d * (r[1] + m); p[2] = c[2] + qz / d * (r[2] + m); }
 // out of an ellipsoid (center c, radii r, grown by m): along the scaled direction (good enough near the surface)
 function pushOutEllipsoid(p, c, r, m) { const qx = (p[0] - c[0]) / (r[0] + m), qy = (p[1] - c[1]) / (r[1] + m), qz = (p[2] - c[2]) / (r[2] + m), d = Math.hypot(qx, qy, qz); if (d >= 1 || d < 1e-9) return; p[0] = c[0] + qx / d * (r[0] + m); p[1] = c[1] + qy / d * (r[1] + m); p[2] = c[2] + qz / d * (r[2] + m); }
 
@@ -173,10 +178,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (let k = 0; k < bones.length; k++) { tmp.multiplyMatrices(bones[k].matrixWorld, skeleton.boneInverses[k]); BM.set(tmp.elements, k * 16); }
     floorY = root.matrixWorld.elements[13];
     M.fromArray(BM, head * 16); Mi.copy(M).invert();
+    { const e = M.elements, l = Math.hypot(e[4], e[5], e[6]) || 1; GR[0] = e[4] / l; GR[1] = e[5] / l - 1; GR[2] = e[6] / l; }   // gravity, less what the head carries (see step)
     for (const c of CN) { const e = c.bone * 16, [x, y, z] = c.c; c.now[0] = BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]; c.now[1] = BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]; c.now[2] = BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]; }
     const e = M.elements; for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2]; T[i * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; T[i * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; T[i * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
   }
-  const pp = [0, 0, 0]; let floorY = 0;
+  const pp = [0, 0, 0], GR = [0, 0, 0]; let floorY = 0;
   function collide(i) {   // point i (root space) out of the head (in its rest space) and the spheres
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
     pp[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; pp[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; pp[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
@@ -186,11 +192,14 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     if (X[j + 1] < floorY + r) X[j + 1] = floorY + r;   // the floor (the avatar's feet)
   }
   function step(h, keep) {   // one step of h seconds
-    const gy = -9.8 * h * h;
+    // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
+    // gravity the head's turn has taken away acts here: world down less the rest's down turned with the head. Upright that is nothing (no sag
+    // off the rest shape: before, the locks sank a few cm and left the head); a head bent forward or lying down lets the hair fall
+    const g = 9.8 * h * h, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
     for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
       for (let q = 0; q < 3; q++) { const v = (X[j + q] - P[j + q]) * keep; P[j + q] = X[j + q]; X[j + q] += v; }
-      X[j + 1] += gy;
+      X[j] += gx; X[j + 1] += gy; X[j + 2] += gz;
       for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * K[p]; }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;

@@ -418,7 +418,7 @@ export const DEFAULTS = {
       }
     },
     "bangs": "nendo",
-    "back": "short",
+    "back": "hang",
     "ahoge": true,
     "sculpt": {
       "hime": {
@@ -490,7 +490,6 @@ export const DEFAULTS = {
         "span": 115,
         "width": 0.075,
         "thick": 0.25,
-        "hang": true,
         "ph": [64, 44],
         "below": 0.01,
         "lie": {
@@ -519,6 +518,7 @@ export const DEFAULTS = {
       "ahogeDir": 90,
       "long": {
         "locks": true,
+        "hug": true,
         "count": 13,
         "span": 110,
         "width": 0.075,

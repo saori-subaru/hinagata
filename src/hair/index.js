@@ -86,7 +86,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   // how far the back hair stands off the skull: the short hair's, plus (the bob) a little more below the top of the head only,
   // so every kind of bangs meets it without a step on top (the bob used to be thicker everywhere: other bangs sat inside it like a helmet's rim)
   const backOff = (o, y) => (BACKS.short.r[0] - 0.282 * KX) + (o.r[0] - BACKS.short.r[0]) * sstep(1.12, 1.0, y);
-  { const BT = OPT.hair.sculpt.bob; if (BT) Object.assign(BACKS.bob, BT); }   // bob overrides: tips (depth of the hem's points), teeth (how many), flare (outward flick)   // height of the hairline at the forehead
+  { const BT = OPT.hair.sculpt.bob; if (BT) Object.assign(BACKS.bob, BT); }
+  BACKS.hang = BACKS.short;   // short hair hanging from the back of the head (hair/locks.js): the same block under it   // bob overrides: tips (depth of the hem's points), teeth (how many), flare (outward flick)   // height of the hairline at the forehead
   // shell > 0: the back block is the head surface pushed out by this thickness instead of its own ellipsoid (follows a flat top / back)
   const CORNER = OPT.hair.sculpt.corner ?? null, TAPER_SIDES = OPT.hair.sculpt.taperSides ?? null;
   const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
@@ -150,7 +151,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const underLocks = (o) => ({ ...o, taper: OPT.hair.sculpt.nendo.lockTaper ?? 0.08 });
   // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
-  const backAsLocks = (pick) => (pick.back === "short" && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
+  const backAsLocks = (pick) => ((pick.back === "short" || pick.back === "hang") && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
   const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
     let o = BACKS[pick.back]; if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
