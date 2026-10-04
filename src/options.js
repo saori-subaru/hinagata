@@ -63,11 +63,11 @@ export const DEFAULTS = {
         "width": 0.85,
         "nape": {
           "on": true,
-          "y0": 0.78,
+          "y0": 0.82,
           "y1": 0.96,
-          "z0": -0.035,
-          "z1": -0.06,
-          "r": 0.05,
+          "z0": -0.025,
+          "z1": -0.035,
+          "r": 0.04,
           "k": 0.04
         }
       },
@@ -95,7 +95,8 @@ export const DEFAULTS = {
         "backRise": 0.7,
         "backMax": 0.07,
         "napeY": 0.95,
-        "napeZ": 0
+        "napeZ": 0,
+        "napeDrop": 0.06
       },
       "jawU": {
         "on": 1,

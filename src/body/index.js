@@ -106,7 +106,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // napeY: behind the ear (z behind napeZ) the bottom of the head is level at this height, as a real skull's base is (about the ear's
   // height, cut off level, the neck below; Saori, with a photo of a skull). Before, the skull's ball reached down below the earlobe and
   // showed under the ear seen from below. The neck reaches up to it (neck.top)
-  const level = (x, z, base) => CH.napeY == null ? base : base + Math.max(0, CH.napeY - base) * sstep(CH.napeZ ?? 0, (CH.napeZ ?? 0) - 0.04, z);
+  // napeDrop: at the back, toward the middle, the level base slopes down to the neck (a chamfer seen from the side, so the head doesn't end
+  // in a flat shelf over the neck): lower by napeDrop at the neck's back (z napeNeckZ), nothing at the back of the head (napeBackZ) or behind the ears
+  const chamfer = (x, z) => CH.napeDrop ? CH.napeDrop * sstep(CH.napeBackZ ?? -0.2, CH.napeNeckZ ?? -0.07, z) * (1 - sstep(CH.napeDropX?.[0] ?? 0.05, CH.napeDropX?.[1] ?? 0.13, Math.abs(x))) : 0;
+  const level = (x, z, base) => { if (CH.napeY == null) return base; const t = CH.napeY - chamfer(x, z); return base + Math.max(0, t - base) * sstep(CH.napeZ ?? 0, (CH.napeZ ?? 0) - 0.04, z); };
   CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) + CH.curve * x * x)) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
