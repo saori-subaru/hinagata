@@ -17,8 +17,11 @@ const fileName = (s) => (s || "character").replace(/[\\/:*?"<>|]+/g, "_").slice(
 
 // ── view preferences (per browser) ──
 const PREF_KEY = "hinagata.editor.prefs";
-const prefs = { bg: "warm", quality: "game", floor: true };
-try { Object.assign(prefs, JSON.parse(localStorage.getItem(PREF_KEY)) || {}); } catch {}
+// quality: the editor builds "high" by default (it is the tool you look closely in; games pass their own quality).
+//   A saved quality counts only if it was picked with the buttons (qualityPicked): "game" was the default until
+//   2026-10-04 and savePrefs stored it with the other prefs, so a stored "game" alone says nothing about a choice.
+const prefs = { bg: "warm", quality: "high", floor: true };
+try { const saved = JSON.parse(localStorage.getItem(PREF_KEY)) || {}; if (!saved.qualityPicked) delete saved.quality; Object.assign(prefs, saved); } catch {}
 const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} };
 
 // ── characters ──
@@ -86,7 +89,7 @@ store.subscribe((paths, why) => {
 let imagePath = null;
 const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("diffCount"), resetEl: $("resetTab") }, {
   store, quality: () => prefs.quality,
-  onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; savePrefs(); panel.render(); rebuild(); },
+  onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => { if (!vp.avatar) return; faceSheet(vp.avatar, { kind, lang: getLang() }).toBlob((b) => download(kind === "sheet" ? "hinagata-face-sheet.png" : "hinagata-face-parts.png", b), "image/png"); },
   onReadTemplate: () => $("fileTpl").click(),
