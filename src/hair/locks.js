@@ -16,31 +16,63 @@ const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]]; 
 const SUB = 3;   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
- * Where the locks grow and how they hang (root space, rest pose). Long hair: a ring of locks around the back and sides of the head, in two
- * layers (the inner one between the outer one's locks), each draped once over the hair underneath and the body.
- * L: options.hair.sculpt.long / cap(x, y, z): the hair under the locks (distance, root space) / center: the head's center (root space)
- * coll: the colliders (see colliders()) / seed: a number, so the small differences between locks are the same every build
+ * Where the locks grow and how they hang (root space, rest pose): a ring of locks around the back and sides of the head, in two layers
+ * (the inner one between the outer one's locks), each draped once over the hair underneath and the body.
+ * L: { count, span (degrees each side of the back), width, thick, ph: [outer, inner] (degrees up from the head's middle, where they grow) }
+ * bottom(th): the height the lock reaches at this angle around the head (0 = front) / cap(x, y, z): the hair under the locks (distance, root space)
+ * center: the head's center (root space) / coll: the colliders (see colliders()) / ellipsoid: the head for the drape
  */
-export function longLocks(L, { cap, center, coll, ellipsoid }) {
-  const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110;   // span: degrees each side of the back
-  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, N = 12 }) {
+  const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, PH = L.ph ?? [52, 30];
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // the same small differences every build
   for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
-    const u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u) * deg, ph = (layer ? 30 : 52) * deg;   // th: around the head (0 = front), ph: up from the head's middle
+    const u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u) * deg, ph = PH[layer] * deg;   // th: around the head (0 = front), ph: up from the head's middle
     const dir = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)];
     const t = surfaceAlong(cap, center, dir);   // the hair's surface along this direction
     const root = dir.map((v, k) => center[k] + v * (t - 0.012));   // a little under the surface: the root is hidden in the hair
-    const side = Math.abs(Math.sin(th)), len = (root[1] - L.bottom) * (1 + 0.12 * (rnd() - 0.5)) * (1 - 0.18 * side * side) + 0.04;   // the sides a little shorter (the hem curves up toward the face)
+    const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04);
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1);
     specs.push({ root, len, w, thick: L.thick ?? 0.3, layer, curl: (rnd() - 0.5) * 0.04 });
   }
-  return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid) }));
+  return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid, N) }));
 }
+// long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
+export const longLocks = (L, kit) => ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });
 
 /** How far from c along the unit direction d the surface of f is (c inside it): halving the range, inside → outside. */
 export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
   for (let k = 0; k < 30; k++) { const t = 0.5 * (t0 + t1); if (f(c[0] + d[0] * t, c[1] + d[1] * t, c[2] + d[2] * t) < 0) t0 = t; else t1 = t; }
   return 0.5 * (t0 + t1);
 }
+/**
+ * Bangs as locks (head space, then carried into root space by toRoot). B: options.hair.sculpt.nendo — the same tips the "nendo" bangs are
+ * cut from ([angle, tip height, slope, skew, group, sweep (degrees), extra thickness]): each tip becomes one lock, from the top of the head
+ * to that tip, as wide as the gap between its neighbours (and a little more, so they overlap), lying over the hair and the forehead with
+ * a little puff in the middle. surf: the hair under the bangs and the head (distance, head space) / center: the head's center (head space)
+ */
+export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
+  const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
+  const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
+  T.forEach((tp, i) => {
+    const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
+    // a wide clump is several locks side by side whose tips gather toward the clump's tip (the outer ones end a little higher): strands, not a sheet
+    const k = Math.max(1, Math.round(2 * half / ((B.lockSpan ?? 13) * deg)));
+    for (let j = 0; j < k; j++) {
+      const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
+      const tip = horiz(tipY, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
+      const ph = (B.root ?? 55) * deg, ra = (tp.a + f * half) * 0.6, rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
+      const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
+      const w = 2 * half / k * r0 * (B.overlap ?? 1.25) * (k > 1 ? 1.35 : 1) * sx, thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, m) => v + (tip[m] - v) * t), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
+        const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + (q ? off : -0.006);   // along the surface (the root a little inside the hair); the middle of a clump on top
+        pts.push(toRoot(center[0] + u[0] * at, center[1] + u[1] * at, center[2] + u[2] * at)); }
+      let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0 });
+    }
+  });
+  return out;
+}
+
 // hang one lock under gravity in the rest pose, against the same colliders it meets when moving (so the first frame doesn't jump)
 function drape(s, coll, ell, N = 12) {
   const seg = s.len / (N - 1), P = [];
@@ -78,15 +110,15 @@ export function colliders(J, BI, sdf) {
 }
 
 /**
- * The moving locks. specs: from longLocks / head: the head bone's index / coll: colliders() / ell: { c, r } the head (root space, rest) /
+ * The moving locks. specs: from longLocks or bangLocks (all with the same number of points) / head: the head bone's index / coll: colliders() / ell: { c, r } the head (root space, rest) /
  * outward(p): the direction the hair faces at p (for the cross-section's "out" and the shading normals) / opts: { stiff, damping }
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
 export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9 }) {
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SUB + 1, VPL = ringsPer * RING.length, NV = NL * VPL;
-  const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NL);
-  specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff; RAD[l * N + i] = 0.5 * s.w * s.thick * width(t) + 0.003; });
-    SEG[l] = s.len / (N - 1); });
+  const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
+  specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff; RAD[l * N + i] = 0.5 * s.w * s.thick * width(t) + 0.003;
+    if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
   X.set(R); P.set(R);
   // the mesh
   const pos = new Float32Array(NV * 3), nor = new Float32Array(NV * 3), shn = new Float32Array(NV * 3), idx = [];
@@ -114,7 +146,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   function collide(i) {   // point i (root space) out of the head (in its rest space) and the spheres
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
     pp[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; pp[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; pp[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
-    const q0 = pp[0], q1 = pp[1], q2 = pp[2]; pushOutEllipsoid(pp, ell.c, ell.r, r);
+    const q0 = pp[0], q1 = pp[1], q2 = pp[2]; if (ell) pushOutEllipsoid(pp, ell.c, ell.r, r);
     if (pp[0] !== q0 || pp[1] !== q1 || pp[2] !== q2) { const f = M.elements; X[j] = f[0] * pp[0] + f[4] * pp[1] + f[8] * pp[2] + f[12]; X[j + 1] = f[1] * pp[0] + f[5] * pp[1] + f[9] * pp[2] + f[13]; X[j + 2] = f[2] * pp[0] + f[6] * pp[1] + f[10] * pp[2] + f[14]; }
     for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, c.r + r); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
     if (X[j + 1] < floorY + r) X[j + 1] = floorY + r;   // the floor (the avatar's feet)
@@ -127,7 +159,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       X[j + 1] += gy;
       for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * K[p]; }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
-      for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l]) / d;
+      for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
         if (i === 2) { X[b] -= dx * f; X[b + 1] -= dy * f; X[b + 2] -= dz * f; }   // the one before rides on the head: only this one moves
         else { X[a] += dx * f * 0.5; X[a + 1] += dy * f * 0.5; X[a + 2] += dz * f * 0.5; X[b] -= dx * f * 0.5; X[b + 1] -= dy * f * 0.5; X[b + 2] -= dz * f * 0.5; } }
       for (let i = 2; i < N; i++) collide(l * N + i);
@@ -156,7 +188,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
           toRest(pos, v, x, y, z, false);
           let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w; const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
           toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
-          const io = s.layer ? -0.5 : 0.7, sx = ox * io + nx / nl * 0.3, sy = oy * io + ny / nl * 0.3, sz = oz * io + nz / nl * 0.3, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
+          const io = s.layer ? 0.1 : 0.7, sx = ox * io + nx / nl * 0.3, sy = oy * io + ny / nl * 0.3, sz = oz * io + nz / nl * 0.3, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
           toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } } }
     for (const a of ["position", "normal", "shadeN"]) g.attributes[a].needsUpdate = true;
     g.computeBoundingSphere();

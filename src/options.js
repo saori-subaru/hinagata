@@ -458,6 +458,11 @@ export const DEFAULTS = {
         "groove": 0.02,
         "grooveW": 5,
         "root": 55,
+        "locks": true,
+        "lockThick": 0.22,
+        "overlap": 1.25,
+        "puff": 0.012,
+        "lockStiff": 4,
         "width": 1,
         "flat": 0.42,
         "lift": 0.022,
@@ -473,6 +478,17 @@ export const DEFAULTS = {
           [-64, -70, -40, 0.05, 0],
           [64, 70, -40, 0.05, 0]
         ]
+      },
+      "shortLocks": {
+        "on": true,
+        "count": 15,
+        "span": 115,
+        "width": 0.075,
+        "thick": 0.25,
+        "ph": [64, 44],
+        "below": 0.01,
+        "vary": 0.15,
+        "stiff": 3
       },
       "shortBack": 0.86,
       "shell": 0.036,

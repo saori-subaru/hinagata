@@ -6567,6 +6567,97 @@
     "en": "nendo"
    }
   },
+  "hair.sculpt.nendo.locks": {
+   "path": "hair.sculpt.nendo.locks",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "en": "nendo › locks"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.lockThick": {
+   "path": "hair.sculpt.nendo.lockThick",
+   "type": "number",
+   "default": 0.22,
+   "label": {
+    "en": "nendo › lock thick"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.11,
+   "max": 0.33,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.overlap": {
+   "path": "hair.sculpt.nendo.overlap",
+   "type": "number",
+   "default": 1.25,
+   "label": {
+    "en": "nendo › overlap"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.625,
+   "max": 1.875,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.puff": {
+   "path": "hair.sculpt.nendo.puff",
+   "type": "number",
+   "default": 0.012,
+   "label": {
+    "en": "nendo › puff"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.006,
+   "max": 0.018,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.lockStiff": {
+   "path": "hair.sculpt.nendo.lockStiff",
+   "type": "number",
+   "default": 4,
+   "label": {
+    "en": "nendo › lock stiff"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 2,
+   "max": 6,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
   "hair.sculpt.nendo.width": {
    "path": "hair.sculpt.nendo.width",
    "type": "number",
@@ -6720,6 +6811,172 @@
    "apply": null,
    "section": {
     "en": "nendo"
+   }
+  },
+  "hair.sculpt.shortLocks.on": {
+   "path": "hair.sculpt.shortLocks.on",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "en": "short locks › on"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.count": {
+   "path": "hair.sculpt.shortLocks.count",
+   "type": "number",
+   "default": 15,
+   "label": {
+    "en": "short locks › count"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 30,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.span": {
+   "path": "hair.sculpt.shortLocks.span",
+   "type": "number",
+   "default": 115,
+   "label": {
+    "en": "short locks › span"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 230,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.width": {
+   "path": "hair.sculpt.shortLocks.width",
+   "type": "number",
+   "default": 0.075,
+   "label": {
+    "en": "short locks › width"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.0375,
+   "max": 0.1125,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.thick": {
+   "path": "hair.sculpt.shortLocks.thick",
+   "type": "number",
+   "default": 0.25,
+   "label": {
+    "en": "short locks › thick"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.125,
+   "max": 0.375,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.ph": {
+   "path": "hair.sculpt.shortLocks.ph",
+   "type": "json",
+   "default": [
+    64,
+    44
+   ],
+   "label": {
+    "en": "short locks › ph"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.below": {
+   "path": "hair.sculpt.shortLocks.below",
+   "type": "number",
+   "default": 0.01,
+   "label": {
+    "en": "short locks › below"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.005,
+   "max": 0.015,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.vary": {
+   "path": "hair.sculpt.shortLocks.vary",
+   "type": "number",
+   "default": 0.15,
+   "label": {
+    "en": "short locks › vary"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.075,
+   "max": 0.225,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.stiff": {
+   "path": "hair.sculpt.shortLocks.stiff",
+   "type": "number",
+   "default": 3,
+   "label": {
+    "en": "short locks › stiff"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 2,
+   "max": 5,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "short locks"
    }
   },
   "hair.sculpt.shortBack": {

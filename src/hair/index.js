@@ -135,6 +135,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       return o.coverEars ? smin(d, Math.max(ear - 0.012, hem - y), 0.02) : smax(d, -ear, EAR_GAP.k);   // coverEars (the bob): the hair goes over the ears instead of around them (carving them out left little holes at the hem)
     } };
   }
-  const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...BANGS[pick.bangs](pick), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
-  return { BANGS, BACKS, hairSdfOf };
+  const bangsAsLocks = (pick) => pick.bangs === "nendo" && OPT.hair.sculpt.nendo.locks;   // the nendo bangs made of locks (hair/locks.js) instead of this layer
+  const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...(bangsAsLocks(pick) ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
+  return { BANGS, BACKS, hairSdfOf, bangsAsLocks };
 }
