@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -95,9 +95,9 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
 $("fileTpl").addEventListener("change", (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
   const im = new Image(); im.onload = () => {
-    let r; try { r = readFaceSheet(vp.avatar, im); } catch { toast(t("tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
+    let r; try { r = readFaceSheet(vp.avatar, im); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
     if (!r.read.length) { toast(t("tplRead0")); return; }
-    const ch = { ...r.changes };
+    const ch = sheetChanges(store.recipe, r);
     if (!String(store.get("face.parts.eyes")).startsWith("image")) Object.assign(ch, { "face.parts.eyes": "image", "face.parts.brows": "image", "face.parts.mouth": "image" });
     store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length));
   };
@@ -192,6 +192,7 @@ async function exportAs(k) {
   if (k === "link") {
     const o = compact(store.recipe); let dropped = false;
     for (const im of Object.values(o.face?.images ?? {})) if (im?.src) { delete im.src; dropped = true; }
+    for (const d of o.face?.drawn ?? []) for (const k of ["eye", "brow", "mouth"]) if (d?.[k]) { d[k] = null; dropped = true; }   // pictures don't fit in a link
     const url = `${location.origin}${location.pathname}?o=${encodeURIComponent(JSON.stringify(o))}`;
     try { await navigator.clipboard.writeText(url); toast(dropped ? t("linkNoImages") : t("linkCopied")); } catch { prompt(t("exLink"), url); }
   }

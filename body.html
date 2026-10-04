@@ -235,7 +235,7 @@ function refreshLook() {
 // ── 顔 ──
 const FACES = Object.keys(face.PRESETS); let faceI = 0;
 const ja = (slot, id) => PART_LABELS[slot][id]?.ja ?? id;
-function faceLabels() { const s = avatar.faceSel; $("tFace").textContent = `表情: ${EXPRESSIONS[FACES[faceI]]?.ja ?? FACES[faceI]}`; $("tEyes").textContent = `目: ${ja("eyes", s.eyes)}`; $("tBrow").textContent = `眉: ${ja("brows", s.brows)}`; $("tMouth").textContent = `口: ${ja("mouth", s.mouth)}`; }
+function faceLabels() { const s = avatar.faceSel; $("tFace").textContent = `表情: ${face.presetName?.(FACES[faceI]).ja ?? EXPRESSIONS[FACES[faceI]]?.ja ?? FACES[faceI]}`; $("tEyes").textContent = `目: ${ja("eyes", s.eyes)}`; $("tBrow").textContent = `眉: ${ja("brows", s.brows)}`; $("tMouth").textContent = `口: ${ja("mouth", s.mouth)}`; }
 // 顔全体を1枚に描いた絵(PNG)を貼る(古いやり方)。顔の絵と同じ座標(1024×768)で置く
 //   置き方: 絵の基準点(ax, ay)を、下絵の(512 + x, 586 + y)に、大きさ s 倍で合わせる(基準点=鼻の点の左右・口の高さ)
 const FACE_IMG = { on: false, img: null, ax: 445, ay: 596, x: 0, y: 200, s: 1 };

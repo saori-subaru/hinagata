@@ -90,8 +90,7 @@ const MAIN = [
   ["face.images.brow.src", L("眉の絵", "Brow picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/brow.png", "null = the bundled img/parts/brow.png") }],
   ["face.images.mouth.src", L("口の絵", "Mouth picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/mouth.png", "null = the bundled img/parts/mouth.png") }],
   ["face.images.nose.src", L("鼻の絵", "Nose picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = なし", "null = none") }],
-  ...[["happy", "にこっ", "happy"], ["surprised", "びっくり", "surprised"], ["glare", "じとー", "glare"], ["sleeping", "すやすや", "sleeping"]].flatMap(([id, ja, en]) => [["eye", "目", "eye"], ["brow", "眉", "brow"], ["mouth", "口", "mouth"]].map(([k, kj, ke]) =>
-    [`face.images.sets.${id}.${k}.src`, L(`${kj}の絵(${ja})`, `${ke[0].toUpperCase() + ke.slice(1)} picture (${en})`), { section: L("描いた表情", "Drawn expressions"), help: L(`表情「絵: ${ja}」で使う。null = ふつうの絵${id === "sleeping" && k === "eye" ? "(目は とじ目の絵)" : ""}`, `Used by the expression "Picture: ${en}". null = the normal picture${id === "sleeping" && k === "eye" ? " (the eye: the closed-eye picture)" : ""}`) }])),
+  ["face.drawn", L("描いた表情", "Drawn expressions"), { section: L("描いた表情", "Drawn expressions"), help: L("[{ id, name, eye, brow, mouth, cheeks, blink }] 名前をつけた表情をいくつでも。eye / brow / mouth は絵(data URL か パス)、null = ふつうの絵。表情とパーツの名前は image@<id>", "[{ id, name, eye, brow, mouth, cheeks, blink }] named expressions, as many as you like. eye / brow / mouth: pictures (data URL or path), null = the normal picture. Their expression and part ids are image@<id>") }],
 
   // hair
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
@@ -209,7 +208,8 @@ export function checkOptions(options) {
     if (e.type === "number") { if (typeof v !== "number" || !isFinite(v)) out.push({ path, problem: "not a number" }); else if (!e.soft && (v < e.min || v > e.max)) out.push({ path, problem: `outside ${e.min}..${e.max}` }); }
     else if (e.type === "boolean") { if (typeof v !== "boolean") out.push({ path, problem: "not true / false" }); }
     else if (e.type === "color") { if (typeof v !== "string" || !/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(v)) out.push({ path, problem: "not a #rrggbb color" }); }
-    else if (e.type === "enum") { if (!e.options.some((o) => o.value === v)) out.push({ path, problem: `not one of ${e.options.map((o) => o.value).join(", ")}` }); }
+    else if (e.type === "enum") { if (pre === "face.parts" && typeof v === "string" && v.startsWith("image@")) { if (!(options.face?.drawn ?? []).some((d) => `image@${d.id}` === v)) out.push({ path, problem: "no drawn expression with that id (face.drawn)" }); }
+      else if (!e.options.some((o) => o.value === v)) out.push({ path, problem: `not one of ${e.options.map((o) => o.value).join(", ")}` }); }
     else if (e.type === "image") { if (typeof v !== "string") out.push({ path, problem: "not an image path or data URL" }); } } };
   walk(options, "");
   return out;

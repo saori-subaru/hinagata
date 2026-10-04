@@ -610,14 +610,9 @@ export const DEFAULTS = {
         "src": null,
         "width": 0,
         "dy": 0
-      },
-      "sets": {
-        "happy": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },
-        "surprised": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },
-        "glare": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },
-        "sleeping": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } }
       }
     },
+    "drawn": [],
     "shading": {
       "weight": 1,
       "y": 1.04,

@@ -8,11 +8,9 @@ export const PART_LABELS = {
   nose: { shadow: { ja: "影", en: "Shadow" }, none: { ja: "なし", en: "None" }, image: { ja: "絵の鼻", en: "Picture" } },
   cheeks: { none: { ja: "なし", en: "None" }, flush: { ja: "ぽっ", en: "Flush" } },
 };
-// Drawn expressions: besides the drawn face itself (part id "image" = ふつう), each of these can have its own drawn eye, brow and mouth
-// (options.face.images.sets.<id>). Their part ids are "image_<id>"; a part not drawn for it falls back to the ふつう picture.
-export const DRAWN = ["happy", "surprised", "glare", "sleeping"];
-for (const id of DRAWN) { const n = { happy: ["にこっ", "happy"], surprised: ["びっくり", "surprised"], glare: ["じとー", "glare"], sleeping: ["すやすや", "sleeping"] }[id];
-  PART_LABELS.eyes[`image_${id}`] = { ja: `絵の目(${n[0]})`, en: `Picture (${n[1]})` }; PART_LABELS.brows[`image_${id}`] = { ja: `絵の眉(${n[0]})`, en: `Picture (${n[1]})` }; PART_LABELS.mouth[`image_${id}`] = { ja: `絵の口(${n[0]})`, en: `Picture (${n[1]})` }; }
+// Drawn expressions of a character (options.face.drawn: [{ id, name, eye, brow, mouth, cheeks, blink }]) add their own part ids
+// "image@<id>" and expressions of the same id; they belong to the character, so they are not listed here (face/index.js makes them).
+export const DRAWN_PREFIX = "image@";
 // Expressions: a set of parts under one name. avatar.setFace("happy") picks one; slots it doesn't list keep their part.
 export const EXPRESSIONS = {
   normal: { ja: "ふつう", en: "Normal", parts: { eyes: "round", brows: "normal", mouth: "smile", cheeks: "none" } },
@@ -23,7 +21,6 @@ export const EXPRESSIONS = {
   classic: { ja: "ふつう(前)", en: "Classic", parts: { eyes: "classic", brows: "classic", mouth: "smile", cheeks: "none" } },
   image: { ja: "絵: ふつう", en: "Picture: normal", parts: { eyes: "image", brows: "image", mouth: "image", cheeks: "none" } },
 };
-for (const id of DRAWN) EXPRESSIONS[`image_${id}`] = { ja: `絵: ${EXPRESSIONS[id].ja}`, en: `Picture: ${EXPRESSIONS[id].en.toLowerCase()}`, parts: { eyes: `image_${id}`, brows: `image_${id}`, mouth: `image_${id}`, cheeks: EXPRESSIONS[id].parts.cheeks } };
 // Older recipes and pages used the Japanese names as ids: accept them
 const JA_ID = {}; for (const [slot, L] of Object.entries(PART_LABELS)) { JA_ID[slot] = {}; for (const [id, l] of Object.entries(L)) JA_ID[slot][l.ja] = id; }
 const JA_EXPR = Object.fromEntries(Object.entries(EXPRESSIONS).map(([id, e]) => [e.ja, id]));

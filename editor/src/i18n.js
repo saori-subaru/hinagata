@@ -26,9 +26,11 @@ const T = {
     stats: (v, b, ms) => [`${v.toLocaleString()} verts · ${b} bones`, `built in ${ms} ms`], quality: "Mesh quality", q_game: "Game (fast)", q_high: "High (detailed)",
     imageNote: "Pictures are kept in the recipe; very large ones may not fit in browser storage.",
     drawn: "Drawn parts", tplSheet: "Template (every expression)", tplParts: "Template (normal only)", tplRead: "Load drawn template…", tplClear: "Clear all",
-    tplHelp: "Write out a template, draw the parts in its red frames (on a transparent layer), save that layer as a PNG and load it. Only frames with something drawn in them are read. Expressions: “Picture: …” above.",
+    tplHelp: "Add named expressions, then write out a template. Draw the parts in its red frames (on a transparent layer), save that layer as a PNG and load it: only frames with something drawn in them are read. Parts left out use the normal ones. Switch expressions with “Picture: …” above.",
     tplRead0: "Nothing was drawn in the frames", tplReadN: (n) => `Read ${n} part${n === 1 ? "" : "s"}`, tplBad: "That picture isn't a face template (4:3 or 2:1)",
-    f_eye: "Eye", f_eyeClosed: "Closed", f_brow: "Brow", f_mouth: "Mouth", f_nose: "Nose", confirmClearDrawn: "Remove every drawn part from this character?",
+    f_eye: "Eye", f_eyeClosed: "Closed", f_brow: "Brow", f_mouth: "Mouth", f_nose: "Nose", confirmClearDrawn: "Remove every drawn picture from this character? (the expressions stay)",
+    pic: "Picture", normalPic: "Normal", exprName: "Expression name", newExpr: (n) => `Expression ${n}`, addExpr: "Add expression", flush: "Flush", blink: "Blinks", delExpr: "Remove",
+    confirmDelExpr: (n) => `Remove the expression “${n}” and its pictures?`, tplCount: "This template was made for a different number of expressions. Write it out again (or match the expressions) and redraw",
   },
   ja: {
     library: "キャラ一覧", name: "キャラの名前", undo: "元に戻す", redo: "やり直す", close: "閉じる",
@@ -54,9 +56,11 @@ const T = {
     stats: (v, b, ms) => [`頂点 ${v.toLocaleString()} · 骨 ${b}`, `生成 ${ms} ms`], quality: "メッシュの細かさ", q_game: "ゲーム用(速い)", q_high: "高画質(細かい)",
     imageNote: "絵はレシピの中に入る。大きすぎる絵はブラウザに保存しきれないことがある。",
     drawn: "描いたパーツ", tplSheet: "テンプレを書き出す(表情ぜんぶ)", tplParts: "テンプレ(ふつうだけ)", tplRead: "描いたテンプレを読む…", tplClear: "ぜんぶ外す",
-    tplHelp: "テンプレを書き出して、赤い枠の中にパーツを描く(透明なレイヤーに)。そのレイヤーだけをPNGで保存して読むと、描いた枠だけ取りこむ。表情は上の「絵: …」で切りかえる。",
+    tplHelp: "表情を名前をつけて足してから、テンプレを書き出す。赤い枠の中にパーツを描き(透明なレイヤーに)、そのレイヤーだけをPNGで保存して読むと、描いた枠だけ取りこむ。描かなかったパーツは ふつう の絵を使う。表情は上の「絵: …」で切りかえる。",
     tplRead0: "枠の中に何も描かれていなかった", tplReadN: (n) => `${n}個のパーツを読んだ`, tplBad: "顔のテンプレではない絵(4:3 か 2:1)",
-    f_eye: "目", f_eyeClosed: "とじ目", f_brow: "眉", f_mouth: "口", f_nose: "鼻", confirmClearDrawn: "このキャラの描いたパーツを全部外す?",
+    f_eye: "目", f_eyeClosed: "とじ目", f_brow: "眉", f_mouth: "口", f_nose: "鼻", confirmClearDrawn: "このキャラの描いた絵を全部外す?(表情は残る)",
+    pic: "絵", normalPic: "ふつう", exprName: "表情の名前", newExpr: (n) => `表情${n}`, addExpr: "表情を足す", flush: "ぽっ", blink: "まばたき", delExpr: "消す",
+    confirmDelExpr: (n) => `表情「${n}」とその絵を消す?`, tplCount: "表情の数が違うキャラのテンプレ。書き出し直して(か、表情の数を合わせて)描き直して",
   },
 };
 

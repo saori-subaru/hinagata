@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, SHEET_TILES } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS } from "../../src/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 
@@ -96,7 +96,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     ta.addEventListener("change", () => { try { const x = JSON.parse(ta.value); ta.classList.remove("bad"); set({ [e.path]: x }); } catch { ta.classList.add("bad"); } });
     return h("div", { class: "field" }, labelOf(e, id), ta, helpOf(e));
   }
-  const fieldOf = (e) => { const v = store.get(e.path); return ({ number: numberField, boolean: boolField, color: colorField, enum: enumField, image: imageField })[e.type]?.(e, v) ?? jsonField(e, v); };
+  const DRAWN_SLOTS = new Set(["face.parts.eyes", "face.parts.brows", "face.parts.mouth"]);   // the drawn expressions' parts can be picked one slot at a time too
+  const fieldOf = (e0) => { const e = DRAWN_SLOTS.has(e0.path) ? { ...e0, options: [...e0.options, ...drawnList().map((d) => ({ value: `image@${d.id}`, label: { ja: drawnName(d), en: drawnName(d) } }))] } : e0, v = store.get(e.path); return ({ number: numberField, boolean: boolField, color: colorField, enum: enumField, image: imageField })[e.type]?.(e, v) ?? jsonField(e, v); };
 
   // ── sections ──
   function costNote(entries) {
@@ -116,8 +117,9 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     if (tab === "face") {
       const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
+      const drawnX = drawnList().map((d) => { const id = `image@${d.id}`; return { ja: drawnName(d), en: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" } }; });   // the character's drawn expressions
       return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))),
-        h("div", { class: "chips" }, Object.entries(EXPRESSIONS).map(([k, x]) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => {
+        h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => {
           const ch = {}; for (const [kk, v] of Object.entries(x.parts)) ch[`face.parts.${kk}`] = v; set(ch); } }, L(x)))));
     }
     if (tab === "look") {
@@ -126,17 +128,38 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return null;
   }
-  // drawn face parts: one template for all of them (write it out, draw, read it back), and what each expression has
-  const isDrawn = (e) => e.group === "face" && e.type === "image";
+  // drawn face parts: one template for all of them (write it out, draw, read it back), the character's own drawn expressions, and what each has
+  const isDrawn = (e) => e.group === "face" && (e.type === "image" || e.path === "face.drawn");
+  const drawnList = () => (store.get("face.drawn") ?? []).filter((d) => d && d.id != null);
+  const drawnName = (d) => `${t("pic")}: ${d.name || d.id}`;
+  const setDrawn = (list, extra = {}) => set({ "face.drawn": list, ...extra });
   function drawnBlock() {
-    const COLS = ["eye", "eyeClosed", "brow", "mouth", "nose"];
-    const any = SHEET_TILES.some((T) => T.frames.some((k) => store.get(T.path(k))));
+    const list = drawnList(), base = (k) => store.get(`face.images.${k}.src`);
+    const pic = (k, v) => h("div", { class: "pic" }, v ? h("img", { class: "thumb", src: v, alt: "" }) : h("span", { class: "thumb empty" }, "–"), h("span", {}, t(`f_${k}`)));
+    const anyPic = ["eye", "eyeClosed", "brow", "mouth", "nose"].some(base) || list.some((d) => d.eye || d.brow || d.mouth);
+    const edit = (d, ch) => setDrawn(list.map((q) => q === d ? { ...q, ...ch } : q));
+    const remove = (d) => { if (!confirm(t("confirmDelExpr", d.name || d.id))) return; const id = `image@${d.id}`, extra = {};
+      for (const k of ["eyes", "brows", "mouth"]) if (store.get(`face.parts.${k}`) === id) extra[`face.parts.${k}`] = "image";   // the face was showing it: back to the drawn ふつう
+      setDrawn(list.filter((q) => q !== d), extra); };
+    const nameIn = h("input", { class: "num grow", placeholder: t("exprName"), "aria-label": t("exprName") });
+    const add = () => { let n = list.length + 1; const ids = new Set(list.map((d) => String(d.id))); let id; do id = `e${n++}`; while (ids.has(id));
+      setDrawn([...list, { id, name: nameIn.value.trim() || t("newExpr", list.length + 1), eye: null, brow: null, mouth: null, cheeks: "none", blink: true }]); };
+    nameIn.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
+    const cards = [h("div", { class: "drow" }, h("div", { class: "head" }, h("b", {}, t("normalPic"))), h("div", { class: "pics" }, ["eye", "eyeClosed", "brow", "mouth", "nose"].map((k) => pic(k, base(k)))))];
+    for (const d of list) {
+      const nm = h("input", { class: "num name", value: d.name ?? "", "aria-label": t("exprName") }); nm.addEventListener("change", () => edit(d, { name: nm.value.trim() || d.id }));
+      cards.push(h("div", { class: "drow" }, h("div", { class: "head" }, nm,
+          h("button", { class: "chip", type: "button", "aria-pressed": String((d.cheeks ?? "none") === "flush"), onclick: () => edit(d, { cheeks: (d.cheeks ?? "none") === "flush" ? "none" : "flush" }) }, t("flush")),
+          h("button", { class: "chip", type: "button", "aria-pressed": String(d.blink !== false), onclick: () => edit(d, { blink: d.blink === false }) }, t("blink")),
+          h("button", { class: "chip", type: "button", onclick: () => remove(d) }, t("delExpr"))),
+        h("div", { class: "pics" }, ["eye", "brow", "mouth"].map((k) => pic(k, d[k])))));
+    }
     return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("drawn"))),
       h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("sheet") }, t("tplSheet")), h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplParts")),
-        h("button", { class: "btn small", type: "button", onclick: () => ctx.onReadTemplate() }, t("tplRead")), any ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const T of SHEET_TILES) for (const k of T.frames) ch[T.path(k)] = null; set(ch); } }, t("tplClear")) : null),
-      h("table", { class: "drawn" }, h("tr", {}, h("th", {}), COLS.map((k) => h("th", {}, t(`f_${k}`)))),
-        SHEET_TILES.map((T) => h("tr", {}, h("th", {}, L(T.name)), COLS.map((k) => { const v = T.frames.includes(k) ? store.get(T.path(k)) : undefined;
-          return h("td", {}, v ? h("img", { class: "thumb", src: v, alt: "", title: T.path(k) }) : h("span", { class: "cost" }, v === undefined ? "" : "–")); })))),
+        h("button", { class: "btn small", type: "button", onclick: () => ctx.onReadTemplate() }, t("tplRead")),
+        anyPic ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const k of ["eye", "eyeClosed", "brow", "mouth", "nose"]) ch[`face.images.${k}.src`] = null; ch["face.drawn"] = list.map((d) => ({ ...d, eye: null, brow: null, mouth: null })); set(ch); } }, t("tplClear")) : null),
+      h("div", { class: "drawn" }, cards),
+      h("div", { class: "row add" }, nameIn, h("button", { class: "btn small", type: "button", onclick: add }, t("addExpr"))),
       h("div", { class: "help" }, t("tplHelp")));
   }
   function advanced(entries) {
