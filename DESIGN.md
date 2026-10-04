@@ -158,7 +158,7 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - Changes with an `apply` method happen at once; others rebuild the avatar when the slider is released (the cache makes repeats fast). Undo / redo for every change (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z).
 - Characters saved in the browser (new, duplicate, delete, rename); share link (`?o=`), recipe JSON save / open, copy as code (only what differs), PNG (transparent), GLB.
 - View: camera buttons, clay / wireframe / bones / floor, background, motions with play / pause / speed, mesh quality (game / high).
-- Not yet: face part templates and reading framed drawings (still in `body.html`), dragging bang tufts, comparing two characters, `avatar.rebuild()` for partial rebuilds, a dark theme.
+- Not yet: dragging bang tufts, comparing two characters, `avatar.rebuild()` for partial rebuilds, a dark theme.
 
 - 3D view on the left, panel on the right: Body / Face / Hair / Outfit / Motion.
 - Panel generated from `options.schema.json` (public tier). An "Advanced" section shows sculpt values.
@@ -176,7 +176,7 @@ Engine: **yes** = the engine has it, the editor only needs UI; **part** = there,
 | recipe | new from a preset; save in the browser (a list of characters); save / load JSON; share by URL (`?o=`); copy as code (only what differs); undo / redo of every change; reset a section / all; count of values that differ from the defaults; two recipes side by side | editor-side |
 | export | GLB (A-pose, no outlines) | yes |
 | | PNG (transparent, fixed views) | editor-side |
-| | face part template (frames to draw in) and reading a framed PNG back | part (lives in `body.html`, move into the library) |
+| | face part template (frames to draw in) and reading a framed PNG back | done (2026-10-04): `src/face/sheet.js`, used by the editor; `body.html` still has its own copy of the one-face template |
 | | VRM | no |
 | view | orbit camera, view buttons (front / side / back / 3-4 / face), background, floor and shadow, reference image overlay | editor-side |
 | | shading (toon / smooth / flat), outline (on / width / color), clay, wireframe, bones, quality, vertex count and build time | yes |
@@ -455,3 +455,6 @@ When the face editor is built for real (beyond the check page's 枠つきPNGを�
 ## Decisions
 
 Decided: working name "Hinagata" (check npm before publishing); code-drawn face is the default; first body sliders are head size, chubbiness and leg length; chibi proportions only.
+
+**Drawn expressions and the face sheet (2026-10-04, done)**: drawn faces had one expression only (絵), so a character drawn by hand could not smile. Now four more expressions can be drawn — にこっ, びっくり, じとー, すやすや (`face.images.sets.<id>.{eye,brow,mouth}`, part ids `image_<id>`, expressions 「絵: …」). A part not drawn for an expression falls back to the ふつう picture (a sleeping eye: to the drawn closed eye, then the code's). The closed eye and the nose stay single slots. `src/face/sheet.js` makes the templates and reads them back: "parts" (the face picture's own 1024×768, as `body.html` had) and "sheet" (3×2 tiles of it: ふつう with all five frames, then one tile per drawn expression with that expression's code face faintly as a guide, and a how-to tile). Reading takes either (by its 4:3 or 2:1 shape) and keeps only frames with something drawn in them, so redrawing one part means drawing just that frame. The editor's face tab replaces the five picture loaders with this (write out / read back, and a table of what each expression has); one-picture loading moved to Advanced. (Saori: エディタでもテンプレ一枚を読み込みたい / 表情も一種類しか登録できない)
+

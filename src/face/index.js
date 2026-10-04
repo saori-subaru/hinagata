@@ -2,12 +2,12 @@
 // Parts are code-drawn by default; image parts (img/parts/*.png, see facekit/) are a preset.
 import * as THREE from "three";
 
-import { PART_LABELS, EXPRESSIONS, partIds, expressionId } from "./names.js";
+import { PART_LABELS, EXPRESSIONS, DRAWN, partIds, expressionId } from "./names.js";
 import { shaded } from "../materials.js";
-export { PART_LABELS, EXPRESSIONS, partIds, expressionId };
+export { PART_LABELS, EXPRESSIONS, DRAWN, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS = new Set(["round", "classic", "surprised", "glare", "image"]);
+const BLINKS = new Set(["round", "classic", "surprised", "glare", "image", "image_surprised", "image_glare"]);
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -46,8 +46,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, eyeClosed: { src: OPT.face.images.eyeClosed?.src ?? null, w: OPT.face.images.eyeClosed?.width ?? 0, dx: OPT.face.images.eyeClosed?.dx ?? 0.004, dy: OPT.face.images.eyeClosed?.dy ?? 0.004 }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
     nose: { src: OPT.face.images.nose?.src ?? null, w: OPT.face.images.nose?.width ?? 0, dx: 0, dy: OPT.face.images.nose?.dy ?? 0 } };   // nose: no picture unless one is given
   const NOSEP = { x: 0, y: 0.929 + OPT.body.sculpt.nose.lift - FACE.dy };   // the nose tip on the face picture (head space, same as the tip in body/index.js)
+  // drawn expressions (face.images.sets): their own eye / brow / mouth, placed like the ふつう ones ("eye.happy" …)
+  for (const id of DRAWN) for (const k of ["eye", "brow", "mouth"]) PART_IMG[`${k}.${id}`] = { ...PART_IMG[k], src: OPT.face.images.sets?.[id]?.[k]?.src ?? null };
   for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
   const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
+  const imgOr = (keys, x, y) => { const k = keys.find((q) => PART_IMG[q]?.img); if (k) imgPart(k, x, y); return !!k; };   // the first of these pictures that is loaded
   const PARTS = {
     eyes: {
       image: () => imgPart("eye", EYE.x, EYE.y),
@@ -135,6 +138,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     if (B.cheeks.on) for (const m of [1, -1]) soft(m * B.cheeks.x, B.cheeks.y, B.cheeks.size, 0.68, B.cheeks.color, B.cheeks.strength);
     if (B.nose.on) soft(0, 0.929 + OPT.body.sculpt.nose.lift - FACE.dy, B.nose.size, 0.85, B.nose.color, B.nose.strength);   // 鼻先(頭の座標。body/index.js の鼻の先端と同じ高さ)
   }
+  for (const id of DRAWN) {   // a part not drawn for this expression falls back to the ふつう picture (a sleeping eye: to the closed eye, then the code's)
+    PARTS.eyes[`image_${id}`] = id === "sleeping" ? (m) => { if (!imgOr([`eye.${id}`, "eyeClosed"], EYE.x, EYE.y)) PARTS.eyes.closed(m); } : () => imgOr([`eye.${id}`, "eye"], EYE.x, EYE.y);
+    PARTS.brows[`image_${id}`] = () => imgOr([`brow.${id}`, "brow"], BROW.x, BROW.y);
+    PARTS.mouth[`image_${id}`] = () => imgOr([`mouth.${id}`, "mouth"], MOUTHP.x, MOUTHP.y); }
   const SLOTS = ["nose", "brows", "eyes", "cheeks", "mouth"];   // 下から順に重ねる
   const SIDED = { eyes: true, brows: true, cheeks: true };
   const PRESETS = Object.fromEntries(Object.entries(EXPRESSIONS).map(([id, e]) => [id, e.parts]));   // expression id → parts
@@ -142,7 +149,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
     drawBlush();
-    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && BLINKS.has(sel.eyes) ? (sel.eyes === "image" && PART_IMG.eyeClosed.img ? "imageClosed" : "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
+    for (const slot of SLOTS) { const name = slot === "eyes" && blinking && BLINKS.has(sel.eyes) ? (sel.eyes.startsWith("image") && PART_IMG.eyeClosed.img ? "imageClosed" : "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       if (SIDED[slot]) for (const m of [1, -1]) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
       else draw(1); }
     faceTex.needsUpdate = true;

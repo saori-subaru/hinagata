@@ -4016,7 +4016,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 63,
+   "order": 75,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4034,7 +4034,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 64,
+   "order": 76,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4075,7 +4075,7 @@
      }
     }
    ],
-   "order": 65,
+   "order": 77,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4116,7 +4116,7 @@
      }
     }
    ],
-   "order": 66,
+   "order": 78,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4150,7 +4150,7 @@
      }
     }
    ],
-   "order": 67,
+   "order": 79,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4358,7 +4358,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 68,
+   "order": 80,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4376,7 +4376,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 69,
+   "order": 81,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4410,7 +4410,7 @@
      }
     }
    ],
-   "order": 70,
+   "order": 82,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4451,7 +4451,7 @@
      }
     }
    ],
-   "order": 71,
+   "order": 83,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4475,7 +4475,7 @@
    "min": 0.2,
    "max": 0.4,
    "step": 0.005,
-   "order": 74,
+   "order": 86,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4503,7 +4503,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 75,
+   "order": 87,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4531,7 +4531,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 76,
+   "order": 88,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4616,7 +4616,7 @@
    "min": 0.22,
    "max": 0.4,
    "step": 0.005,
-   "order": 72,
+   "order": 84,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4683,7 +4683,7 @@
    "min": 0,
    "max": 0.4,
    "step": 0.01,
-   "order": 73,
+   "order": 85,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4705,7 +4705,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 77,
+   "order": 89,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4739,7 +4739,7 @@
      }
     }
    ],
-   "order": 78,
+   "order": 90,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4757,7 +4757,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 79,
+   "order": 91,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4775,7 +4775,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 83,
+   "order": 95,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4797,7 +4797,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 84,
+   "order": 96,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4859,7 +4859,7 @@
      }
     }
    ],
-   "order": 80,
+   "order": 92,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4911,7 +4911,7 @@
      }
     }
    ],
-   "order": 81,
+   "order": 93,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4933,7 +4933,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 82,
+   "order": 94,
    "nullable": true,
    "section": {
     "ja": "鎧",
@@ -4959,7 +4959,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 85,
+   "order": 97,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4980,7 +4980,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 86,
+   "order": 98,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -5042,7 +5042,7 @@
      }
     }
    ],
-   "order": 87,
+   "order": 99,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5094,7 +5094,7 @@
      }
     }
    ],
-   "order": 88,
+   "order": 100,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5128,7 +5128,7 @@
      }
     }
    ],
-   "order": 89,
+   "order": 101,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5150,7 +5150,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 90,
+   "order": 102,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5168,7 +5168,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 91,
+   "order": 103,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5186,7 +5186,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 92,
+   "order": 104,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5204,7 +5204,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 96,
+   "order": 108,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5222,7 +5222,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 97,
+   "order": 109,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5240,7 +5240,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 98,
+   "order": 110,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5353,7 +5353,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 93,
+   "order": 105,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5371,7 +5371,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 94,
+   "order": 106,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5392,7 +5392,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 95,
+   "order": 107,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5410,7 +5410,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 57,
+   "order": 69,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5431,7 +5431,7 @@
    "min": 10,
    "max": 60,
    "step": 1,
-   "order": 58,
+   "order": 70,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5474,7 +5474,7 @@
    "min": 0,
    "max": 0.6,
    "step": 0.01,
-   "order": 59,
+   "order": 71,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5533,7 +5533,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 60,
+   "order": 72,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5551,7 +5551,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 61,
+   "order": 73,
    "nullable": true,
    "section": {
     "ja": "塗り",
@@ -5580,7 +5580,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 62,
+   "order": 74,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5714,7 +5714,7 @@
      }
     }
    ],
-   "order": 52,
+   "order": 64,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -5762,7 +5762,7 @@
      }
     }
    ],
-   "order": 53,
+   "order": 65,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -5780,7 +5780,7 @@
    "tier": "main",
    "cost": "hair",
    "apply": "setHair",
-   "order": 54,
+   "order": 66,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -6727,7 +6727,7 @@
    "min": 0.6,
    "max": 1.6,
    "step": 0.01,
-   "order": 55,
+   "order": 67,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -6751,7 +6751,7 @@
    "min": -180,
    "max": 180,
    "step": 5,
-   "order": 56,
+   "order": 68,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -8089,6 +8089,34 @@
       "ja": "絵のとじ目",
       "en": "Picture (closed)"
      }
+    },
+    {
+     "value": "image_happy",
+     "label": {
+      "ja": "絵の目(にこっ)",
+      "en": "Picture (happy)"
+     }
+    },
+    {
+     "value": "image_surprised",
+     "label": {
+      "ja": "絵の目(びっくり)",
+      "en": "Picture (surprised)"
+     }
+    },
+    {
+     "value": "image_glare",
+     "label": {
+      "ja": "絵の目(じとー)",
+      "en": "Picture (glare)"
+     }
+    },
+    {
+     "value": "image_sleeping",
+     "label": {
+      "ja": "絵の目(すやすや)",
+      "en": "Picture (sleeping)"
+     }
     }
    ],
    "order": 22,
@@ -8151,6 +8179,34 @@
       "ja": "絵の眉",
       "en": "Picture"
      }
+    },
+    {
+     "value": "image_happy",
+     "label": {
+      "ja": "絵の眉(にこっ)",
+      "en": "Picture (happy)"
+     }
+    },
+    {
+     "value": "image_surprised",
+     "label": {
+      "ja": "絵の眉(びっくり)",
+      "en": "Picture (surprised)"
+     }
+    },
+    {
+     "value": "image_glare",
+     "label": {
+      "ja": "絵の眉(じとー)",
+      "en": "Picture (glare)"
+     }
+    },
+    {
+     "value": "image_sleeping",
+     "label": {
+      "ja": "絵の眉(すやすや)",
+      "en": "Picture (sleeping)"
+     }
     }
    ],
    "order": 23,
@@ -8212,6 +8268,34 @@
      "label": {
       "ja": "絵の口",
       "en": "Picture"
+     }
+    },
+    {
+     "value": "image_happy",
+     "label": {
+      "ja": "絵の口(にこっ)",
+      "en": "Picture (happy)"
+     }
+    },
+    {
+     "value": "image_surprised",
+     "label": {
+      "ja": "絵の口(びっくり)",
+      "en": "Picture (surprised)"
+     }
+    },
+    {
+     "value": "image_glare",
+     "label": {
+      "ja": "絵の口(じとー)",
+      "en": "Picture (glare)"
+     }
+    },
+    {
+     "value": "image_sleeping",
+     "label": {
+      "ja": "絵の口(すやすや)",
+      "en": "Picture (sleeping)"
      }
     }
    ],
@@ -8789,6 +8873,282 @@
    "soft": true,
    "section": {
     "en": "images › nose"
+   }
+  },
+  "face.images.sets.happy.eye.src": {
+   "path": "face.images.sets.happy.eye.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "目の絵(にこっ)",
+    "en": "Eye picture (happy)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 52,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: にこっ」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: happy\". null = the normal picture"
+   }
+  },
+  "face.images.sets.happy.brow.src": {
+   "path": "face.images.sets.happy.brow.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "眉の絵(にこっ)",
+    "en": "Brow picture (happy)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 53,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: にこっ」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: happy\". null = the normal picture"
+   }
+  },
+  "face.images.sets.happy.mouth.src": {
+   "path": "face.images.sets.happy.mouth.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "口の絵(にこっ)",
+    "en": "Mouth picture (happy)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 54,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: にこっ」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: happy\". null = the normal picture"
+   }
+  },
+  "face.images.sets.surprised.eye.src": {
+   "path": "face.images.sets.surprised.eye.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "目の絵(びっくり)",
+    "en": "Eye picture (surprised)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 55,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: びっくり」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: surprised\". null = the normal picture"
+   }
+  },
+  "face.images.sets.surprised.brow.src": {
+   "path": "face.images.sets.surprised.brow.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "眉の絵(びっくり)",
+    "en": "Brow picture (surprised)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 56,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: びっくり」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: surprised\". null = the normal picture"
+   }
+  },
+  "face.images.sets.surprised.mouth.src": {
+   "path": "face.images.sets.surprised.mouth.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "口の絵(びっくり)",
+    "en": "Mouth picture (surprised)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 57,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: びっくり」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: surprised\". null = the normal picture"
+   }
+  },
+  "face.images.sets.glare.eye.src": {
+   "path": "face.images.sets.glare.eye.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "目の絵(じとー)",
+    "en": "Eye picture (glare)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 58,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: じとー」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: glare\". null = the normal picture"
+   }
+  },
+  "face.images.sets.glare.brow.src": {
+   "path": "face.images.sets.glare.brow.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "眉の絵(じとー)",
+    "en": "Brow picture (glare)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 59,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: じとー」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: glare\". null = the normal picture"
+   }
+  },
+  "face.images.sets.glare.mouth.src": {
+   "path": "face.images.sets.glare.mouth.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "口の絵(じとー)",
+    "en": "Mouth picture (glare)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 60,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: じとー」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: glare\". null = the normal picture"
+   }
+  },
+  "face.images.sets.sleeping.eye.src": {
+   "path": "face.images.sets.sleeping.eye.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "目の絵(すやすや)",
+    "en": "Eye picture (sleeping)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 61,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: すやすや」で使う。null = ふつうの絵(目は とじ目の絵)",
+    "en": "Used by the expression \"Picture: sleeping\". null = the normal picture (the eye: the closed-eye picture)"
+   }
+  },
+  "face.images.sets.sleeping.brow.src": {
+   "path": "face.images.sets.sleeping.brow.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "眉の絵(すやすや)",
+    "en": "Brow picture (sleeping)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 62,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: すやすや」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: sleeping\". null = the normal picture"
+   }
+  },
+  "face.images.sets.sleeping.mouth.src": {
+   "path": "face.images.sets.sleeping.mouth.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "口の絵(すやすや)",
+    "en": "Mouth picture (sleeping)"
+   },
+   "group": "face",
+   "tier": "main",
+   "cost": "instant",
+   "apply": null,
+   "order": 63,
+   "nullable": true,
+   "section": {
+    "ja": "描いた表情",
+    "en": "Drawn expressions"
+   },
+   "help": {
+    "ja": "表情「絵: すやすや」で使う。null = ふつうの絵",
+    "en": "Used by the expression \"Picture: sleeping\". null = the normal picture"
    }
   },
   "face.shading.weight": {

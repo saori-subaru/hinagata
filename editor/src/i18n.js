@@ -25,6 +25,10 @@ const T = {
     edited: (t) => `edited ${t}`, justNow: "just now", minAgo: (n) => `${n} min ago`, hAgo: (n) => `${n} h ago`,
     stats: (v, b, ms) => [`${v.toLocaleString()} verts · ${b} bones`, `built in ${ms} ms`], quality: "Mesh quality", q_game: "Game (fast)", q_high: "High (detailed)",
     imageNote: "Pictures are kept in the recipe; very large ones may not fit in browser storage.",
+    drawn: "Drawn parts", tplSheet: "Template (every expression)", tplParts: "Template (normal only)", tplRead: "Load drawn template…", tplClear: "Clear all",
+    tplHelp: "Write out a template, draw the parts in its red frames (on a transparent layer), save that layer as a PNG and load it. Only frames with something drawn in them are read. Expressions: “Picture: …” above.",
+    tplRead0: "Nothing was drawn in the frames", tplReadN: (n) => `Read ${n} part${n === 1 ? "" : "s"}`, tplBad: "That picture isn't a face template (4:3 or 2:1)",
+    f_eye: "Eye", f_eyeClosed: "Closed", f_brow: "Brow", f_mouth: "Mouth", f_nose: "Nose", confirmClearDrawn: "Remove every drawn part from this character?",
   },
   ja: {
     library: "キャラ一覧", name: "キャラの名前", undo: "元に戻す", redo: "やり直す", close: "閉じる",
@@ -49,13 +53,17 @@ const T = {
     edited: (t) => `${t}に編集`, justNow: "さっき", minAgo: (n) => `${n}分前`, hAgo: (n) => `${n}時間前`,
     stats: (v, b, ms) => [`頂点 ${v.toLocaleString()} · 骨 ${b}`, `生成 ${ms} ms`], quality: "メッシュの細かさ", q_game: "ゲーム用(速い)", q_high: "高画質(細かい)",
     imageNote: "絵はレシピの中に入る。大きすぎる絵はブラウザに保存しきれないことがある。",
+    drawn: "描いたパーツ", tplSheet: "テンプレを書き出す(表情ぜんぶ)", tplParts: "テンプレ(ふつうだけ)", tplRead: "描いたテンプレを読む…", tplClear: "ぜんぶ外す",
+    tplHelp: "テンプレを書き出して、赤い枠の中にパーツを描く(透明なレイヤーに)。そのレイヤーだけをPNGで保存して読むと、描いた枠だけ取りこむ。表情は上の「絵: …」で切りかえる。",
+    tplRead0: "枠の中に何も描かれていなかった", tplReadN: (n) => `${n}個のパーツを読んだ`, tplBad: "顔のテンプレではない絵(4:3 か 2:1)",
+    f_eye: "目", f_eyeClosed: "とじ目", f_brow: "眉", f_mouth: "口", f_nose: "鼻", confirmClearDrawn: "このキャラの描いたパーツを全部外す?",
   },
 };
 
 // Motion names (keys of POSES)
 const POSE = {
   aPose: ["A-pose", "Aポーズ"], tPose: ["T-pose", "Tポーズ"], idle: ["Idle", "立つ"], walk: ["Walk", "歩く"], wave: ["Wave", "手をふる"], cheer: ["Cheer", "ばんざい"],
-  sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"],
+  sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"], guard: ["Guard", "構え"],
   run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpCrouch: ["Jump (wind-up)", "跳ぶ(ため)"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpLeap: ["Running jump", "走って跳ぶ"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], sneak: ["Sneak (crouched walk)", "しのび足"], crawl: ["Crawl (base)", "はう構え"], mantleReach: ["Pull-up: reach", "よじ登る(手をかける)"], mantlePull: ["Pull-up: haul", "よじ登る(引き上げる)"], mantleKnee: ["Pull-up: knee on the edge", "よじ登る(ひざをかける)"], vault: ["Vault", "乗り越える"], glide: ["Glide (hanging overhead)", "滑空(頭の上の物にぶら下がる)"], swim: ["Swim (dog paddle)", "泳ぐ(犬かき)"], treadWater: ["Tread water", "立ち泳ぎ"], wade: ["Wade", "水の中を歩く"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
 };
 const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], kid: ["Kid", "子ども"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };

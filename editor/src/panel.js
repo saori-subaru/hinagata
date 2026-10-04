@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, SHEET_TILES } from "../../src/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 
@@ -27,7 +27,7 @@ const fmt = (v, step) => { const d = Math.max(0, Math.min(5, -Math.floor(Math.lo
 let uid = 0;
 
 /**
- * ctx: { store, quality, onQuality(q), onImage(path) }
+ * ctx: { store, quality, onQuality(q), onImage(path), onTemplate(kind), onReadTemplate() }
  */
 export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const { store } = ctx;
@@ -126,6 +126,19 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return null;
   }
+  // drawn face parts: one template for all of them (write it out, draw, read it back), and what each expression has
+  const isDrawn = (e) => e.group === "face" && e.type === "image";
+  function drawnBlock() {
+    const COLS = ["eye", "eyeClosed", "brow", "mouth", "nose"];
+    const any = SHEET_TILES.some((T) => T.frames.some((k) => store.get(T.path(k))));
+    return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("drawn"))),
+      h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("sheet") }, t("tplSheet")), h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplParts")),
+        h("button", { class: "btn small", type: "button", onclick: () => ctx.onReadTemplate() }, t("tplRead")), any ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const T of SHEET_TILES) for (const k of T.frames) ch[T.path(k)] = null; set(ch); } }, t("tplClear")) : null),
+      h("table", { class: "drawn" }, h("tr", {}, h("th", {}), COLS.map((k) => h("th", {}, t(`f_${k}`)))),
+        SHEET_TILES.map((T) => h("tr", {}, h("th", {}, L(T.name)), COLS.map((k) => { const v = T.frames.includes(k) ? store.get(T.path(k)) : undefined;
+          return h("td", {}, v ? h("img", { class: "thumb", src: v, alt: "", title: T.path(k) }) : h("span", { class: "cost" }, v === undefined ? "" : "–")); })))),
+      h("div", { class: "help" }, t("tplHelp")));
+  }
   function advanced(entries) {
     if (!entries.length) return null;
     const box = h("div", { class: "fold-in" });
@@ -150,9 +163,9 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const mine = ALL.filter((e) => tabOf(e) === tab), main = mine.filter((e) => e.tier === "main").sort((a, b) => a.order - b.order);
     panelEl.replaceChildren();
     const pre = presetBlock(); if (pre) panelEl.append(pre);
-    for (const [name, es] of sections(main.filter(shown))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
-    if (tab === "face") panelEl.append(h("div", { class: "note" }, t("imageNote")));
-    const adv = advanced(mine.filter((e) => e.tier === "advanced")); if (adv) panelEl.append(adv);
+    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
+    if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
+    const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced")]); if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });
     renderFoot();

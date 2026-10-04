@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -88,6 +88,20 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   store, quality: () => prefs.quality,
   onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
+  onTemplate: (kind) => { if (!vp.avatar) return; faceSheet(vp.avatar, { kind, lang: getLang() }).toBlob((b) => download(kind === "sheet" ? "hinagata-face-sheet.png" : "hinagata-face-parts.png", b), "image/png"); },
+  onReadTemplate: () => $("fileTpl").click(),
+});
+// a drawn template: only the frames with something in them are read; the face then shows the drawn parts (unless it already does)
+$("fileTpl").addEventListener("change", (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
+  const im = new Image(); im.onload = () => {
+    let r; try { r = readFaceSheet(vp.avatar, im); } catch { toast(t("tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
+    if (!r.read.length) { toast(t("tplRead0")); return; }
+    const ch = { ...r.changes };
+    if (!String(store.get("face.parts.eyes")).startsWith("image")) Object.assign(ch, { "face.parts.eyes": "image", "face.parts.brows": "image", "face.parts.mouth": "image" });
+    store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length));
+  };
+  im.onerror = () => toast(t("tplBad")); im.src = URL.createObjectURL(f);
 });
 const IMAGE_SLOT = { eye: "eyes", brow: "brows", mouth: "mouth", nose: "nose" };
 $("fileImg").addEventListener("change", (e) => {

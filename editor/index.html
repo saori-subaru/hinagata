@@ -143,6 +143,11 @@ button { cursor: pointer; }
 .json { width: 100%; min-height: 64px; font: 11px/1.4 var(--mono); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--raised); resize: vertical; }
 .json.bad { border-color: #c2410c; }
 .img { display: flex; align-items: center; gap: 8px; }
+.sec > .help { font-size: 11.5px; color: var(--muted); }
+table.drawn { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.drawn th { font-weight: 600; color: var(--ink-2); text-align: left; padding: 3px 4px; white-space: nowrap; }
+table.drawn td { padding: 3px 2px; text-align: center; }
+table.drawn .thumb { width: 38px; height: 28px; border-radius: 5px; border: 1px solid var(--line); background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 8px 8px; object-fit: contain; display: block; margin: 0 auto; }
 .img .thumb { width: 44px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 10px 10px; object-fit: contain; }
 .fold { border: 1px solid var(--line); border-radius: 14px; background: var(--raised); }
 .fold > summary { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: pointer; list-style: none; font-weight: 600; }
@@ -242,6 +247,7 @@ button { cursor: pointer; }
 </aside>
 <input type="file" id="fileJson" accept="application/json,.json" hidden>
 <input type="file" id="fileImg" accept="image/*" hidden>
+<input type="file" id="fileTpl" accept="image/*" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script type="module" src="./src/app.js"></script>
