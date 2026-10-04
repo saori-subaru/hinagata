@@ -1,0 +1,61 @@
+# ============================================================
+#  site.yml — the editor and the test page on Cloudflare Pages: https://hinagata.pages.dev
+#    /           → the editor (editor/)
+#    /body.html  → the test page (素体の確認ページ)
+#
+#  Runs on every push to main (and by hand: Actions → site → Run workflow), so what is pushed here is on the site a minute later.
+#  The station (devlog) still takes the latest main into its own /avatar/ when it deploys; this site doesn't wait for that.
+#
+#  🔑 Repository secrets (the same ones devlog and the games use):
+#     CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID  (⛔ never empty: the URL becomes /accounts//pages and the deploy fails)
+#  The Pages project "hinagata" is made on the first run.
+# ============================================================
+name: site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: site-deploy
+  cancel-in-progress: true
+
+env:
+  PROJECT: hinagata
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # wrangler 4
+
+      - name: Check the scripts parse (no deploy if not)
+        run: for f in $(find src editor -name '*.js'); do node --check "$f" || exit 1; done
+
+      - name: Make the Pages project if it isn't there
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main || true
+
+      - name: Build dist/ (what the site serves)
+        run: sh build_site.sh
+
+      - name: Upload to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 pages deploy dist --project-name "$PROJECT" --branch main
+
+      - name: Where it went
+        run: |
+          {
+            echo "## 🌐 Deployed"
+            echo ""
+            echo "**https://${PROJECT}.pages.dev** (editor) · https://${PROJECT}.pages.dev/body.html (test page)"
+          } >> "$GITHUB_STEP_SUMMARY"
