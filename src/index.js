@@ -275,7 +275,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     }
     if (bangsOn) {
       const B = OPT.hair.sculpt.nendo;
-      out.bangs = part(bangLocks(B, bangKit()), { coll: [], ell: null, stiff: B.lockStiff ?? 4, damping: 0.8 });
+      const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      out.bangs = part(specs, { coll: long ? lockColliders(J, BI, bodySdf) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 });
     }
     return out;
   }
@@ -446,7 +447,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const x = makeLocks(["bangs"]).bangs; if (x) { parts.bangs = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
     /** Where a tip of the nendo bangs is (avatar space, rest pose; just outside the hair): angle around the head (degrees, 0 = front), height (head space). */
-    bangTipAt(angle, y) { return bangTipAt(angle, y, bangKit()); },
+    bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
     async exportGLB() {

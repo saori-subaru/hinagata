@@ -2,7 +2,8 @@
 // Each tip of hair.sculpt.nendo.tips gets a dot on the face; dragging it moves the tip around the head (left / right) and up or down.
 // A dot rides on the head bone, so it stays on its tip while the character moves. Releasing it writes the tips into the recipe
 // (one undo step); the engine then rebuilds only the bangs (avatar.setBangs).
-// Table row: [angle (degrees around the head, 0 = front), tip height (head space), slope?, skew?, group?, sweep (degrees)?, extra thickness?, flick (m)?]
+// Table row: [angle (degrees around the head, 0 = front), tip height (head space), slope?, skew?, group?, sweep (degrees)?, extra thickness?, flick (m)?, width (×)?]
+// A tip can go down to the waist (the tuft then hangs off the head over the shoulders and the chest).
 import * as THREE from "three";
 
 const D2R = Math.PI / 180;
@@ -15,6 +16,7 @@ export function createBangTool({ vp, store, onSelect = () => {} }) {
   const geo = new THREE.SphereGeometry(0.0085, 16, 12);
   let on = false, sel = -1, drag = null, av = null;
   const tips = () => store.get("hair.sculpt.nendo.tips") ?? [];
+  const waist = () => av.internals.HT.toHead(0, av.internals.J.spine[1], 0)[1];   // the lowest a tip goes (head space): the waist
   const usable = () => store.get("hair.bangs") === "nendo";
 
   // a tip's point (avatar space, rest) → the head bone's own space (the dots are children of the head bone)
@@ -40,7 +42,7 @@ export function createBangTool({ vp, store, onSelect = () => {} }) {
     if (!drag) return; toNdc(e); if (!ray.ray.intersectPlane(plane, hit)) return;
     const l = av.bones.head.worldToLocal(hit.clone()), J = av.internals.J.head, [x, y, z] = av.internals.HT.toHead(l.x + J[0], l.y + J[1], l.z + J[2]);   // → the rest pose → head space
     const span = store.get("hair.sculpt.nendo.span") ?? 92, t = drag.tips[sel], a = Math.max(-span, Math.min(span, Math.atan2(x, Math.max(z, 0.02)) / D2R));
-    t[0] = +(a + (t[5] ?? 0)).toFixed(3); t[1] = +Math.max(0.82, Math.min(1.16, y - 0.006)).toFixed(3);   // the table keeps the angle before the sweep
+    t[0] = +(a + (t[5] ?? 0)).toFixed(3); t[1] = +Math.max(waist(), Math.min(1.16, y - 0.006)).toFixed(3);   // the table keeps the angle before the sweep
     group.children[sel]?.position.copy(headLocal(av.bangTipAt(a, t[1]))); drag.moved = true;
   });
   const up = () => { if (!drag) return; const d = drag; drag = null; vp.controls.enabled = true; if (d.moved) store.set({ "hair.sculpt.nendo.tips": d.tips }, { commit: true }); };
@@ -59,8 +61,8 @@ export function createBangTool({ vp, store, onSelect = () => {} }) {
     add() { write((T) => { const i = sel >= 0 ? sel : Math.floor(T.length / 2), j = Math.min(i + 1, T.length - 1), a = i === j ? T[i][0] + 8 : (T[i][0] + T[j][0]) / 2;
       T.splice(i + 1, 0, [+a.toFixed(3), +((T[i][1] + T[j][1]) / 2).toFixed(3)]); sel = i + 1; }); },
     remove() { if (sel < 0 || tips().length <= 2) return; write((T) => { T.splice(sel, 1); sel = -1; }); },
-    /** a value of the selected tuft's row (5: sweep, 6: extra thickness, 7: flick out (> 0) / curl in (< 0)) */
-    value(k) { return sel >= 0 ? (tips()[sel]?.[k] ?? 0) : 0; },
-    setValue(k, v) { if (sel < 0) return; write((T) => { const t = T[sel]; while (t.length <= k) t.push(t.length === 4 ? null : t.length === 2 ? store.get("hair.sculpt.nendo.slope") : 0); t[k] = v; }); },
+    /** a value of the selected tuft's row (5: sweep, 6: extra thickness, 7: flick out (> 0) / curl in (< 0), 8: width (×)) */
+    value(k) { const d = k === 8 ? 1 : 0; return sel >= 0 ? (tips()[sel]?.[k] ?? d) : d; },
+    setValue(k, v) { if (sel < 0) return; write((T) => { const t = T[sel]; while (t.length <= k) t.push(t.length === 4 ? null : t.length === 2 ? store.get("hair.sculpt.nendo.slope") : t.length === 8 ? 1 : 0); t[k] = v; }); },
   };
 }

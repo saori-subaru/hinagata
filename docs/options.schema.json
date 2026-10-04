@@ -6986,6 +6986,25 @@
     "en": "nendo"
    }
   },
+  "hair.sculpt.nendo.lockHangY": {
+   "path": "hair.sculpt.nendo.lockHangY",
+   "type": "number",
+   "default": 0.86,
+   "label": {
+    "en": "nendo › lock hang y"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setBangs",
+   "min": 0.43,
+   "max": 1.29,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
   "hair.sculpt.nendo.lockRoot": {
    "path": "hair.sculpt.nendo.lockRoot",
    "type": "number",

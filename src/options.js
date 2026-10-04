@@ -480,6 +480,7 @@ export const DEFAULTS = {
         "lockStiff": 4,
         "lockSpan": 13,
         "lockRise": 0.03,
+        "lockHangY": 0.86,
         "lockRoot": 70,
         "lockRootSpread": 0.45,
         "lockTaper": 0.08,
