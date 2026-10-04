@@ -98,7 +98,6 @@ const MAIN = [
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
-  ["hair.sculpt.shortLocks.lift", L("毛束の浮き", "Locks lift"), { when: { "hair.back": "short" }, min: 0, max: 1, step: 0.05, section: L("髪型", "Style"), help: L("1 = 髪の上にのせる(ふんわり) / 0 = 半分うめる(すっきり)", "1 = lying on the hair (fuller) / 0 = half sunk into it (sleeker)") }],
   ["hair.sculpt.ahogeSize", L("アホ毛の大きさ", "Ahoge size"), { when: { "hair.ahoge": true }, min: 0.6, max: 1.6, step: 0.01, section: L("髪型", "Style") }],
   ["hair.sculpt.ahogeDir", L("アホ毛の向き(度)", "Ahoge direction (°)"), { when: { "hair.ahoge": true }, min: -180, max: 180, step: 5, section: L("髪型", "Style"), help: L("0 = 前 / 90 = キャラの左", "0 = forward, 90 = toward the character's left") }],
   ["hair.paint.strands.on", L("髪の筋", "Strands"), { section: L("塗り", "Paint") }],

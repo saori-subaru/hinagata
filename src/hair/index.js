@@ -92,7 +92,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const EAR_GAP = OPT.hair.sculpt.earGap ?? { gap: 0.01, k: 0.006 };   // the hair keeps this far from the ears, with this much rounding
   const BACKV_TOP = OPT.hair.sculpt.backVolumeTop ?? null;   // fades out again toward the top (the sides get fuller, the top doesn't rise, no groove down the middle)
   const BACKV_Z = OPT.hair.sculpt.backVolumeZ ?? [0.12, -0.12], BACKV_Y = OPT.hair.sculpt.backVolumeY ?? [1.08, 1.3];   // where the extra volume fades in: front→back (z) and bottom→top (y)
-  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER0 = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean))) : null;   // the head without ears and face details
+  const BACKV = OPT.hair.sculpt.backVolume ?? 0, TAPER = OPT.hair.sculpt.taper ?? 0, TAPER_BACK = OPT.hair.sculpt.taperBack ?? 0, TMIN = 0.15, PEAK = OPT.hair.sculpt.peak ?? { depth: 0 }, SQ = OPT.hair.sculpt.square ?? 0, SHELL = OPT.hair.sculpt.shell, skullOnly = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape, ...PLANES].filter(Boolean))) : null;   // the head without ears and face details
   const skullSmooth = SHELL ? ((f) => (x, y, z) => f(x / faceWarp(y), y, z) * Math.min(1, faceWarp(0)))(blend([P.skull, P.skullTop, P.occiput, P.face, CUT.crown, CUT.back, CUT.nape].filter(Boolean))) : null;   // the same without the face's cut planes
   // long: the hair's cross-section at height yc, carried straight down (a curtain behind the head and shoulders), behind z = zc,
   // widening a little toward the bottom (spread), with pointed tips along its lower edge
@@ -124,7 +124,6 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
       // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
       // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
-      const TAPER = o.taper ?? TAPER0;   // (a back block may bring its own)
       let tf = 1; if (TAPER || TAPER_BACK) { const s2x = Math.min(1, (x / 0.21) ** 2), front = o.top - (CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) : o.arch * (SQ ? (1 - SQ) * s2x + SQ * s2x ** 3 : s2x)), back = o.back + (o.side - o.back) * s2x;
         const sideKeep = TAPER_SIDES ? sstep(TAPER_SIDES.a0, TAPER_SIDES.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) * (1 - sstep(1.12, 1.24, y)) : 0;   // only on the sides: on top of the head the angle swings across the middle, which made ridges   // taperSides: no thinning on the sides of the head (the outline stays full at the temples)
         const ff = TAPER ? 1 - (1 - sstep(0, TAPER, y - Math.max(front, o.side - 0.05))) * (1 - sideKeep) : 1, fb = TAPER_BACK ? sstep(0, TAPER_BACK, y - back) : 1;
@@ -144,9 +143,6 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     } };
   }
   const bangsAsLocks = (pick) => pick.bangs === "nendo" && OPT.hair.sculpt.nendo.locks;   // the nendo bangs made of locks (hair/locks.js) instead of this layer
-  // under bangs made of locks the block reaches further down the forehead (a thin layer: it thins toward its edge), so a gap between the locks
-  // shows hair, not the skin of the forehead and the block's hairline (2026-10-04, Saori). nendo.lockHairline: the hairline's height (head space)
-  const underLocks = (o) => { const N = OPT.hair.sculpt.nendo; return N.lockHairline == null ? o : { ...o, top: Math.min(o.top, N.lockHairline), taper: N.lockTaper ?? 0.08 }; };
-  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick); return blend([backBlock(L ? underLocks(BACKS[pick.back]) : BACKS[pick.back]), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [AHOGE] : [])]); };   // pick: { bangs, back, ahoge }
+  const hairSdfOf = (pick) => blend([backBlock(BACKS[pick.back]), ...(bangsAsLocks(pick) ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [AHOGE] : [])]);   // pick: { bangs, back, ahoge }
   return { BANGS, BACKS, hairSdfOf, bangsAsLocks };
 }
