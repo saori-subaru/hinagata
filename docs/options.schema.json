@@ -1022,7 +1022,7 @@
   "body.sculpt.chin.backZ": {
    "path": "body.sculpt.chin.backZ",
    "type": "number",
-   "default": 0.12,
+   "default": 0.16,
    "label": {
     "en": "chin › back z"
    },
@@ -1030,8 +1030,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.06,
-   "max": 0.18,
+   "min": 0.08,
+   "max": 0.24,
    "step": 0.001,
    "soft": true,
    "section": {
@@ -1041,7 +1041,7 @@
   "body.sculpt.chin.backRise": {
    "path": "body.sculpt.chin.backRise",
    "type": "number",
-   "default": 0.7,
+   "default": 0.5,
    "label": {
     "en": "chin › back rise"
    },
@@ -1049,8 +1049,8 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.35,
-   "max": 1.05,
+   "min": 0.25,
+   "max": 0.75,
    "step": 0.01,
    "soft": true,
    "section": {
@@ -1060,7 +1060,7 @@
   "body.sculpt.chin.backMax": {
    "path": "body.sculpt.chin.backMax",
    "type": "number",
-   "default": 0.07,
+   "default": 0.045,
    "label": {
     "en": "chin › back max"
    },
@@ -1068,9 +1068,9 @@
    "tier": "advanced",
    "cost": "body",
    "apply": null,
-   "min": 0.035,
-   "max": 0.105,
-   "step": 0.001,
+   "min": 0.0225,
+   "max": 0.0675,
+   "step": 0.0001,
    "soft": true,
    "section": {
     "en": "chin"

@@ -144,12 +144,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // face shading: shade the head with normals borrowed from a smooth ellipsoid, so toon bands don't follow small bumps (clay view keeps the real normals)
   const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25 * OPT.body.sculpt.skull.width / 0.249, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };
   function addShadeNormals(geo) {
-    const Pa = geo.attributes.position.array, N = geo.attributes.shadeN.array, N0 = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]), CS = OPT.face.shading.chin;
+    const Pa = geo.attributes.position.array, N = geo.attributes.shadeN.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]), CS = OPT.face.shading.chin;
     for (let i = 0; i < Pa.length; i += 3) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]);   // in head space
       let w = F.w * sstep(0.8, 0.86, y);
       // the chin (face.shading.chin): the ellipsoid's light reaches down to the chin's edge, and the underside (the mesh's own normal facing
-      // down) keeps the real shading: the shadow under the chin stops at the edge instead of creeping onto the front of the chin (2026-10-04, Saori)
-      if (CS?.on) { const down = sstep(CS.down[0], CS.down[1], -N0[i + 1]); w = F.w * sstep(CS.y[0], CS.y[1], y) * (1 - down) * (y < 0.87 ? sstep(CS.z[0], CS.z[1], z) : 1); } for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
+      // down) keeps the real shading: the shadow under the chin stops at the edge instead of creeping onto the front of the chin (2026-10-04, Saori).
+      // "Facing down" is read from the softened normal (the mesh's own made the shadow's edge jagged)
+      if (CS?.on) { const down = sstep(CS.down[0], CS.down[1], -N[i + 1]); w = F.w * sstep(CS.y[0], CS.y[1], y) * (1 - down) * (y < 0.87 ? sstep(CS.z[0], CS.z[1], z) : 1); } for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
       const ex = (x - F.c[0]) / F.r[0] ** 2 / HT.sx, ey = (y - F.c[1]) / F.r[1] ** 2 / HT.sy, ez = (z - F.c[2]) / F.r[2] ** 2 / HT.sz, el = Math.hypot(ex, ey, ez) || 1;   // normal back to world space
       const sx = N[i] + (ex / el - N[i]) * w, sy = N[i + 1] + (ey / el - N[i + 1]) * w, sz = N[i + 2] + (ez / el - N[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }

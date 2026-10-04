@@ -82,9 +82,9 @@ export const DEFAULTS = {
         "y": 0.835,
         "curve": 0.95,
         "k": 0.007,
-        "backZ": 0.12,
-        "backRise": 0.7,
-        "backMax": 0.07
+        "backZ": 0.16,
+        "backRise": 0.5,
+        "backMax": 0.045
       },
       "jawU": {
         "on": 1,
