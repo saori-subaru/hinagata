@@ -172,7 +172,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       kids.push(h("div", { class: "help" }, t("bangHelp")),
         h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => B.add() }, t("bangAdd")), h("button", { class: "btn small ghost", type: "button", disabled: B.selected < 0, onclick: () => B.remove() }, t("bangDel"))));
       if (B.selected < 0) kids.push(h("div", { class: "note" }, t("bangPick")));
-      else for (const [k, key, min, max, step] of [[5, "bangSweep", -25, 25, 0.5], [6, "bangThick", -0.02, 0.03, 0.001]]) {   // the row's sweep and extra thickness
+      else for (const [k, key, min, max, step] of [[5, "bangSweep", -25, 25, 0.5], [7, "bangFlick", -0.04, 0.04, 0.001], [6, "bangThick", -0.02, 0.03, 0.001]]) {   // the row's sweep, flick / curl and extra thickness
         const id = `f${uid++}`, v = B.value(k), num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
         const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
         rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });

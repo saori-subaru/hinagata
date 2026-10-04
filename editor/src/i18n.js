@@ -35,7 +35,7 @@ const T = {
     pic: "Picture", normalPic: "Normal", exprName: "Expression name", newExpr: (n) => `Expression ${n}`, addExpr: "Add expression", flush: "Flush", blink: "Blinks", delExpr: "Remove",
     bangTufts: "Moving the tufts", bangMove: "Move tufts on the face", bangHelp: "Drag a dot: left / right moves the tuft around the head, up / down moves its tip. Releasing it rebuilds the bangs.",
     bangPick: "Click a dot to pick a tuft", bangAdd: "Add a tuft", bangDel: "Remove this tuft", bangNeedNendo: "Tufts can be moved with the “Clumps” bangs",
-    bangSweep: "Sweep (°)", bangThick: "Extra thickness", bangN: (n) => `${n} tufts`,
+    bangSweep: "Sweep (°)", bangFlick: "Flick out (+) / curl in (−)", bangThick: "Extra thickness", bangN: (n) => `${n} tufts`,
     confirmDelExpr: (n) => `Remove the expression “${n}” and its pictures?`, tplCount: "This template was made for a different number of expressions. Write it out again (or match the expressions) and redraw",
   },
   ja: {
@@ -71,7 +71,7 @@ const T = {
     pic: "絵", normalPic: "ふつう", exprName: "表情の名前", newExpr: (n) => `表情${n}`, addExpr: "表情を足す", flush: "ぽっ", blink: "まばたき", delExpr: "消す",
     bangTufts: "ふさを動かす", bangMove: "顔の上でふさを動かす", bangHelp: "玉を引っぱる: 左右 = 頭のまわりの位置 / 上下 = 毛先の高さ。離すと前髪を作り直す。",
     bangPick: "玉を押すとふさを選べる", bangAdd: "ふさを足す", bangDel: "このふさを消す", bangNeedNendo: "前髪が「ふさ」のときに動かせる",
-    bangSweep: "流れ(度)", bangThick: "このふさの厚さ(足す)", bangN: (n) => `ふさ ${n}本`,
+    bangSweep: "流れ(度)", bangFlick: "はね(+) / 内巻き(−)", bangThick: "このふさの厚さ(足す)", bangN: (n) => `ふさ ${n}本`,
     confirmDelExpr: (n) => `表情「${n}」とその絵を消す?`, tplCount: "表情の数が違うキャラのテンプレ。書き出し直して(か、表情の数を合わせて)描き直して",
   },
 };

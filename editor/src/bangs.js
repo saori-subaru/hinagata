@@ -2,7 +2,7 @@
 // Each tip of hair.sculpt.nendo.tips gets a dot on the face; dragging it moves the tip around the head (left / right) and up or down.
 // A dot rides on the head bone, so it stays on its tip while the character moves. Releasing it writes the tips into the recipe
 // (one undo step); the engine then rebuilds only the bangs (avatar.setBangs).
-// Table row: [angle (degrees around the head, 0 = front), tip height (head space), slope?, skew?, group?, sweep (degrees)?, extra thickness?]
+// Table row: [angle (degrees around the head, 0 = front), tip height (head space), slope?, skew?, group?, sweep (degrees)?, extra thickness?, flick (m)?]
 import * as THREE from "three";
 
 const D2R = Math.PI / 180;
@@ -59,7 +59,7 @@ export function createBangTool({ vp, store, onSelect = () => {} }) {
     add() { write((T) => { const i = sel >= 0 ? sel : Math.floor(T.length / 2), j = Math.min(i + 1, T.length - 1), a = i === j ? T[i][0] + 8 : (T[i][0] + T[j][0]) / 2;
       T.splice(i + 1, 0, [+a.toFixed(3), +((T[i][1] + T[j][1]) / 2).toFixed(3)]); sel = i + 1; }); },
     remove() { if (sel < 0 || tips().length <= 2) return; write((T) => { T.splice(sel, 1); sel = -1; }); },
-    /** a value of the selected tuft's row (5: sweep, 6: extra thickness) */
+    /** a value of the selected tuft's row (5: sweep, 6: extra thickness, 7: flick out (> 0) / curl in (< 0)) */
     value(k) { return sel >= 0 ? (tips()[sel]?.[k] ?? 0) : 0; },
     setValue(k, v) { if (sel < 0) return; write((T) => { const t = T[sel]; while (t.length <= k) t.push(t.length === 4 ? null : t.length === 2 ? store.get("hair.sculpt.nendo.slope") : 0); t[k] = v; }); },
   };

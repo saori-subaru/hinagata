@@ -68,12 +68,12 @@ export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
 }
 /**
  * Bangs as locks (head space, then carried into root space by toRoot). B: options.hair.sculpt.nendo — the same tips the "nendo" bangs are
- * cut from ([angle, tip height, slope, skew, group, sweep (degrees), extra thickness]): each tip becomes one lock, from the top of the head
+ * cut from ([angle, tip height, slope, skew, group, sweep (degrees), extra thickness, flick (m)]): each tip becomes one lock, from the top of the head
  * to that tip, as wide as the gap between its neighbours (and a little more, so they overlap), lying over the hair and the forehead with
  * a little puff in the middle. surf: the hair under the bangs and the head (distance, head space) / center: the head's center (head space)
  */
 export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
-  const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
+  const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk, fl]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0, fl: fl ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
   T.forEach((tp, i) => {
     const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
@@ -91,6 +91,12 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
         const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
         let px = center[0] + u[0] * at, py = center[1] + u[1] * at, pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
         if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
+        // flick (the row's 8th value, m): toward the tip the lock bends away from the head (> 0: flicked out, a little up too) or in toward it
+        // (< 0: curled in, the tip tucked toward the face), never into the head (it keeps 2 mm over what it lies on)
+        if (tp.fl) { const e = Math.pow(t, 2.2) * tp.fl, hx = px, hz = pz - center[2], h = Math.hypot(hx, hz) || 1;
+          let dx = hx / h * e, dz = hz / h * e; py += Math.max(0, e) * 0.5;
+          if (e < 0) { const c = [0, py, center[2]], dir = [hx / h, 0, hz / h], floor = surfaceAlong(surf, c, dir) + 0.002, nh = Math.max(floor, h + e); dx = hx / h * (nh - h); dz = hz / h * (nh - h); }
+          px += dx; pz += dz; }
         pts.push(toRoot(px, py, pz)); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true });
