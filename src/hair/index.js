@@ -30,11 +30,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   }
   const AY = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) - 1.39;   // the ahoge sits on the top of the head
   // ahoge: one curled strand standing up from the top of the hair, arching forward (size: hair.sculpt.ahogeSize)
-  const AHOGE = (() => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (OPT.hair.sculpt.shell || 0.02);
+  const ahogeOn = (shell) => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shell || 0.02);   // standing on hair this thick
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D);   // direction it curls: 0 = forward, 90 = toward the character's left
     const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), segs = [];
     for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); segs.push(strandSeg(pts[i], pts[i + 1], (0.014 * (1 - t0 * 0.55)) * S, (0.014 * (1 - t1 * 0.55)) * S, 0.6)); }
-    return G(segs, 0.006); })();
+    return G(segs, 0.006); };
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
@@ -129,7 +129,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         const sideKeep = TAPER_SIDES ? sstep(TAPER_SIDES.a0, TAPER_SIDES.a1, Math.abs(Math.atan2(x, Math.max(z, 0.02))) / deg) * (1 - sstep(1.12, 1.24, y)) : 0;   // only on the sides: on top of the head the angle swings across the middle, which made ridges   // taperSides: no thinning on the sides of the head (the outline stays full at the temples)
         const ff = TAPER ? 1 - (1 - sstep(0, TAPER, y - Math.max(front, o.side - 0.05))) * (1 - sideKeep) : 1, fb = TAPER_BACK ? sstep(0, TAPER_BACK, y - back) : 1;
         tf = TMIN + (1 - TMIN) * (fb + (ff - fb) * sstep(-0.08, 0.08, z)); }
-      const thick = SHELL ? SHELL * tf
+      const thick = SHELL ? (o.shell ?? SHELL) * tf
         + BACKV * sstep(BACKV_Z[0], BACKV_Z[1], z) * sstep(BACKV_Y[0], BACKV_Y[1], y) * (BACKV_TOP ? 1 - sstep(BACKV_TOP[0], BACKV_TOP[1], y) : 1) : 0;   // backVolume: thicker toward the back of the top, so the hair line rises from the hairline toward the back (the skull stays as it is)
       // flick (the flip): near the hem the hair bends out sideways, and the further out, the higher its bottom edge, so the ends curl up and out
       let base = dPrim(e, x, y, z), thk = thick;
@@ -148,6 +148,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   // forehead running into thin hair, not the 3.6 cm rim the block ended in (it was hidden by the bangs' own layer). The hairline stays where
   // it is: it belongs to the head, not to the hairstyle (2026-10-04, Saori). nendo.lockTaper: how far above the hairline the hair reaches its full thickness
   const underLocks = (o) => ({ ...o, taper: OPT.hair.sculpt.nendo.lockTaper ?? 0.08 });
-  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick); return blend([backBlock(L ? underLocks(BACKS[pick.back]) : BACKS[pick.back]), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [AHOGE] : [])]); };   // pick: { bangs, back, ahoge }
+  // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
+  // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
+  const backAsLocks = (pick) => (pick.back === "short" && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
+  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
+    let o = BACKS[pick.back]; if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
+    return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
   return { BANGS, BACKS, hairSdfOf, bangsAsLocks };
 }
