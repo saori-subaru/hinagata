@@ -32,6 +32,7 @@ export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and 
 import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
 export { holdPole } from "./motion/glide.js";   // gliding under something held overhead; both hands on a pole (motion/glide.js)
 export { SWIM_W, swimHead } from "./motion/swim.js";   // swimming, treading water, wading (motion/swim.js)
+export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the hands' work for living in the wild: pant, shiver, limp, drink, chop, sleep... (motion/survival.js)
 
 /**
  * Build an avatar.
