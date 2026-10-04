@@ -487,6 +487,7 @@ export const DEFAULTS = {
         "span": 135,
         "width": 0.09,
         "thick": 0.32,
+        "backLift": 1,
         "puff": 0.006,
         "flick": 0.02,
         "ph": [74, 54],
