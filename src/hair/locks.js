@@ -51,7 +51,7 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
     const ty = bottom(th) - (L.vary ?? 0.15) * 0.1 * rnd(), c = [center[0], ty, center[2]], hd = [Math.sin(th), 0, Math.cos(th)], tip = hd.map((v, k) => c[k] + v * surfaceAlong(cap, c, hd));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1), thick = L.thick ?? 0.25, puff = (L.puff ?? 0.008) * rnd(), pts = [];   // puff: some locks stand a little off the others
     for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, k) => v + (tip[k] - v) * t), d = p.map((v, k) => v - center[k]), dl = Math.hypot(...d), e = d.map((v) => v / dl);
-      const off = rise(t, (layer ? -0.003 : 0.003) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3), at = surfaceAlong(cap, center, e) + off;   // half sunk into the hair (it keeps the hair's own volume; on top of it the locks made the head 2-4 cm bigger, a step where they began); the outer layer over the inner onehe inner one
+      const lift = L.lift ?? 1, off = rise(t, (layer ? -0.003 : 0.003) + lift * (0.5 * w * thick * width(t) + (layer ? 0.002 : 0.004)) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3), at = surfaceAlong(cap, center, e) + off;   // lift (0..1): 1 = lying on the hair (a fuller head, the locks stand out), 0 = half sunk into it (the hair keeps its own size); the outer layer over the inner onehe inner one
       pts.push(e.map((v, k) => center[k] + v * at)); }
     let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
     specs.push({ root: pts[0], pts, len, w, thick, layer, curl: (rnd() - 0.5) * 0.03, rise: true });
