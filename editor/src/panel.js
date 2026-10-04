@@ -145,18 +145,18 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const add = () => { let n = list.length + 1; const ids = new Set(list.map((d) => String(d.id))); let id; do id = `e${n++}`; while (ids.has(id));
       setDrawn([...list, { id, name: nameIn.value.trim() || t("newExpr", list.length + 1), eye: null, brow: null, mouth: null, cheeks: "none", blink: true }]); };
     nameIn.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
-    const cards = [h("div", { class: "drow" }, h("div", { class: "head" }, h("b", {}, t("normalPic"))), h("div", { class: "pics" }, ["eye", "eyeClosed", "brow", "mouth", "nose"].map((k) => pic(k, base(k)))))];
+    const readBtn = (into) => h("button", { class: "chip read", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("tplReadShort"));   // the template drawn for this expression
+    const cards = [h("div", { class: "drow" }, h("div", { class: "head" }, h("b", {}, t("normalPic")), readBtn(null)), h("div", { class: "pics" }, ["eye", "eyeClosed", "brow", "mouth", "nose"].map((k) => pic(k, base(k)))))];
     for (const d of list) {
       const nm = h("input", { class: "num name", value: d.name ?? "", "aria-label": t("exprName") }); nm.addEventListener("change", () => edit(d, { name: nm.value.trim() || d.id }));
-      cards.push(h("div", { class: "drow" }, h("div", { class: "head" }, nm,
+      cards.push(h("div", { class: "drow" }, h("div", { class: "head" }, nm, readBtn(d.id),
           h("button", { class: "chip", type: "button", "aria-pressed": String((d.cheeks ?? "none") === "flush"), onclick: () => edit(d, { cheeks: (d.cheeks ?? "none") === "flush" ? "none" : "flush" }) }, t("flush")),
           h("button", { class: "chip", type: "button", "aria-pressed": String(d.blink !== false), onclick: () => edit(d, { blink: d.blink === false }) }, t("blink")),
           h("button", { class: "chip", type: "button", onclick: () => remove(d) }, t("delExpr"))),
         h("div", { class: "pics" }, ["eye", "brow", "mouth"].map((k) => pic(k, d[k])))));
     }
     return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("drawn"))),
-      h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("sheet") }, t("tplSheet")), h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplParts")),
-        h("button", { class: "btn small", type: "button", onclick: () => ctx.onReadTemplate() }, t("tplRead")),
+      h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
         anyPic ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const k of ["eye", "eyeClosed", "brow", "mouth", "nose"]) ch[`face.images.${k}.src`] = null; ch["face.drawn"] = list.map((d) => ({ ...d, eye: null, brow: null, mouth: null })); set(ch); } }, t("tplClear")) : null),
       h("div", { class: "drawn" }, cards),
       h("div", { class: "row add" }, nameIn, h("button", { class: "btn small", type: "button", onclick: add }, t("addExpr"))),

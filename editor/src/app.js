@@ -91,17 +91,34 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   store, quality: () => prefs.quality,
   onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
-  onTemplate: (kind) => { if (!vp.avatar) return; faceSheet(vp.avatar, { kind, lang: getLang() }).toBlob((b) => download(kind === "sheet" ? "hinagata-face-sheet.png" : "hinagata-face-parts.png", b), "image/png"); },
-  onReadTemplate: () => $("fileTpl").click(),
+  onTemplate: (kind) => showTemplate(kind),
+  onReadTemplate: (into = null) => { tplInto = into; $("fileTpl").click(); },
 });
+// the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
+let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう)
+function showTemplate(kind) {
+  if (!vp.avatar) return;
+  faceSheet(vp.avatar, { kind, lang: getLang() }).toBlob((b) => {
+    if (tplUrl) URL.revokeObjectURL(tplUrl); tplUrl = URL.createObjectURL(b);
+    $("tplTitle").textContent = t(kind === "sheet" ? "tplSheet" : "tplMake"); $("tplText").textContent = t(kind === "sheet" ? "tplSheetText" : "tplPartsText");
+    $("tplImg").src = tplUrl; $("tplSave").href = tplUrl; $("tplSave").download = kind === "sheet" ? "hinagata-face-sheet.png" : "hinagata-face-template.png";
+    $("tplModal").hidden = false; $("tplClose").focus();
+  }, "image/png");
+}
+const closeTpl = () => { $("tplModal").hidden = true; };
+$("tplClose").addEventListener("click", closeTpl);
+$("tplModal").addEventListener("click", (e) => { if (e.target === $("tplModal")) closeTpl(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("tplModal").hidden) closeTpl(); });
 // a drawn template: only the frames with something in them are read; the face then shows the drawn parts (unless it already does)
 $("fileTpl").addEventListener("change", (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
   const im = new Image(); im.onload = () => {
-    let r; try { r = readFaceSheet(vp.avatar, im); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
+    let r; try { r = readFaceSheet(vp.avatar, im, { into: tplInto }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
     if (!r.read.length) { toast(t("tplRead0")); return; }
     const ch = sheetChanges(store.recipe, r);
-    if (!String(store.get("face.parts.eyes")).startsWith("image")) Object.assign(ch, { "face.parts.eyes": "image", "face.parts.brows": "image", "face.parts.mouth": "image" });
+    const id = tplInto != null ? `image@${tplInto}` : "image";   // show what was just read
+    Object.assign(ch, { "face.parts.eyes": id, "face.parts.brows": id, "face.parts.mouth": id });
+    if (tplInto != null) ch["face.parts.cheeks"] = (store.get("face.drawn") ?? []).find((d) => String(d?.id) === String(tplInto))?.cheeks ?? "none";
     store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length));
   };
   im.onerror = () => toast(t("tplBad")); im.src = URL.createObjectURL(f);

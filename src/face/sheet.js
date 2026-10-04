@@ -111,10 +111,11 @@ function cutBackground(c, tol = 48) {   // clear the color that runs in from the
 }
 
 /** Read a drawn template (an Image or canvas): a "parts" one (4:3) or a sheet made for this avatar's expressions.
+ *  A one-face template can go into a drawn expression instead ({ into: id }): every expression uses the same frames.
  *  Returns { base: { eye, eyeClosed, brow, mouth, nose }, drawn: { <id>: { eye, brow, mouth } }, read: [[tileId, frame], …], kind }
  *  — only the frames with something drawn in them (data URLs). sheetChanges() turns it into option changes.
  *  Throws if the picture is neither, or is a sheet for a different number of expressions (err.code "count"). */
-export function readFaceSheet(avatar, im) {
+export function readFaceSheet(avatar, im, { into = null } = {}) {   // into: a drawn expression's id — a one-face ("parts") template goes into it (its eye / brow / mouth) instead of ふつう
   const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height, ratio = im.width / im.height, n = sheetTiles(avatar).length;
   let rows = 0; for (let r = 1; r <= 20; r++) if (Math.abs(ratio - COLS * W / (HEAD + r * H)) < 0.012) rows = r;
   const sheet = rows > 0;
@@ -130,7 +131,9 @@ export function readFaceSheet(avatar, im) {
     cg.drawImage(full, x, y, w, h, 0, 0, w, h);
     const part = alpha ? c : cutBackground(c), D = part.getContext("2d").getImageData(0, 0, w, h).data;
     let ink = 0; for (let j = 3; j < D.length; j += 4) if (D[j] > 24) ink++; if (ink < 20) continue;   // nothing drawn here
-    const url = part.toDataURL("image/png"); if (tile === "normal") out.base[k] = url; else (out.drawn[tile] ??= {})[k] = url; out.read.push([tile, k]); }
+    if (into != null && !sheet && !["eye", "brow", "mouth"].includes(k)) continue;   // into an expression: its own parts only (the closed eye and the nose are shared)
+    const url = part.toDataURL("image/png"), to = into != null && !sheet ? String(into) : tile;
+    if (to === "normal") out.base[k] = url; else (out.drawn[to] ??= {})[k] = url; out.read.push([to, k]); }
   return out;
 }
 
