@@ -508,6 +508,7 @@ export const DEFAULTS = {
         "thick": 0.25,
         "ph": [64, 44],
         "below": 0.01,
+        "flick": 0,
         "lie": {
           "count": 17,
           "span": 135,
@@ -539,6 +540,7 @@ export const DEFAULTS = {
         "span": 110,
         "width": 0.075,
         "thick": 0.3,
+        "flick": 0,
         "stiff": 1,
         "damping": 0.9,
         "yc": 1.0,

@@ -19,7 +19,7 @@ const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its 
 /**
  * Where the locks grow and how they hang (root space, rest pose): a ring of locks around the back and sides of the head, in two layers
  * (the inner one between the outer one's locks), each draped once over the hair underneath and the body.
- * L: { count, span (degrees each side of the back), width, thick, ph: [outer, inner] (degrees up from the head's middle, where they grow) }
+ * L: { count, span (degrees each side of the back), width, thick, ph: [outer, inner] (degrees up from the head's middle, where they grow), flick }
  * bottom(th): the height the lock reaches at this angle around the head (0 = front) / cap(x, y, z): the hair under the locks (distance, root space)
  * center: the head's center (root space) / coll: the colliders (see colliders()) / ellipsoid: the head for the drape
  */
@@ -35,7 +35,10 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1);
     specs.push({ root, len, w, thick: L.thick ?? 0.3, layer, curl: (rnd() - 0.5) * 0.04, rise: true });   // rise: it gets its thickness gently (no ridge at the root)
   }
-  return specs.map((s) => ({ ...s, pts: drape(s, coll, ellipsoid, N, hugY) }));
+  const fl = L.flick ?? 0;   // flick (m): toward the tip the locks bend away from the head (> 0, a little up too) or in under it (< 0)
+  return specs.map((s) => { const pts = drape(s, coll, ellipsoid, N, hugY);
+    if (fl) pts.forEach((p, i) => { const e = Math.pow(i / (N - 1), 2.2) * fl, hx = p[0] - center[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1; p[0] += hx / h * e; p[2] += hz / h * e; p[1] += Math.max(0, e) * 0.5; });
+    return { ...s, pts }; });
 }
 /**
  * Short hair: locks that lie along the hair underneath (root space), from near the crown down to the hem, following its shape (into the

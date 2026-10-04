@@ -60,6 +60,7 @@ function showStats(av, ms = lastMs) {
 
 // instant changes through the engine's own methods (schema `apply`)
 const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield" };
+let locksT = 0;
 function applyInstant(av, p, v) {
   const k = p.split("."), last = k.at(-1);
   switch (SCHEMA[p]?.apply) {
@@ -72,6 +73,8 @@ function applyInstant(av, p, v) {
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
+    case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
+      const ch = k.length > 4 ? { [k[3]]: { [last]: v } } : { [last]: v }; clearTimeout(locksT); locksT = setTimeout(() => { try { av.setLocks(k[2], ch); vp.apply(); } catch (e) { console.warn(e); } }, 150); return true; }
   }
   return false;
 }

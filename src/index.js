@@ -439,6 +439,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
 
     /** The nendo bangs: values into options.hair.sculpt.nendo ({ tips, overlap, lockThick, … }). Bangs made of locks rebuild only themselves
      *  (fast enough to follow an editor's handles); otherwise, or when the hair under them changes too, the whole hair is rebuilt. */
+    /** The back hair's locks (instant-ish, no other part rebuilt): values into options.hair.sculpt[group], group "shortLocks" or "long"
+     *  (count, width, thick, flick, stiff, below / bottom …; for shortLocks.lie, pass { lie: { … } }). */
+    setLocks(group, values) {
+      const G = OPT.hair.sculpt[group]; for (const [k, v] of Object.entries(structuredClone(values))) { if (v && typeof v === "object" && !Array.isArray(v) && G[k] && typeof G[k] === "object") Object.assign(G[k], v); else G[k] = v; }
+      const on = parts.hair.on, vis = parts.hair.m.visible;
+      if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
+      const x = makeLocks(["locks"]).locks; if (x) { parts.locks = x; x.on = on; x.m.visible = x.o.visible = vis; }
+    },
     setBangs(values) {
       const N = OPT.hair.sculpt.nendo, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
       if (!was || !hairKit.bangsAsLocks(hairPick) || ["locks", "lockTaper"].some((k) => k in values)) { avatar.setHair({}); return; }
