@@ -17,6 +17,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
+import { longLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -247,13 +248,27 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004, "hair");
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
   parts.hair = makeHair(H);
+  // long hair as locks (hair/locks.js): flat ribbons with sharp tips hanging from the back of the head, each a chain that swings.
+  // Under them the short hair's block covers the head (hair/index.js leaves the long curtain out when hair.sculpt.long.locks is on)
+  function makeLocks() {
+    const L = OPT.hair.sculpt.long; if (hairPick.back !== "long" || !L.locks) return null;
+    const cap = HT.wrap(hairKit.hairSdfOf(hairPick)), c = HT.fromHead(0, 1.125, -0.02);
+    const ray = (d) => surfaceAlong(cap, c, d);
+    const ell = { c, r: [ray([1, 0, 0]), ray([0, 1, 0]), ray([0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
+    const coll = lockColliders(J, BI, bodySdf), specs = longLocks(L, { cap, center: c, coll, ellipsoid: ell });
+    const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
+      return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
+    const sim = createLocks({ specs, head: BI.head, coll, ell, skeleton, root, outward, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+    const x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.sim = sim; return x;
+  }
+  { const x = makeLocks(); if (x) parts.locks = x; }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
   const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles"], armor: ARMOR };
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
   const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) show(k, on);
     if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
-      if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes"]) for (const k of GARMENTS[h]) show(k, !plate && OPT.outfit[h].on !== false); show("hair", !plate); }
+      if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes"]) for (const k of GARMENTS[h]) show(k, !plate && OPT.outfit[h].on !== false); show("hair", !plate); if (parts.locks) show("locks", !plate); }
       else if (plate) for (const k of GARMENTS[g]) show(k, false); } };
   for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
   if (AO.on) wear("armor", true);
@@ -337,6 +352,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
       else seatAdj *= instant ? 0 : Math.exp(-dt * 9);
       cloth?.update(dt, instant, lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null);
+      if (parts.locks?.m.visible) parts.locks.sim.update(dt, instant);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
@@ -363,7 +379,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
     setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield } = {}) {
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
-      if (hair) { OPT.colors.hair = hair; const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (hair) { OPT.colors.hair = hair; parts.locks?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { parts[k].m.material.color.set(c); OPT.outfit[k].color = c; }
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
@@ -384,7 +400,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (!SHADINGS.includes(style)) throw new Error(`Unknown shading "${style}". Available: ${SHADINGS.join(", ")}`);
       if (bands !== 2 && bands !== 3) throw new Error(`shading.bands is 2 or 3, not ${bands}`);
       const resoften = soften !== OPT.shading.soften; Object.assign(OPT.shading, { style, bands, soften });
-      if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
+      if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN && !x.sim) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
         const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style); x.m.material.wireframe = old.wireframe; old.dispose();
@@ -398,6 +414,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       Object.assign(hairPick, pick); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k];
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
+      if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
+      { const x = makeLocks(); if (x) { parts.locks = x; x.on = on; x.m.visible = x.o.visible = parts.hair.m.visible; } }
     },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
@@ -405,6 +423,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       const outs = []; root.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
       cloth?.rest();   // the skirt as built (not as the cloth has it now)
+      parts.locks?.sim.rest();   // the locks as they hang in the rest pose
       const saved = BONES.map((b) => bone[b].quaternion.clone()), hy = bone.hips.position.y;
       BONES.forEach((b) => bone[b].quaternion.identity()); bone.hips.position.copy(HIPS0);
       const restore = () => { outs.forEach((o) => { o.visible = true; }); BONES.forEach((b, i) => bone[b].quaternion.copy(saved[i])); bone.hips.position.y = hy; };

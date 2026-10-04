@@ -109,7 +109,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const LU = OPT.hair.sculpt.lumps, SKY = OPT.body.sculpt.skull.y;
   const lumpOf = (x, y, z) => { if (!LU?.amp) return 0; const dz = z + 0.005, th = Math.atan2(Math.hypot(x, dz), y - SKY), ph = Math.atan2(x, dz), s = ph * LU.count / (2 * Math.PI) + LU.twist * th * Math.sin(ph);
     return LU.amp * (Math.pow(Math.abs(Math.sin(Math.PI * s)), LU.sharp) - 0.6) * sstep(LU.from, LU.from + 0.35, th); };   // fades out toward the crown, where the bundles meet
-  function backBlock(o) { const b = backBlock0(o); return o.long ? longCurtain(o, b) : b; }
+  function backBlock(o) { const b = backBlock0(o); return o.long && !o.long.locks ? longCurtain(o, b) : b; }   // long.locks: the long hair is made of locks (hair/locks.js) over this block
   function backBlock0(o) {
     const e0 = E([0, 1.125, -0.02], o.r, "head"), e = SHELL ? { t: 3, f: (x, y, z) => skullOnly(x, y, z) - backOff(o, y) } : e0;   // bob: a little thicker (below the top only)
     return { t: 3, k: 0.012, bx0: 0, by0: 1.1, bz0: -0.02, br: 0.45, f: (x, y, z) => {

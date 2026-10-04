@@ -479,6 +479,13 @@ export const DEFAULTS = {
       "ahogeSize": 1.15,
       "ahogeDir": 90,
       "long": {
+        "locks": true,
+        "count": 13,
+        "span": 110,
+        "width": 0.075,
+        "thick": 0.3,
+        "stiff": 1,
+        "damping": 0.9,
         "yc": 1.0,
         "zc": -0.02,
         "bottom": 0.55,

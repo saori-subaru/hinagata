@@ -6812,6 +6812,135 @@
     "hair.ahoge": true
    }
   },
+  "hair.sculpt.long.locks": {
+   "path": "hair.sculpt.long.locks",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "en": "long › locks"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.count": {
+   "path": "hair.sculpt.long.count",
+   "type": "number",
+   "default": 13,
+   "label": {
+    "en": "long › count"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 26,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.span": {
+   "path": "hair.sculpt.long.span",
+   "type": "number",
+   "default": 110,
+   "label": {
+    "en": "long › span"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 220,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.width": {
+   "path": "hair.sculpt.long.width",
+   "type": "number",
+   "default": 0.075,
+   "label": {
+    "en": "long › width"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.0375,
+   "max": 0.1125,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.thick": {
+   "path": "hair.sculpt.long.thick",
+   "type": "number",
+   "default": 0.3,
+   "label": {
+    "en": "long › thick"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.15,
+   "max": 0.45,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.stiff": {
+   "path": "hair.sculpt.long.stiff",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "en": "long › stiff"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.5,
+   "max": 1.5,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
+  "hair.sculpt.long.damping": {
+   "path": "hair.sculpt.long.damping",
+   "type": "number",
+   "default": 0.9,
+   "label": {
+    "en": "long › damping"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.45,
+   "max": 1.35,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "long"
+   }
+  },
   "hair.sculpt.long.yc": {
    "path": "hair.sculpt.long.yc",
    "type": "number",
