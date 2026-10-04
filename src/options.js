@@ -612,6 +612,7 @@ export const DEFAULTS = {
         "dy": 0
       }
     },
+    "drawn": [],
     "shading": {
       "weight": 1,
       "y": 1.04,

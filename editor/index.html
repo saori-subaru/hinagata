@@ -143,6 +143,17 @@ button { cursor: pointer; }
 .json { width: 100%; min-height: 64px; font: 11px/1.4 var(--mono); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--raised); resize: vertical; }
 .json.bad { border-color: #c2410c; }
 .img { display: flex; align-items: center; gap: 8px; }
+.sec > .help { font-size: 11.5px; color: var(--muted); }
+.drawn { display: grid; gap: 6px; margin-top: 8px; }
+.drow { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: grid; gap: 6px; }
+.drow .head { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .drow .head b { font-size: 13px; font-weight: 600; }
+.drow .head .chip { padding: 3px 10px; font-size: 11.5px; } .drow input.name { width: 110px; height: 28px; font-size: 12.5px; }
+.drow .pics { display: flex; gap: 8px; flex-wrap: wrap; }
+.drow .pic { display: grid; justify-items: center; gap: 2px; font-size: 10.5px; color: var(--muted); }
+.drow .thumb { width: 44px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 8px 8px; object-fit: contain; display: grid; place-items: center; }
+.drow .thumb.empty { background: var(--surface-2); color: var(--muted); }
+.sec > .row.add { display: flex; gap: 6px; margin-top: 8px; } .sec > .row.add .grow { flex: 1; min-width: 0; height: 32px; }
+.drow input.name, .sec > .row.add input { text-align: left; font: 500 12.5px inherit; font-family: inherit; border-color: var(--line); background: var(--raised); padding: 2px 8px; }
 .img .thumb { width: 44px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 10px 10px; object-fit: contain; }
 .fold { border: 1px solid var(--line); border-radius: 14px; background: var(--raised); }
 .fold > summary { display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: pointer; list-style: none; font-weight: 600; }
@@ -242,6 +253,7 @@ button { cursor: pointer; }
 </aside>
 <input type="file" id="fileJson" accept="application/json,.json" hidden>
 <input type="file" id="fileImg" accept="image/*" hidden>
+<input type="file" id="fileTpl" accept="image/*" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script type="module" src="./src/app.js"></script>

@@ -24,6 +24,7 @@ import { createCloth } from "./cloth.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
+export { faceSheet, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
@@ -320,9 +321,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     play(name) { if (!POSES[name]) throw new Error(`Unknown motion "${name}". Available: ${Object.keys(POSES).join(", ")}`); poseName = name; },
 
-    /** Face (instant): an expression id ("happy", see EXPRESSIONS), or parts by slot { eyes, brows, mouth, cheeks, nose } (ids in PART_LABELS). Kept in options.face.parts. */
+    /** Face (instant): an expression id ("happy", see EXPRESSIONS; a drawn one "image@<id>", see options.face.drawn), or parts by slot { eyes, brows, mouth, cheeks, nose } (ids in PART_LABELS). Kept in options.face.parts. */
     setFace(sel) {
-      if (typeof sel === "string") { const e = EXPRESSIONS[expressionId(sel)]; if (!e) throw new Error(`Unknown expression "${sel}". Available: ${Object.keys(EXPRESSIONS).join(", ")}`); sel = e.parts; }
+      if (typeof sel === "string") { const e = face.PRESETS[expressionId(sel)]; if (!e) throw new Error(`Unknown expression "${sel}". Available: ${Object.keys(face.PRESETS).join(", ")}`); sel = e; }   // drawn expressions too ("image@<id>")
       sel = partIds(sel); Object.assign(faceSel, sel); Object.assign(OPT.face.parts, sel); avatar.drawFace();
     },
     /** Move the face parts on the face picture (instant): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. Kept in options.face.

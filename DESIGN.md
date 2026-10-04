@@ -158,7 +158,7 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - Changes with an `apply` method happen at once; others rebuild the avatar when the slider is released (the cache makes repeats fast). Undo / redo for every change (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z).
 - Characters saved in the browser (new, duplicate, delete, rename); share link (`?o=`), recipe JSON save / open, copy as code (only what differs), PNG (transparent), GLB.
 - View: camera buttons, clay / wireframe / bones / floor, background, motions with play / pause / speed, mesh quality (game / high).
-- Not yet: face part templates and reading framed drawings (still in `body.html`), dragging bang tufts, comparing two characters, `avatar.rebuild()` for partial rebuilds, a dark theme.
+- Not yet: dragging bang tufts, comparing two characters, `avatar.rebuild()` for partial rebuilds, a dark theme.
 
 - 3D view on the left, panel on the right: Body / Face / Hair / Outfit / Motion.
 - Panel generated from `options.schema.json` (public tier). An "Advanced" section shows sculpt values.
@@ -176,7 +176,7 @@ Engine: **yes** = the engine has it, the editor only needs UI; **part** = there,
 | recipe | new from a preset; save in the browser (a list of characters); save / load JSON; share by URL (`?o=`); copy as code (only what differs); undo / redo of every change; reset a section / all; count of values that differ from the defaults; two recipes side by side | editor-side |
 | export | GLB (A-pose, no outlines) | yes |
 | | PNG (transparent, fixed views) | editor-side |
-| | face part template (frames to draw in) and reading a framed PNG back | part (lives in `body.html`, move into the library) |
+| | face part template (frames to draw in) and reading a framed PNG back | done (2026-10-04): `src/face/sheet.js`, used by the editor; `body.html` still has its own copy of the one-face template |
 | | VRM | no |
 | view | orbit camera, view buttons (front / side / back / 3-4 / face), background, floor and shadow, reference image overlay | editor-side |
 | | shading (toon / smooth / flat), outline (on / width / color), clay, wireframe, bones, quality, vertex count and build time | yes |
@@ -457,3 +457,8 @@ When the face editor is built for real (beyond the check page's 枠つきPNGを�
 ## Decisions
 
 Decided: working name "Hinagata" (check npm before publishing); code-drawn face is the default; first body sliders are head size, chubbiness and leg length; chibi proportions only.
+
+**Drawn expressions and the face sheet (2026-10-04, done)**: drawn faces had one expression only (絵), so a character drawn by hand could not smile. A first try gave drawn versions of the four code expressions (fixed slots); Saori wanted her own, so it is a free list now: `face.drawn` = `[{ id, name, eye, brow, mouth, cheeks, blink }]`, as many as wanted, each named (泣く, 照れ, ウインク…). Each adds the expression and part ids `image@<id>` (listed by the avatar: `face.PRESETS`, `face.presetName`; `checkOptions` accepts them when the list has that id). A part not drawn falls back to the ふつう picture (`face.images.*`); the closed eye and the nose stay single slots; `blink: false` for expressions whose eyes are already closed. `src/face/sheet.js` makes the templates and reads them back: "parts" (the face picture's own 1024×768, as `body.html` had) and "sheet" (a header strip, then 3 tiles across: ふつう with all five frames, one tile per drawn expression in list order with its current parts faintly as a guide, and a how-to tile). A sheet is read by position, so it belongs to the list it was made from: the header says how many, and reading refuses a sheet whose row count doesn't fit (`err.code "count"`). Only frames with something drawn in them are read, so redrawing one part means drawing just that frame; `sheetChanges()` turns what was read into option changes. The editor's face tab has the list (add with a name, rename, ぽっ / まばたき, remove), the template buttons, and what each expression has; one-picture loading moved to Advanced; drawn expressions join the expression chips and the part selectors. (Saori: エディタでもテンプレ一枚を読み込みたい / 表情も一種類しか登録できない)
+
+**Its own site (2026-10-04)**: the engine's pages were only online through the station (devlog deploys the latest hinagata `main` into `/avatar/` when the station itself deploys), so a push here waited for some devlog push. Now hinagata deploys itself to Cloudflare Pages on every push to `main`: `https://hinagata.pages.dev` → the editor, `/body.html` → the test page (`.github/workflows/site.yml`; the project is made on the first run; secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in this repository). `build_site.sh` serves the same files devlog serves from it — notes, PSDs, scripts, `tools/ docs/ facekit/ examples/` and the reference sheet stay out (the repository is private, the site is public). The station keeps taking the engine into `/avatar/` as before (its games load it from there). (Saori: サイトを持たせたい)
+
