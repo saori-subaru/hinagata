@@ -129,3 +129,27 @@ export function gridSampler(G, fallback) {
     return fallback(x, y, z);
   };
 }
+
+/**
+ * Normals for toon shading: each vertex's normal averaged with its neighbors' (along the mesh's edges), `iters` times.
+ * The small bumps of the blended shapes (each one a stain once the light is cut into bands) go; the big shapes stay.
+ * A neighbor only counts when it faces within ~60° (minDot) of the vertex, so rims, hems and both sides of a thin strand stay apart.
+ * nor: the mesh's normals (not changed) / idx: its triangles. Returns new normals (Float32Array). Spread ≈ cell size · √iters.
+ */
+export function smoothNormals(nor, idx, iters, minDot = 0.5) {
+  const n = nor.length / 3, start = new Uint32Array(n + 1);
+  for (let t = 0; t < idx.length; t++) start[idx[t] + 1] += 2;
+  for (let v = 0; v < n; v++) start[v + 1] += start[v];
+  const adj = new Uint32Array(start[n]), at = start.slice(0, n);
+  for (let t = 0; t < idx.length; t += 3) for (let e = 0; e < 3; e++) { const a = idx[t + e], b = idx[t + (e + 1) % 3]; adj[at[a]++] = b; adj[at[b]++] = a; }
+  let A = Float32Array.from(nor), B = new Float32Array(nor.length);
+  for (let it = 0; it < iters; it++) {
+    for (let v = 0; v < n; v++) {
+      const ax = A[v * 3], ay = A[v * 3 + 1], az = A[v * 3 + 2]; let sx = ax, sy = ay, sz = az;
+      for (let j = start[v]; j < start[v + 1]; j++) { const u = adj[j] * 3, bx = A[u], by = A[u + 1], bz = A[u + 2]; if (ax * bx + ay * by + az * bz > minDot) { sx += bx; sy += by; sz += bz; } }
+      const l = Math.hypot(sx, sy, sz) || 1; B[v * 3] = sx / l; B[v * 3 + 1] = sy / l; B[v * 3 + 2] = sz / l;
+    }
+    [A, B] = [B, A];
+  }
+  return A;
+}

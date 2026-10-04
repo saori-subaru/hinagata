@@ -14,7 +14,9 @@ export const DEFAULTS = {
     "color": "#3a2a3a"
   },
   "shading": {
-    "style": "toon"
+    "style": "toon",
+    "bands": 2,
+    "soften": 1
   },
   "body": {
     "head": {
@@ -615,9 +617,9 @@ export const DEFAULTS = {
     "drawn": [],
     "shading": {
       "weight": 1,
-      "y": 1.04,
+      "y": 0.96,
       "z": -0.02,
-      "radiusY": 0.31,
+      "radiusY": 0.7,
       "radiusZ": 0.2
     }
   }

@@ -31,7 +31,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const fctx = faceCanvas.getContext("2d");
   const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
   // 顔の絵も体と同じ陰影で(光を無視すると暗い場所で目だけ光って見える)。setShading で作り直す
-  const faceMatFor = (style) => Object.assign(shaded(style, 0xffffff), { map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(shaded(style, 0xffffff, bands), { map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const faceMat = faceMatFor(OPT.shading.style);
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";

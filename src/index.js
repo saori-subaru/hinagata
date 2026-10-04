@@ -7,11 +7,11 @@
 //
 import * as THREE from "three";
 import { sstep } from "./sdf/prim.js";
-import { surfaceNets, gridSampler } from "./sdf/mesh.js";
+import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat } from "./materials.js";
+import { shaded, metal, SHADINGS, outlineMat, withShadeN } from "./materials.js";
 import { DEFAULTS, resolveOptions, diff } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
@@ -112,19 +112,40 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
     return { pos: P, nor: N, idx: out };
   }
-  function skinned(geo, color, ow = 0.005) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1)
-    const m = new THREE.SkinnedMesh(geo, shaded(OPT.shading.style, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
+  function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
+    if (soft) addSoftNormals(soft, geo);
+    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
     const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
     const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
     return { m, o, on: true };
   }
 
+  // shading normals ("shadeN"): the mesh's normals smoothed over about SOFT_R (times shading.soften), so the toon bands follow the big
+  // shapes instead of staining every bump where the blended shapes meet (the clay view and the outline keep the real normals).
+  // On top of that the head borrows an ellipsoid's normals (addShadeNormals) and the hair shades as one round volume (HAIR_ROUND)
+  const SOFT_R = 0.022, HAIR_ROUND = 0.6;
+  function addSoftNormals(name, geo) {
+    const idx = (geo.userData.idx0 ??= geo.index.array), n0 = geo.attributes.normal.array, it = Math.round((SOFT_R * OPT.shading.soften / H) ** 2);
+    geo.setAttribute("shadeN", new THREE.BufferAttribute(it > 0 ? smoothNormals(n0, idx, it) : Float32Array.from(n0), 3));
+    if (name === "body") addShadeNormals(geo);
+    if (name === "hair") hairRound(geo);
+  }
+  // the hair as one volume, the way anime games shade it: normals from the head's center (above it) or from the vertical line under it
+  // (long hair hanging down), mixed into the smoothed ones. Its light and shadow then split the hair cleanly instead of strand by strand
+  function hairRound(geo) {
+    const Pa = geo.attributes.position.array, S = geo.attributes.shadeN.array, SK = OPT.body.sculpt.skull, c = HT.fromHead(0, SK.y, -0.005), w = HAIR_ROUND * Math.min(1, OPT.shading.soften);
+    for (let i = 0; i < Pa.length; i += 3) { const dx = Pa[i] - c[0], dy = Math.max(0, Pa[i + 1] - c[1]), dz = Pa[i + 2] - c[2], dl = Math.hypot(dx, dy, dz) || 1;
+      const sx = S[i] + (dx / dl - S[i]) * w, sy = S[i + 1] + (dy / dl - S[i + 1]) * w, sz = S[i + 2] + (dz / dl - S[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
+      S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
+  }
+  const shadedFor = (geo, c, style = OPT.shading.style) => { const m = shaded(style, c, OPT.shading.bands); return geo.attributes.shadeN ? withShadeN(m) : m; };   // a part's material: by its softened normals when it has them
+
   // face shading: shade the head with normals borrowed from a smooth ellipsoid, so toon bands don't follow small bumps (clay view keeps the real normals)
   const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25 * OPT.body.sculpt.skull.width / 0.249, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };
   function addShadeNormals(geo) {
-    const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
+    const Pa = geo.attributes.position.array, N = geo.attributes.shadeN.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
     for (let i = 0; i < Pa.length; i += 3) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]);   // in head space
-      let w = F.w * sstep(0.86, 0.93, y); for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
+      let w = F.w * sstep(0.8, 0.86, y); for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
       const ex = (x - F.c[0]) / F.r[0] ** 2 / HT.sx, ey = (y - F.c[1]) / F.r[1] ** 2 / HT.sy, ez = (z - F.c[2]) / F.r[2] ** 2 / HT.sz, el = Math.hypot(ex, ey, ez) || 1;   // normal back to world space
       const sx = N[i] + (ex / el - N[i]) * w, sy = N[i + 1] + (ey / el - N[i + 1]) * w, sz = N[i + 2] + (ez / el - N[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
@@ -148,9 +169,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
   }
-  const shadeToon = (c) => { const m = shaded(OPT.shading.style, c); m.onBeforeCompile = (sh) => {
-    sh.vertexShader = "attribute vec3 shadeN;\nattribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", "vec3 objectNormal = shadeN;").replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
-    sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return m; };
+  const shadeToon = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    sh.vertexShader = "attribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
+    sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return withShadeN(m); };
 
   lap("setup");
   // build in workers: the body and the hair at once, then the clothes (they read the body's grid, so the result is the same as here).
@@ -177,8 +198,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const glf = (v) => (+v).toFixed(4);
   // the ring's color when none is given: the hair color, lighter and a little warmer (brown hair → orange), so it doesn't stand out as white
   const ringOf = (c) => { const h = {}; new THREE.Color(c).getHSL(h); return new THREE.Color().setHSL(h.h + (0.075 - h.h) * 0.5, Math.min(1, h.s * 1.1 + 0.08), Math.min(0.85, h.l + 0.14)); };
-  const hairMat = (c) => { const m = shaded(OPT.shading.style, c), HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
-    m.onBeforeCompile = (sh) => {
+  const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
+    m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "varying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, N = ${glf(St.count)};
@@ -191,17 +212,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); }
     if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line)); }`); };
-    return m; };
+    return withShadeN(m); };
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const meshPart = (name, h = H) => { const s = partSpec(name, { OPT, H: h, kit, bodyAt }); return mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft); };   // the part table (parts.js) is shared with the workers
-  parts.body = skinned(meshPart("body"), OPT.colors.skin); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
+  parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
-  addShadeNormals(parts.body.m.geometry); addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
-  parts.shirt = skinned(meshPart("shirt"), OPT.outfit.shirt.color);
-  parts.pants = skinned(meshPart("pants"), OPT.outfit.pants.color);
+  addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
+  parts.shirt = skinned(meshPart("shirt"), OPT.outfit.shirt.color, 0.005, "shirt");
+  parts.pants = skinned(meshPart("pants"), OPT.outfit.pants.color, 0.005, OPT.outfit.pants.kind === "skirt" ? null : "pants");   // a skirt moves as cloth (its normals too): it keeps the mesh's own
   // a skirt drapes as cloth (cloth.js): it stays over the thighs when they turn up (sitting) instead of tearing open or letting them poke through
   // The legs it keeps clear of: capsules measured off this body (rest pose), so every body type fits (a single thigh capsule from the root to the knee
   // missed the girl's full mid-thigh). Along each thigh, at a few points from just below the hip joint to the knee: how far the body reaches
@@ -215,15 +236,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false });
     return out; };
   const cloth = PT.kind === "skirt" ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: PT.top, hem: PT.skirt?.hem ?? 0.3, colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
-  parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color);
-  parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor);
-  parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003);
+  parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color, 0.005, "shoes");
+  parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
+  parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   for (const k of ARMOR) { parts[k] = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, AO.color); } }   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
   const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" || k === "weaponLGrip" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : WO.color;
   for (const k of WEAPONS) { parts[k] = skinned(meshPart(k), weaponColor(k), 0.004); if (k === "weaponR" || k === "weaponL") { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, WO.color); } }   // in the hands (clothes/weapons.js)
   lap("shadeAndClothes");
-  const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004);
+  const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004, "hair");
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
   parts.hair = makeHair(H);
   lap("hair");
@@ -356,15 +377,19 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
       root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
     },
-    /** Shading style (instant, no rebuild): "toon" | "smooth" | "flat" (see SHADINGS). Keeps the current colors. */
-    setShading(style) {
+    /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
+     *  bands 2 (light / shadow) or 3 (with a mid tone), soften 0.. how far the shading normals are smoothed (0 = the mesh's own, 1 = default). Keeps the current colors. */
+    setShading(s) {
+      const { style = OPT.shading.style, bands = OPT.shading.bands, soften = OPT.shading.soften } = typeof s === "string" ? { style: s } : s;
       if (!SHADINGS.includes(style)) throw new Error(`Unknown shading "${style}". Available: ${SHADINGS.join(", ")}`);
-      OPT.shading.style = style;
+      if (bands !== 2 && bands !== 3) throw new Error(`shading.bands is 2 or 3, not ${bands}`);
+      const resoften = soften !== OPT.shading.soften; Object.assign(OPT.shading, { style, bands, soften });
+      if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = (k === "hair" ? hairMat : isMetal(k) ? (c) => metal(style, c) : (c) => shaded(style, c))(old.color.getHex()); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style); x.m.material.wireframe = old.wireframe; old.dispose();
       }
-      { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style); old.dispose(); }   // 顔の絵も同じ陰影に
+      { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },

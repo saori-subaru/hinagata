@@ -69,7 +69,7 @@ interface Avatar {
   setColors(c: { skin?, hair?, eyes?, shirt?, pants?, socks?, shoes?, soles? }): void   // instant
   setWorn(w: { shirt?: boolean, pants?: boolean, socks?: boolean, shoes?: boolean }): void   // instant
   setOutline(o: { on?: boolean, width?: number, color?: string }): void   // instant
-  setShading(style: "toon" | "smooth" | "flat"): void   // instant
+  setShading(style: "toon" | "smooth" | "flat" | { style?, bands?: 2 | 3, soften?: number }): void   // instant (soften re-smooths the shading normals, ~0.15 s)
   setFace(face: string | { eyes?, brows?, mouth?, cheeks?, nose? }): void   // instant: an expression id, or part ids by slot
   setFaceLayout(l: { eyeX?, eyeY?, eyeSize?, browX?, browY?, mouthY? }): void   // instant
   setBlush(b: { cheeks?, nose? }): void   // instant
@@ -92,7 +92,7 @@ Two tiers, so the common knobs stay short and the sculpt details stay out of the
 {
   "colors": { "skin": "#ffe0c8", "hair": "#6a4a30", "eyes": "#4f6a9a" },
   "outline": { "on": true, "width": 1, "color": "#3a2a3a" },   // art style: some games want no outline. avatar.setOutline() changes it instantly
-  "shading": { "style": "toon" },   // "toon" (3 flat bands) | "smooth" (soft light falloff) | "flat" (no lighting). avatar.setShading() changes it instantly
+  "shading": { "style": "toon", "bands": 2, "soften": 1 },   // "toon" (2 flat bands: light / shadow; bands: 3 adds a mid tone) | "smooth" (soft light falloff) | "flat" (no lighting). avatar.setShading() changes it instantly
   "face": {
     "parts": { "eyes": "round", "brows": "normal", "mouth": "smile", "cheeks": "none", "nose": null },   // ids in PART_LABELS (with ja / en names); "image" = a drawn part. nose null = follow noseShadow.on
     "images": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },   // drawn parts (null = the bundled img/parts/*.png)
@@ -455,6 +455,12 @@ When the face editor is built for real (beyond the check page's 枠つきPNGを�
 **Closed eye (2026-10-03, done)**: a drawn closed eye has its own fixed slot (`face.images.eyeClosed`), apart from named expressions, because the engine itself needs it: drawn eyes (`image`) blink with it (before, they blinked with the code-drawn closed eye, which didn't match the drawing), and the eye part `imageClosed` (絵のとじ目) shows it. On the framed template it is drawn in the frame on the other eye (where the dashed "don't draw" frame was), so both eyes are drawn in place; reading flips it to the side the face draws. Without a closed-eye drawing, blinking stays code-drawn. Not yet in `facekit/` (the PSD template and `cut_face_parts.py`). The same kind of fixed slot will be needed for an open mouth if characters talk.
 
 ## Decisions
+
+**Clean shadows (2026-10-04, Saori; done)**: the toon bands stained the character: a band across the lower face, blotches on the shirt and the hair. The bands followed the mesh's normals, which carry every small bump where the blended shapes meet; three bands made twice the stains, and are too many for chibi characters anyway. Now:
+- **2 bands by default** (light / shadow; `shading.bands: 3` keeps the old mid tone). The shadow is a little violet, not grey (three's toon shader only reads the ramp's red channel, so `toon()` reads its color). The ramp is 64 filtered texels: a crisp edge without jaggies. The edge sits at dot(N, L) = 0.2, so the side away from the light shows some shadow from the usual front-right view.
+- **Shading normals** (`shadeN`, `smoothNormals` in `sdf/mesh.js`): each part's normals averaged with their neighbors' over about 2.2 cm (`shading.soften` scales it, 0 = the mesh's own). A neighbor only counts when it faces within 60°, so hems, rims and both sides of a strand stay apart. Body, clothes and hair; armor and weapons keep their hard edges; a skirt keeps the cloth's normals. The clay view and the outline use the real normals. ~0.15 s at high quality, not cached (it's cheap and follows `soften`).
+- **The hair shades as one volume**: its shading normals lean 60 % toward the direction from the head's center (or from the vertical line under it, for hair hanging down), the way anime games do it, so light and shadow split the hair cleanly instead of strand by strand.
+- **The face**: the head's ellipsoid normals (face.shading) are now taller and lower (y 0.96, radiusY 0.7) and reach down to the chin (head-space y 0.80–0.86), so the front of the face stays lit and only a thin shadow is left under the chin.
 
 Decided: working name "Hinagata" (check npm before publishing); code-drawn face is the default; first body sliders are head size, chubbiness and leg length; chibi proportions only.
 

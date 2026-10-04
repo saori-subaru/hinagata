@@ -41,6 +41,8 @@ const MAIN = [
   ["outline.width", L("輪郭線の太さ", "Outline width"), { when: { "outline.on": true }, min: 0, max: 3, step: 0.05, apply: "setOutline" }],
   ["outline.color", L("輪郭線の色", "Outline color"), { when: { "outline.on": true }, apply: "setOutline" }],
   ["shading.style", L("塗り", "Shading"), { options: opts({ toon: ["アニメ", "Toon"], smooth: ["なめらか", "Smooth"], flat: ["べた塗り", "Flat"] }), apply: "setShading" }],
+  ["shading.bands", L("影の段数", "Shadow bands"), { when: { "shading.style": "toon" }, min: 2, max: 3, step: 1, apply: "setShading", help: L("2 = 光と影だけ(すっきり) / 3 = 中間の色つき", "2 = light and shadow only (clean) / 3 = with a mid tone") }],
+  ["shading.soften", L("影のなめらかさ", "Shadow smoothing"), { when: { "shading.style": "toon" }, min: 0, max: 2, step: 0.05, apply: "setShading", help: L("影の境目を大きな形にそわせる(0 = メッシュの凹凸のまま)", "how much the shadow follows the big shapes instead of small bumps (0 = the mesh as is)") }],
 
   // body
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.8, max: 1.05, step: 0.01, section: L("頭", "Head") }],
