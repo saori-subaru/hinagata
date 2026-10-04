@@ -98,7 +98,7 @@ const MAIN = [
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
-  ["hair.sculpt.shortLocks.backLift", L("後ろ髪の浮き", "Back hair lift"), { when: { "hair.back": "short" }, min: 0, max: 1, step: 0.05, section: L("髪型", "Style"), help: L("後頭部の毛束 1 = 髪の上にのせる(ふんわり) / 0 = 半分うめる(すっきり)", "the locks on the back of the head: 1 = lying on the hair (fuller) / 0 = half sunk (sleeker)") }],
+  ["hair.sculpt.shortLocks.hang", L("後ろ髪をたらす", "Hang the back hair"), { when: { "hair.back": "short" }, section: L("髪型", "Style"), help: L("オン = 後頭部から垂らす(刈り上げが下からのぞく) / オフ = 頭にそわせる", "on = hanging from the back of the head (the nape shows under it) / off = lying along the head") }],
   ["hair.sculpt.ahogeSize", L("アホ毛の大きさ", "Ahoge size"), { when: { "hair.ahoge": true }, min: 0.6, max: 1.6, step: 0.01, section: L("髪型", "Style") }],
   ["hair.sculpt.ahogeDir", L("アホ毛の向き(度)", "Ahoge direction (°)"), { when: { "hair.ahoge": true }, min: -180, max: 180, step: 5, section: L("髪型", "Style"), help: L("0 = 前 / 90 = キャラの左", "0 = forward, 90 = toward the character's left") }],
   ["hair.paint.strands.on", L("髪の筋", "Strands"), { section: L("塗り", "Paint") }],

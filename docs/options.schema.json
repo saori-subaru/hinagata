@@ -6869,7 +6869,7 @@
   "hair.sculpt.shortLocks.count": {
    "path": "hair.sculpt.shortLocks.count",
    "type": "number",
-   "default": 17,
+   "default": 15,
    "label": {
     "en": "short locks › count"
    },
@@ -6878,7 +6878,7 @@
    "cost": "hair",
    "apply": null,
    "min": 0,
-   "max": 34,
+   "max": 30,
    "step": 1,
    "soft": true,
    "section": {
@@ -6888,7 +6888,7 @@
   "hair.sculpt.shortLocks.span": {
    "path": "hair.sculpt.shortLocks.span",
    "type": "number",
-   "default": 135,
+   "default": 115,
    "label": {
     "en": "short locks › span"
    },
@@ -6897,7 +6897,7 @@
    "cost": "hair",
    "apply": null,
    "min": 0,
-   "max": 270,
+   "max": 230,
    "step": 1,
    "soft": true,
    "section": {
@@ -6907,7 +6907,7 @@
   "hair.sculpt.shortLocks.width": {
    "path": "hair.sculpt.shortLocks.width",
    "type": "number",
-   "default": 0.09,
+   "default": 0.075,
    "label": {
     "en": "short locks › width"
    },
@@ -6915,9 +6915,9 @@
    "tier": "advanced",
    "cost": "hair",
    "apply": null,
-   "min": 0.045,
-   "max": 0.135,
-   "step": 0.001,
+   "min": 0.0375,
+   "max": 0.1125,
+   "step": 0.0001,
    "soft": true,
    "section": {
     "en": "short locks"
@@ -6926,7 +6926,7 @@
   "hair.sculpt.shortLocks.thick": {
    "path": "hair.sculpt.shortLocks.thick",
    "type": "number",
-   "default": 0.32,
+   "default": 0.25,
    "label": {
     "en": "short locks › thick"
    },
@@ -6934,86 +6934,45 @@
    "tier": "advanced",
    "cost": "hair",
    "apply": null,
-   "min": 0.16,
-   "max": 0.48,
+   "min": 0.125,
+   "max": 0.375,
    "step": 0.001,
    "soft": true,
    "section": {
     "en": "short locks"
    }
   },
-  "hair.sculpt.shortLocks.backLift": {
-   "path": "hair.sculpt.shortLocks.backLift",
-   "type": "number",
-   "default": 1,
+  "hair.sculpt.shortLocks.hang": {
+   "path": "hair.sculpt.shortLocks.hang",
+   "type": "boolean",
+   "default": true,
    "label": {
-    "ja": "後ろ髪の浮き",
-    "en": "Back hair lift"
+    "ja": "後ろ髪をたらす",
+    "en": "Hang the back hair"
    },
    "group": "hair",
    "tier": "main",
    "cost": "hair",
    "apply": null,
-   "min": 0,
-   "max": 1,
-   "step": 0.05,
    "order": 58,
    "section": {
     "ja": "髪型",
     "en": "Style"
    },
    "help": {
-    "ja": "後頭部の毛束 1 = 髪の上にのせる(ふんわり) / 0 = 半分うめる(すっきり)",
-    "en": "the locks on the back of the head: 1 = lying on the hair (fuller) / 0 = half sunk (sleeker)"
+    "ja": "オン = 後頭部から垂らす(刈り上げが下からのぞく) / オフ = 頭にそわせる",
+    "en": "on = hanging from the back of the head (the nape shows under it) / off = lying along the head"
    },
    "when": {
     "hair.back": "short"
-   }
-  },
-  "hair.sculpt.shortLocks.puff": {
-   "path": "hair.sculpt.shortLocks.puff",
-   "type": "number",
-   "default": 0.006,
-   "label": {
-    "en": "short locks › puff"
-   },
-   "group": "hair",
-   "tier": "advanced",
-   "cost": "hair",
-   "apply": null,
-   "min": 0.003,
-   "max": 0.009,
-   "step": 0.0001,
-   "soft": true,
-   "section": {
-    "en": "short locks"
-   }
-  },
-  "hair.sculpt.shortLocks.flick": {
-   "path": "hair.sculpt.shortLocks.flick",
-   "type": "number",
-   "default": 0.02,
-   "label": {
-    "en": "short locks › flick"
-   },
-   "group": "hair",
-   "tier": "advanced",
-   "cost": "hair",
-   "apply": null,
-   "min": 0.01,
-   "max": 0.03,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "short locks"
    }
   },
   "hair.sculpt.shortLocks.ph": {
    "path": "hair.sculpt.shortLocks.ph",
    "type": "json",
    "default": [
-    74,
-    54
+    64,
+    44
    ],
    "label": {
     "en": "short locks › ph"
@@ -7043,6 +7002,138 @@
    "soft": true,
    "section": {
     "en": "short locks"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.count": {
+   "path": "hair.sculpt.shortLocks.lie.count",
+   "type": "number",
+   "default": 17,
+   "label": {
+    "en": "short locks › lie › count"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 34,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.span": {
+   "path": "hair.sculpt.shortLocks.lie.span",
+   "type": "number",
+   "default": 135,
+   "label": {
+    "en": "short locks › lie › span"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 270,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.width": {
+   "path": "hair.sculpt.shortLocks.lie.width",
+   "type": "number",
+   "default": 0.09,
+   "label": {
+    "en": "short locks › lie › width"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.045,
+   "max": 0.135,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.thick": {
+   "path": "hair.sculpt.shortLocks.lie.thick",
+   "type": "number",
+   "default": 0.32,
+   "label": {
+    "en": "short locks › lie › thick"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.16,
+   "max": 0.48,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.puff": {
+   "path": "hair.sculpt.shortLocks.lie.puff",
+   "type": "number",
+   "default": 0.006,
+   "label": {
+    "en": "short locks › lie › puff"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.003,
+   "max": 0.009,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.flick": {
+   "path": "hair.sculpt.shortLocks.lie.flick",
+   "type": "number",
+   "default": 0.02,
+   "label": {
+    "en": "short locks › lie › flick"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.01,
+   "max": 0.03,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "short locks › lie"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.ph": {
+   "path": "hair.sculpt.shortLocks.lie.ph",
+   "type": "json",
+   "default": [
+    74,
+    54
+   ],
+   "label": {
+    "en": "short locks › lie › ph"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "section": {
+    "en": "short locks › lie"
    }
   },
   "hair.sculpt.shortLocks.vary": {
