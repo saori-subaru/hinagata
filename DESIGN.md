@@ -357,6 +357,8 @@ Saori wanted the forest game's character to climb giant trees and fall properly,
 
 **Gliding under a held leaf, and holding a pole** (2026-10-03, Saori: 「登ったところからパラセールみたいに葉っぱでとべたら楽しそう」; `src/motion/glide.js`): `glide` hangs the body from both hands (legs trailing a little and swinging loosely, toes down, head looking ahead; sharp, since IK runs on it every frame). `holdPole(avatar, { at, up, right })` puts both hands on a pole at a world point, the left one a little higher, elbows out. The game owns the held thing (the forest's leaf: its mesh and where it sits); the engine only puts the body under it and the hands on it. The default body's arms are short (0.18 m at 0.86 m tall) and the head is big, so the hands cannot reach above the head: the forest holds the stalk in front of the chin, with the leaf above the head.
 
+**In the water** (2026-10-04, Saori: 「今泳げないし、足がつかないところはいけない」; `src/motion/swim.js`): `swim` is a dog paddle for a big-headed body (the body tipped forward ~55°, the head turned back up so the eyes look ahead and the chin rides the surface, the hands paddling under the chin in turn, the legs kicking behind; `SWIM_W` rad/s at speed 1). `treadWater` stands upright, sculling at the sides and pedalling slowly. `wade` walks through water to the thighs: knees high, leaning in, arms raised out of the water. `swimHead(avatar)` gives the chin's height in the swim pose, so the game can float the feet point at water level minus that.
+
 Not yet: hanging by the hands; feet finding holds during the pull-up (the legs are posed, not placed).
 
 ### Loading Mixamo / VRM motions (2026-10-02, noted)
