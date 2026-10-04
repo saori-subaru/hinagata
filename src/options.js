@@ -518,7 +518,7 @@ export const DEFAULTS = {
       "ahogeDir": 90,
       "long": {
         "locks": true,
-        "hug": true,
+        "hug": false,
         "count": 13,
         "span": 110,
         "width": 0.075,
