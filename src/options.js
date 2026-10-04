@@ -81,7 +81,10 @@ export const DEFAULTS = {
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.015
+        "k": 0.015,
+        "backZ": 0.12,
+        "backRise": 0.7,
+        "backMax": 0.07
       },
       "jawU": {
         "on": 0,

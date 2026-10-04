@@ -1019,6 +1019,63 @@
     "en": "chin"
    }
   },
+  "body.sculpt.chin.backZ": {
+   "path": "body.sculpt.chin.backZ",
+   "type": "number",
+   "default": 0.12,
+   "label": {
+    "en": "chin › back z"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.06,
+   "max": 0.18,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.backRise": {
+   "path": "body.sculpt.chin.backRise",
+   "type": "number",
+   "default": 0.7,
+   "label": {
+    "en": "chin › back rise"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.35,
+   "max": 1.05,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.backMax": {
+   "path": "body.sculpt.chin.backMax",
+   "type": "number",
+   "default": 0.07,
+   "label": {
+    "en": "chin › back max"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.035,
+   "max": 0.105,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
   "body.sculpt.jawU.on": {
    "path": "body.sculpt.jawU.on",
    "type": "number",
@@ -7471,7 +7528,7 @@
   "hair.sculpt.long.hug": {
    "path": "hair.sculpt.long.hug",
    "type": "boolean",
-   "default": true,
+   "default": false,
    "label": {
     "en": "long › hug"
    },

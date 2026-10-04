@@ -96,7 +96,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
   CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
   const CH = OPT.body.sculpt.chin;   // under the chin: height at the middle, how fast it rises toward the sides (rounder U), softness of the corner
-  CUT.chin = plane((x, y) => (y - CH.y + 0.014 * Math.exp(-x * x / 0.0032) - CH.curve * x * x) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
+  // backRise: seen from the side the underside of the jaw rises from the chin toward the ear (by backRise per m behind backZ, at most backMax),
+  // so there is no corner under the ear: the jaw line runs up to it and the neck sits behind (2026-10-04, Saori: "the jaw looks heavy, under the ear bulges")
+  const rise = (z) => { if (!CH.backRise) return 0; const s = (CH.backZ ?? 0.12) - z, r = CH.backRise * 0.5 * (s + Math.sqrt(s * s + 0.0004)), m = CH.backMax ?? 0.06; return r - 0.5 * (r - m + Math.sqrt((r - m) ** 2 + 0.0001)); };   // a smooth ramp, then a smooth cap
+  CUT.chin = plane((x, y, z) => (y - CH.y - rise(z) + 0.014 * Math.exp(-x * x / 0.0032) - CH.curve * x * x) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;
