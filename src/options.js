@@ -87,13 +87,13 @@ export const DEFAULTS = {
         "backMax": 0.07
       },
       "jawU": {
-        "on": 0,
+        "on": 1,
         "rx": 0.165,
         "ry": 0.12,
-        "y": 0.96,
-        "z0": 0.02,
-        "open": 1.5,
-        "k": 0.03
+        "y": 0.9,
+        "z0": 0.06,
+        "open": 0.8,
+        "k": 0.06
       },
       "noseGroove": {
         "depth": 0,
