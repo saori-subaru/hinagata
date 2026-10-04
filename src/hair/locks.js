@@ -85,10 +85,13 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
       const ph = (B.lockRoot ?? 70) * deg, ra = (tp.a + f * half) * (B.lockRootSpread ?? 0.45),   // they grow from near the crown (where the back's locks start too)
         rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
+      let reach = 0;
       const w = 2 * half / k * r0 * (B.overlap ?? 1.25) * (k > 1 ? 1.35 : 1) * sx, thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
       for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, m) => v + (tip[m] - v) * t), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
         const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
-        pts.push(toRoot(center[0] + u[0] * at, center[1] + u[1] * at, center[2] + u[2] * at)); }
+        let px = center[0] + u[0] * at, py = center[1] + u[1] * at, pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
+        if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
+        pts.push(toRoot(px, py, pz)); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true });
     }
