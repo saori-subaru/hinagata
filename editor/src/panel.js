@@ -141,10 +141,6 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const remove = (d) => { if (!confirm(t("confirmDelExpr", d.name || d.id))) return; const id = `image@${d.id}`, extra = {};
       for (const k of ["eyes", "brows", "mouth"]) if (store.get(`face.parts.${k}`) === id) extra[`face.parts.${k}`] = "image";   // the face was showing it: back to the drawn ふつう
       setDrawn(list.filter((q) => q !== d), extra); };
-    const nameIn = h("input", { class: "num grow", placeholder: t("exprName"), "aria-label": t("exprName") });
-    const add = () => { let n = list.length + 1; const ids = new Set(list.map((d) => String(d.id))); let id; do id = `e${n++}`; while (ids.has(id));
-      setDrawn([...list, { id, name: nameIn.value.trim() || t("newExpr", list.length + 1), eye: null, brow: null, mouth: null, cheeks: "none", blink: true }]); };
-    nameIn.addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
     const readBtn = (into) => h("button", { class: "chip read", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("tplReadShort"));   // the template drawn for this expression
     const cards = [h("div", { class: "drow" }, h("div", { class: "head" }, h("b", {}, t("normalPic")), readBtn(null)), h("div", { class: "pics" }, ["eye", "eyeClosed", "brow", "mouth", "nose"].map((k) => pic(k, base(k)))))];
     for (const d of list) {
@@ -157,9 +153,9 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("drawn"))),
       h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
+        h("button", { class: "btn small", type: "button", title: t("tplNewTitle"), onclick: () => ctx.onReadTemplate("new") }, t("tplNew")),
         anyPic ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const k of ["eye", "eyeClosed", "brow", "mouth", "nose"]) ch[`face.images.${k}.src`] = null; ch["face.drawn"] = list.map((d) => ({ ...d, eye: null, brow: null, mouth: null })); set(ch); } }, t("tplClear")) : null),
       h("div", { class: "drawn" }, cards),
-      h("div", { class: "row add" }, nameIn, h("button", { class: "btn small", type: "button", onclick: add }, t("addExpr"))),
       h("div", { class: "help" }, t("tplHelp")));
   }
   // moving the nendo bangs' tufts on the face (editor/src/bangs.js): the switch, adding / removing, and the picked tuft's own values

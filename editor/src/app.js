@@ -96,11 +96,12 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
-  onReadTemplate: (into = null) => { tplInto = into; $("fileTpl").click(); },
+  onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
   bangs,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
-let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう)
+let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
+const NEW = Symbol("new");
 function showTemplate(kind) {
   if (!vp.avatar) return;
   faceSheet(vp.avatar, { kind, lang: getLang() }).toBlob((b) => {
@@ -118,13 +119,20 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("tplModal").hi
 $("fileTpl").addEventListener("change", (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
   const im = new Image(); im.onload = () => {
-    let r; try { r = readFaceSheet(vp.avatar, im, { into: tplInto }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
+    const list = (store.get("face.drawn") ?? []).filter((d) => d && d.id != null), fresh = tplInto === NEW;   // NEW: the drawing becomes a new expression
+    let into = tplInto;
+    if (fresh) { const ids = new Set(list.map((d) => String(d.id))); let n = list.length + 1; do into = `e${n++}`; while (ids.has(into)); }
+    let r; try { r = readFaceSheet(vp.avatar, im, { into }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
     if (!r.read.length) { toast(t("tplRead0")); return; }
-    const ch = sheetChanges(store.recipe, r);
-    const id = tplInto != null ? `image@${tplInto}` : "image";   // show what was just read
+    let ch;
+    if (fresh) {   // named "新しい表情" (2, 3 … if taken); renamed in its row
+      const names = new Set(list.map((d) => d.name)); let name = t("newExprName"), k = 2; while (names.has(name)) name = `${t("newExprName")}${k++}`;
+      ch = { "face.drawn": [...list, { id: into, name, eye: null, brow: null, mouth: null, ...r.drawn[into], cheeks: "none", blink: true }] };
+    } else ch = sheetChanges(store.recipe, r);
+    const id = into != null ? `image@${into}` : "image";   // show what was just read
     Object.assign(ch, { "face.parts.eyes": id, "face.parts.brows": id, "face.parts.mouth": id });
-    if (tplInto != null) ch["face.parts.cheeks"] = (store.get("face.drawn") ?? []).find((d) => String(d?.id) === String(tplInto))?.cheeks ?? "none";
-    store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length));
+    if (into != null) ch["face.parts.cheeks"] = fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none";
+    store.set(ch, { commit: true }); toast(fresh ? t("tplNewExpr", ch["face.drawn"].at(-1).name) : t("tplReadN", r.read.length));
   };
   im.onerror = () => toast(t("tplBad")); im.src = URL.createObjectURL(f);
 });
