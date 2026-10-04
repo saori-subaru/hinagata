@@ -14,7 +14,7 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
-const OWN = 0.5;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
+const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
  * Where the locks grow and how they hang (root space, rest pose): a ring of locks around the back and sides of the head, in two layers
@@ -51,10 +51,10 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
     const ty = bottom(th) - (L.vary ?? 0.15) * 0.1 * rnd(), c = [center[0], ty, center[2]], hd = [Math.sin(th), 0, Math.cos(th)], tip = hd.map((v, k) => c[k] + v * surfaceAlong(cap, c, hd));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1), thick = L.thick ?? 0.25, puff = (L.puff ?? 0.008) * rnd(), pts = [];   // puff: some locks stand a little off the others
     for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, k) => v + (tip[k] - v) * t), d = p.map((v, k) => v - center[k]), dl = Math.hypot(...d), e = d.map((v) => v / dl);
-      const off = q ? 0.5 * w * thick * width(t) + 0.002 + (layer ? 0 : 0.005) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3 : -0.008, at = surfaceAlong(cap, center, e) + off;   // the outer layer over the inner one
+      const off = rise(t, (layer ? -0.003 : 0.003) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3), at = surfaceAlong(cap, center, e) + off;   // half sunk into the hair (it keeps the hair's own volume; on top of it the locks made the head 2-4 cm bigger, a step where they began); the outer layer over the inner onehe inner one
       pts.push(e.map((v, k) => center[k] + v * at)); }
     let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-    specs.push({ root: pts[0], pts, len, w, thick, layer, curl: (rnd() - 0.5) * 0.03 });
+    specs.push({ root: pts[0], pts, len, w, thick, layer, curl: (rnd() - 0.5) * 0.03, rise: true });
   }
   return specs;
 }
@@ -82,14 +82,15 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
     for (let j = 0; j < k; j++) {
       const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
       const tip = horiz(tipY, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
-      const ph = (B.root ?? 55) * deg, ra = (tp.a + f * half) * 0.6, rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
+      const ph = (B.lockRoot ?? 70) * deg, ra = (tp.a + f * half) * (B.lockRootSpread ?? 0.45),   // they grow from near the crown (where the back's locks start too)
+        rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
       const w = 2 * half / k * r0 * (B.overlap ?? 1.25) * (k > 1 ? 1.35 : 1) * sx, thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
       for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, m) => v + (tip[m] - v) * t), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
-        const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + (q ? off : -0.006);   // along the surface (the root a little inside the hair); the middle of a clump on top
+        const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
         pts.push(toRoot(center[0] + u[0] * at, center[1] + u[1] * at, center[2] + u[2] * at)); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0 });
+      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true });
     }
   });
   return out;
@@ -109,6 +110,10 @@ function drape(s, coll, ell, N = 12) {
   }
   return P;
 }
+// a lock lying on the hair comes out of it gently: its lift over the surface (off) grows from under the surface over the first third,
+// and the mesh gets its thickness over the first fifth (else the root's cut edge stood out as a ridge — a step between the bangs and the
+// back on top of the head, read as a helmet's rim from the front: 2026-10-04, Saori)
+const rise = (t, off) => -0.006 + (off + 0.006) * sstep(0, 0.33, t);
 // how wide a lock is along its length (t: 0 root → 1 tip): a little fuller in the middle, then to a sharp point
 export const width = (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - t * t * t), 0.8);
 
@@ -204,7 +209,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         let dx = Dd[r * 3], dy = Dd[r * 3 + 1], dz = Dd[r * 3 + 2]; const dl = Math.hypot(dx, dy, dz) || 1; dx /= dl; dy /= dl; dz /= dl;
         let [ox, oy, oz] = outward(cx, cy, cz, M); const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * width(t), ht = Math.max(0.0012, hw * s.thick), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
+        const hw = 0.5 * s.w * width(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
         for (let k = 0; k < RING.length; k++) { const [u, w] = RING[k], v = (l * VPL + r * RING.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const x = cx + ax * (u * hw + cu) + ox * w * ht * bulge, y = cy + ay * (u * hw + cu) + oy * w * ht * bulge, z = cz + az * (u * hw + cu) + oz * w * ht * bulge;
           toRest(pos, v, x, y, z, false);

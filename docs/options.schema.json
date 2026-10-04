@@ -6658,6 +6658,44 @@
     "en": "nendo"
    }
   },
+  "hair.sculpt.nendo.lockRoot": {
+   "path": "hair.sculpt.nendo.lockRoot",
+   "type": "number",
+   "default": 70,
+   "label": {
+    "en": "nendo › lock root"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0,
+   "max": 140,
+   "step": 1,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.lockRootSpread": {
+   "path": "hair.sculpt.nendo.lockRootSpread",
+   "type": "number",
+   "default": 0.45,
+   "label": {
+    "en": "nendo › lock root spread"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": null,
+   "min": 0.225,
+   "max": 0.675,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
   "hair.sculpt.nendo.width": {
    "path": "hair.sculpt.nendo.width",
    "type": "number",
@@ -6831,7 +6869,7 @@
   "hair.sculpt.shortLocks.count": {
    "path": "hair.sculpt.shortLocks.count",
    "type": "number",
-   "default": 15,
+   "default": 17,
    "label": {
     "en": "short locks › count"
    },
@@ -6840,7 +6878,7 @@
    "cost": "hair",
    "apply": null,
    "min": 0,
-   "max": 30,
+   "max": 34,
    "step": 1,
    "soft": true,
    "section": {
@@ -6850,7 +6888,7 @@
   "hair.sculpt.shortLocks.span": {
    "path": "hair.sculpt.shortLocks.span",
    "type": "number",
-   "default": 115,
+   "default": 135,
    "label": {
     "en": "short locks › span"
    },
@@ -6859,7 +6897,7 @@
    "cost": "hair",
    "apply": null,
    "min": 0,
-   "max": 230,
+   "max": 270,
    "step": 1,
    "soft": true,
    "section": {
@@ -6869,7 +6907,7 @@
   "hair.sculpt.shortLocks.width": {
    "path": "hair.sculpt.shortLocks.width",
    "type": "number",
-   "default": 0.075,
+   "default": 0.09,
    "label": {
     "en": "short locks › width"
    },
@@ -6877,9 +6915,9 @@
    "tier": "advanced",
    "cost": "hair",
    "apply": null,
-   "min": 0.0375,
-   "max": 0.1125,
-   "step": 0.0001,
+   "min": 0.045,
+   "max": 0.135,
+   "step": 0.001,
    "soft": true,
    "section": {
     "en": "short locks"
@@ -6907,7 +6945,7 @@
   "hair.sculpt.shortLocks.puff": {
    "path": "hair.sculpt.shortLocks.puff",
    "type": "number",
-   "default": 0.014,
+   "default": 0.006,
    "label": {
     "en": "short locks › puff"
    },
@@ -6915,8 +6953,8 @@
    "tier": "advanced",
    "cost": "hair",
    "apply": null,
-   "min": 0.007,
-   "max": 0.021,
+   "min": 0.003,
+   "max": 0.009,
    "step": 0.0001,
    "soft": true,
    "section": {
@@ -6946,8 +6984,8 @@
    "path": "hair.sculpt.shortLocks.ph",
    "type": "json",
    "default": [
-    64,
-    44
+    74,
+    54
    ],
    "label": {
     "en": "short locks › ph"
