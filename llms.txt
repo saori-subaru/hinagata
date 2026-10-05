@@ -43,14 +43,15 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta()); renderer.rend
 </script>
 ```
 - three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
-- `createAvatar(recipe, { quality: "game" })`: "game" (default, lighter) or "high". Scale `avatar.object` to your world as you like.
+- `createAvatar(recipe, { quality: "game" })`: "game" (default), "lite" (about a quarter of the game's vertices, ~13k: the meshes thinned
+  and the hair's locks drawn lighter; for several characters or phones) or "high". Scale `avatar.object` to your world as you like.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine.
 - A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source). A whole small game an agent made from this
   guide alone (its character.json, its own swing pose, touch controls): https://hinagata.pages.dev/examples/tennis/
-- Weight: one avatar at "game" quality is about 100k triangles, and `update` takes about 5 ms (10 with a skirt or long hair: hair and cloth
+- Weight: one avatar at "game" quality is about 100k triangles ("lite" 15–45k), and `update` takes about 5 ms (7–12 with a skirt or long hair: hair and cloth
   are simulated on the CPU; measured on a 2.8 GHz cloud CPU). Budget for it with several on screen; don't update avatars nobody sees.
-  To thin the meshes: `createAvatar(recipe, { simplify: 0.3 })` keeps 30% of the triangles (add `"meshoptimizer":
-  "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.module.js"` to the import map). Headless browsers draw it slowly; a real GPU doesn't.
+  Lighter: `quality: "lite"`, or thin the meshes yourself: `createAvatar(recipe, { simplify: 0.3 })` keeps 30% of the triangles (it loads
+  meshoptimizer from jsDelivr, or the import map's "meshoptimizer"). Headless browsers draw slowly; a real GPU doesn't.
 
 ## The recipe
 

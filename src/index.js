@@ -41,10 +41,11 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 /**
  * Build an avatar.
  * options:  see DEFAULTS (src/options.js); anything left out uses the default.
- * settings: { quality: "game" (default) | "high" | "low" — mesh density (cell size 13.6 / 6.8 / 9.5 mm).
+ * settings: { quality: "game" (default) | "lite" | "high" | "low" — mesh density (cell size 13.6 / 13.6 / 6.8 / 9.5 mm; "lite" also thins the meshes to 15%
+ *              (simplify) and draws the hair's locks lighter: about a fifth of the game's vertices).
  *               "game" is about 3x faster to build and 4x lighter to draw than "high"; only hair tips and hems get slightly rougher.
  *             cell: a cell size in metres, instead of quality,
- *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Needs the "meshoptimizer" package in your import map,
+ *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
@@ -59,16 +60,20 @@ function shapeOnly(OPT) {
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
-export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
-  const H = cell || { game: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  const H = cell || { game: 0.0136, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  // "lite" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点"): the game's meshes thinned to 15% (meshoptimizer) and lighter hair locks, about a fifth
+  // of the vertices; the same look at a game's distance
+  const LITE = quality === "lite", simplify = simplifyAsked ?? (LITE ? 0.15 : 1);
   let MS = null;   // meshoptimizer's simplifier, only when asked for
   if (simplify < 1) {
-    try { MS = (await import("meshoptimizer")).MeshoptSimplifier; await MS.ready; }
-    catch (e) { throw new Error('settings.simplify needs the "meshoptimizer" package: add "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.module.js" to your import map (or npm install meshoptimizer). ' + e.message); }
+    const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)
+    try { MS = (await import("meshoptimizer").catch(() => import(MO))).MeshoptSimplifier; await MS.ready; }
+    catch (e) { throw new Error(`settings.simplify needs the "meshoptimizer" package (it couldn't be loaded from your import map or ${MO}). ` + e.message); }
   }
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
@@ -100,11 +105,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null) {
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
+    if (w && MS) { rec = simplified(rec, name); }   // a worker builds full meshes; they are thinned here (with their skin weights)
     if (w) fresh[name] = rec;
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
-      if (MS) ({ pos, nor, idx } = simplified(pos, nor, idx));
+      if (MS) ({ pos, nor, idx } = simplified({ pos, nor, idx }, name));
       const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only, soft);
       rec = fresh[name] = { pos, nor, idx, si, sw };
     }
@@ -117,15 +123,20 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     PROF.push({ part: name, verts: rec.pos.length / 3, ms: w ? w.ms : Math.round(performance.now() - T0), cached: !time, worker: !!w, sample: time ? Math.round(time.sample) : 0, project: time ? Math.round(time.project) : 0 });
     return g;
   }
-  // keep `simplify` of the triangles (meshoptimizer), then drop the vertices nothing uses any more
-  function simplified(pos, nor, idx) {
-    if (idx.length < 3) return { pos, nor, idx };   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
-    const [out] = MS.simplify(idx, pos, 3, Math.min(idx.length, Math.max(3, Math.floor(idx.length * simplify / 3) * 3)), 1, []);   // error 1 = let the triangle count decide
+  // keep `simplify` of the triangles (meshoptimizer), then drop the vertices nothing uses any more (the skin weights, if there are any,
+  // follow their vertices: meshoptimizer keeps a subset of the vertices). Cloth (a skirt, a cape) is thinned less: its inner side rides on
+  // the outer side's nearest points, and from big triangles the inside showed through in holes (2026-10-05, the lite quality)
+  function simplified(rec, name) {
+    const { pos, nor, idx, si, sw } = rec;
+    if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
+    const share = (name === "cape" || (name === "pants" && skirtOf(OPT))) ? Math.max(simplify, Math.min(1, simplify * 4)) : simplify;
+    const [out] = MS.simplify(idx, pos, 3, Math.min(idx.length, Math.max(3, Math.floor(idx.length * share / 3) * 3)), 1, []);   // error 1 = let the triangle count decide
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
-    const P = new Float32Array(n * 3), N = new Float32Array(n * 3);
-    for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; } }
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
+    for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }
+      if (SI) for (let k = 0; k < 4; k++) { SI[m * 4 + k] = si[v * 4 + k]; SW[m * 4 + k] = sw[v * 4 + k]; } }
     for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
-    return { pos: P, nor: N, idx: out };
+    return SI ? { pos: P, nor: N, idx: out, si: SI, sw: SW } : { pos: P, nor: N, idx: out };
   }
   function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
     if (soft) addSoftNormals(soft, geo);
@@ -195,7 +206,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
   const pre = {};
   const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, armor, weapons } };
-  if (workers && !MS) {
+  if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H };
     const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
     const hairN = hairPartName(hairPick), jh = need(hairN) ? run(hairN) : null;   // the hair doesn't need the body: start it together with the body
@@ -364,7 +375,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
-    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.m.material = withGrad(x.m.material, U); x.sim = sim; return x; };
+    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.m.material = withGrad(x.m.material, U); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
