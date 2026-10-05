@@ -10,6 +10,7 @@ import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
 import { createTieTool } from "./ties.js";
 import { createPaintTool } from "./paint.js";
+import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
@@ -52,7 +53,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -83,6 +84,7 @@ function applyInstant(av, p, v) {
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
+    case "setAccessories": av.setAccessories(structuredClone(v)); return true;
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
       const ch = k.length > 4 ? { [k[3]]: { [last]: v } } : { [last]: v }; clearTimeout(locksT); locksT = setTimeout(() => { try { av.setLocks(k[2], ch); vp.apply(); backs.refresh(); } catch (e) { console.warn(e); } }, 150); return true; }
   }
@@ -106,7 +108,8 @@ const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   /
 const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
 const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
 const ties = createTieTool({ vp, store, onChange: () => panel.render() });
-const paint = createPaintTool({ vp, store, onChange: () => panel.render() });   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
+const paint = createPaintTool({ vp, store, onChange: () => panel.render() });
+const acc = createAccessoryTool({ vp, store, onChange: () => panel.render() });   // putting accessories on the character (accessories.js)   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
 // my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
 const HAIRS_KEY = "hinagata.editor.hairs";
 const hairs = {
@@ -126,7 +129,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
   onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
-  bangs, draw, hairs, backs, ties, paint,
+  bangs, draw, hairs, backs, ties, paint, acc,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)

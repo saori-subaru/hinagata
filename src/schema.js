@@ -265,6 +265,7 @@ const MAIN = [
   ["outfit.shoes.bootHeight", L("ブーツの高さ", "Boot height"), { when: { "outfit.shoes.kind": "boots" }, min: 0.12, max: 0.3, step: 0.005, section: L("靴", "Shoes"), help: L("はき口の高さ(m)", "the top's height (m)") }],
   ["outfit.shoes.heelAngle", L("ヒールの高さ", "Heel height"), { when: { "outfit.shoes.kind": "heels" }, min: 8, max: 40, step: 1, section: L("靴", "Shoes"), help: L("つま先立ちの角度(度)。大きいほどヒールが高い", "how far the foot tips forward (degrees): more is a higher heel") }],
   ["outfit.shoes.soleColor", L("靴底の色", "Sole color"), { section: L("靴", "Shoes"), apply: "setColors" }],
+  ["accessories", L("アクセサリー", "Accessories"), { section: L("アクセサリー", "Accessories"), help: L("[{ kind, bone, at, n, spin, size, color, mirror }] 体に付ける小物。kind: leaf(葉っぱ) / gem(宝石) / flower(花) / star(星) / ball(玉) / band(輪: 腕輪・足首・首)。bone の上に乗る。at: 頭なら頭の座標、ほかは骨の関節からのずれ。n: 向き(表面の向き)。spin: 向きのまわりの回転(度)。size: 大きさ(m、band は輪の太さ)。mirror: 反対側にも", "[{ kind, bone, at, n, spin, size, color, mirror }] small pieces on the body. kind: leaf / gem / flower / star / ball / band (a ring around the limb: bracelet, anklet, choker), riding on bone. at: head space for the head, else the offset from the bone's joint. n: the way it faces (the surface's normal). spin: turned around n (degrees). size: m (a band: how thick the ring is). mirror: on the other side too") }],
 ];
 
 // Where a path goes and what it costs, for every value (MAIN entries may override)
@@ -278,6 +279,7 @@ function place(path) {
   if (/^outfit\.\w+\.texture\./.test(path)) return { group: "outfit", cost: "instant", apply: "setTexture" };   // pictures on the garments: avatar.setTexture
   if (/^(hair|outfit\.\w+)\.gradient\./.test(path)) return { group: p[0] === "hair" ? "hair" : "outfit", cost: "instant", apply: "setGradient" };   // gradients: avatar.setGradient
   if (path.startsWith("hair.tail.")) return { group: "hair", cost: "hair", apply: "setTails" };   // tails: avatar.setTails rebuilds only them
+  if (top === "accessories") return { group: "outfit", cost: "instant", apply: "setAccessories" };   // accessories: avatar.setAccessories
   if (path === "hair.drawn") return { group: "hair", cost: "hair", apply: "setDrawn" };   // locks drawn by hand: avatar.setDrawnHair
   if (/^hair\.sculpt\.(shortLocks|long)\.(lie\.)?edits$/.test(path)) return { group: "hair", cost: "hair", apply: "setLocks" };   // the back locks' own changes (editor/src/backs.js)   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
   if (top === "hair") return { group: "hair", cost: p[1] === "paint" ? "paint" : "hair" };

@@ -207,6 +207,31 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     if (painted.length) kids.push(h("div", { class: "chips" }, painted.map((k) => h("button", { class: "chip", type: "button", title: t("paintClear"), onclick: () => { if (confirm(t("paintClearQ", t(`paint_${k}`)))) P.clear(k); } }, `${t(`paint_${k}`)} ×`))));
     return h("div", { class: "sec" }, kids);
   }
+  // accessories (editor/src/accessories.js): the kind and color for the next one, the tool's switch, and the picked item's own values
+  function accBlock() {
+    const A = ctx.acc; if (!A) return null; const S = A.state, items = A.items, sel = A.selected, it = items[sel];
+    const colorField = (val, on) => { const id = `f${uid++}`, inp = h("input", { id, type: "color", value: val }); inp.addEventListener("change", () => on(inp.value));
+      return h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t("accColor"))), h("div", { class: "row" }, inp)); };
+    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("accTitle")), h("span", { class: "cost" }, t("accN", items.length))),
+      h("div", { class: "chips" }, A.kinds.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(S.kind === k), onclick: () => A.set("kind", k) }, t(`acc_${k}`)))),
+      colorField(S.color, (v) => A.set("color", v)),
+      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => A.toggle() }, t("accOn")),
+        h("button", { class: "chip", type: "button", "aria-pressed": String(S.mirror), onclick: () => A.set("mirror", !S.mirror) }, t("accMirror")))];
+    if (S.on) kids.push(h("div", { class: "help" }, t(sel >= 0 ? "accHelpMove" : "accHelp")));
+    if (items.length) kids.push(h("div", { class: "chips" }, items.map((x, i) => h("button", { class: "chip", type: "button", "aria-pressed": String(sel === i), onclick: () => A.pick(i) }, `${t(`acc_${x.kind}`)} ${i + 1}`))));
+    if (it) {
+      for (const [k, key, min, max, step] of [["size", "accSize", 0.005, 0.2, 0.001], ["spin", "accSpin", -180, 180, 1]]) {
+        const id = `f${uid++}`, val = it[k] ?? 0, num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
+        const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
+        rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
+        rng.addEventListener("change", () => A.edit(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) A.edit(k, +num.value); });
+        kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
+      kids.push(colorField(it.color ?? "#e3c25a", (v) => A.edit("color", v)),
+        h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(!!it.mirror), onclick: () => A.edit("mirror", !it.mirror) }, t("accMirror")),
+          h("button", { class: "btn small ghost", type: "button", onclick: () => A.pick(sel) }, t("accNew")), h("button", { class: "btn small ghost", type: "button", onclick: () => A.remove() }, t("accDel"))));
+    }
+    return h("div", { class: "sec" }, kids);
+  }
   // the tails' ties by hand (editor/src/ties.js): only with tails
   function tiesBlock() {
     const T = ctx.ties; if (!T || !T.usable) return null;
@@ -286,11 +311,11 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const mine = ALL.filter((e) => tabOf(e) === tab), main = mine.filter((e) => e.tier === "main").sort((a, b) => a.order - b.order);
     panelEl.replaceChildren();
     const pre = presetBlock(); if (pre) panelEl.append(pre);
-    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
+    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories"))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
     if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
-    if (tab === "outfit") { const b = paintBlock(); if (b) panelEl.append(b); }
+    if (tab === "outfit") { for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
     if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), tiesBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
-    const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]);   // drawn locks: their own block if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
+    const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]); if (adv) panelEl.append(adv);   // one picture at a time: in Advanced; drawn locks and the back locks' edits: their own blocks
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });
     renderFoot();

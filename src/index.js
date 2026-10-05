@@ -23,6 +23,7 @@ import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 import { createCloth } from "./cloth.js";
+import { accessoryGeometries } from "./accessories.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
@@ -408,6 +409,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       else if (plate) for (const k of GARMENTS[g]) show(k, false); } };
   for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
   if (AO.on) wear("armor", true);
+  // accessories (options.accessories, src/accessories.js): small meshes, each on one bone; parts "acc<i>" (a mirrored item: "acc<i>.<k>")
+  let accKeys = [];
+  function makeAccessories() {
+    for (const k of accKeys) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; } accKeys = [];
+    (OPT.accessories ?? []).forEach((it, i) => { if (!it?.kind || !it.bone) return;
+      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z) }).forEach(({ geo, bone }, k) => {
+        const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
+        geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
+        const key = k ? `acc${i}.${k}` : `acc${i}`; parts[key] = skinned(geo, it.color ?? "#e8c25a", 0.0025); accKeys.push(key); }); });
+  }
+  makeAccessories();
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
   const EL = OPT.face.earLine; let earLine = null;
   if (EL.on) { earLine = new THREE.Group(); earLine.name = "earLine"; const mat = new THREE.MeshBasicMaterial({ color: EL.color }), deg = Math.PI / 180;
@@ -621,6 +633,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Where the tails are tied (avatar space, rest pose): [{ p, o }] (o: the way the bundle leaves the head), [] without tails. For an editor's handles. */
     tailTies() { return tailAnchors.map((a) => ({ p: [...a.p], o: [...a.o] })); },
+    /** Accessories (instant): the whole list, as options.accessories ([{ kind, bone, at, n, spin, size, color, mirror }], src/accessories.js). */
+    setAccessories(list) { OPT.accessories = structuredClone(list ?? []); makeAccessories(); },
     setDrawnHair(list) {
       OPT.hair.drawn = structuredClone(list ?? []);
       const on = parts.hair.on, vis = parts.hair.m.visible;

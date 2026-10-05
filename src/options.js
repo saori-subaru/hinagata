@@ -11,6 +11,7 @@ export function skirtOf(OPT) {
   return PT.kind === "skirt" ? { ...base, top: PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
 }
 export const DEFAULTS = {
+  "accessories": [],
   "colors": {
     "skin": "#ffe0c8",
     "hair": "#6a4a30",
