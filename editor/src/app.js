@@ -12,6 +12,7 @@ import { createTieTool } from "./ties.js";
 import { createPaintTool } from "./paint.js";
 import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
+import { connectSync } from "./sync.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -33,8 +34,8 @@ const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pr
 
 // ── characters ──
 const lib = loadLibrary();
-const shared = new URLSearchParams(location.search).get("o");
-if (shared) { try { addChar(lib, t("shared"), recipeOf(JSON.parse(shared))); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", location.pathname); }
+const shared = new URLSearchParams(location.search).get("o"), SYNC = (({ sync, key }) => sync && key ? { port: +sync, key } : null)(Object.fromEntries(new URLSearchParams(location.search)));   // SYNC: live sync with a recipe file (sync.js)
+if (shared) { try { addChar(lib, t("shared"), recipeOf(JSON.parse(shared))); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
 if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
 let cur = lib.chars.find((c) => c.id === lib.current) ?? lib.chars[0]; lib.current = cur.id;
 const store = createStore(recipeOf(cur.recipe));
@@ -131,6 +132,14 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
   bangs, draw, hairs, backs, ties, paint, acc,
 });
+let syncShown = null;   // the sync's state on screen (redrawn in another language)
+// live sync with a recipe file (tools/sync.mjs, sync.js): the file is a character of its own in the library (named after it), switched to
+// when the editor connects; its changes come in as undo steps, the ones made here go back into it
+if (SYNC) connectSync({ ...SYNC, store,
+  onStart: (recipe, file) => { let c = lib.chars.find((x) => x.sync === file); if (!c) { c = addChar(lib, file, recipeOf(recipe)); c.sync = file; }
+    c.recipe = compact(recipeOf(recipe)); if (c.id === cur.id) { store.replace(recipeOf(recipe)); syncUndo(); renderLibrary(); } else switchTo(c); },
+  onStatus: (state, file) => { syncShown = { state, file }; showSync(); } });
+function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
 const NEW = Symbol("new");
@@ -218,7 +227,7 @@ addEventListener("keydown", (e) => {
   else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); store.redo(); }
 });
 function renderLang() { for (const b of $("lang").children) b.setAttribute("aria-pressed", String(b.dataset.lang === getLang())); }
-$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
+$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); showSync(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
 
 function switchTo(c) {
   store.commit(); persist();

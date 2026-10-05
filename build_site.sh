@@ -17,6 +17,9 @@ tar -cf - \
   --exclude='./tools' --exclude='./docs' --exclude='./facekit' --exclude='./examples' \
   --exclude='sotai-ref.jpg' \
   . | tar -C dist -xf -
+# the live-sync helper is a tool, but people run it from the site (the repository is private): curl -O https://hinagata.pages.dev/sync.mjs
+cp tools/sync.mjs dist/sync.mjs
+
 cat > dist/index.html <<'HTML'
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hinagata</title>
 <meta http-equiv="refresh" content="0; url=editor/"><link rel="canonical" href="editor/"></head>
