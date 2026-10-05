@@ -478,7 +478,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const SEAT_PROBE = ["body", "pants"].map((k) => { const m = parts[k].m, A = m.geometry.attributes.position, idx = [];
     for (let i = 0; i < A.count; i++) { const x = A.getX(i), y = A.getY(i), z = A.getZ(i); if (Math.abs(x) < 0.17 && y > 0.22 && y < 0.5 && z > -0.16 && z < 0.12) idx.push(i); }
     const step = Math.max(1, Math.ceil(idx.length / 500)); return { m, idx: idx.filter((_, j) => j % step === 0) }; });
-  const seatV = new THREE.Vector3(); let seatAdj = 0;
+  const seatV = new THREE.Vector3(); let seatAdj = 0, lastRoot = null; const wind = [0, 0, 0];
   function seatLow(front) { root.updateMatrixWorld(true); let lo = Infinity;   // front: the seat's front edge (z); the thighs beyond it are not on the seat
     for (const { m, idx } of SEAT_PROBE) { if (!m.visible) continue; for (const i of idx) { m.getVertexPosition(i, seatV); seatV.applyMatrix4(m.matrixWorld); root.worldToLocal(seatV); if (seatV.z < front && seatV.y < lo) lo = seatV.y; } }
     return lo; }
@@ -502,7 +502,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
       else seatAdj *= instant ? 0 : Math.exp(-dt * 9);
       { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(dt, instant, seat); capeCloth?.update(dt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
-      for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(dt, instant);
+      // the wind the hair meets: a pose that goes somewhere (run, walk: lastPose.air, m/s) played in place still streams the hair back. When
+      // the avatar really moves that fast, its own motion does it (the locks trail in world space): only what it lacks is added
+      { root.updateMatrixWorld(true); const e = root.matrixWorld.elements, fw = [e[8], 0, e[10]], fl = Math.hypot(fw[0], fw[2]) || 1, pos = [e[12], e[13], e[14]];
+        const v = !instant && lastRoot && dt > 0 ? ((pos[0] - lastRoot[0]) * fw[0] + (pos[2] - lastRoot[2]) * fw[2]) / fl / dt : 0; lastRoot = pos;
+        const a = Math.max(0, (lastPose.air ?? 0) - Math.max(0, v)); wind[0] = -fw[0] / fl * a; wind[1] = 0; wind[2] = -fw[2] / fl * a; }
+      for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(dt, instant, wind);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },

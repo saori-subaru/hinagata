@@ -22,7 +22,7 @@ Object.assign(POSES, {
       "foot.L": [0.15 - 0.2 * s - kL * 0.35, 0, 0], "foot.R": [0.15 + 0.2 * s - kR * 0.35, 0, 0],
       "upperArm.L": [0.75 * s, 0, -0.3], "upperArm.R": [-0.75 * s, 0, 0.3],   // arms against the legs
       "lowerArm.L": [-1.3 + 0.25 * s, 0, -0.05], "lowerArm.R": [-1.3 - 0.25 * s, 0, 0.05],   // elbows bent ~90°, opening a little on the back swing
-    }, y: 0.01 - 0.02 * Math.abs(c), grip: { L: 0.6, R: 0.6 }, sharp: true };   // sharp: once blended in, followed exactly (eased, the fast swing came out smaller and the feet slid)
+    }, y: 0.01 - 0.02 * Math.abs(c), grip: { L: 0.6, R: 0.6 }, sharp: true, air: 2.6 };   // air: the wind it runs into (m/s; the hair streams back, see index.js)   // sharp: once blended in, followed exactly (eased, the fast swing came out smaller and the feet slid)
   },
 });
 

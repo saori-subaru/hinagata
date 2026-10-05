@@ -1,4 +1,5 @@
-// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height }.
+// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height,
+//   air?: the speed (m/s) the pose would go at, for the wind the hair meets while it is played in place }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
 // grip?: { L, R } — how far each hand closes into a fist (0 = open, 1 = a fist): the finger bones curl toward the palm and the thumb folds
@@ -46,7 +47,7 @@ export const POSES = {
   "idle": (t) => ({ b: { ...ARMS_DOWN, chest: [sin(t * 1.6) * 0.02, 0, 0], head: [sin(t * 0.8) * 0.04, sin(t * 0.5) * 0.12, sin(t * 0.7) * 0.05] }, y: 0 }),
   "walk": (t) => { const ph = t * 6.2, s = sin(ph), kL = 0.12 + 0.75 * mx(0, sin(ph + 1.9)), kR = 0.12 + 0.75 * mx(0, sin(ph + 1.9 + Math.PI));
     return { b: { hips: [0, s * 0.12, 0], spine: [0.05, -s * 0.08, 0], head: [0.02, -s * 0.05, 0], "upperLeg.L": [-0.5 * s, 0, 0], "upperLeg.R": [0.5 * s, 0, 0], "lowerLeg.L": [kL, 0, 0], "lowerLeg.R": [kR, 0, 0], "foot.L": [-0.25 * s - kL * 0.3, 0, 0], "foot.R": [0.25 * s - kR * 0.3, 0, 0],
-      "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
+      "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02, air: 1 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
   // 手をふる: 腕を上げて止め、肘から先を左右に振る(WAVE)。手のひらは正面の相手へ。手首は曲げない(振ると前腕とずれて見えた)
   "wave": (t) => ({ b: { "upperArm.L": [0.18, 0, -0.18], "lowerArm.L": [0, 0.4, -0.08], "shoulder.R": WAVE.sh, "upperArm.R": WAVE.ua, "lowerArm.R": WAVE.fore(WAVE.mid + sin(t * 8) * WAVE.amp), "hand.R": WAVE.hand, head: [0.04, -0.15, -0.14], chest: WAVE.chest }, y: 0 }),
   // ばんざいジャンプ: 腕を下ろしてしゃがみ(ため) → 跳ね上がって頂点で伸び切り、少し浮く → ストンと落ちてひざで受ける。手のひらは正面へ(CHEER)

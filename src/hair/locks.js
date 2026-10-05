@@ -14,6 +14,7 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
+const DRAG = 2.4, VDAMP = 0.5;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
@@ -289,9 +290,9 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     M.fromArray(BM, head * 16); Mi.copy(M).invert();
     { const e = M.elements, l = Math.hypot(e[4], e[5], e[6]) || 1; GR[0] = e[4] / l; GR[1] = e[5] / l - 1; GR[2] = e[6] / l; }   // gravity, less what the head carries (see step)
     for (const c of CN) { const e = c.bone * 16, [x, y, z] = c.c; c.now[0] = BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]; c.now[1] = BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]; c.now[2] = BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]; }
-    const e = M.elements; for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2]; T[i * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; T[i * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; T[i * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
+    TP.set(T); const e = M.elements; for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2]; T[i * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; T[i * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; T[i * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
   }
-  const pp = [0, 0, 0], GR = [0, 0, 0]; let floorY = 0;
+  const pp = [0, 0, 0], GR = [0, 0, 0], AIR = [0, 0, 0], TP = new Float32Array(NP * 3); let floorY = 0, sub = 1;   // TP: the targets a frame ago / sub: steps this frame
   function collide(i) {   // point i (root space) out of the head (in its rest space) and the spheres
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
     pp[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; pp[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; pp[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
@@ -307,8 +308,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     const g = 9.8 * h * h, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
     for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
-      for (let q = 0; q < 3; q++) { const v = (X[j + q] - P[j + q]) * keep; P[j + q] = X[j + q]; X[j + q] += v; }
-      X[j] += gx; X[j + 1] += gy; X[j + 2] += gz;
+      for (let q = 0; q < 3; q++) { let v = (X[j + q] - P[j + q]) * keep; if (q === 1 && keep) { const tv = (T[j + 1] - TP[j + 1]) / sub; v = tv + (v - tv) * VDAMP; } P[j + q] = X[j + q]; X[j + q] += v; }   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
+      X[j] += gx + AIR[0] * h * h; X[j + 1] += gy + AIR[1] * h * h; X[j + 2] += gz + AIR[2] * h * h;   // the wind (air drag pulling it along)
       for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * K[p]; }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
@@ -352,11 +353,12 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   return {
     geometry: g,
     /** Each frame after the pose is set. instant: settle at once (no swing carried over). */
-    update(dt, instant = false) {
+    update(dt, instant = false, wind = null) {
       matrices();
+      for (let q = 0; q < 3; q++) AIR[q] = (wind?.[q] ?? 0) * DRAG;
       let jump = 0; for (let i = 0; i < NP * 3; i += 3 * N) jump = Math.max(jump, Math.abs(T[i] - X[i]) + Math.abs(T[i + 1] - X[i + 1]) + Math.abs(T[i + 2] - X[i + 2]));   // the roots against where they were
       if (first || instant || jump > 0.5) { X.set(T); P.set(T); for (let s = 0; s < (first ? 40 : 20); s++) step(H, 0); first = false; acc = 0; }   // settle (also when the avatar was moved far at once: no whip across the scene)
-      else { acc = Math.min(acc + dt, 4 * H); while (acc >= H) { step(H, damping); acc -= H; } }
+      else { acc = Math.min(acc + dt, 4 * H); sub = Math.max(1, Math.floor(acc / H)); while (acc >= H) { step(H, damping); acc -= H; } }
       mesh();
     },
     /** the locks' rest shapes (root space): [{ pts, w, … }] in build order (an editor's handles) */
