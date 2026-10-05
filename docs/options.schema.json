@@ -7412,6 +7412,21 @@
     "hair.back": "hang"
    }
   },
+  "hair.sculpt.shortLocks.edits": {
+   "path": "hair.sculpt.shortLocks.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "short locks › edits"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setLocks",
+   "section": {
+    "en": "short locks"
+   }
+  },
   "hair.sculpt.shortLocks.lie.count": {
    "path": "hair.sculpt.shortLocks.lie.count",
    "type": "number",
@@ -7548,6 +7563,21 @@
    },
    "when": {
     "hair.back": "short"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.edits": {
+   "path": "hair.sculpt.shortLocks.lie.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "short locks › lie › edits"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setLocks",
+   "section": {
+    "en": "short locks › lie"
    }
   },
   "hair.sculpt.shortLocks.lie.ph": {
@@ -7962,6 +7992,21 @@
    },
    "when": {
     "hair.back": "long"
+   }
+  },
+  "hair.sculpt.long.edits": {
+   "path": "hair.sculpt.long.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "long › edits"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setLocks",
+   "section": {
+    "en": "long"
    }
   },
   "hair.sculpt.long.stiff": {

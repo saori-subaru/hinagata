@@ -444,6 +444,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** The back hair's locks (instant-ish, no other part rebuilt): values into options.hair.sculpt[group], group "shortLocks" or "long"
      *  (count, width, thick, flick, stiff, below / bottom …; for shortLocks.lie, pass { lie: { … } }). */
     setLocks(group, values) {
+      if (group === "shortLocks.lie") { group = "shortLocks"; values = { lie: values }; }
       const G = OPT.hair.sculpt[group]; for (const [k, v] of Object.entries(structuredClone(values))) { if (v && typeof v === "object" && !Array.isArray(v) && G[k] && typeof G[k] === "object") Object.assign(G[k], v); else G[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
@@ -465,6 +466,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const x = makeLocks(["bangs"]).bangs; if (x) { parts.bangs = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
     /** Where a tip of the nendo bangs is (avatar space, rest pose; just outside the hair): angle around the head (degrees, 0 = front), height (head space). */
+    /** The back hair's locks as built (avatar space, rest pose): [{ i, tip: [x, y, z], root }] in the order of their edits (hair.sculpt.*.edits),
+     *  and which group they belong to: "shortLocks" (hanging), "shortLocks.lie" (lying) or "long". Empty without back locks. */
+    backLocks() { const sim = parts.locks?.sim; if (!sim) return { group: null, locks: [] };
+      const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : "shortLocks";
+      return { group, locks: sim.specs.map((s, i) => ({ i, tip: s.pts.at(-1), root: s.pts[0] })) }; },
     bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */

@@ -181,6 +181,27 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return h("div", { class: "sec" }, kids);
   }
+  // the back hair's locks one by one (editor/src/backs.js)
+  function backsBlock() {
+    const B = ctx.backs; if (!B) return null;
+    const p = { hang: "hair.sculpt.shortLocks.edits", short: "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" }[store.get("hair.back")], n = p ? (store.get(p) ?? []).length : 0;
+    const head = h("div", { class: "sec-h" }, h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null);
+    if (!B.usable) return h("div", { class: "sec" }, head, h("div", { class: "note" }, t("backNone")));
+    const kids = [head, h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(B.on), onclick: () => B.toggle() }, t("backMove")),
+      n ? h("button", { class: "btn small ghost", type: "button", onclick: () => B.resetAll() }, t("backResetAll")) : null)];
+    if (B.on) {
+      kids.push(h("div", { class: "help" }, t("backHelp")));
+      if (B.selected < 0) kids.push(h("div", { class: "note" }, t("backPick")));
+      else { for (const [k, key, min, max, step] of [["w", "backW", 0.2, 2.5, 0.05], ["th", "backTh", 0.2, 2.5, 0.05], ["fl", "backFl", -0.06, 0.08, 0.002]]) {
+          const id = `f${uid++}`, v = B.value(k), num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
+          const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
+          rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
+          rng.addEventListener("change", () => B.setValue(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) B.setValue(k, +num.value); });
+          kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
+        kids.push(h("div", { class: "chips" }, h("button", { class: "btn small ghost", type: "button", onclick: () => B.resetOne() }, t("backReset")))); }
+    }
+    return h("div", { class: "sec" }, kids);
+  }
   // my hairstyles (saved in this browser) and drawn locks (editor/src/draw.js)
   function hairsBlock() {
     const H = ctx.hairs; if (!H) return null; const L = H.list();
@@ -234,8 +255,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
     if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
-    if (tab === "hair") { for (const b of [bangsBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
-    const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn")]);   // drawn locks: their own block if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
+    if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
+    const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]);   // drawn locks: their own block if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });
     renderFoot();

@@ -23,20 +23,23 @@ const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its 
  * bottom(th): the height the lock reaches at this angle around the head (0 = front) / cap(x, y, z): the hair under the locks (distance, root space)
  * center: the head's center (root space) / coll: the colliders (see colliders()) / ellipsoid: the head for the drape
  */
+// one lock's own changes (L.edits: [{ i, dy, da, w, th, fl }], i = the lock's number, outer layer first): dy moves its tip up (m, < 0 = longer),
+// da turns it around the head (degrees), w and th scale its width and thickness, fl flicks it out (m, > 0) or curls it in (< 0)
+const editOf = (L, i) => (L.edits ?? []).find((e) => e?.i === i) ?? {};
 export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null, N = 12 }) {
   const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, PH = L.ph ?? [52, 30];
   let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // the same small differences every build
   for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
-    const u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u) * deg, ph = PH[layer] * deg;   // th: around the head (0 = front), ph: up from the head's middle
+    const E = editOf(L, specs.length), u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u + (E.da ?? 0)) * deg, ph = PH[layer] * deg;   // th: around the head (0 = front), ph: up from the head's middle
     const dir = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)];
     const t = surfaceAlong(cap, center, dir);   // the hair's surface along this direction
     const root = dir.map((v, k) => center[k] + v * (t - 0.012));   // a little under the surface: the root is hidden in the hair
-    const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04);
-    const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1);
-    specs.push({ root, len, w, thick: L.thick ?? 0.3, layer, curl: (rnd() - 0.5) * 0.04, rise: true });   // rise: it gets its thickness gently (no ridge at the root)
+    const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04 - (E.dy ?? 0));
+    const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
+    specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0) });   // rise: it gets its thickness gently (no ridge at the root)
   }
-  const fl = L.flick ?? 0;   // flick (m): toward the tip the locks bend away from the head (> 0, a little up too) or in under it (< 0)
-  return specs.map((s) => { const pts = drape(s, coll, ellipsoid, N, hugY);
+  // flick (m): toward the tip the locks bend away from the head (> 0, a little up too) or in under it (< 0)
+  return specs.map((s) => { const pts = drape(s, coll, ellipsoid, N, hugY), fl = s.fl;
     if (fl) pts.forEach((p, i) => { const e = Math.pow(i / (N - 1), 2.2) * fl, hx = p[0] - center[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1; p[0] += hx / h * e; p[2] += hz / h * e; p[1] += Math.max(0, e) * 0.5; });
     return { ...s, pts }; });
 }
@@ -49,12 +52,12 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
   const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 15)), span = L.span ?? 115, PH = L.ph ?? [64, 44];
   let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
-    const u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u) * deg, ph = PH[layer] * deg;
+    const E = editOf(L, specs.length), u = (i + (layer ? 1 : 0.5)) / n, th = (180 - span + 2 * span * u + (E.da ?? 0)) * deg, ph = PH[layer] * deg;
     const rd = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], root = rd.map((v, k) => center[k] + v * (surfaceAlong(cap, center, rd) - 0.01));
-    const ty = bottom(th) - (L.vary ?? 0.15) * 0.1 * rnd(), c = [center[0], ty, center[2]], hd = [Math.sin(th), 0, Math.cos(th)], tip = hd.map((v, k) => c[k] + v * surfaceAlong(cap, c, hd));
-    const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1), thick = L.thick ?? 0.25, puff = (L.puff ?? 0.008) * rnd(), pts = [];   // puff: some locks stand a little off the others
+    const ty = bottom(th) - (L.vary ?? 0.15) * 0.1 * rnd() + (E.dy ?? 0), c = [center[0], ty, center[2]], hd = [Math.sin(th), 0, Math.cos(th)], tip = hd.map((v, k) => c[k] + v * surfaceAlong(cap, c, hd));
+    const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1), thick = (L.thick ?? 0.25) * (E.th ?? 1), puff = (L.puff ?? 0.008) * rnd(), pts = [];   // puff: some locks stand a little off the others
     for (let q = 0; q < N; q++) { const t = q / (N - 1), p = root.map((v, k) => v + (tip[k] - v) * t), d = p.map((v, k) => v - center[k]), dl = Math.hypot(...d), e = d.map((v) => v / dl);
-      const off = rise(t, (layer ? -0.003 : 0.003) + puff * Math.sin(Math.PI * t) + (L.flick ?? 0.02) * t ** 3), at = surfaceAlong(cap, center, e) + off;   // half sunk into the hair (it keeps the hair's own volume; on top of it the locks made the head 2-4 cm bigger, a step where they began); the outer layer over the inner one
+      const off = rise(t, (layer ? -0.003 : 0.003) + puff * Math.sin(Math.PI * t) + ((L.flick ?? 0.02) + (E.fl ?? 0)) * t ** 3), at = surfaceAlong(cap, center, e) + Math.max(-0.006, off);   // half sunk into the hair (it keeps the hair's own volume; on top of it the locks made the head 2-4 cm bigger, a step where they began); the outer layer over the inner one
       pts.push(e.map((v, k) => center[k] + v * at)); }
     let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
     specs.push({ root: pts[0], pts, len, w, thick, layer, curl: (rnd() - 0.5) * 0.03, rise: true });
@@ -291,6 +294,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       else { acc = Math.min(acc + dt, 4 * H); while (acc >= H) { step(H, damping); acc -= H; } }
       mesh();
     },
+    /** the locks' rest shapes (root space): [{ pts, w, … }] in build order (an editor's handles) */
+    specs,
     /** The locks as they hang in the rest pose (glTF export). The next update moves them again. */
     rest() { M.identity(); Mi.identity(); X.set(R); mesh(); first = true; },
   };

@@ -510,6 +510,7 @@ export const DEFAULTS = {
         "ph": [64, 44],
         "below": 0.01,
         "flick": 0,
+        "edits": [],
         "lie": {
           "count": 17,
           "span": 135,
@@ -517,6 +518,7 @@ export const DEFAULTS = {
           "thick": 0.32,
           "puff": 0.006,
           "flick": 0.02,
+          "edits": [],
           "ph": [74, 54]
         },
         "vary": 0.15,
@@ -542,6 +544,7 @@ export const DEFAULTS = {
         "width": 0.075,
         "thick": 0.3,
         "flick": 0,
+        "edits": [],
         "stiff": 1,
         "damping": 0.9,
         "yc": 1.0,

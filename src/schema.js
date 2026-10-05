@@ -173,7 +173,8 @@ function place(path) {
   if (top === "quality") return { group: "quality", cost: "body" };
   if (top === "body") return { group: "body", cost: "body" };
   if (path.startsWith("hair.sculpt.nendo.")) return { group: "hair", cost: "hair", apply: "setBangs" };   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
-  if (path === "hair.drawn") return { group: "hair", cost: "hair", apply: "setDrawn" };   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
+  if (path === "hair.drawn") return { group: "hair", cost: "hair", apply: "setDrawn" };   // locks drawn by hand: avatar.setDrawnHair
+  if (/^hair\.sculpt\.(shortLocks|long)\.(lie\.)?edits$/.test(path)) return { group: "hair", cost: "hair", apply: "setLocks" };   // the back locks' own changes (editor/src/backs.js)   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
   if (top === "hair") return { group: "hair", cost: p[1] === "paint" ? "paint" : "hair" };
   if (top === "outfit") return { group: "outfit", cost: p[2] === "on" || /color$/i.test(p[2]) ? "instant" : "clothes" };
   if (top === "face") {   // drawn into the face picture → instant; painted onto the head mesh or built from it → paint
