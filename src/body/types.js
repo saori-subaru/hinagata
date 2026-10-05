@@ -15,4 +15,5 @@ const r2 = (x) => Math.round(x * 100) / 100, r3 = (x) => Math.round(x * 1000) / 
 // tall: about 4.5 heads (legs 1.65, torso 1.3, head 0.82); limbs 0.84×, belly 0.82× (not under 0.6, its slider's least), a little more waist
 const tall = (b) => ({ torso: { ...b.torso, belly: r2(Math.max(0.6, b.torso.belly * 0.82)), waist: r3(b.torso.waist + 0.006) }, thickness: Object.fromEntries(Object.entries(b.thickness).map(([k, v]) => [k, r2(v * 0.84)])),
   proportion: { legs: 1.65, torso: 1.3 }, head: { scale: 0.82 } });
-export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: { ...CHIBI, ...b } }], [`${k}Tall`, { body: tall(b) }]]));
+const NO_TALL = new Set(["toddler"]);   // a tall toddler is a contradiction (2026-10-05, Saori)
+export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: { ...CHIBI, ...b } }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: tall(b) }]])]));

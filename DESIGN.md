@@ -435,7 +435,7 @@ Then (Saori: "足の指丸まってない？"): the toes sat under the foot's ro
 
 ### Body types: chibi and tall (2026-10-05, Saori; done)
 
-Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js. "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only).
+Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js; the toddler has no tall one (a contradiction). "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only).
 
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
