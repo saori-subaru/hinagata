@@ -54,8 +54,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       const notches = T.slice(1).map(([a, , , , g], i) => g != null && g === T[i][4] ? null : (a + T[i][0]) / 2).filter((a) => a != null);
       return [{ t: 3, k: 0.008, bx0: 0, by0: 1.1, bz0: 0.1, br: 0.4, f: (x, y, z) => {
         const th = Math.atan2(x, z), rr = Math.hypot(x, z);
-        // sweep: near its tip the clump shifts sideways (the whole clump bends to one side, both edges together)
-        let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
+        // sweep: near its tip the clump bends sideways (both edges together), more and more toward the tip: a curve, not a slant (squared, 2026-10-05)
+        let hem = 9; for (const [a, ty, sl, sk, , sw] of T) { const d = th - a + (sw ? sw * (1 - sstep(ty, ty + B.sweepLen, y)) ** 2 : 0), ad = Math.abs(d), e = sl * (1 + (d < 0 ? sk : -sk)) * ad * (CV === 1 ? 1 : Math.pow(ad / 0.3, CV - 1)); hem = -smax(-hem, -(ty + e), B.round); }   // V points: lines rising from each tip meet at the (slightly rounded) notches
         if (B.slits) for (const [a, len, w] of B.slits) { const v = 1 - Math.abs(th - a * deg) * rr / w; if (v > 0) hem += len * v * v * (3 - 2 * v); }   // slits: a narrow gap running up between two clumps here and there (len up from the hem, w half-width in m)
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + backExtra(y) + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);

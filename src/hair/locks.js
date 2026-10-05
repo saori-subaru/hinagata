@@ -116,6 +116,9 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45 * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
       const yH = Math.max(tipY, HY), hang = yH - tipY;   // the part on the head ends at yH; the rest (hang) falls straight down from there
       const tip = leave(yH, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
+      // sweep (the row's 6th value): the lock comes straight down, then curves over to the swept tip in its lower part (2026-10-05, Saori:
+      // "流れも毛先が横に移動してるだけ"; it ran straight from the root to the swept tip, a slanted lock)
+      const tip0 = tp.sw ? leave(yH, tipA + tp.sw) : tip, swk = (u) => u <= 0.4 ? 0 : ((u - 0.4) / 0.6) ** 2;
       const ph = (B.lockRoot ?? 70) * deg, ra = (tp.a + f * half) * (B.lockRootSpread ?? 0.45),   // they grow from near the crown (where the back's locks start too)
         rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
@@ -124,7 +127,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       const upper = 1.15 * Math.hypot(...tip.map((v, m) => v - root[m])), share = upper / (upper + hang);   // the points spread over the whole length
       for (let q = 0; q < N; q++) { const t = q / (N - 1);
         let px, py, pz;
-        if (t <= share || !hang) { const tu = hang ? t / share : t, p = root.map((v, m) => v + (tip[m] - v) * tu), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
+        if (t <= share || !hang) { const tu = hang ? t / share : t, p = root.map((v, m) => v + (tip0[m] - v) * tu + (tip[m] - tip0[m]) * swk(tu)), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
           const off = 0.5 * w / sx * thick * width(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
           px = center[0] + u[0] * at; py = center[1] + u[1] * at; pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
           if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
