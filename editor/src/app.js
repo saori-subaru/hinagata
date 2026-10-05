@@ -138,7 +138,16 @@ let syncShown = null;   // the sync's state on screen (redrawn in another langua
 if (SYNC) connectSync({ ...SYNC, store,
   onStart: (recipe, file) => { let c = lib.chars.find((x) => x.sync === file); if (!c) { c = addChar(lib, file, recipeOf(recipe)); c.sync = file; }
     c.recipe = compact(recipeOf(recipe)); if (c.id === cur.id) { store.replace(recipeOf(recipe)); syncUndo(); renderLibrary(); } else switchTo(c); },
-  onStatus: (state, file) => { syncShown = { state, file }; showSync(); } });
+  onStatus: (state, file) => { syncShown = { state, file }; showSync(); },
+  onRequest: async (cmd, a) => {   // the helper's MCP tools (tools/sync.mjs): a picture of the character, in a pose if asked (then back to the one playing)
+    if (cmd !== "screenshot") throw new Error(`unknown request ${cmd}`);
+    while (building || !vp.avatar) await new Promise((r) => setTimeout(r, 100));   // (a change just made may still be building)
+    const av = vp.avatar, was = vp.motion.pose;
+    if (a.pose && !POSES[a.pose]) throw new Error(`unknown pose "${a.pose}"; poses: ${Object.keys(POSES).join(", ")}`);
+    if (a.pose) { av.play(a.pose); av.update(0, { t: 1.2, instant: true }); }
+    try { return { png: vp.capture({ view: a.view, size: a.size, bg: BACKGROUNDS[prefs.bg]?.[0] ?? "#ebe5dc" }) }; }
+    finally { if (a.pose) { av.play(was); av.update(0, { instant: true }); } }
+  } });
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)

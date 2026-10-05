@@ -94,5 +94,19 @@ export function createViewport(canvas, stage) {
     return new Promise((ok) => canvas.toBlob((b) => { floor.visible = fv; if (helper) helper.visible = hv; chair.visible = cv; renderer.setPixelRatio(pr); size(); ok(b); }, "image/png"));
   }
 
-  return { view, display, background, setAvatar, lift, apply, snapshot, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  /** A square picture from one of the views (for an agent, through the sync helper's MCP tools): base64 PNG on a solid background.
+   *  The user's camera and the canvas are put back right after. */
+  function capture({ view: name = "free", size: px = 640, bg = "#ebe5dc" } = {}) {
+    let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST;
+    if (ST && !ST.identity) { if (name === "face") { p = [p[0], p[1] + ST.lift, p[2]]; t = [t[0], t[1] + ST.lift, t[2]]; } else { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); } }
+    const cp = camera.position.clone(), pr = renderer.getPixelRatio(), hv = helper?.visible; if (helper) helper.visible = false;
+    px = Math.max(128, Math.min(2048, Math.round(px)));
+    camera.position.set(...p); camera.lookAt(...t); camera.aspect = 1; camera.fov = 32; camera.updateProjectionMatrix();
+    renderer.setPixelRatio(1); renderer.setSize(px, px, false); renderer.setClearColor(bg, 1); renderer.render(scene, camera);
+    const url = canvas.toDataURL("image/png");
+    renderer.setClearColor(0x000000, 0); renderer.setPixelRatio(pr); if (helper) helper.visible = hv; camera.position.copy(cp); size(); controls.update(); renderer.render(scene, camera);
+    return url.slice(url.indexOf(",") + 1);
+  }
+
+  return { view, display, background, setAvatar, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }

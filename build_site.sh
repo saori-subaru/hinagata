@@ -19,6 +19,7 @@ tar -cf - \
   . | tar -C dist -xf -
 # the live-sync helper is a tool, but people run it from the site (the repository is private): curl -O https://hinagata.pages.dev/sync.mjs
 cp tools/sync.mjs dist/sync.mjs
+cp docs/options.schema.json dist/options.schema.json   # (its MCP tools check recipes and find options with it)
 
 cat > dist/index.html <<'HTML'
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Hinagata</title>

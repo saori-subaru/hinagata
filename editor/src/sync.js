@@ -6,7 +6,7 @@ import { changedPaths, getPath, compact, recipeOf } from "./store.js";
 
 /** { port, key }: where the helper is / store: the recipe / onStart(recipe, fileName): the first recipe (the app switches to it) /
  *  onStatus(state, fileName): "on" | "off" | "error" */
-export function connectSync({ port, key, store, onStart, onStatus }) {
+export function connectSync({ port, key, store, onStart, onStatus, onRequest = async () => { throw new Error("not here"); } }) {
   const base = `http://127.0.0.1:${port}`, id = Math.random().toString(36).slice(2, 10), q = `key=${encodeURIComponent(key)}`;
   let started = false, remote = false, file = "", pushT = 0, live = false;
 
@@ -22,6 +22,11 @@ export function connectSync({ port, key, store, onStart, onStatus }) {
     file = m.file ?? file;
     if (!started) { started = true; remote = true; try { onStart(m.recipe, file); } finally { remote = false; } onStatus("on", file); return; }
     if (m.from !== id) applyRemote(m.recipe);
+  });
+  es.addEventListener("request", async (e) => {   // something the helper's MCP tools ask of the editor (a picture): answered on /response
+    const m = JSON.parse(e.data); let reply;
+    try { reply = { rid: m.rid, result: await onRequest(m.cmd, m.args ?? {}) }; } catch (err) { reply = { rid: m.rid, error: String(err?.message ?? err) }; }
+    fetch(`${base}/response`, { method: "POST", headers: { "Content-Type": "application/json", "X-Hinagata-Key": key }, body: JSON.stringify(reply) }).catch(() => {});
   });
   es.onerror = () => { if (live) { live = false; onStatus("off", file); } else if (!started) onStatus("error", file); };   // (it retries by itself)
 
