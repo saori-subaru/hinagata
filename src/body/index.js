@@ -218,6 +218,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.057, `lowerLeg.${s}`, 0.05);
     P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, OPT.body.sculpt.calf.back.z], [OPT.body.sculpt.calf.back.width, 0.068, OPT.body.sculpt.calf.back.depth], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
     P[`foot.${s}`] = E([m * (FOOT_X - 0.002), -0.003 + FOOT_H, 0.015], [0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
+    // toes (foot.toes, 2026-10-05, Saori: barefoot like Nahida): four along the front of the foot (chibi style), the big toe on the inside, each a
+    // round piece joined with a narrow blend so the gaps between them show. Inside a shoe they are hidden (the body under it isn't drawn)
+    // and within the shoe's shape (it is made around the foot alone, 1.2 cm out), so a shoe looks the same
+    { const TS = OPT.body.sculpt.foot.toes; if (TS?.on) { const cx = m * (FOOT_X - 0.002), z0 = 0.015, k = TS.size ?? 1;
+      [[-0.027, 0.052, 0.016, 0.014, 0.02], [-0.004, 0.056, 0.0125, 0.012, 0.016], [0.016, 0.051, 0.0115, 0.011, 0.015], [0.033, 0.04, 0.0105, 0.01, 0.013]].forEach(([dx, dz, rx, ry, rz], i) =>   // four: smaller than the grid the fifth only blurred the edge
+        P[`toe${i}.${s}`] = E([cx + m * dx * k, -0.003 + ry * k + 0.003, z0 + dz * k], [rx * k, ry * k, rz * k], `foot.${s}`, 0.004)); } }
     // 服用: 半分の長さの袖・すそ
     const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
     P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);

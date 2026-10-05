@@ -427,6 +427,10 @@ editor/src/facepaint.js: the same "parts" template as the download (the head fro
 
 A frame left empty keeps its old picture (as with a loaded template): erasing a part entirely doesn't remove it; "外す" does.
 
+### Toes (barefoot) (2026-10-05, Saori: "ナヒーダは裸足だけど…靴を脱いだらちゃんと足の指がついてるように"; done)
+
+`body.sculpt.foot.toes` (on): four toes along the front of the foot (chibi style: a fifth was below the grid and only blurred the edge), the big toe on the inside, each a small round piece with a narrow blend so the gaps show; big enough to read at the "game" grid too. Under a shoe the body isn't drawn (the clothes' culling already left out the body inside shoes), and the toes stay inside the shoe's shape (a shoe is made around the foot without them, 1.2 cm out; they sit 6 mm back so the sock over them doesn't poke out at the shoe's front). Socks follow them (toe bumps); clipping the sock to the toeless foot showed the toes' skin through it instead. With shoes on the default renders the same but for a few outline pixels at the soles.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

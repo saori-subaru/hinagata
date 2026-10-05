@@ -182,6 +182,10 @@ export const DEFAULTS = {
         "sideSlope": 1.5
       },
       "foot": {
+        "toes": {
+          "on": true,
+          "size": 1
+        },
         "thickness": 0.029
       },
       "shoulders": {
