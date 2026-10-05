@@ -4,7 +4,7 @@
 const T = {
   en: {
     library: "Characters", name: "Character name", undo: "Undo", redo: "Redo", close: "Close",
-    copyCode: "Copy as code", export: "Export", copied: "Copied the code (only what differs from the defaults)",
+    copyCode: "Copy as code", exprSet: "Expression set (this character’s)", exprSetHelp: "The faces a game asks for (setFace(\"happy\")…). Make the face above, then “Use this face” on its row. Rows not set use the stock expression (Normal: the face the character has).", ex_normal: "Normal", ex_happy: "Happy", ex_sad: "Sad", ex_angry: "Angry", ex_surprised: "Surprised", exOwn: "its own", exStock: "stock", exUse: "Use this face", exShow: "Show", exReset: "Reset", export: "Export", copied: "Copied the code (only what differs from the defaults)",
     exJson: "Save recipe (JSON)", exJsonSub: "The character as an options file", exImport: "Open recipe (JSON)…", exImportSub: "Adds it to your characters",
     exLink: "Copy share link", exLinkSub: "Opens this character in the editor", exPng: "Save picture (PNG)", exPngSub: "Transparent background, current view",
     exGlb: "Save 3D model (GLB)", exGlbSub: "A-pose, without outlines (opens in Blender)",
@@ -61,7 +61,7 @@ const T = {
   },
   ja: {
     library: "キャラ一覧", name: "キャラの名前", undo: "元に戻す", redo: "やり直す", close: "閉じる",
-    copyCode: "コードをコピー", export: "書き出し", copied: "コードをコピーした(デフォルトと違う値だけ)",
+    copyCode: "コードをコピー", exprSet: "表情セット(このキャラ用)", exprSetHelp: "ゲームが頼む顔(setFace(\"happy\") など)。上で顔を作ってから、その行の「今の顔を登録」。登録しない行は共通の表情(ふつう: いまのキャラの顔)。", ex_normal: "ふつう", ex_happy: "喜び", ex_sad: "悲しみ", ex_angry: "怒り", ex_surprised: "驚き", exOwn: "このキャラ用", exStock: "共通", exUse: "今の顔を登録", exShow: "見る", exReset: "戻す", export: "書き出し", copied: "コードをコピーした(デフォルトと違う値だけ)",
     exJson: "レシピを保存(JSON)", exJsonSub: "キャラを options のファイルで", exImport: "レシピを開く(JSON)…", exImportSub: "キャラ一覧に足す",
     exLink: "共有リンクをコピー", exLinkSub: "このキャラをエディタで開くリンク", exPng: "画像を保存(PNG)", exPngSub: "背景は透明・いまの視点で",
     exGlb: "3Dモデルを保存(GLB)", exGlbSub: "Aポーズ・輪郭線なし(Blender で開ける)",

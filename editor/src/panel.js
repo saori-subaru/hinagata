@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET } from "../../src/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 
@@ -120,9 +120,17 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     if (tab === "face") {
       const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
       const drawnX = drawnList().map((d) => { const id = `image@${d.id}`; return { ja: drawnName(d), en: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" } }; });   // the character's drawn expressions
-      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))),
-        h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => {
-          const ch = {}; for (const [kk, v] of Object.entries(x.parts)) ch[`face.parts.${kk}`] = v; set(ch); } }, L(x)))));
+      const wear = (parts) => { const ch = {}; for (const [kk, v] of Object.entries(parts)) ch[`face.parts.${kk}`] = v; set(ch); };
+      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Make the face above, then "use this face"
+      const ES = r.face.expressions ?? {}, now = () => ({ eyes: r.face.parts.eyes, brows: r.face.parts.brows, mouth: r.face.parts.mouth, cheeks: r.face.parts.cheeks });
+      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts);
+        return h("div", { class: "expr-row" }, h("span", { class: "expr-name" }, t(`ex_${n}`)), h("span", { class: "cost" }, t(own ? "exOwn" : "exStock")),
+          h("span", { class: "expr-btns" }, h("button", { class: "chip", type: "button", onclick: () => set({ "face.expressions": { ...ES, [n]: now() } }) }, t("exUse")),
+            shown ? h("button", { class: "chip", type: "button", "aria-pressed": String(on({ parts: shown })), onclick: () => wear(shown) }, t("exShow")) : null,
+            own ? h("button", { class: "chip", type: "button", onclick: () => { const o = { ...ES }; delete o[n]; set({ "face.expressions": o }); } }, t("exReset")) : null)); };
+      const both = document.createDocumentFragment(); both.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))),
+        h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => wear(x.parts) }, L(x))))),
+        h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), h("div", { class: "help" }, t("exprSetHelp")), EXPRESSION_SET.map(row))); return both;
     }
     if (tab === "outfit") {   // the whole garment at once: a robe is a dress down to the ankles with bell sleeves
       const G = { plain: { "outfit.dress.on": false, "outfit.shirt.sleeve": "short" }, dress: { "outfit.dress.on": true, "outfit.dress.hem": 0.28, "outfit.dress.flare": 0.45, "outfit.shirt.sleeve": "short" },

@@ -827,6 +827,7 @@ export const DEFAULTS = {
       "cheeks": "none",
       "nose": null
     },
+    "expressions": {},
     "eyeSize": 1.25,
     "layout": {
       "eyeX": 0.096,

@@ -91,6 +91,8 @@ Only what differs from the defaults, nested as the options are. Example:
   by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
   armor, weapon), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
 - Faces can be drawn: the user does that in the editor (face tab); you can pick part ids (`face.parts`) or expressions with `avatar.setFace("happy")`.
+  Ask for the standard names (`EXPRESSION_SET`: normal, happy, sad, angry, surprised): each character shows its own version of them when
+  the user has made one in the editor (`face.expressions`, e.g. its own drawn smile), else the stock one; "normal" is the face it was built with.
 
 ## Moving it in a game
 
@@ -118,6 +120,22 @@ Only what differs from the defaults, nested as the options are. Example:
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
   `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
+
+## Already have a rig? Dress it
+
+If the game already animates its own figures (a mannequin of boxes and capsules, another model), keep that code and dress them:
+```js
+const avatar = await createAvatar(recipe); scene.add(avatar.object);
+const f = avatar.follow({ hips: pelvis, spine, head, "upperArm.L": shL, "lowerArm.L": elL, "hand.L": hL, "upperArm.R": shR, "lowerArm.R": elR,
+  "hand.R": hR, "upperLeg.L": hipL, "lowerLeg.L": kneeL, "foot.L": ankleL, "upperLeg.R": hipR, "lowerLeg.R": kneeR, "foot.R": ankleR },
+  { root: figure, fit: { height: 1.7 } });   // call it while the figure stands in its rest pose (joints unturned)
+f.attach(racket, "hand.R");                  // what the figure held, now in the avatar's hand, placed as it was
+// each frame, after the game has posed the figure: avatar.update(dt, { camera })
+```
+Every update copies the figure's joint turns and place onto the avatar and hides the figure. The figure's joints can be any Object3Ds;
+their turns are measured from the rest pose they had when follow was called (arms straight down, a T-pose, the avatar's A-pose: all
+fine). `fit`: `{ height }` in the figure's units, or true (default) to match the leg length. `grip: { L, R }` closes the hands (0–1).
+A figure with one spine joint has its turn shared over the avatar's spine, chest and upper chest; collarbones rise with raised arms.
 
 ## The editor
 

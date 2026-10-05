@@ -54,7 +54,7 @@ const MAIN = [
   ["body.sculpt.ears.elf.curve", L("先の反り", "Tip curl"), { when: { "body.sculpt.ears.elf.on": true }, min: -0.3, max: 0.8, step: 0.01, section: L("耳", "Ears") }],
   ["body.proportion.legs", L("脚の長さ", "Leg length"), { min: 0.8, max: 2, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで脚を伸ばす(倍)。頭を小さくするのと合わせると頭身が上がる", "lengthens the legs, keeping their width (×). With a smaller head, the figure gets more heads tall") }],
   ["body.proportion.torso", L("胴の長さ", "Torso length"), { min: 0.8, max: 1.6, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで胴を伸ばす(倍)。腕も少し長くなる", "lengthens the torso, keeping its width (×). The arms get a little longer too") }],
-  ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.8, max: 1.05, step: 0.01, section: L("頭", "Head") }],
+  ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.6, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身で 0.7 前後にすると5頭身ほど(2026-10-05、それまでは 0.8 まで)", "about 0.7 on a tall body: some 5 heads tall (2026-10-05; it stopped at 0.8 before)") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.sculpt.neck.width", L("首の太さ", "Neck width"), { min: 0.6, max: 1.2, step: 0.01, section: L("頭", "Head") }],
@@ -112,6 +112,7 @@ const MAIN = [
   ["face.images.brow.src", L("眉の絵", "Brow picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/brow.png", "null = the bundled img/parts/brow.png") }],
   ["face.images.mouth.src", L("口の絵", "Mouth picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/mouth.png", "null = the bundled img/parts/mouth.png") }],
   ["face.images.nose.src", L("鼻の絵", "Nose picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = なし", "null = none") }],
+  ["face.expressions", L("表情セット", "Expression set"), { whole: true, section: L("表情セット", "Expression set"), help: L("{ normal, happy, sad, angry, surprised: { eyes, brows, mouth, cheeks } } このキャラ用の表情。ゲームが avatar.setFace(\"happy\") と呼ぶとこれが出る(ないものは共通の表情。normal がなければ作った時の顔)", "{ normal, happy, sad, angry, surprised: { eyes, brows, mouth, cheeks } } this character's own expressions: avatar.setFace(\"happy\") shows its own (missing ones: the stock expression; normal: the face it was built with)") }],
   ["face.drawn", L("描いた表情", "Drawn expressions"), { section: L("描いた表情", "Drawn expressions"), help: L("[{ id, name, eye, brow, mouth, cheeks, blink }] 名前をつけた表情をいくつでも。eye / brow / mouth は絵(data URL か パス)、null = ふつうの絵。表情とパーツの名前は image@<id>", "[{ id, name, eye, brow, mouth, cheeks, blink }] named expressions, as many as you like. eye / brow / mouth: pictures (data URL or path), null = the normal picture. Their expression and part ids are image@<id>") }],
 
   // hair
@@ -285,8 +286,9 @@ function place(path) {
   if (/^hair\.sculpt\.(shortLocks|long)\.(lie\.)?edits$/.test(path)) return { group: "hair", cost: "hair", apply: "setLocks" };   // the back locks' own changes (editor/src/backs.js)   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
   if (top === "hair") return { group: "hair", cost: p[1] === "paint" ? "paint" : "hair" };
   if (top === "outfit") return { group: "outfit", cost: p[2] === "on" || /color$/i.test(p[2]) ? "instant" : "clothes" };
+  if (path === "face.expressions") return { group: "face", cost: "instant", apply: "setExpressions" };   // the character's own expressions: avatar.setExpressions
   if (top === "face") {   // drawn into the face picture → instant; painted onto the head mesh or built from it → paint
-    if (["parts", "eyeSize", "layout", "blush", "noseShadow", "images"].includes(p[1])) return { group: "face", cost: "instant" };
+    if (["parts", "expressions", "eyeSize", "layout", "blush", "noseShadow", "images"].includes(p[1])) return { group: "face", cost: "instant" };
     return { group: "face", cost: "paint" };
   }
   return { group: top, cost: "body" };
@@ -308,7 +310,7 @@ const typeOf = (v, ex) => ex?.options ? "enum" : /\.src$/.test(ex?.path ?? "") ?
 function build() {
   const S = {}, main = new Map(MAIN.map(([path, label, ex], i) => [path, { label, ...ex, order: i }]));
   const walk = (o, pre) => { for (const [k, v] of Object.entries(o)) { const path = pre ? `${pre}.${k}` : k;
-    if (v && typeof v === "object" && !Array.isArray(v)) { walk(v, path); continue; }
+    if (v && typeof v === "object" && !Array.isArray(v) && !main.get(path)?.whole) { walk(v, path); continue; }   // (whole: an object that is one value, e.g. face.expressions)
     const ex = main.get(path), at = place(path);
     let type = typeOf(v, { ...ex, path });
     if (ex && v === null) type = /\.src$/.test(path) ? "image" : ex.options ? "enum" : /color/i.test(path) ? "color" : "number";   // described values whose default is null

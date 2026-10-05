@@ -24,8 +24,10 @@ import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./f
 import { POSES, createPosePlayer } from "./motion/index.js";
 import { createCloth } from "./cloth.js";
 import { accessoryGeometries } from "./accessories.js";
+import { createFollower } from "./follow.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
+export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
@@ -484,6 +486,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   let faceDrawHook = null, faceWrap = debug.faceWrap ?? null, blinking = false, blinkAt = 2.5;
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
+  const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
   let faceLayer = null;
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
@@ -519,7 +522,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // motion
   const HEEL = OPT.outfit.shoes.kind === "heels" ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
   const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
-  let poseName = "aPose", time = 0, lastPose = { b: {} };
+  let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null;   // follower: the rig this avatar dresses (follow)
   // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
   // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)
   const SEAT_PROBE = ["body", "pants"].map((k) => { const m = parts[k].m, A = m.geometry.attributes.position, idx = [];
@@ -556,6 +559,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
      *  camera: the camera the scene is drawn with: the hair and cloth are simulated less when the character is small on the screen
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself. */
     update(dt, { t, instant = false, pose, camera, detail } = {}) {
+      follower?.sync();   // dressing another rig (follow): its joints now
       syncCover();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
@@ -578,12 +582,23 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
     play(name) { if (!POSES[name]) throw new Error(`Unknown motion "${name}". Available: ${Object.keys(POSES).join(", ")}`); poseName = name; },
+    /** Dress another rig in this character (src/follow.js): joints { hips, spine, head, "upperArm.L", "lowerArm.L", "hand.L", "upperLeg.L",
+     *  "lowerLeg.L", "foot.L", … .R } → that rig's Object3Ds, in their rest pose now; { root, fit = true, hide = true, grip }. From then on every
+     *  update copies the rig's joints and place (its own code keeps animating it). Returns { attach(object, bone), scale, … }; follow(null) stops. */
+    follow(joints, opts = {}) {
+      const topOf = (o) => { while (o?.parent && !o.parent.isScene) o = o.parent; return o; };   // (the rig's root: the top of the hips' tree under the scene)
+      follower?.stop(); follower = null; if (!joints) { poseName = "idle"; return null; }
+      follower = createFollower({ avatar, POSES, J: Jr, PARENT, BONES, legK: ST.legK ?? 1, joints, ...opts, root: opts.root ?? topOf(joints.hips) });
+      poseName = follower.pose; return follower;
+    },
 
-    /** Face (instant): an expression id ("happy", see EXPRESSIONS; a drawn one "image@<id>", see options.face.drawn), or parts by slot { eyes, brows, mouth, cheeks, nose } (ids in PART_LABELS). Kept in options.face.parts. */
+    /** Face (instant): an expression id ("happy", see EXPRESSIONS; the character's own version first, options.face.expressions; a drawn one "image@<id>", see options.face.drawn), or parts by slot { eyes, brows, mouth, cheeks, nose } (ids in PART_LABELS). Kept in options.face.parts. */
     setFace(sel) {
-      if (typeof sel === "string") { const e = face.PRESETS[expressionId(sel)]; if (!e) throw new Error(`Unknown expression "${sel}". Available: ${Object.keys(face.PRESETS).join(", ")}`); sel = e; }   // drawn expressions too ("image@<id>")
+      if (typeof sel === "string") { const id = expressionId(sel), e = OPT.face.expressions?.[id] ?? (id === "normal" ? FACE0 : null) ?? face.PRESETS[id]; if (!e) throw new Error(`Unknown expression "${sel}". Available: ${Object.keys(face.PRESETS).join(", ")}`); sel = e; }   // drawn expressions too ("image@<id>")
       sel = partIds(sel); Object.assign(faceSel, sel); Object.assign(OPT.face.parts, sel); avatar.drawFace();
     },
+    /** This character's own expressions (instant): { happy: { eyes, brows, mouth, cheeks }, … } (options.face.expressions), what setFace(name) shows */
+    setExpressions(map = {}) { OPT.face.expressions = structuredClone(map ?? {}); },
     /** Move the face parts on the face picture (instant): { eyeX, eyeY, eyeSize, browX, browY, mouthY }. Kept in options.face.
      *  eyeX / eyeY also place the eye sockets in the head's shape, which follows on the next build. */
     setFaceLayout(l) {
