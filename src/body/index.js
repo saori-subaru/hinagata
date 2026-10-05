@@ -113,6 +113,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // point / pointW: seen from the front the middle of the jaw's bottom dips further into a small, sharp chin (round cheeks, a pointed chin: Saori,
   // after Nahida); sides (m per m of |x|): the bottom rises straight toward the sides as well as curving, a V more than a U
   const pointAt = (x) => (CH.point ?? 0) * Math.exp(-x * x / ((CH.pointW ?? 0.03) ** 2)) - (CH.sides ?? 0) * Math.sqrt(x * x + 0.0001);
+  // vChin: seen from the front the lower face narrows in a V to a small chin: each side is cut by a slanted plane, |x| = halfW at the chin's
+  // bottom (y CH.y) widening by slope per m up, only below y0 (above it the cheeks stay round) and only at the front (z ahead of z0, so
+  // under the ears nothing changes). Soft (k) where it meets the rest
+  { const V = CH.v; if (V?.on) { const L = Math.hypot(1, V.slope);
+    // the cut fades out (its planes move outward) toward y0 and toward z0 instead of stopping there: no ledge at its edges
+    const fade = (y, z) => sstep(V.y0, V.y0 - (V.fadeY ?? 0.06), y) * sstep(V.z0 ?? 0.04, (V.z0 ?? 0.04) + (V.fadeZ ?? 0.06), z);
+    CUT.vChin = plane((x, y, z) => (V.halfW + V.slope * (y - CH.y) + 0.3 * (1 - fade(y, z)) - Math.abs(x)) / L, V.k ?? 0.02); } }
   CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) - pointAt(x) * sstep(-0.02, 0.06, z) + CH.curve * x * x)) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front

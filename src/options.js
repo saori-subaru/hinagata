@@ -94,9 +94,19 @@ export const DEFAULTS = {
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
-        "point": 0.025,
+        "point": 0,
         "pointW": 0.022,
-        "sides": 0.25,
+        "sides": 0,
+        "v": {
+          "on": true,
+          "halfW": 0.02,
+          "slope": 1.3,
+          "y0": 0.97,
+          "fadeY": 0.08,
+          "z0": 0.04,
+          "fadeZ": 0.06,
+          "k": 0.025
+        },
         "napeY": 0.95,
         "napeZ": 0,
         "napeDrop": 0
