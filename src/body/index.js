@@ -110,7 +110,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // in a flat shelf over the neck): lower by napeDrop at the neck's back (z napeNeckZ), nothing at the back of the head (napeBackZ) or behind the ears
   const chamfer = (x, z) => CH.napeDrop ? CH.napeDrop * sstep(CH.napeBackZ ?? -0.2, CH.napeNeckZ ?? -0.07, z) * (1 - sstep(CH.napeDropX?.[0] ?? 0.05, CH.napeDropX?.[1] ?? 0.13, Math.abs(x))) : 0;
   const level = (x, z, base) => { if (CH.napeY == null) return base; const t = CH.napeY - chamfer(x, z); return base + Math.max(0, t - base) * sstep(CH.napeZ ?? 0, (CH.napeZ ?? 0) - 0.04, z); };
-  CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) + CH.curve * x * x)) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
+  // point / pointW: seen from the front the middle of the jaw's bottom dips further into a small, sharp chin (round cheeks, a pointed chin: Saori,
+  // after Nahida); sides (m per m of |x|): the bottom rises straight toward the sides as well as curving, a V more than a U
+  const pointAt = (x) => (CH.point ?? 0) * Math.exp(-x * x / ((CH.pointW ?? 0.03) ** 2)) - (CH.sides ?? 0) * Math.sqrt(x * x + 0.0001);
+  CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) - pointAt(x) * sstep(-0.02, 0.06, z) + CH.curve * x * x)) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;

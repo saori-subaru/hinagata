@@ -48,6 +48,8 @@ const MAIN = [
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.8, max: 1.05, step: 0.01, section: L("頭", "Head") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
+  ["body.sculpt.chin.point", L("あごのとがり", "Chin point"), { min: 0, max: 0.05, step: 0.001, section: L("頭", "Head"), help: L("あご先の真ん中を下へとがらせる(m)", "how far the middle of the chin comes down to a point (m)") }],
+  ["body.sculpt.chin.sides", L("あごの細さ", "Chin narrowness"), { min: 0, max: 0.5, step: 0.01, section: L("頭", "Head"), help: L("あごの下を横へまっすぐ上げる(U→V)", "the underside of the jaw rises straight toward the sides (a U → a V)") }],
   ["body.torso.chest", L("胸板", "Chest"), { min: 0.8, max: 1.4, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.bust", L("胸(ふくらみ)", "Bust"), { min: 0, max: 1, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.belly", L("おなか", "Belly"), { min: 0.6, max: 1.15, step: 0.01, section: L("胴", "Torso") }],

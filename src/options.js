@@ -94,6 +94,9 @@ export const DEFAULTS = {
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
+        "point": 0.025,
+        "pointW": 0.022,
+        "sides": 0.25,
         "napeY": 0.95,
         "napeZ": 0,
         "napeDrop": 0
