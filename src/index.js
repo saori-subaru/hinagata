@@ -6,7 +6,7 @@
 //   // every frame: avatar.update(dt)
 //
 import * as THREE from "three";
-import { sstep, dPrim } from "./sdf/prim.js";
+import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
@@ -209,9 +209,22 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const [x, y, z] = HTr.toHead(Pa[i], Pa[i + 1], Pa[i + 2]), dz = z + 0.005, dy = y - S.y;
       U[v * 2] = Math.atan2(x, dz); U[v * 2 + 1] = Math.atan2(Math.hypot(x, dz), dy); }
     geo.setAttribute("hairUV", new THREE.BufferAttribute(U, 2));
-    { const G = new Float32Array(Pa.length / 3); let lo = Infinity, hi = -Infinity; for (let v = 0; v < G.length; v++) { G[v] = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2])[1]; lo = Math.min(lo, G[v]); hi = Math.max(hi, G[v]); }
-      for (let v = 0; v < G.length; v++) G[v] = (hi - G[v]) / ((hi - lo) || 1);   // the gradient (withGrad): 0 at the crown, 1 at the lowest tip (as a lock's root to tip)
-      geo.setAttribute("gradT", new THREE.BufferAttribute(G, 1)); }
+    geo.setAttribute("gradT", new THREE.BufferAttribute(new Float32Array(Pa.length / 3), 1));   // filled by hairGrad (once the locks are made)
+  }
+  // the hair's own gradient (withGrad), by height in head space: 0 at the crown, 1 at the lowest tip (as a lock's root to tip). The lowest
+  // tip is the back locks' when they hang below the block: the block's lowest point was then a lock of the bangs at the temple, which turned
+  // green as if it were the tip (2026-10-05, Saori's Nahida). Bangs that are part of the block (block, hime, side) stay out of it with
+  // gradient.bangs off, as bangs made of locks do: a vertex is the bangs' where the bangs' own shape is on the surface
+  function hairGrad() {
+    const geo = parts.hair.m.geometry, ud = geo.userData, Pa = geo.attributes.position.array, n = Pa.length / 3, G = geo.attributes.gradT.array;
+    if (!ud.headY) { ud.headY = new Float32Array(n); for (let v = 0; v < n; v++) ud.headY[v] = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2])[1]; }
+    const Y = ud.headY; let lo = Infinity, hi = -Infinity; for (let v = 0; v < n; v++) { lo = Math.min(lo, Y[v]); hi = Math.max(hi, Y[v]); }
+    for (const s of parts.locks?.sim?.specs ?? []) { const t = s.pts.at(-1); lo = Math.min(lo, HTr.toHead(t[0], t[1], t[2])[1]); }
+    const GO = OPT.hair.gradient, off = GO?.on && GO.bangs === false && hairPick.bangs !== "none" && !hairKit.bangsAsLocks(hairPick);
+    if (off && ud.bangsOf !== hairPick.bangs) { const f = blend(hairKit.BANGS[hairPick.bangs](hairPick)); ud.bangW = new Float32Array(n); ud.bangsOf = hairPick.bangs;
+      for (let v = 0; v < n; v++) { const h = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); ud.bangW[v] = 1 - sstep(0.01, 0.045, f(h[0], h[1], h[2])); } }   // 1 on the bangs, fading over a few cm into the rest (hime locks over a bob: the bob's lumps poking through them stayed green streaks)
+    for (let v = 0; v < n; v++) G[v] = (hi - Y[v]) / ((hi - lo) || 1) * (off ? 1 - ud.bangW[v] : 1);
+    geo.attributes.gradT.needsUpdate = true;
   }
   const glf = (v) => (+v).toFixed(4);
   // the ring's color when none is given: the hair color, lighter and a little warmer (brown hair → orange), so it doesn't stand out as white
@@ -379,7 +392,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
-  Object.assign(parts, makeLocks());
+  Object.assign(parts, makeLocks()); hairGrad();
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
   const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
@@ -544,6 +557,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks())) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = parts.hair.m.visible; }
+      hairGrad();
     },
 
     /** The nendo bangs: values into options.hair.sculpt.nendo ({ tips, overlap, lockThick, … }). Bangs made of locks rebuild only themselves
@@ -556,6 +570,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
       const x = makeLocks(["locks"]).locks; if (x) { parts.locks = x; x.on = on; x.m.visible = x.o.visible = vis; }
+      hairGrad();   // the lowest tip may have moved
     },
     /** Locks drawn by hand (options.hair.drawn): [{ pts: [[x, y, z], …] (head space, root to tip), width (m), thick (×width), stiff, mirror }].
      *  Rebuilds only them. */
@@ -564,7 +579,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setGradient(target, values = {}) {
       const G = target === "hair" ? OPT.hair.gradient : OPT.outfit[target]?.gradient, U = GRAD[target]; if (!G || !U) throw new Error(`Unknown gradient "${target}". Available: ${Object.keys(GRAD).join(", ")}`);
       Object.assign(G, values); U.on.value = G.on ? 1 : 0; U.color.value.set(G.color); U.start.value = G.start; U.soft.value = G.soft;
-      if (target === "hair") GRAD.bangs.on.value = G.on && G.bangs !== false ? 1 : 0;
+      if (target === "hair") { GRAD.bangs.on.value = G.on && G.bangs !== false ? 1 : 0; hairGrad(); }
     },
     /** A picture on a garment (instant; a new src loads in the background, the returned promise resolves when it shows): target "shirt" | "pants" |
      *  "dress" | "cape", values { src (path or data URL, null = none), mode: "tile" | "wrap" | "front", scale (m), rotate (degrees), x, y (m), opacity, blend: "over" | "multiply" }.
