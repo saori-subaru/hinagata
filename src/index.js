@@ -400,13 +400,16 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // the hair. The hair's surfaces mark the pixels they draw (stencil 1); the hair's outlines are drawn after them, only where no hair was
   // drawn: its outer edge and where it lies over the face, the body or the clothes keep their line. (The ties keep theirs everywhere.)
   // Checked each update: the hair's materials are replaced by rebuilds (locks, tails, bangs) and by setShading
-  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"];
+  // "front" (default; Saori: "後ろ髪のことだった。前はあっさりしちゃうから"): the bangs and drawn locks keep their lines everywhere, the back
+  // hair's block, its locks and the tails draw theirs only off the hair. "none": no hair outline over the hair. "all": the lines as before
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
   function hairLines() {
-    const on = !OPT.outline.hairInner;
+    const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
-      if (f.userData.hairStencil !== on) { Object.assign(f, { stencilWrite: on, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = on; }
-      if (o.userData.hairStencil !== on) { Object.assign(o, { stencilWrite: on, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = on; }
-      x.o.renderOrder = on ? 1 : 0; }
+      const write = mode !== "all", test = mode === "none" || (mode === "front" && HAIR_BACK.includes(k));
+      if (f.userData.hairStencil !== write) { Object.assign(f, { stencilWrite: write, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = write; }
+      if (o.userData.hairStencil !== test) { Object.assign(o, { stencilWrite: test, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = test; }
+      x.o.renderOrder = test ? 1 : 0; }
   }
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
