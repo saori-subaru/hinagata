@@ -1025,7 +1025,9 @@ export function fromQuery(search) {
 
 // A fresh copy every time (the avatar writes instant changes back into it, so it must never share objects with DEFAULTS or the caller).
 // Face parts given with the old Japanese names become ids.
-export const resolveOptions = (user) => { const o = structuredClone(merge(DEFAULTS, user)); Object.assign(o.face.parts, partIds(user?.face?.parts)); return o; };
+/** Bangs that are gone, and what they became ("parted" had a tuft in the middle of its parting: 2026-10-05). */
+export const bangsId = (v) => v === "parted" ? "block" : v;
+export const resolveOptions = (user) => { const o = structuredClone(merge(DEFAULTS, user)); Object.assign(o.face.parts, partIds(user?.face?.parts)); o.hair.bangs = bangsId(o.hair.bangs); return o; };
 
 /** Only what differs from base (e.g. a recipe without its defaults, for "copy as code"). Arrays and values compare as a whole. */
 export function diff(base, opt) {

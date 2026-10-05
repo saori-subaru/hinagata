@@ -613,7 +613,7 @@ function tipPoint(a, y) {   // 頭の座標の (角度, 高さ) → 毛先のす
 }
 function bangBuild() {   // 玉を置き直す
   avatar.object.add(bangGrp); bangGrp.clear();
-  if (I.hairPick.bangs !== "nendo") { $("bangNote").textContent = `いまの前髪(${I.hairPick.bangs})は ふさを動かせない。「前髪: nendo」にすると動かせる`; return; }
+  if (!["nendo", "block"].includes(I.hairPick.bangs)) { $("bangNote").textContent = `いまの前髪(${I.hairPick.bangs})は ふさを動かせない。「前髪: nendo」にすると動かせる`; return; }
   $("bangNote").textContent = `ふさ ${bangTips().length}本。玉を押すと選べる`;
   bangTips().forEach((t, i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 16, 12), i === bangSel ? bangSelMat : bangMat); m.position.copy(tipPoint(tipAngle(t), t[1])); m.renderOrder = 10; m.userData.i = i; bangGrp.add(m); });
   bangPanelSync();

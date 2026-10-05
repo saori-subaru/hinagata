@@ -40,8 +40,6 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
   const BANGS = {
-    "parted": () => [[0, 2, -12, 0.074, 0], [-25, -30, -15, 0.07, -3], [25, 30, -15, 0.07, 3], [-47, -55, -24, 0.052, 0], [47, 55, -24, 0.052, 0]]
-      .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     "side": () => [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
       .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
@@ -68,6 +66,9 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     "nendoStrands": () => { const B = OPT.hair.sculpt.nendo;   // wide, flat clumps that overlap, tips at the brows, longer locks at the sides
       return B.clumps.map(([th0, th1, ph1, w, bend, layer = 1]) => strand({ th0, ph0: B.root, th1, ph1, w: w * B.width, bend, off0: 0.014 * layer, off1: B.lift * layer, flat: B.flat, N: 8, tipPow: B.tipPow })); },   // layer: clumps in front / behind, so their edges show
     "none": () => [],
+    // block: the nendo bangs as one layer (the tufts before they became locks; the same tips, so the tuft tool moves them too). 2026-10-05, Saori:
+    // "かたまりのふさタイプの髪型を追加して、分け目は消していい" (the parted bangs had a tuft in the middle of the parting; old recipes' "parted" become this)
+    "block": (pick) => BANGS.nendo(pick),
     // hime: a princess cut. The same layer as nendo, but square-ended clumps: a straight fringe across the forehead and straight side locks
     // down to the cheeks (a steep curve keeps each clump's end flat; the grooves between them show the clumps)
     // curl: the side locks bend forward toward their ends (seen from the side the lock curves toward the chin): below curlY0 the lock is

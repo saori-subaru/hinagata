@@ -13,7 +13,7 @@ import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
-import { DEFAULTS, resolveOptions, diff, skirtOf } from "./options.js";
+import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
@@ -536,7 +536,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
     /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). Kept in options.hair. */
     setHair(pick) {
-      Object.assign(hairPick, pick); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k]; bangKitMemo = null;
+      Object.assign(hairPick, pick, pick.bangs ? { bangs: bangsId(pick.bangs) } : {}); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k]; bangKitMemo = null;
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }

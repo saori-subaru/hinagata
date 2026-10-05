@@ -2,7 +2,7 @@
 // Built from DEFAULTS, so a new option is never missing: values described in MAIN get names and ranges by hand,
 // every other value (the sculpt tuning) gets an entry made from its default (a guessed range, marked soft).
 // No three.js here (node tools and workers can read it). tools/schema.mjs writes docs/options.schema.json from it.
-import { DEFAULTS } from "./options.js";
+import { DEFAULTS, bangsId } from "./options.js";
 import { PART_LABELS, partIds } from "./face/names.js";
 
 /*
@@ -114,7 +114,7 @@ const MAIN = [
   ["face.drawn", L("描いた表情", "Drawn expressions"), { section: L("描いた表情", "Drawn expressions"), help: L("[{ id, name, eye, brow, mouth, cheeks, blink }] 名前をつけた表情をいくつでも。eye / brow / mouth は絵(data URL か パス)、null = ふつうの絵。表情とパーツの名前は image@<id>", "[{ id, name, eye, brow, mouth, cheeks, blink }] named expressions, as many as you like. eye / brow / mouth: pictures (data URL or path), null = the normal picture. Their expression and part ids are image@<id>") }],
 
   // hair
-  ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
+  ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ(毛束)", "Clumps (locks)"], block: ["ふさ(かたまり)", "Clumps (block)"], hime: ["姫カット", "Hime cut"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ hang: ["ショート(たらし)", "Short, hanging"], short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"] }), section: L("結び髪", "Tails") }],
@@ -329,6 +329,7 @@ export function checkOptions(options) {
   const out = [], keys = Object.keys(SCHEMA);
   const walk = (o, pre) => { for (let [k, v] of Object.entries(o ?? {})) { const path = pre ? `${pre}.${k}` : k, e = SCHEMA[path];
     if (pre === "face.parts") v = partIds({ [k]: v })[k];   // the old Japanese part names are still accepted
+    if (path === "hair.bangs") v = bangsId(v);   // and bangs that are gone (they become another)
     if (!e) { if (v && typeof v === "object" && !Array.isArray(v) && keys.some((x) => x.startsWith(path + "."))) walk(v, path); else out.push({ path, problem: "unknown option" }); continue; }
     if (v === null) { if (!e.nullable) out.push({ path, problem: "null is not allowed" }); continue; }
     if (e.type === "json") continue;

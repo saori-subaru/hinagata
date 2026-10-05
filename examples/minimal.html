@@ -23,7 +23,7 @@ const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.
 addEventListener("resize", resize); resize();
 
 // one avatar: bob hair, green shirt, walking
-const avatar = await createAvatar({ hair: { back: "bob", bangs: "parted" }, outfit: { shirt: { color: "#8cc084" } } });
+const avatar = await createAvatar({ hair: { back: "bob", bangs: "block" }, outfit: { shirt: { color: "#8cc084" } } });
 scene.add(avatar.object);
 avatar.play("walk");
 

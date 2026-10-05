@@ -8691,8 +8691,15 @@
     {
      "value": "nendo",
      "label": {
-      "ja": "ふさ",
-      "en": "Clumps"
+      "ja": "ふさ(毛束)",
+      "en": "Clumps (locks)"
+     }
+    },
+    {
+     "value": "block",
+     "label": {
+      "ja": "ふさ(かたまり)",
+      "en": "Clumps (block)"
      }
     },
     {
@@ -8700,13 +8707,6 @@
      "label": {
       "ja": "姫カット",
       "en": "Hime cut"
-     }
-    },
-    {
-     "value": "parted",
-     "label": {
-      "ja": "分け目",
-      "en": "Parted"
      }
     },
     {
