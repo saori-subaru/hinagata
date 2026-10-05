@@ -607,6 +607,8 @@ export const DEFAULTS = {
       "spread": 1.5,
       "stiff": 1,
       "size": 1,
+      "wave": 0,
+      "waves": 1.5,
       "tie": {
         "on": true,
         "color": "#c94a4a",
