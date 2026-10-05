@@ -690,11 +690,5 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### The retest, and what is next (2026-10-05)
 - `examples/tennis-agent/`: a fresh agent told only 「https://github.com/saori-subaru/hinagata のツールでキャラを作って、three.jsでテニスゲーム作って」 with the rewritten llms.txt (it read only the internet: checked in its transcript). 55 min, full rules, crowd and boards, a title / close-up / results, a bot played every level without errors; two Hinagata characters with their own swings. Far better than the first attempt (`examples/tennis/`, whose serve didn't work), but Saori still finds the plain three.js game (`examples/tennis-dressed/` is that game, dressed in Hinagata with `follow`) the better game.
-- Why, as far as we can tell: (1) the chibi default pulls the whole game toward a toy (the agent titled it "ちびキャラ 3D テニス" and shrank the court to the chibi's height); (2) the engine has no sports moves, so the agent spent its time writing swings instead of the game.
-- To do next:
-  - Poses switch in about 0.35 s (createPosePlayer's ease); fast swings went soft. Document `sharp`, or let `play(name, { blend: 0 })` switch at once.
-  - Something held in a hand: its orientation had to be found by trial (the racket's tilt and twist). A helper (`avatar.hold(object, "hand.R", { along, face })`) or a clear recipe in llms.txt.
-  - The sync helper serves one file; the agent wanted both characters live in the editor. Several files (or a folder) in one helper.
-  - A sports pose set (forehand, backhand, serve, kick…) or guidance to dress the game's own rig with `follow` (what made `examples/tennis-dressed/` work in about 100 lines).
-  - The guide could say: pick the body type the game needs (tall for a sports game), don't let the default chibi set the game's scale.
-
+- Why: not the missing sports moves (the plain game wrote its own swings too) but the rig the moves are written against. The plain agent designed its own mannequin (arms straight down, axes of its own choosing); ours had to learn the A-pose arms, the twist and the racket's angle by trial, wrote its own aim helpers and went round six screenshot rounds, and the 0.35 s pose ease softened its swings. The dressed game shows the rig itself is fine (the mannequin's moves copied within 6°). And the chibi default pulled the game toward a toy (the court shrunk to the chibi's height).
+- What to do next is in TODO.md (宿題): recommend moves made on the game's own simple rig and dressed with `follow`; aim / hold / instant-switch helpers for posing the avatar directly; the sync helper for several files; and a retest.
