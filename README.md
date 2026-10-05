@@ -16,6 +16,17 @@ avatar.play("walk");
 avatar.update(dt);
 ```
 
+## Live sync with an agent
+
+Have the agent keep the character in a file (`character.json`: the recipe, only what differs from the defaults) and fine-tune it in the editor while both see each other's changes:
+
+```sh
+curl -O https://hinagata.pages.dev/sync.mjs     # once (or tools/sync.mjs here); Node 18+, no dependencies
+node sync.mjs character.json                     # prints a link: open it
+```
+
+The editor opened from that link shows the file as a character of its own. When the agent (or anyone) saves the file, the editor follows within a moment, one undo step per change; what you change in the editor is written back into the file (keys in a steady order, so the agent reads your tweaks as a diff). The link carries a key made for this run: other pages can't read or write the file. Works in Chrome and Firefox (a page on the web reaching `127.0.0.1`).
+
 Design notes, API and decisions: [`DESIGN.md`](DESIGN.md).
 
 Used by: the saon site (`saori-subaru/devlog`, as a git submodule at `site/avatar/`) and the forest game.
