@@ -84,7 +84,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   { const ST = OPT.body.sculpt.skullTop; if (ST.extra) P.skullTop = E([0, ST.y, ST.z], [SK.width + ST.extra, ST.ry, ST.rz], "head", 0.06); }   // 頭(大きな丸。横幅・前後とも見本どおり)
   { const OC = OPT.body.sculpt.occiput ?? {}; P.occiput = E([0, OC.y ?? 1.0, OC.z ?? -0.07], [OC.rx ?? 0.17, OC.ry ?? 0.09, OC.rz ?? 0.14], "head", 0.08); }   // 後頭部の下(首の上まで丸くふくらむ)
   P.face = E([0, 0.935, 0.08], [OPT.body.sculpt.cheeks.width, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
-  P.jaw = E([0, 0.868, 0.094], [OPT.body.sculpt.jaw.width, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
+  P.jaw = E([0, 0.868, 0.094], [OPT.body.sculpt.jaw.width, 0.062, 0.142], "head", 0.07);
+  // chinTip: a small round piece at the bottom of the chin, so the face ends in a small point below round cheeks (Saori, after Nahida). The chin
+  // cut's middle comes down with it (chin.point), else the cut would take it off again
+  { const T = OPT.body.sculpt.chinTip; if (T?.on) P.chinTip = E([0, T.y, T.z], [T.rx, T.ry, T.rz], "head", T.k); }      // あご先(下は平らぎみ)
   P.muzzle = E([0, OPT.body.sculpt.muzzle.y, 0.17], [OPT.body.sculpt.muzzle.width, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
   const NOSE_DY = -0.035;
   const NOSE_Z = OPT.body.sculpt.nose.tipZ;   // 鼻先の前後(前は0.273。少し内側へ)
@@ -204,7 +207,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thighTop ?? TH.thigh, TH.thigh);   // thighTop: at the hip joint (slimmer = the hips don't bulge out at the top of the legs)
     for (const n of ["calf", "calfO", "calfB"]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
   }
-  const isHead = (k) => /^(skull|occiput|face|jaw|muzzle|nose|ear)/.test(k);
+  const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
   const BODY = Object.entries(P).filter(([k, v]) => !/^(sleeve|leghole)/.test(k) && !v.sub).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
   // experimental: a rounded box in front of the face, so the face front (forehead to under the eyes) is a flat plane and the eyes don't wrap around a sphere

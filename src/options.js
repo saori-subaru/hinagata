@@ -130,6 +130,15 @@ export const DEFAULTS = {
       "jaw": {
         "width": 0.112
       },
+      "chinTip": {
+        "on": false,
+        "y": 0.84,
+        "z": 0.16,
+        "rx": 0.03,
+        "ry": 0.03,
+        "rz": 0.05,
+        "k": 0.04
+      },
       "backPlane": {
         "z": 0,
         "k": 0.05,
