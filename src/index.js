@@ -42,7 +42,8 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 
 /**
  * Build an avatar.
- * options:  see DEFAULTS (src/options.js); anything left out uses the default.
+ * options:  see DEFAULTS (src/options.js); anything left out uses the default. Also a URL of a character file ("player.json"), and the
+ *           editor's export as it is ({ hinagata: 1, name, options }: 書き出し → JSON).
  * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
  *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
@@ -68,6 +69,10 @@ function shapeOnly(OPT) {
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
+  // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
+  // a file's URL ("player.json") is fetched, and the editor's export ({ hinagata: 1, name, options }) is opened to its options
+  if (typeof options === "string") { const r = await fetch(options); if (!r.ok) throw new Error(`createAvatar("${options}"): ${r.status}`); options = await r.json(); }
+  if (options?.hinagata && options.options) options = options.options;
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
   // "fine" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to

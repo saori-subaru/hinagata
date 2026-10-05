@@ -19,7 +19,9 @@ goes. The character is one asset among the court, the ball and the UI:
 
 ## The character file and the live link
 
-1. Keep the character in its own file, `character.json` (the recipe), and have the game load it (`fetch("character.json")`). Don't bury it in code.
+1. Keep the character in its own file, `character.json` (the recipe), and have the game load it (`createAvatar("character.json")`). Don't
+   bury it in code. One file per character. A file the user saved from the editor (書き出し → JSON / Export → JSON:
+   `{ "hinagata": 1, "name", "options" }`) works as it is: to put their character in the game, they drop it in place of the file.
 2. Start the live sync so the user can fine-tune it in the editor while you work on the game (they don't need to ask for it):
    ```sh
    curl -O https://hinagata.pages.dev/sync.mjs        # Node 18+, no dependencies
@@ -46,8 +48,8 @@ then hand the user an editor link with the recipe in it instead: `https://hinaga
 <script type="module">
 import * as THREE from "three";
 import { createAvatar } from "https://hinagata.pages.dev/src/index.js";
-const recipe = await (await fetch("character.json")).json();
-const avatar = await createAvatar(recipe);          // async: builds the meshes (in workers; cached in the browser), 1–2 s each the first time
+const avatar = await createAvatar("character.json"); // a file's URL or the recipe object. async: builds the meshes (in workers; cached
+                                                    // in the browser), 1–2 s each the first time
 scene.add(avatar.object);                           // a THREE.Group: feet at y = 0, facing +z, about 1.3–1.4 units tall
 avatar.play("walk");
 renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
