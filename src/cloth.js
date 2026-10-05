@@ -17,9 +17,12 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
 
 /** m, o: the skinned skirt and its outline. top / hem: the skirt's waist and hem heights (rest).
  *  colliders: [{ bone, a, b, ra, rb, thigh }] capsules in the rest pose (root space, radii with a margin for the cloth), each turning with its bone;
- *  thigh: a thigh's piece (the skirt's front goes over it when it turns up).
- *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up). */
-export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null }) {
+ *  thigh: a thigh's piece (the skirt's front goes over it when it turns up). outward: the cloth goes round it on the side away from the body's
+ *  middle line (an arm swinging back pushes a cape back; pushed the nearest way, the cape slipped in front of the arm and it poked through). 
+ *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
+ *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
+ *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind). */
+export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0 }) {
   const g0 = m.geometry, GP = g0.attributes.position.array, GN = g0.attributes.normal.array, R = Float32Array.from(GP), SI = g0.attributes.skinIndex.array, SW = g0.attributes.skinWeight.array, n = R.length / 3;   // GP / GN: what is drawn; R / NR: the built mesh (kept)
   // the skirt is a shell 1-2 cm thick: only its outer side is moved as cloth; each point of the inner side rides along with the nearest outer
   // point (keeping its offset from it, as skinned). Half the points and edges: the cost is about halved and the look is the same
@@ -61,21 +64,21 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   }
   function capsules() {   // the capsules now (root space): [ax, ay, az, bx, by, bz, ra, rb, thigh?]
     const at = (b, v) => root.worldToLocal(b.localToWorld(wp.copy(v))).toArray();
-    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0]);
+    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0, c.outward ? 1 : 0]);
   }
   // a point of the skirt already inside a capsule when standing (the skirt's top over the thigh's root) may stay as close to its axis as it was
   // then, but no closer: KEEP[v * NC + ci] = the share of the radius it must keep (1 = all of it). Before, such points ignored that capsule
   // altogether, and sitting the root of the thigh bulged out through them (most on the girl's body)
   const NC = COL.length, KEEP = new Float32Array(n * NC).fill(1);
   { const C0 = capsules(); for (let v = 0; v < n; v++) C0.forEach((c, ci) => { const x = R[v * 3], y = R[v * 3 + 1], z = R[v * 3 + 2], bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / (bx * bx + by * by + bz * bz)));
-      const d = Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t), r = c[6] + (c[7] - c[6]) * t; if (d < r) KEEP[v * NC + ci] = d / r; }); }
+      const d = Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t), r = c[6] + (c[7] - c[6]) * t; if (d < r && !c[9]) KEEP[v * NC + ci] = d / r; }); }   // (not an arm: the cape's edge near the arm in the A-pose would let the arm through it)
   // ── the body's surface (hips, bottom, thighs): a third of its points there, skinned each frame with their normals; a skirt point that comes
   //    closer to the nearest of them than it was standing (at most MB) is pushed back out along that point's normal. The capsules can't follow
   //    the flesh of the hip and the thigh's root, which bulges out when the thigh turns up (it showed through the skirt, most on the girl's body)
   const MB = 0.004, HC = 0.04, HT_N = 8192;   // margin / grid cell (m) / hash table size
   const BD = body && (() => { const g = body.geometry, P0 = Float32Array.from(g.attributes.position.array), N0 = Float32Array.from(g.attributes.normal.array), bi = g.attributes.skinIndex.array, bw = g.attributes.skinWeight.array;
-    const ok = new Set(["hips", "spine", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"].map((nm) => bones.findIndex((x) => x.name === nm)));
-    const ids = []; for (let v = 0; v < P0.length / 3; v += 3) { const x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2]; if (Math.abs(x) > 0.32 || y < 0.05 || y > 0.58 || z < -0.26 || z > 0.28) continue;
+    const ok = new Set((bodyRegion?.bones ?? ["hips", "spine", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"]).map((nm) => bones.findIndex((x) => x.name === nm))), yMax = bodyRegion?.yMax ?? 0.58;
+    const ids = []; for (let v = 0; v < P0.length / 3; v += 3) { const x = P0[v * 3], y = P0[v * 3 + 1], z = P0[v * 3 + 2]; if (Math.abs(x) > 0.32 || y < 0.05 || y > yMax || z < -0.26 || z > 0.28) continue;
       let top = 0; for (let q = 1; q < 4; q++) if (bw[v * 4 + q] > bw[v * 4 + top]) top = q; if (ok.has(bi[v * 4 + top])) ids.push(v); }   // not the arms and hands (they hang beside the hips)
     const k = ids.length; return { ids: Uint32Array.from(ids), P0, N0, bi, bw, Q: new Float32Array(k * 3), QN: new Float32Array(k * 3), cnt: new Int32Array(HT_N + 1), items: new Int32Array(k), hs: new Int32Array(k) }; })();
   const hashOf = (ix, iy, iz) => ((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) & (HT_N - 1);
@@ -119,6 +122,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
         // a thigh turned up (sitting): the front of the skirt goes over it, not under (pushed the nearest way, the part under the thigh tucked
         // beneath it and the thigh showed through a hole). The back of the skirt stays under (you sit on it)
         const u = U[ci]; if (u && FR[v]) { const s = dx * u[0] + dy * u[1] + dz * u[2]; if (s < 0) { dx -= 2 * s * u[0]; dy -= 2 * s * u[1]; dz -= 2 * s * u[2]; } }
+        if (c[9]) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
         const k = r / d; x = px + dx * k; y = py + dy * k; z = pz + dz * k; }
       if (y < 0.003) y = 0.003;   // the floor
       if (seat && z < seat.front && Math.abs(x) < 0.2 && y < seat.y && y > seat.y - 0.06) y = seat.y;   // the chair's seat (the part of it under the bottom)
@@ -164,6 +168,17 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
     g0.attributes.position.needsUpdate = g0.attributes.normal.needsUpdate = true;
   }
   const T0 = new Float32Array(R.length); let still = 0;   // the targets last frame / frames in a row that nothing moved
+  // sway: the character's own move since last frame (root space now ← root space then); the free points are carried back by it (they stay
+  // where they were in the world), so the cloth trails behind and swings. A jump of more than 30 cm in a frame is a teleport: not carried
+  const M0 = new THREE.Matrix4(), MD = new THREE.Matrix4(); let hasM0 = false;
+  function carry() {
+    MD.copy(root.matrixWorld).invert().multiply(M0); const e = MD.elements; M0.copy(root.matrixWorld);
+    const moved = Math.abs(e[12]) + Math.abs(e[13]) + Math.abs(e[14]) + Math.abs(e[0] - 1) + Math.abs(e[5] - 1) + Math.abs(e[10] - 1);
+    if (moved < 1e-7 || Math.hypot(e[12], e[13], e[14]) > 0.3) return false;
+    for (const A_ of [X, P]) for (let v = 0, i = 0; v < n; v++, i += 3) { if (!W[v]) continue; const s = sway * W[v], x = A_[i], y = A_[i + 1], z = A_[i + 2];
+      A_[i] = x + (e[0] * x + e[4] * y + e[8] * z + e[12] - x) * s; A_[i + 1] = y + (e[1] * x + e[5] * y + e[9] * z + e[13] - y) * s; A_[i + 2] = z + (e[2] * x + e[6] * y + e[10] * z + e[14] - z) * s; }
+    return true;
+  }
   function step(keep, iters, C, seat) {
     for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * A[v]; X[i] = W[v] ? x : T[i]; }
     for (let k = 0; k < iters; k++) { let t0 = now(); edges(); PROF.edges += now() - t0; t0 = now(); collide(C, seat); PROF.collide += now() - t0; }
@@ -174,6 +189,12 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
     prof: PROF,
     /** For checking: skirt points (outer side) inside the body's surface now: count, deepest (m), and how many of those the search couldn't see. */
     inside() { if (!BD) return null; let c = 0, deep = 0, pinned = 0; for (let v = 0; v < n; v++) { if (!OUT[v]) continue; const d = bodyDist(X[v * 3], X[v * 3 + 1], X[v * 3 + 2]); if (d < KEEPB[v] - 0.002) { c++; deep = Math.min(deep, d); if (!W[v]) pinned++; } } return { count: c, deep, pinned, keepMin: Math.min(...KEEPB) }; },
+    /** For checking: points inside a capsule now (outer side: free / pinned; and inner points), by capsule. */
+    inCapsules() { const C = capsules(), r = C.map(() => ({ free: 0, pinned: 0, inner: 0 }));
+      for (let v = 0; v < n; v++) { const x = X[v * 3], y = X[v * 3 + 1], z = X[v * 3 + 2];
+        C.forEach((c, ci) => { const bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / (bx * bx + by * by + bz * bz)));
+          if (Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t) < (c[6] + (c[7] - c[6]) * t) * 0.9) r[ci][!OUT[v] ? "inner" : W[v] ? "free" : "pinned"]++; }); }
+      return r; },
     /** For checking: how many points the cloth has moved off their targets now, and the farthest (m). */
     moved() { let c = 0, mx = 0; for (let v = 0, i = 0; v < n; v++, i += 3) { const d = Math.hypot(X[i] - T[i], X[i + 1] - T[i + 1], X[i + 2] - T[i + 2]); if (d > 1e-5) c++; if (d > mx) mx = d; } return { count: c, of: n, max: mx }; },
     /** Each frame after the pose is set. instant: settle at once (no sway carried over). seat: { y, front } when sitting on a chair. */
@@ -182,8 +203,9 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       for (const k in PROF) PROF[k] = 0; let t0 = now();
       root.updateMatrixWorld(true); targets(); if (BD) bodySkin(); const C = capsules(); PROF.targets = now() - t0;
       let moved = 0; for (let i = 0; i < T.length; i++) { const d = Math.abs(T[i] - T0[i]); if (d > moved) moved = d; } T0.set(T);
-      if (first || instant) { X.set(T); P.set(T); for (let s = 0; s < (first ? 30 : 10); s++) step(0, 2, C, seat); first = false; still = 0; }   // settle: no motion carried over
-      else { still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
+      if (first || instant) { X.set(T); P.set(T); for (let s = 0; s < (first ? 30 : 10); s++) step(0, 2, C, seat); first = false; still = 0; if (sway) { M0.copy(root.matrixWorld); hasM0 = true; } }   // settle: no motion carried over
+      else { if (sway && hasM0 && carry()) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
+        still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
         step(Math.pow(0.55, Math.min(dt, 0.05) * 60), 2, C, seat); }   // keep a little of the motion (55% per 1/60 s)
       t0 = now(); normals(); unskin(); PROF.normals = now() - t0;
     },

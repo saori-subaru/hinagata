@@ -6,6 +6,9 @@ import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
 
+/** the cape's shoulder line (rest pose): where the mantle over the shoulders turns into the part that hangs */
+export const capeTop = (J) => J["upperArm.L"][1] + 0.005;
+
 export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const pick = (...names) => names.flatMap((n) => [P[n]?.cloth ?? P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);   // .cloth: a part's own shape for clothes (the bust: joined across the middle)
   // shirt.sleeve: "short" (to the middle of the upper arm) | "none" (cut off at the armhole) | "long" (to the wrist)
@@ -74,5 +77,22 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
   const armor = (OPT.outfit.armor.style === "full" ? buildPlate : buildArmor)(OPT, { P, J, HT, bodySdf });   // 鎧: 体にそわせず、かんたんな形をかぶせた硬い部品(軽鎧 armor.js / 全身鎧 plate.js)
   const weapons = buildWeapons(OPT, { J, bodySdf });   // 武器: 手に持つ硬い部品(weapons.js)
-  return { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, armor, weapons };
+  // cape (outfit.cape): a shell over the shoulders that hangs down the back, open in front. Over the shoulders it is the body pushed out
+  // (a mantle); from the shoulder line down, an elliptic cone around the body that flares toward the hem (more at the back than at the sides).
+  // Its front edge is behind the arms (they hang forward of it), and over the shoulders it wraps forward (cape.wrap). It moves as cloth (cloth.js)
+  const CA = OPT.outfit.cape, CAPE_Y = capeTop(J), capeSdf = CA?.on ? (() => {
+    const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, CAPE_Y, dz * t) < 0) t += 0.001; return t; };
+    const off = 0.026, ax0 = out(1, 0) + off, az0 = out(0, -1) + off, k = 0.02;   // off: over the shirt and its sleeves
+    // over a skirt (or a dress's): at least as wide as the skirt at every height (it goes on flaring below the hem), else the skirt showed through its sides
+    // (above the skirt's top it narrows at 45°: a step there showed as a crack across the cape)
+    const sk = SKIRT ? (y) => { const d = SK_Y0 - y, m = 0.02 + SK.pleatDepth; return [SK_AX + (d > 0 ? SK.flare * d : d) + m, SK_AZ + (d > 0 ? SK.flare * 0.8 * d : d) + m + Math.abs(SK_ZC)]; } : null;
+    const smax = (a, b, k = 0.02) => -smin(-a, -b, k);
+    return (x, y, z, B = bodySdf) => {
+      const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax0_ = ax0 + CA.flare * 0.6 * drop, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
+      const cone = Math.max((Math.hypot(x / ax, z / az) - 1) * Math.min(ax, az), y - CAPE_Y);
+      const mantle = Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);
+      const S = smin(cone, mantle, k), zf = -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y);   // zf: the front edge (behind the arms below the shoulders)
+      return Math.max(S, -(S + CA.thick), y - (CA.collar - 0.12 * z), z - zf, CA.hem - y); };   // the collar is a little higher at the back
+  })() : null;
+  return { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons };
 }

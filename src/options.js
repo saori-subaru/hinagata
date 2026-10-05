@@ -392,6 +392,16 @@ export const DEFAULTS = {
         "y1": 0.75
       }
     },
+    "cape": {
+      "on": false,
+      "color": "#8c2f3c",
+      "hem": 0.16,
+      "flare": 0.3,
+      "wrap": 0.05,
+      "collar": 0.78,
+      "thick": 0.018,
+      "sway": 1
+    },
     "dress": {
       "on": false,
       "color": null,

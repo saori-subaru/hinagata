@@ -341,6 +341,18 @@ Not yet: hugging the knees shows the tops of the thighs (as a real skirt would);
 
 Not yet: sitting on a chair, the cloth tents over each knee and sags between them (the cloth doesn't resist being squeezed, and the middle follows the hips); a real dress would stretch flat across. The outline speckles a little at those tents.
 
+### The cape (マント) (2026-10-05, Saori; done)
+
+`outfit.cape`: a shell over the shoulders that hangs down the back, open in front, moved as cloth. Only built when worn: `cape.on` rebuilds the clothes (and is in the mesh cache's key), so nobody else pays for it.
+
+- Shape (`capeSdf`, clothes/index.js): over the shoulders, the body pushed out 2.6 cm (a mantle); from the shoulder line (`capeTop`) down, an elliptic cone measured off the body there, flaring toward the hem (`cape.flare`, half as much at the sides as at the back). Its front edge is behind the arms (the rest pose holds them out at 45°), and over the shoulders it wraps forward (`cape.wrap`). The collar is a little higher at the back. 1.8 cm thick, like the skirt (1.2 cm was thinner than the mesh's cell and the surface broke into specks).
+- Over a skirt or a dress it is at least as wide as the skirt at every height (it goes on flaring below the hem), else the skirt showed through its sides. Above the skirt's top that floor narrows at 45° (a step there showed as a crack).
+- Cloth (`cloth.js`, the skirt's): pinned at the collar, free toward the hem. It keeps off the legs, the arms and the body's surface from the hips to the shoulders (`bodyRegion`). The arms push it outward (away from the body's middle line): pushed the nearest way, it slipped in front of an arm swinging back. For the arms, points near them in the rest pose may not stay close (that rule is for the skirt over the thigh's root; here it let the arm through), and the arm capsules include the cape's thickness (its inner side rides on the outer one).
+- `cape.sway`: the free points keep their place in the world when the whole character moves (the root's move since last frame is undone for them), so it trails behind walking and running. The skirt has 0 (unchanged). A move over 30 cm in a frame is a teleport.
+- Sitting on a chair it isn't lifted onto the seat (it stood out sideways like a table): it hangs behind.
+
+Not yet: it doesn't collide with the skirt as cloth (only its shape is wide enough); long hair lies over it without touching it.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").
