@@ -14,7 +14,7 @@ import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN } from "./materials.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody } from "./body/index.js";
+import { buildBody, makeStretch } from "./body/index.js";
 import { buildClothes, capeTop } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, drawnLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
@@ -79,7 +79,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
-  const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J, PARENT, BONES });
+  // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
+  // stretched upward as they are made (mesh), and what moves the character uses the stretched ones: the bones (Jr), the head's transform
+  // for things placed in head space (HTr: the hair's locks, the face picture, the ear line) and the body read in place (bodySdfR, for colliders)
+  const ST = makeStretch(OPT, J);
+  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.fwd(v[1]), v[2]]]));
+  const HTr = ST.identity ? HT : { ...HT, identity: false, toHead: (x, y, z) => HT.toHead(x, ST.inv(y), z), fromHead: (x, y, z) => { const p = HT.fromHead(x, y, z); p[1] = ST.fwd(p[1]); return p; },
+    wrap: (f) => { const g = HT.wrap(f); return (x, y, z) => g(x, ST.inv(y), z); } };
+  const bodySdfR = ST.identity ? bodySdf : (x, y, z) => bodySdf(x, ST.inv(y), z) * ST.k;
+  const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J: Jr, PARENT, BONES });
 
   lap("shapes");
   // shape → skinned mesh
@@ -98,7 +106,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       rec = fresh[name] = { pos, nor, idx, si, sw };
     }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(rec.pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(rec.nor, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
+    let gp = rec.pos, gn = rec.nor;
+    if (!ST.identity) { gp = Float32Array.from(gp); gn = Float32Array.from(gn);   // the proportions: points up by fwd, normals by the slope there (the record stays at the base, for the cache)
+      for (let i = 0; i < gp.length; i += 3) { const s = ST.slope(gp[i + 1]); gp[i + 1] = ST.fwd(gp[i + 1]); const ny = gn[i + 1] / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
+    g.setAttribute("position", new THREE.BufferAttribute(gp, 3)); g.setAttribute("normal", new THREE.BufferAttribute(gn, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(rec.si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(rec.sw, 4));
     PROF.push({ part: name, verts: rec.pos.length / 3, ms: w ? w.ms : Math.round(performance.now() - T0), cached: !time, worker: !!w, sample: time ? Math.round(time.sample) : 0, project: time ? Math.round(time.project) : 0 });
     return g;
@@ -134,7 +145,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // the hair as one volume, the way anime games shade it: normals from the head's center (above it) or from the vertical line under it
   // (long hair hanging down), mixed into the smoothed ones. Its light and shadow then split the hair cleanly instead of strand by strand
   function hairRound(geo) {
-    const Pa = geo.attributes.position.array, S = geo.attributes.shadeN.array, SK = OPT.body.sculpt.skull, c = HT.fromHead(0, SK.y, -0.005), w = HAIR_ROUND * Math.min(1, OPT.shading.soften);
+    const Pa = geo.attributes.position.array, S = geo.attributes.shadeN.array, SK = OPT.body.sculpt.skull, c = HTr.fromHead(0, SK.y, -0.005), w = HAIR_ROUND * Math.min(1, OPT.shading.soften);
     for (let i = 0; i < Pa.length; i += 3) { const dx = Pa[i] - c[0], dy = Math.max(0, Pa[i + 1] - c[1]), dz = Pa[i + 2] - c[2], dl = Math.hypot(dx, dy, dz) || 1;
       const sx = S[i] + (dx / dl - S[i]) * w, sy = S[i + 1] + (dy / dl - S[i + 1]) * w, sz = S[i + 2] + (dz / dl - S[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
@@ -145,7 +156,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const FACE_SHADE = { w: OPT.face.shading.weight, c: [0, OPT.face.shading.y, OPT.face.shading.z], r: [0.25 * OPT.body.sculpt.skull.width / 0.249, OPT.face.shading.radiusY, OPT.face.shading.radiusZ] };
   function addShadeNormals(geo) {
     const Pa = geo.attributes.position.array, N = geo.attributes.shadeN.array, S = new Float32Array(N.length), F = FACE_SHADE, ears = [1, -1].map((m) => [m * EAR.x, EAR.y, -0.022]);
-    for (let i = 0; i < Pa.length; i += 3) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]);   // in head space
+    for (let i = 0; i < Pa.length; i += 3) { const [x, y, z] = HTr.toHead(Pa[i], Pa[i + 1], Pa[i + 2]);   // in head space
       let w = F.w * sstep(0.8, 0.86, y);
       for (const e of ears) w *= sstep(0.05, 0.1, Math.hypot(x - e[0], y - e[1], z - e[2]));   // head only; ears keep their own shading
       const ex = (x - F.c[0]) / F.r[0] ** 2 / HT.sx, ey = (y - F.c[1]) / F.r[1] ** 2 / HT.sy, ez = (z - F.c[2]) / F.r[2] ** 2 / HT.sz, el = Math.hypot(ex, ey, ez) || 1;   // normal back to world space
@@ -160,7 +171,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   function addPaint(geo) {
     const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), jc = new THREE.Color(JS.color), ec = new THREE.Color(ES_.color);
     const put = (v, c, k) => { if (k <= 0) return; for (const [o, ch] of [[0, "r"], [1, "g"], [2, "b"]]) A[v * 3 + o] *= 1 + (c[ch] - 1) * Math.min(1, k); };
-    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = ST.inv(Pa[i + 1]), z = Pa[i + 2], ny = N[i + 1];   // (at the base proportions: the shadow's heights are)
       if (JS.on) { const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);
         const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(-0.06, 0.0, z);
         put(v, jc, Math.max(jaw, neck)); }
@@ -193,7 +204,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // Each hair vertex gets its direction from the head's center (head space): around the head (phi) and down from the crown (theta)
   function addHairUV(geo) {
     const Pa = geo.attributes.position.array, U = new Float32Array(Pa.length / 3 * 2), S = OPT.body.sculpt.skull;
-    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const [x, y, z] = HT.toHead(Pa[i], Pa[i + 1], Pa[i + 2]), dz = z + 0.005, dy = y - S.y;
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const [x, y, z] = HTr.toHead(Pa[i], Pa[i + 1], Pa[i + 2]), dz = z + 0.005, dy = y - S.y;
       U[v * 2] = Math.atan2(x, dz); U[v * 2 + 1] = Math.atan2(Math.hypot(x, dz), dy); }
     geo.setAttribute("hairUV", new THREE.BufferAttribute(U, 2));
   }
@@ -232,20 +243,20 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // forward, outward and forward-out from the bone's line (the inner side and the back run into the other leg and the bottom), and the shin likewise
   const PT = OPT.outfit.pants, CM = 0.006;   // CM: the cloth's margin off the leg
   const legReach = (c) => { let rm = 0; for (const d of [[1, 0, 0], [0, 0, 1], [0.7071, 0, 0.7071], [0.7071, 0, -0.7071]]) { const dx = d[0] * Math.sign(c[0] || 1), dz = d[2]; let r = 0.02;
-      for (; r < 0.16; r += 0.002) if (bodySdf(c[0] + dx * r, c[1], c[2] + dz * r) > 0) break; rm = Math.max(rm, r); } return rm; };
-  const legCols = (s) => { const h = J[`upperLeg.${s}`], k = J[`lowerLeg.${s}`], f = J[`foot.${s}`], at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), out = [];
+      for (; r < 0.16; r += 0.002) if (bodySdfR(c[0] + dx * r, c[1], c[2] + dz * r) > 0) break; rm = Math.max(rm, r); } return rm; };
+  const legCols = (s) => { const h = Jr[`upperLeg.${s}`], k = Jr[`lowerLeg.${s}`], f = Jr[`foot.${s}`], at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), out = [];
     const thigh = [0.12, 0.35, 0.6, 0.85, 1].map((t) => { const c = at(h, k, t); return [c, legReach(c) + CM]; }), shin = [0, 0.5, 0.9].map((t) => { const c = at(k, f, t); return [c, legReach(c) + CM]; });
     for (let i = 0; i + 1 < thigh.length; i++) out.push({ bone: `upperLeg.${s}`, a: thigh[i][0], b: thigh[i + 1][0], ra: thigh[i][1], rb: thigh[i + 1][1], thigh: true });
     for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false });
     return out; };
-  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: SKO.top, hem: SKO.hem, colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
+  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
   // the cape: cloth too, hanging from the shoulders; it keeps clear of the legs and the arms, and of the body's surface from the hips to the
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
-  const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: J[`${a}.${s}`], b: J[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
-  const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: CA.collar + 0.01, hem: CA.hem, colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
-    bodyRegion: { yMax: capeTop(J) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1 }) : null;
+  const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
+  const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
+    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1 }) : null;
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color, 0.005, "shoes");
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
@@ -265,29 +276,29 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   let bangKitMemo = null;   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
-  const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HT.fromHead(x, y, z), sx: HT.sx }; })();
+  const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
     const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && (hairPick.back === "short" || hairPick.back === "hang") && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     if (!longOn && !shortOn && !bangsOn && !drawnOn) return out;
-    const capRaw = hairKit.hairSdfOf(hairPick), cap = HT.wrap(capRaw), c = HT.fromHead(0, 1.125, -0.02);
+    const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
     const part = (specs, opt) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
-      const coll = lockColliders(J, BI, bodySdf);
-      if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HT.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
-      else { const B = hairKit.BACKS.short, bottom = (th) => HT.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
+      const coll = lockColliders(Jr, BI, bodySdfR);
+      if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
         out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {
       const B = OPT.hair.sculpt.nendo;
       const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
-      out.bangs = part(specs, { coll: long ? lockColliders(J, BI, bodySdf) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 });
+      out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 });
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HT.fromHead(x, y, z) }), { coll: lockColliders(J, BI, bodySdf), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
   Object.assign(parts, makeLocks());
@@ -307,8 +318,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
     for (const E of EARS) { const pts = [], N = 24;
       for (let i = 0; i <= N; i++) { const a = (EL.a0 + (EL.a1 - EL.a0) * i / N) * deg, ph = [0, 1, 2].map((k) => E.c[k] + (E.eu[k] * (EL.cu + Math.cos(a) * EL.ru) + E.ev[k] * (EL.cv + Math.sin(a) * EL.rv) + E.ew[k] * 0.05) * E.ES);
-        let p = HT.fromHead(...ph); const d = E.ew;
-        for (let t = 0; t < 60; t++) { const f = bodySdf(...p); if (f < 0.0004) break; p = p.map((v, k) => v - d[k] * Math.min(f, 0.01)); }   // slide back onto the ear's front
+        let p = HTr.fromHead(...ph); const d = E.ew;
+        for (let t = 0; t < 60; t++) { const f = bodySdfR(...p); if (f < 0.0004) break; p = p.map((v, k) => v - d[k] * Math.min(f, 0.01)); }   // slide back onto the ear's front
         pts.push(new THREE.Vector3(p[0] + d[0] * EL.lift, p[1] + d[1] * EL.lift, p[2] + d[2] * EL.lift)); }
       const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, EL.width, 6, false); g.applyMatrix4(inv); earLine.add(new THREE.Mesh(g, mat)); }
     bone.head.add(earLine); }
@@ -320,7 +331,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   let faceLayer = null;
   function buildFaceLayer() {
-    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HT.identity ? null : HT.toHead);
+    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
@@ -337,7 +348,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   if (cull) { const Pa = bodyGeo.attributes.position.array, kept = building && hit?.cover;   // remembered with the meshes (same shape, same answer; recomputing reads the whole body ~0.25 s)
     if (kept && kept.length === Pa.length / 3) coverBits = kept;
     else { coverBits = new Uint8Array(Pa.length / 3);
-      COVER.forEach(([, f], b) => { for (let v = 0; v < coverBits.length; v++) if (f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -COVER_DEPTH) coverBits[v] |= 1 << b; });
+      COVER.forEach(([, f], b) => { for (let v = 0; v < coverBits.length; v++) if (f(Pa[v * 3], ST.inv(Pa[v * 3 + 1]), Pa[v * 3 + 2]) < -COVER_DEPTH) coverBits[v] |= 1 << b; });   // (the garments' shapes are at the base proportions)
       fresh.cover = coverBits; } }
   function syncCover() {
     if (!coverBits) return;
@@ -351,7 +362,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
 
   lap("cover");
   // motion
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
+  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
   let poseName = "aPose", time = 0, lastPose = { b: {} };
   // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
   // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)
@@ -366,7 +377,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, cloth, capeCloth,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { J, BONES, HIPS0, P, CUT, HEAD, EAR, HT, bodySdf, bodySdfSlow, bodySdfRaw, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },
@@ -377,6 +388,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       syncCover();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
+      if (!ST.identity && lastPose.seat != null) lastPose = { ...lastPose, seat: ST.fwd(lastPose.seat) };   // a seat as high as the knees: higher for longer legs
       if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
       else seatAdj *= instant ? 0 : Math.exp(-dt * 9);

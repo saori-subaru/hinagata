@@ -367,6 +367,14 @@ Bell sleeve (clothes/index.js, in the shirt): the long sleeve, plus a shell arou
 
 The default character renders pixel-identical.
 
+### Proportions: longer legs and torso (2026-10-05, Saori: "ナヒーダは意外と等身高いけど、これくらいの頭身にするのは難しい？"; done)
+
+The base body is about 3 heads tall (head 0.43 of 1.27 m); Nahida is about 4.5. A smaller head alone can't get there, and scaling the body up would scale its chibi thickness with it. `body.proportion.legs` / `.torso` (×) stretch the body upward instead: the legs (just above the ankle to the hip joint) and the torso (hip joint to the neck) get longer, their widths stay, the feet keep their shape, and everything above the neck moves up as one (head, face, hair). Legs 1.7, torso 1.35 and head 0.85 make about 4.5 heads.
+
+How (`makeStretch`, body/index.js): a smooth monotone map of the height (fwd / inv, a table; the slope fades over 3 cm at each joint, no shading kink). Everything is still built at the base proportions (the SDFs, the clothes, the hair, the skin weights, the cache), and only when a mesh becomes geometry its points move up by fwd (normals by the slope). What moves the character uses the stretched space: the bones (`Jr`), the head's transform for what is placed in head space at run time (`HTr`: the locks, the face picture, the ear line), and the body read in place for colliders (`bodySdfR`). Things that read built geometry back in base terms take `inv` (the body's paint, culling under the clothes). Cloth tops and hems go through `fwd`. A pose's hip lift scales with the legs' length, and a seat's height goes through `fwd` (the editor's chair is raised the same way). The editor's whole-body views step back with the height, the face view moves up with the head.
+
+Defaults render pixel-identical. Not yet: lock hair is as long as before (in head space), so on a tall body long locks end higher; weapons held in the hands stretch with the torso band.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

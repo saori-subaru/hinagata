@@ -27,6 +27,10 @@ export const DEFAULTS = {
     "soften": 1
   },
   "body": {
+    "proportion": {
+      "legs": 1,
+      "torso": 1
+    },
     "head": {
       "scale": 0.9,
       "width": 1,

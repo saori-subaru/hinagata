@@ -34,8 +34,12 @@ export function createViewport(canvas, stage) {
 
   // camera moves between views smoothly; dragging takes over
   let tween = null;
+  // a taller character (body.proportion): the whole-body views step back with its height, the face view moves up with its head
   function view(name) {
-    const [p, t] = VIEWS[name]; tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...p), t1: new THREE.Vector3(...t), s: performance.now() };
+    let [p, t] = VIEWS[name]; const ST = avatar?.internals.ST;
+    if (ST && !ST.identity) { if (name === "face") { p = [p[0], p[1] + ST.lift, p[2]]; t = [t[0], t[1] + ST.lift, t[2]]; }
+      else { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); } }
+    tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...p), t1: new THREE.Vector3(...t), s: performance.now() };
   }
   controls.addEventListener("start", () => { tween = null; });
 
@@ -60,6 +64,7 @@ export function createViewport(canvas, stage) {
   }
   function setAvatar(next) {
     const old = avatar; avatar = next; scene.add(next.object);
+    chair.scale.y = next.internals.ST ? next.internals.ST.fwd(0.2) / 0.2 : 1;   // the seat as high as this character's knees (motion seats are moved the same way)
     if (helper) { scene.remove(helper); helper.dispose?.(); }
     helper = new THREE.SkeletonHelper(next.object); helper.material.depthTest = false; helper.renderOrder = 10; scene.add(helper);
     apply();

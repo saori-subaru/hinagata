@@ -310,3 +310,24 @@ function roundBox(c, h, r, k) {
     f: (x, y, z) => { const qx = Math.abs(x - c[0]) - (h[0] - r), qy = Math.abs(y - c[1]) - (h[1] - r), qz = Math.abs(z - c[2]) - (h[2] - r);
       return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r; } };
 }
+
+/**
+ * Proportions (body.proportion: legs, torso): the body is built at the base proportions, then stretched upward. The legs (from just above the
+ * ankle to the hip joint) and the torso (hip joint to the neck) get longer by their factors; their widths stay, so the figure gets taller and
+ * slimmer. Below, nothing changes (the feet and shoes keep their shape); above the neck everything moves up as one (the head, the face, the hair).
+ * Every mesh is made at the base proportions and its points are moved by fwd (normals by the slope); bones likewise. The changes between the
+ * parts fade over a few cm (no kink in the shading).
+ * Returns { identity, fwd(y), inv(y), slope(y), k (the least a distance shrinks: for distances read through inv), lift (how far the head moved), legK }.
+ */
+export function makeStretch(OPT, J) {
+  const PR = OPT.body.proportion ?? {}, sL = PR.legs ?? 1, sT = PR.torso ?? 1;
+  if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1 }; }
+  const ya = 0.12, yh = J["upperLeg.L"][1], yn = J.neck[1], w = 0.03, Y0 = -0.2, D = 0.0005, N = Math.ceil((2.6 - Y0) / D);
+  const box = (y, a, b) => sstep(a - w, a + w, y) * (1 - sstep(b - w, b + w, y));
+  const slope = (y) => 1 + (sL - 1) * box(y, ya, yh) + (sT - 1) * box(y, yh, yn);
+  const F = new Float64Array(N + 1); for (let i = 1; i <= N; i++) F[i] = F[i - 1] + D * slope(Y0 + (i - 0.5) * D);   // fwd(Y0 + i D) - Y0
+  const fwd = (y) => { const t = (y - Y0) / D; if (t <= 0) return y; if (t >= N) return Y0 + F[N] + (y - Y0 - N * D); const i = Math.floor(t); return Y0 + F[i] + (F[i + 1] - F[i]) * (t - i); };
+  const inv = (y) => { const v = y - Y0; if (v <= 0) return y; if (v >= F[N]) return Y0 + N * D + (v - F[N]);
+    let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (F[m] <= v) lo = m; else hi = m; } return Y0 + (lo + (v - F[lo]) / (F[hi] - F[lo])) * D; };
+  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sT), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya) };
+}

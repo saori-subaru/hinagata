@@ -45,6 +45,8 @@ const MAIN = [
   ["shading.soften", L("影のなめらかさ", "Shadow smoothing"), { when: { "shading.style": "toon" }, min: 0, max: 2, step: 0.05, apply: "setShading", help: L("影の境目を大きな形にそわせる(0 = メッシュの凹凸のまま)", "how much the shadow follows the big shapes instead of small bumps (0 = the mesh as is)") }],
 
   // body
+  ["body.proportion.legs", L("脚の長さ", "Leg length"), { min: 0.8, max: 2, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで脚を伸ばす(倍)。頭を小さくするのと合わせると頭身が上がる", "lengthens the legs, keeping their width (×). With a smaller head, the figure gets more heads tall") }],
+  ["body.proportion.torso", L("胴の長さ", "Torso length"), { min: 0.8, max: 1.6, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで胴を伸ばす(倍)。腕も少し長くなる", "lengthens the torso, keeping its width (×). The arms get a little longer too") }],
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.8, max: 1.05, step: 0.01, section: L("頭", "Head") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
