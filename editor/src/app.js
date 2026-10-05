@@ -223,14 +223,16 @@ function renderViewControls() {
       onclick: () => { motionOpen = !motionOpen; renderViewControls(); } }, QUICK.includes(M.pose) ? t("moreMotions") : poseName(M.pose), h("span", { html: ICON.caret })),
     h("select", { "aria-label": t("speed"), title: t("speed"), onchange: (e) => { M.speed = +e.target.value; } }, [0.25, 0.5, 1, 1.5].map((s) => h("option", { value: s, selected: s === M.speed }, `${s}×`))));
   const L = $("motionList"); L.hidden = !motionOpen;
+  fitAboveBar();
   if (motionOpen) L.replaceChildren(...motionGroups().map(([g, ks]) => h("section", {}, h("h3", {}, groupName(g)),
     h("div", { class: "chips" }, ks.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))))));
 }
 // the motions (2026-10-05, Saori: "下に横並びだと動きが全部入らない" / "中央に動きリスト出すとキャラが隠れるから左端" / "下に歩き走りみたいな基本の
-// よく使うポーズは並べておきたい、クイックランチャー的な感じで"): the bar under the view has the everyday ones (QUICK) and "more", which opens
-// the whole list at the left edge (out of the character's way), in groups. First the ones played through with what they need (a ledge, a
+// よく使うポーズは並べておきたい、クイックランチャー的な感じで" / "右端にその他を置くなら窓も右端に" / "選択しても出しっぱなしにして、他のところクリック
+// で消える"): the bar under the view has the everyday ones (QUICK) and, at its right end, "more", which opens the whole list at the right
+// edge (out of the character's way), in groups. It stays open while motions are picked from it; a press anywhere else closes it. First the ones played through with what they need (a ledge, a
 // wall: demos.js); a motion not listed here goes under "other". When the motion playing is from the list, "more" shows its name
-const QUICK = ["idle", "walk", "run", "wave", "cheer", "sitChair"];
+const QUICK = ["idle", "walk", "run", "wave", "cheer", "guard", "aPose", "tPose", "sitChair", "sitChairGirl", "sitFloor", "hugKnees"];   // the everyday ones and the poses checked most (a wide screen shows them all; "下が余ってるからもっと出して")
 const MOTION_GROUPS = [
   ["demo", null],
   ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
@@ -250,8 +252,11 @@ function motionGroups() {
   return out;
 }
 let motionOpen = false;
+// the list and the numbers at the bottom left sit just above the bar (on a wide screen the bar takes two rows)
+function fitAboveBar() { const b = $("poses").offsetHeight + 22; $("motionList").style.bottom = `${b}px`; $("stats").parentElement.style.bottom = `${b + 4}px`; }
+addEventListener("resize", fitAboveBar);
 function pickMotion(k) {
-  const M = vp.motion, wasDemo = vp.demos.has(M.pose); M.pose = k; motionOpen = false;
+  const M = vp.motion, wasDemo = vp.demos.has(M.pose); M.pose = k;   // (the list stays open: picking one after another)
   if (vp.demos.has(k)) vp.demo(k); else { vp.demo(null); vp.avatar?.play(k); if (wasDemo) vp.view(curView); }   // back from a demo: the camera too
   renderViewControls();
 }
