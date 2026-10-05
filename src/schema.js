@@ -10,7 +10,8 @@ import { PART_LABELS, partIds } from "./face/names.js";
    path      "body.torso.chest"
    type      "number" | "boolean" | "color" | "enum" | "image" | "json"   (json: arrays, or a value whose default is null / any shape)
    default
-   min, max, step   numbers. soft: true = a guessed range (an editor may let people type outside it)
+   min, max, step   numbers. soft: true = a guessed range (an editor may let people type outside it). reverse: true = a slider shows the
+                    larger value on the left (a height where lower is longer: the long hair's length)
    options   enum: [{ value, label: { ja, en } }]
    nullable  null is allowed (and means what `help` says)
    label     { ja?, en }
@@ -147,7 +148,7 @@ const MAIN = [
   ["hair.sculpt.long.count", L("毛束の数", "Lock count"), { when: { "hair.back": "long" }, min: 6, max: 24, step: 1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.long.width", L("毛束の幅", "Lock width"), { when: { "hair.back": "long" }, min: 0.03, max: 0.16, step: 0.005, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.long.thick", L("毛束の厚み", "Lock thickness"), { when: { "hair.back": "long" }, min: 0.1, max: 0.6, step: 0.01, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("幅に対する厚さ", "thickness for the width") }],
-  ["hair.sculpt.long.bottom", L("毛先の高さ", "Tip height"), { when: { "hair.back": "long" }, min: 0.47, max: 0.85, step: 0.005, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("低いほど長い(腰まで)", "lower is longer (down to the waist)") }],
+  ["hair.sculpt.long.bottom", L("長さ", "Length"), { when: { "hair.back": "long" }, min: 0.3, max: 0.85, step: 0.005, reverse: true, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("右ほど長い(値は毛先の高さ。太ももの上まで)", "right is longer (the value is the tips' height; down to the thighs)") }],
   ["hair.sculpt.long.flick", L("はね(+) / 内巻き(−)", "Flick out (+) / curl in (−)"), { when: { "hair.back": "long" }, min: -0.06, max: 0.08, step: 0.002, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.long.stiff", L("硬さ", "Stiffness"), { when: { "hair.back": "long" }, min: 0.3, max: 4, step: 0.1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("小さいほどよく揺れる", "lower swings more") }],
   ["hair.sculpt.nendo.overlap", L("ふさの重なり", "Tuft overlap"), { when: { "hair.bangs": "nendo", "hair.sculpt.nendo.locks": true }, min: 0.8, max: 2, step: 0.01, section: L("前髪のふさ", "Bang tufts"), apply: "setBangs", help: L("ふさの幅(となりのふさとの間に対して)", "how wide a tuft is, for the gap to its neighbours") }],
@@ -317,7 +318,7 @@ function build() {
     if (ex?.options) e.options = ex.options;
     if (ex) e.order = ex.order;   // the editor lists main values in this order
     if (ex?.nullable || v === null) e.nullable = true;
-    for (const k of ["section", "help", "alsoShapes", "when"]) if (ex?.[k]) e[k] = ex[k];
+    for (const k of ["section", "help", "alsoShapes", "when", "reverse"]) if (ex?.[k]) e[k] = ex[k];
     if (!ex) e.section = { en: human(path.split(".").slice(0, -1).join(".")) || path };
     S[path] = e; } };
   walk(DEFAULTS, "");

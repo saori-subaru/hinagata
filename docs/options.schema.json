@@ -3,6 +3,7 @@
  "fields": {
   "type": "number | boolean | color (#rrggbb or #rrggbbaa) | enum | image (path or data URL) | json (arrays, or any shape)",
   "soft": "the range is a guess from the default; values outside it are allowed",
+  "reverse": "a slider shows the larger value on the left (lower is longer)",
   "tier": "main = shown in the editor / advanced = folded (fine-tuning)",
   "cost": "what a change rebuilds: instant | paint (materials or painted attributes) | hair | clothes | body (body, clothes and hair)",
   "apply": "the avatar method that applies it without a rebuild, or null",
@@ -11408,14 +11409,14 @@
    "type": "number",
    "default": 0.55,
    "label": {
-    "ja": "毛先の高さ",
-    "en": "Tip height"
+    "ja": "長さ",
+    "en": "Length"
    },
    "group": "hair",
    "tier": "main",
    "cost": "hair",
    "apply": "setLocks",
-   "min": 0.47,
+   "min": 0.3,
    "max": 0.85,
    "step": 0.005,
    "order": 107,
@@ -11424,12 +11425,13 @@
     "en": "Back locks"
    },
    "help": {
-    "ja": "低いほど長い(腰まで)",
-    "en": "lower is longer (down to the waist)"
+    "ja": "右ほど長い(値は毛先の高さ。太ももの上まで)",
+    "en": "right is longer (the value is the tips' height; down to the thighs)"
    },
    "when": {
     "hair.back": "long"
-   }
+   },
+   "reverse": true
   },
   "hair.sculpt.long.spread": {
    "path": "hair.sculpt.long.spread",

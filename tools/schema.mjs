@@ -10,6 +10,7 @@ const json = JSON.stringify({
   fields: {
     type: "number | boolean | color (#rrggbb or #rrggbbaa) | enum | image (path or data URL) | json (arrays, or any shape)",
     soft: "the range is a guess from the default; values outside it are allowed",
+    reverse: "a slider shows the larger value on the left (lower is longer)",
     tier: "main = shown in the editor / advanced = folded (fine-tuning)",
     cost: "what a change rebuilds: instant | paint (materials or painted attributes) | hair | clothes | body (body, clothes and hair)",
     apply: "the avatar method that applies it without a rebuild, or null",

@@ -49,10 +49,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     if (v === null) {   // nullable number left on auto
       return h("div", { class: "field" }, labelOf(e, id), h("button", { id, class: "chip", type: "button", "aria-pressed": "true", onclick: () => set({ [e.path]: e.min != null ? +(((e.min + e.max) / 2).toFixed(4)) : 0 }) }, t("auto")), helpOf(e));
     }
-    const lo = Math.min(e.min, v), hi = Math.max(e.max, v), pct = (x) => `${((x - lo) / (hi - lo || 1)) * 100}%`;
+    const lo = Math.min(e.min, v), hi = Math.max(e.max, v), pct = (x) => `${((e.reverse ? hi - x : x - lo) / (hi - lo || 1)) * 100}%`;   // reverse: right is the smaller value (a height where lower is longer)
     const num = h("input", { id, class: "num", type: "number", step: e.step, value: fmt(v, e.step), "aria-label": L(e.label) });
     const rng = h("input", { class: `rng full${e.soft ? " soft" : ""}`, type: "range", min: lo, max: hi, step: e.step, value: v, "aria-label": L(e.label), title: e.soft ? t("softRange") : null });
-    rng.style.setProperty("--p", pct(v));
+    rng.style.setProperty("--p", pct(v)); if (e.reverse) rng.dir = "rtl";
     rng.addEventListener("input", () => { const x = +rng.value; num.value = fmt(x, e.step); rng.style.setProperty("--p", pct(x)); set({ [e.path]: x }, false); });
     rng.addEventListener("change", () => store.commit());
     num.addEventListener("change", () => { const x = +num.value; if (!isFinite(x)) { num.value = fmt(store.get(e.path), e.step); return; } set({ [e.path]: x }); });

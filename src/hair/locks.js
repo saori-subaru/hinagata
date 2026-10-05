@@ -254,6 +254,10 @@ export function colliders(J, BI, sdf) {
   const T = [[0, -0.6], [0.6, -0.4], [-0.6, -0.4], [0.7, 0], [-0.7, 0]];   // toward the back and the sides (in units of the radius there)
   seg("neck", J.neck, J.head, 2); seg("upperChest", J.upperChest, J.neck, 1, T); seg("chest", J.chest, J.upperChest, 1, T); seg("spine", J.spine, J.chest, 2, T); seg("hips", J.hips, J.spine, 1, T);
   for (const s of ["L", "R"]) { seg(`shoulder.${s}`, J[`shoulder.${s}`], J[`upperArm.${s}`], 2); seg(`upperArm.${s}`, J[`upperArm.${s}`], J[`lowerArm.${s}`], 2); }
+  // the bottom and the backs of the thighs: long hair may reach down past the waist (2026-10-05, Saori: "ロングヘアの長さいじれなくない?")
+  const BK = [[0, -0.7], [0.6, -0.5], [-0.6, -0.5]];
+  for (const s of ["L", "R"]) { const h = J[`upperLeg.${s}`], k = J[`lowerLeg.${s}`]; seg(`upperLeg.${s}`, h, k.map((v, i) => h[i] + (v - h[i]) * 0.8), 3, BK);
+    add("hips", [h[0] * 0.6, h[1] + 0.01, h[2] - 0.04]); }
   return out;
 }
 
