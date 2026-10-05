@@ -30,6 +30,19 @@ export function withShadeN(m) {
   m.customProgramCacheKey = () => "shadeN|" + key;
   return m;
 }
+/** A gradient (2026-10-05, Saori: hair tips in another color, a hem in another color): from the material's color to U.color along a value
+ *  per vertex, gradT (0 → 1: a lock's root → tip, a garment's top → hem), starting at U.start and blending over U.soft.
+ *  U: { on, color, start, soft } as uniforms ({ value }), shared by every material of that hair or garment, so a change shows on all at once. */
+export function withGrad(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { gOn: U.on, gColor: U.color, gStart: U.start, gSoft: U.soft });
+    sh.vertexShader = "attribute float gradT;\nvarying float vGradT;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vGradT = gradT;");
+    sh.fragmentShader = "uniform float gOn, gStart, gSoft;\nuniform vec3 gColor;\nvarying float vGradT;\n" + sh.fragmentShader.replace("#include <color_fragment>",
+      "#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, gColor, gOn * smoothstep(gStart, gStart + max(gSoft, 0.001), vGradT));"); };
+  m.customProgramCacheKey = () => "grad|" + key;
+  return m;
+}
 // metal (the armor): toon bands with more contrast, a darker rim where the surface turns away, and a hard white glint (anime-style shine)
 const metalRamp = (() => { const d = new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {

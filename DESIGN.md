@@ -381,6 +381,16 @@ Defaults render pixel-identical. Not yet: lock hair is as long as before (in hea
 
 The editor moves the ties by hand too (editor/src/ties.js, "頭の上で結び目を動かす"; Saori: "ドラッグで動かせるのもつけて"): a dot on each tie (`avatar.tailTies()`), dragged around the head and up or down; releasing it writes `hair.tail.angle` and `y` as one undo step. Twin tails move together, mirrored; a side tail dragged over to the other side changes sides; a ponytail stays in the middle.
 
+### Gradients: hair tips and hems (2026-10-05, Saori; done)
+
+Asked whether a loaded texture should do the gradients: not for the hair. Projected by height, a bang's tip (at the brows) and a long lock's (at the waist) would get different colors; the locks already know their own root-to-tip position. So gradients are their own settings, and textures (next) are for patterns.
+
+- `withGrad(material, U)` (materials.js): mixes the material's color toward `U.color` along a per-vertex `gradT` (0 → 1), from `U.start` over `U.soft`. `U` is a set of uniforms shared by every material of that hair or garment, so `avatar.setGradient(target, values)` changes them all at once (instant; no rebuild, not in the mesh cache's key).
+- Hair (`hair.gradient`): locks get `gradT` along each lock (root 0, tip 1); the hair's own mesh by height in head space (crown 0, lowest tip 1). `gradient.bangs` off leaves the bangs out (Nahida's bangs stay white while the rest goes green).
+- Garments (`outfit.shirt / pants / dress / cape .gradient`): top 0 to hem 1 by height. A dress's runs from the collar to the skirt's hem over both its parts (the shirt's and the pants' are then unused).
+
+Defaults render pixel-identical (off: the mix is by 0).
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

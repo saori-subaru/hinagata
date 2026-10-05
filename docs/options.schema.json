@@ -4867,7 +4867,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 108,
+   "order": 113,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4885,10 +4885,101 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 109,
+   "order": 114,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
+   }
+  },
+  "outfit.shirt.gradient.on": {
+   "path": "outfit.shirt.gradient.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "すそグラデ",
+    "en": "Hem gradient"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 119,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   }
+  },
+  "outfit.shirt.gradient.color": {
+   "path": "outfit.shirt.gradient.color",
+   "type": "color",
+   "default": "#ffffff",
+   "label": {
+    "ja": "すそグラデの色",
+    "en": "Hem gradient color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 120,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.gradient.on": true
+   }
+  },
+  "outfit.shirt.gradient.start": {
+   "path": "outfit.shirt.gradient.start",
+   "type": "number",
+   "default": 0.75,
+   "label": {
+    "ja": "すそグラデの始まり",
+    "en": "Hem gradient start"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 121,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "help": {
+    "ja": "0 = 根元・上から / 1 = 毛先・すそだけ",
+    "en": "0 = from the root / top, 1 = only the tips / hem"
+   },
+   "when": {
+    "outfit.shirt.gradient.on": true
+   }
+  },
+  "outfit.shirt.gradient.soft": {
+   "path": "outfit.shirt.gradient.soft",
+   "type": "number",
+   "default": 0.2,
+   "label": {
+    "ja": "すそグラデのぼかし",
+    "en": "Hem gradient blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 122,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.gradient.on": true
    }
   },
   "outfit.shirt.sleeve": {
@@ -4933,7 +5024,7 @@
      }
     }
    ],
-   "order": 110,
+   "order": 115,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4954,7 +5045,7 @@
    "min": 0.02,
    "max": 0.12,
    "step": 0.005,
-   "order": 111,
+   "order": 116,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5002,7 +5093,7 @@
      }
     }
    ],
-   "order": 112,
+   "order": 117,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5036,7 +5127,7 @@
      }
     }
    ],
-   "order": 113,
+   "order": 118,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5232,6 +5323,100 @@
     "en": "shirt › shoulder fit"
    }
   },
+  "outfit.cape.gradient.on": {
+   "path": "outfit.cape.gradient.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "すそグラデ",
+    "en": "Hem gradient"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 129,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.on": true
+   }
+  },
+  "outfit.cape.gradient.color": {
+   "path": "outfit.cape.gradient.color",
+   "type": "color",
+   "default": "#ffffff",
+   "label": {
+    "ja": "すそグラデの色",
+    "en": "Hem gradient color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 130,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.gradient.on": true
+   }
+  },
+  "outfit.cape.gradient.start": {
+   "path": "outfit.cape.gradient.start",
+   "type": "number",
+   "default": 0.75,
+   "label": {
+    "ja": "すそグラデの始まり",
+    "en": "Hem gradient start"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 131,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "help": {
+    "ja": "0 = 根元・上から / 1 = 毛先・すそだけ",
+    "en": "0 = from the root / top, 1 = only the tips / hem"
+   },
+   "when": {
+    "outfit.cape.gradient.on": true
+   }
+  },
+  "outfit.cape.gradient.soft": {
+   "path": "outfit.cape.gradient.soft",
+   "type": "number",
+   "default": 0.2,
+   "label": {
+    "ja": "すそグラデのぼかし",
+    "en": "Hem gradient blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 132,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.gradient.on": true
+   }
+  },
   "outfit.cape.on": {
    "path": "outfit.cape.on",
    "type": "boolean",
@@ -5244,7 +5429,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 114,
+   "order": 123,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5266,7 +5451,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 115,
+   "order": 124,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5290,7 +5475,7 @@
    "min": 0.02,
    "max": 0.5,
    "step": 0.005,
-   "order": 116,
+   "order": 125,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5314,7 +5499,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 117,
+   "order": 126,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5338,7 +5523,7 @@
    "min": -0.04,
    "max": 0.1,
    "step": 0.005,
-   "order": 118,
+   "order": 127,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5404,7 +5589,7 @@
    "min": 0,
    "max": 1,
    "step": 0.05,
-   "order": 119,
+   "order": 128,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5415,6 +5600,100 @@
    },
    "when": {
     "outfit.cape.on": true
+   }
+  },
+  "outfit.dress.gradient.on": {
+   "path": "outfit.dress.gradient.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "すそグラデ",
+    "en": "Hem gradient"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 138,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.on": true
+   }
+  },
+  "outfit.dress.gradient.color": {
+   "path": "outfit.dress.gradient.color",
+   "type": "color",
+   "default": "#ffffff",
+   "label": {
+    "ja": "すそグラデの色",
+    "en": "Hem gradient color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 139,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.gradient.on": true
+   }
+  },
+  "outfit.dress.gradient.start": {
+   "path": "outfit.dress.gradient.start",
+   "type": "number",
+   "default": 0.8,
+   "label": {
+    "ja": "すそグラデの始まり",
+    "en": "Hem gradient start"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 140,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "help": {
+    "ja": "0 = 根元・上から / 1 = 毛先・すそだけ",
+    "en": "0 = from the root / top, 1 = only the tips / hem"
+   },
+   "when": {
+    "outfit.dress.gradient.on": true
+   }
+  },
+  "outfit.dress.gradient.soft": {
+   "path": "outfit.dress.gradient.soft",
+   "type": "number",
+   "default": 0.15,
+   "label": {
+    "ja": "すそグラデのぼかし",
+    "en": "Hem gradient blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 141,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.gradient.on": true
    }
   },
   "outfit.dress.on": {
@@ -5429,7 +5708,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 120,
+   "order": 133,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5451,7 +5730,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 121,
+   "order": 134,
    "nullable": true,
    "section": {
     "ja": "ワンピース",
@@ -5518,7 +5797,7 @@
    "min": 0.03,
    "max": 0.4,
    "step": 0.005,
-   "order": 122,
+   "order": 135,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5542,7 +5821,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 123,
+   "order": 136,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5566,7 +5845,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 124,
+   "order": 137,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5613,6 +5892,97 @@
     "en": "dress"
    }
   },
+  "outfit.pants.gradient.on": {
+   "path": "outfit.pants.gradient.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "すそグラデ",
+    "en": "Hem gradient"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 151,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   }
+  },
+  "outfit.pants.gradient.color": {
+   "path": "outfit.pants.gradient.color",
+   "type": "color",
+   "default": "#ffffff",
+   "label": {
+    "ja": "すそグラデの色",
+    "en": "Hem gradient color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 152,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.gradient.on": true
+   }
+  },
+  "outfit.pants.gradient.start": {
+   "path": "outfit.pants.gradient.start",
+   "type": "number",
+   "default": 0.75,
+   "label": {
+    "ja": "すそグラデの始まり",
+    "en": "Hem gradient start"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 153,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "0 = 根元・上から / 1 = 毛先・すそだけ",
+    "en": "0 = from the root / top, 1 = only the tips / hem"
+   },
+   "when": {
+    "outfit.pants.gradient.on": true
+   }
+  },
+  "outfit.pants.gradient.soft": {
+   "path": "outfit.pants.gradient.soft",
+   "type": "number",
+   "default": 0.2,
+   "label": {
+    "ja": "すそグラデのぼかし",
+    "en": "Hem gradient blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 154,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.gradient.on": true
+   }
+  },
   "outfit.pants.on": {
    "path": "outfit.pants.on",
    "type": "boolean",
@@ -5625,7 +5995,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 125,
+   "order": 142,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5643,7 +6013,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 126,
+   "order": 143,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5677,7 +6047,7 @@
      }
     }
    ],
-   "order": 127,
+   "order": 144,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5718,7 +6088,7 @@
      }
     }
    ],
-   "order": 128,
+   "order": 145,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5742,7 +6112,7 @@
    "min": 0.2,
    "max": 0.4,
    "step": 0.005,
-   "order": 131,
+   "order": 148,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5770,7 +6140,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 132,
+   "order": 149,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5798,7 +6168,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 133,
+   "order": 150,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5883,7 +6253,7 @@
    "min": 0.22,
    "max": 0.4,
    "step": 0.005,
-   "order": 129,
+   "order": 146,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5950,7 +6320,7 @@
    "min": 0,
    "max": 0.4,
    "step": 0.01,
-   "order": 130,
+   "order": 147,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5972,7 +6342,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 134,
+   "order": 155,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6006,7 +6376,7 @@
      }
     }
    ],
-   "order": 135,
+   "order": 156,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6024,7 +6394,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 136,
+   "order": 157,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6042,7 +6412,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 140,
+   "order": 161,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6064,7 +6434,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 141,
+   "order": 162,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6126,7 +6496,7 @@
      }
     }
    ],
-   "order": 137,
+   "order": 158,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6178,7 +6548,7 @@
      }
     }
    ],
-   "order": 138,
+   "order": 159,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6200,7 +6570,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 139,
+   "order": 160,
    "nullable": true,
    "section": {
     "ja": "鎧",
@@ -6226,7 +6596,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 142,
+   "order": 163,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6247,7 +6617,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 143,
+   "order": 164,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6309,7 +6679,7 @@
      }
     }
    ],
-   "order": 144,
+   "order": 165,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6361,7 +6731,7 @@
      }
     }
    ],
-   "order": 145,
+   "order": 166,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6395,7 +6765,7 @@
      }
     }
    ],
-   "order": 146,
+   "order": 167,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6417,7 +6787,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 147,
+   "order": 168,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6435,7 +6805,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 148,
+   "order": 169,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6453,7 +6823,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 149,
+   "order": 170,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6471,7 +6841,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 153,
+   "order": 174,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6489,7 +6859,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 154,
+   "order": 175,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6507,7 +6877,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 155,
+   "order": 176,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6620,7 +6990,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 150,
+   "order": 171,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -6638,7 +7008,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 151,
+   "order": 172,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -6659,7 +7029,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 152,
+   "order": 173,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -6677,7 +7047,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 102,
+   "order": 107,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -6698,7 +7068,7 @@
    "min": 10,
    "max": 60,
    "step": 1,
-   "order": 103,
+   "order": 108,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -6741,7 +7111,7 @@
    "min": 0,
    "max": 0.6,
    "step": 0.01,
-   "order": 104,
+   "order": 109,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -6800,7 +7170,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 105,
+   "order": 110,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -6818,7 +7188,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 106,
+   "order": 111,
    "nullable": true,
    "section": {
     "ja": "塗り",
@@ -6847,7 +7217,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 107,
+   "order": 112,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -7000,6 +7370,118 @@
    "apply": "setDrawn",
    "section": {
     "en": "hair"
+   }
+  },
+  "hair.gradient.on": {
+   "path": "hair.gradient.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "毛先グラデ",
+    "en": "Tip gradient"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 80,
+   "section": {
+    "ja": "グラデーション",
+    "en": "Gradient"
+   }
+  },
+  "hair.gradient.color": {
+   "path": "hair.gradient.color",
+   "type": "color",
+   "default": "#7cc47f",
+   "label": {
+    "ja": "毛先グラデの色",
+    "en": "Tip gradient color"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 81,
+   "section": {
+    "ja": "グラデーション",
+    "en": "Gradient"
+   },
+   "when": {
+    "hair.gradient.on": true
+   }
+  },
+  "hair.gradient.start": {
+   "path": "hair.gradient.start",
+   "type": "number",
+   "default": 0.55,
+   "label": {
+    "ja": "毛先グラデの始まり",
+    "en": "Tip gradient start"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 82,
+   "section": {
+    "ja": "グラデーション",
+    "en": "Gradient"
+   },
+   "help": {
+    "ja": "0 = 根元・上から / 1 = 毛先・すそだけ",
+    "en": "0 = from the root / top, 1 = only the tips / hem"
+   },
+   "when": {
+    "hair.gradient.on": true
+   }
+  },
+  "hair.gradient.soft": {
+   "path": "hair.gradient.soft",
+   "type": "number",
+   "default": 0.35,
+   "label": {
+    "ja": "毛先グラデのぼかし",
+    "en": "Tip gradient blend"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 84,
+   "section": {
+    "ja": "グラデーション",
+    "en": "Gradient"
+   },
+   "when": {
+    "hair.gradient.on": true
+   }
+  },
+  "hair.gradient.bangs": {
+   "path": "hair.gradient.bangs",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "ja": "前髪にもかける",
+    "en": "On the bangs too"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setGradient",
+   "order": 83,
+   "section": {
+    "ja": "グラデーション",
+    "en": "Gradient"
+   },
+   "when": {
+    "hair.gradient.on": true
    }
   },
   "hair.tail.kind": {
@@ -8218,7 +8700,7 @@
    "min": 0.08,
    "max": 0.6,
    "step": 0.01,
-   "order": 98,
+   "order": 103,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -8247,7 +8729,7 @@
    "min": 0.8,
    "max": 2,
    "step": 0.01,
-   "order": 96,
+   "order": 101,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -8276,7 +8758,7 @@
    "min": 0,
    "max": 0.04,
    "step": 0.001,
-   "order": 99,
+   "order": 104,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -8324,7 +8806,7 @@
    "min": 6,
    "max": 40,
    "step": 0.5,
-   "order": 97,
+   "order": 102,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -8618,7 +9100,7 @@
    "min": 6,
    "max": 30,
    "step": 1,
-   "order": 80,
+   "order": 85,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8661,7 +9143,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 81,
+   "order": 86,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8685,7 +9167,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 82,
+   "order": 87,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8731,7 +9213,7 @@
    "min": -0.04,
    "max": 0.12,
    "step": 0.005,
-   "order": 83,
+   "order": 88,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8759,7 +9241,7 @@
    "min": -0.04,
    "max": 0.06,
    "step": 0.002,
-   "order": 84,
+   "order": 89,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8798,7 +9280,7 @@
    "min": 6,
    "max": 30,
    "step": 1,
-   "order": 86,
+   "order": 91,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8841,7 +9323,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 87,
+   "order": 92,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8865,7 +9347,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 88,
+   "order": 93,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8912,7 +9394,7 @@
    "min": -0.02,
    "max": 0.06,
    "step": 0.002,
-   "order": 89,
+   "order": 94,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -8988,7 +9470,7 @@
    "min": 0.3,
    "max": 6,
    "step": 0.1,
-   "order": 85,
+   "order": 90,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9164,7 +9646,7 @@
    "min": 0.6,
    "max": 1.6,
    "step": 0.01,
-   "order": 100,
+   "order": 105,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -9188,7 +9670,7 @@
    "min": -180,
    "max": 180,
    "step": 5,
-   "order": 101,
+   "order": 106,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -9246,7 +9728,7 @@
    "min": 6,
    "max": 24,
    "step": 1,
-   "order": 90,
+   "order": 95,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9289,7 +9771,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 91,
+   "order": 96,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9313,7 +9795,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 92,
+   "order": 97,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9341,7 +9823,7 @@
    "min": -0.06,
    "max": 0.08,
    "step": 0.002,
-   "order": 94,
+   "order": 99,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9380,7 +9862,7 @@
    "min": 0.3,
    "max": 4,
    "step": 0.1,
-   "order": 95,
+   "order": 100,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -9465,7 +9947,7 @@
    "min": 0.47,
    "max": 0.85,
    "step": 0.005,
-   "order": 93,
+   "order": 98,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"

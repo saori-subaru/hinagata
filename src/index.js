@@ -11,7 +11,7 @@ import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat, withShadeN } from "./materials.js";
+import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad } from "./materials.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch } from "./body/index.js";
@@ -52,8 +52,9 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
  */
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient)$/.test(k)) r[k] = strip(v); return r; };
+  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
+  return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, workers = true, debug = {} } = {}) {
@@ -207,10 +208,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const [x, y, z] = HTr.toHead(Pa[i], Pa[i + 1], Pa[i + 2]), dz = z + 0.005, dy = y - S.y;
       U[v * 2] = Math.atan2(x, dz); U[v * 2 + 1] = Math.atan2(Math.hypot(x, dz), dy); }
     geo.setAttribute("hairUV", new THREE.BufferAttribute(U, 2));
+    { const G = new Float32Array(Pa.length / 3); let lo = Infinity, hi = -Infinity; for (let v = 0; v < G.length; v++) { G[v] = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2])[1]; lo = Math.min(lo, G[v]); hi = Math.max(hi, G[v]); }
+      for (let v = 0; v < G.length; v++) G[v] = (hi - G[v]) / ((hi - lo) || 1);   // the gradient (withGrad): 0 at the crown, 1 at the lowest tip (as a lock's root to tip)
+      geo.setAttribute("gradT", new THREE.BufferAttribute(G, 1)); }
   }
   const glf = (v) => (+v).toFixed(4);
   // the ring's color when none is given: the hair color, lighter and a little warmer (brown hair → orange), so it doesn't stand out as white
   const ringOf = (c) => { const h = {}; new THREE.Color(c).getHSL(h); return new THREE.Color().setHSL(h.h + (0.075 - h.h) * 0.5, Math.min(1, h.s * 1.1 + 0.08), Math.min(0.85, h.l + 0.14)); };
+  // gradients (materials.js withGrad): one set of uniforms per hair / garment, shared by all its materials (avatar.setGradient changes them at once)
+  const gradU = (G) => ({ on: { value: G?.on ? 1 : 0 }, color: { value: new THREE.Color(G?.color ?? "#ffffff") }, start: { value: G?.start ?? 0.6 }, soft: { value: G?.soft ?? 0.3 } });
+  const GRAD = { hair: gradU(OPT.hair.gradient), bangs: null, shirt: gradU(OPT.outfit.shirt.gradient), pants: gradU(OPT.outfit.pants.gradient), dress: gradU(OPT.outfit.dress.gradient), cape: gradU(OPT.outfit.cape.gradient) };
+  GRAD.bangs = { ...GRAD.hair, on: { value: OPT.hair.gradient?.on && OPT.hair.gradient.bangs !== false ? 1 : 0 } };   // the bangs: the hair's, unless gradient.bangs is off
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
@@ -225,7 +233,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); }
     if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line)); }`); };
-    return withShadeN(m); };
+    return withGrad(withShadeN(m), GRAD.hair); };
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
@@ -257,6 +265,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1 }) : null;
+  // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts
+  { const gradT = (list, U) => { let lo = Infinity, hi = -Infinity; for (const x of list) { const P = x.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) { lo = Math.min(lo, P[i]); hi = Math.max(hi, P[i]); } }
+      for (const x of list) { const P = x.m.geometry.attributes.position.array, G = new Float32Array(P.length / 3); for (let v = 0; v < G.length; v++) G[v] = (hi - P[v * 3 + 1]) / ((hi - lo) || 1);
+        x.m.geometry.setAttribute("gradT", new THREE.BufferAttribute(G, 1)); x.m.material = withGrad(x.m.material, U); } };
+    if (SKO?.dress) gradT([parts.shirt, parts.pants], GRAD.dress); else { gradT([parts.shirt], GRAD.shirt); gradT([parts.pants], GRAD.pants); }
+    if (CA.on) gradT([parts.cape], GRAD.cape); }
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color, 0.005, "shoes");
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
@@ -286,7 +300,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
-    const part = (specs, opt) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.sim = sim; return x; };
+    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.m.material = withGrad(x.m.material, U); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
@@ -298,7 +312,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (bangsOn) {
       const B = OPT.hair.sculpt.nendo;
       const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
-      out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 });
+      out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 }, GRAD.bangs);
     }
     if (tailsOn) {   // the ties: on the hair at an angle around the head (degrees, 0 = front; twin tails mirrored) and a height (head space)
       const K = bangKit(), D2R = Math.PI / 180, sd = TL.side === "R" ? -1 : 1;
@@ -497,6 +511,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Locks drawn by hand (options.hair.drawn): [{ pts: [[x, y, z], …] (head space, root to tip), width (m), thick (×width), stiff, mirror }].
      *  Rebuilds only them. */
+    /** A gradient (instant): target "hair" | "shirt" | "pants" | "dress" | "cape", values { on, color, start (0..1: root / top → tip / hem), soft }.
+     *  Kept in options (hair.gradient, outfit.<target>.gradient). A dress's covers its top and skirt (the shirt's and the pants' are then unused). */
+    setGradient(target, values = {}) {
+      const G = target === "hair" ? OPT.hair.gradient : OPT.outfit[target]?.gradient, U = GRAD[target]; if (!G || !U) throw new Error(`Unknown gradient "${target}". Available: ${Object.keys(GRAD).join(", ")}`);
+      Object.assign(G, values); U.on.value = G.on ? 1 : 0; U.color.value.set(G.color); U.start.value = G.start; U.soft.value = G.soft;
+      if (target === "hair") GRAD.bangs.on.value = G.on && G.bangs !== false ? 1 : 0;
+    },
     /** Tails (options.hair.tail: { kind: "none" | "pony" | "twin" | "side", side, angle, y, length, volume, count, width, thick, lift, spread, stiff, tie: { on, color, size } }).
      *  Rebuilds only them and their ties. */
     setTails(values) {

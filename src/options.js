@@ -380,6 +380,12 @@ export const DEFAULTS = {
     "shirt": {
       "on": true,
       "color": "#7fb6e8",
+      "gradient": {
+        "on": false,
+        "color": "#ffffff",
+        "start": 0.75,
+        "soft": 0.2
+      },
       "sleeve": "short",
       "bell": 0.08,
       "length": "tuck",
@@ -400,6 +406,12 @@ export const DEFAULTS = {
       }
     },
     "cape": {
+      "gradient": {
+        "on": false,
+        "color": "#ffffff",
+        "start": 0.75,
+        "soft": 0.2
+      },
       "on": false,
       "color": "#8c2f3c",
       "hem": 0.16,
@@ -410,6 +422,12 @@ export const DEFAULTS = {
       "sway": 1
     },
     "dress": {
+      "gradient": {
+        "on": false,
+        "color": "#ffffff",
+        "start": 0.8,
+        "soft": 0.15
+      },
       "on": false,
       "color": null,
       "waist": 0.57,
@@ -421,6 +439,12 @@ export const DEFAULTS = {
       "follow": 0.3
     },
     "pants": {
+      "gradient": {
+        "on": false,
+        "color": "#ffffff",
+        "start": 0.75,
+        "soft": 0.2
+      },
       "on": true,
       "color": "#5a4f7a",
       "kind": "pants",
@@ -496,6 +520,13 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "gradient": {
+      "on": false,
+      "color": "#7cc47f",
+      "start": 0.55,
+      "soft": 0.35,
+      "bangs": true
+    },
     "tail": {
       "kind": "none",
       "side": "L",
