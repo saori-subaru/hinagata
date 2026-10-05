@@ -29,7 +29,7 @@ const SHAPES = {
     const rib = new THREE.CylinderGeometry(0.018, 0.03, 0.95, 6); rib.translate(0, -0.02, 0.13);
     const stem = new THREE.CylinderGeometry(0.02, 0.025, 0.16, 6); stem.translate(0, -0.56, 0.06);
     return merge([g, rib, stem]); },
-  gem: () => { const g = new THREE.OctahedronGeometry(0.5, 0); g.scale(0.8, 1, 0.45); g.translate(0, 0, 0.12); g.computeVertexNormals(); return g.toNonIndexed(); },
+  gem: () => { const g = new THREE.OctahedronGeometry(0.5, 0); g.scale(0.8, 1, 0.45); g.translate(0, 0, 0.12); g.computeVertexNormals(); return g; },
   flower: () => { const parts = []; for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2, p = new THREE.SphereGeometry(0.2, 10, 8); p.scale(0.85, 1.25, 0.35); p.translate(0, 0.25, 0.08); p.rotateZ(a); parts.push(p); }
     const c = new THREE.SphereGeometry(0.13, 10, 8); c.scale(1, 1, 0.7); c.translate(0, 0, 0.14); parts.push(c); return merge(parts); },
   star: () => { const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, r = i % 2 ? 0.21 : 0.5; s[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); }
