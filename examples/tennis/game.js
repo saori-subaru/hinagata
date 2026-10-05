@@ -322,7 +322,7 @@ function stepPlayer(p, dt) {
   p.at += adv;
   p.avatar.object.position.set(p.x, 0, p.z);
   p.avatar.object.rotation.y = p.face;
-  p.avatar.update(adv);
+  p.avatar.update(adv, { camera });
   p.shadow.position.set(p.x, 0.01, p.z);
 }
 

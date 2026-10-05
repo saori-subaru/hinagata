@@ -28,7 +28,7 @@ scene.add(avatar.object);
 avatar.play("walk");
 
 const clock = new THREE.Clock();
-renderer.setAnimationLoop(() => { avatar.update(clock.getDelta()); renderer.render(scene, camera); });
+renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
 </script>
 </body>
 </html>

@@ -1,23 +1,34 @@
 # Hinagata
 
 > A chibi 3D character engine for the browser (three.js). A character is a recipe: a small JSON object of options, built into a skinned,
-> animated avatar at runtime. Made for vibe coding: you (the agent) make the character and the game; the user fine-tunes the character in
+> animated avatar at runtime. Made for vibe coding: you (the agent) make the game and give it characters; the user fine-tunes them in
 > the editor at https://hinagata.pages.dev, live, while you keep working.
 
 Source: https://github.com/saori-subaru/hinagata (public). Everything below is served from https://hinagata.pages.dev with CORS open.
 
-## Do this by default when you make a character for the user
+## First: the game is the job
+
+The user asked for a game. Make it as good a game as you would with any other 3D characters: the rules, the controls and how they feel,
+the camera, the sounds, the screens around it (title, score, results), touch controls if it may run on a phone. That is where your time
+goes. The character is one asset among the court, the ball and the UI:
+- Start it in a few minutes: a body type and colors (`BODY_TYPES`, `colors`, a hairstyle, an outfit). Don't keep refining it; the user
+  does the fine-tuning in the editor (below), and you can change the recipe file any time later.
+- Don't shape the game around what the engine shows off. If the game needs a move the engine lacks (a racket swing, a serve, a kick),
+  write it as a pose (see "Moving it in a game") and check it in screenshots like any other animation, until it reads well.
+- Test the game as a game: play it (a bot pressing keys, at real speed), not only the character.
+
+## The character file and the live link
 
 1. Keep the character in its own file, `character.json` (the recipe), and have the game load it (`fetch("character.json")`). Don't bury it in code.
-2. Start the live sync so the user can fine-tune it in the editor while you work (they don't need to ask for it):
+2. Start the live sync so the user can fine-tune it in the editor while you work on the game (they don't need to ask for it):
    ```sh
    curl -O https://hinagata.pages.dev/sync.mjs        # Node 18+, no dependencies
    node sync.mjs character.json                       # keep it running (in the background); it prints a link
                                                       # (port 8790; --port 8800 for another, e.g. when the game's server is on 8790)
    ```
-   Give the user the link it prints (`https://hinagata.pages.dev/editor/?sync=…&key=…`). From then on, every save you make to the file shows
-   in their editor at once, and what they change there is written back into the file (only what differs from the defaults, keys sorted):
-   read the file again before you change it (with git, their edits show in `git diff`).
+   Give the user the link it prints (`https://hinagata.pages.dev/editor/?sync=…&key=…`), then go back to the game. Every save you make to
+   the file shows in their editor at once, and what they change there is written back into the file (only what differs from the defaults,
+   keys sorted): read the file again before you change it (with git, their edits show in `git diff`).
 3. Optional, if the user wants you to see the character: run the same helper as an MCP server instead of the plain one (not both: one port):
    `claude mcp add hinagata -- node /abs/path/sync.mjs /abs/path/character.json --mcp`. Tools: `editor_link`, `get_recipe`,
    `update_recipe` ({ set: { "dotted.path": value }, reset: [paths] }), `check_recipe`, `find_options` (by words, Japanese or English) and
@@ -36,22 +47,30 @@ then hand the user an editor link with the recipe in it instead: `https://hinaga
 import * as THREE from "three";
 import { createAvatar } from "https://hinagata.pages.dev/src/index.js";
 const recipe = await (await fetch("character.json")).json();
-const avatar = await createAvatar(recipe);          // async: builds the meshes (in workers, cached), ~5 s the first time
+const avatar = await createAvatar(recipe);          // async: builds the meshes (in workers; cached in the browser), 1–2 s each the first time
 scene.add(avatar.object);                           // a THREE.Group: feet at y = 0, facing +z, about 1.3–1.4 units tall
 avatar.play("walk");
-renderer.setAnimationLoop(() => { avatar.update(clock.getDelta()); renderer.render(scene, camera); });
+renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
 </script>
 ```
 - three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
-- `createAvatar(recipe, { quality: "game" })`: "game" (default: built fine, then thinned; the first build takes ~5 s, cached after that),
-  "lite" (a third to a fifth of the game's vertices, 8–19k: for several characters or phones) or "high". Scale `avatar.object` to your world as you like.
-- `avatar.dispose()` when you drop it. Several avatars at once are fine.
-- A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source). A whole small game an agent made from this
-  guide alone (its character.json, its own swing pose, touch controls): https://hinagata.pages.dev/examples/tennis/
-- Weight: one avatar at "game" quality is 35–50k vertices, 70–100k triangles ("lite" 8–19k vertices), and `update` takes about 5 ms (7–12 with a skirt or long hair: hair and cloth
-  are simulated on the CPU; measured on a 2.8 GHz cloud CPU). Budget for it with several on screen; don't update avatars nobody sees.
-  Lighter: `quality: "lite"`, or thin the meshes yourself: `createAvatar(recipe, { simplify: 0.3 })` keeps 30% of the triangles (it loads
-  meshoptimizer from jsDelivr, or the import map's "meshoptimizer"). Headless browsers draw slowly; a real GPU doesn't.
+- Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
+- `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world as you like.
+- A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).
+
+## Keep it fast
+
+A character is built in the browser from its recipe (a second or two each on a laptop, more on a phone) and its hair and cloth are
+simulated on the CPU every frame. Budget for both:
+- Pass the camera to `update`: `avatar.update(dt, { camera })`. The hair and cloth are then simulated every 2nd or 4th frame when the
+  character is small on the screen, and not at all when it is off the screen. Without it they are simulated in full every frame:
+  about 5 ms a character, 10–13 with a skirt or long hair, 25–30 with a dress, a cape and long hair (a 2.8 GHz cloud CPU). `avatar.detail`
+  says what the last update did; `{ detail: "full" | "half" | "low" | "off" }` sets it yourself.
+- `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, about half the build
+  time: crowds, small characters, phones), "fine" (the look of "high" at the vertices of "game", but about 3x as long to build) or
+  "high" (for close-ups and stills; 3–4x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
+- Call `measureGait` / `measureStride` once per avatar after it is built, not every frame.
+- Don't update avatars nobody sees for long (or pass the camera: off the screen costs nothing). Headless browsers draw slowly; a real GPU doesn't.
 
 ## The recipe
 
@@ -75,7 +94,7 @@ Only what differs from the defaults, nested as the options are. Example:
 
 ## Moving it in a game
 
-- `avatar.play(name)`; `avatar.update(dt)` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
+- `avatar.play(name)`; `avatar.update(dt, { camera })` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
   crawl, jumpRise, jumpAir, jumpLand, fall, hardLand, climb, climbOver, sitChair, sitChairGirl, sitFloor, hugKnees, wave, cheer, banzai, guard,
   throw, chop, stab, pickUp, carry, carryWalk, push, roll, stumble, knockdown, swim, treadWater, wade, glide, sleep, drink, eat, pant, shiver,
   limp, lookAround, listen, hide, balance. A pose is a function of the avatar's clock; `avatar.play(name)` doesn't reset it. To start a move
