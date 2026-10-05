@@ -547,6 +547,7 @@ export const DEFAULTS = {
     "shoes": {
       "kind": "sneaker",
       "laceColor": "#f4f1ea",
+      "lacing": "bow",
       "bootHeight": 0.21,
       "heelAngle": 24,
       "on": true,
