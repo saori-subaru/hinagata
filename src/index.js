@@ -384,9 +384,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
   const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
-  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) show(k, on);
+  // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
+  // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
+  const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => OPT.outfit[g].on !== false || isDress(g);
+  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) show(k, on || isDress(g));
     if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
-      if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes", "cape"]) for (const k of GARMENTS[h]) show(k, !plate && OPT.outfit[h].on !== false); show("hair", !plate); for (const k of LOCK_PARTS) if (parts[k]) show(k, !plate); }
+      if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes", "cape"]) for (const k of GARMENTS[h]) show(k, !plate && worn(h)); show("hair", !plate); for (const k of LOCK_PARTS) if (parts[k]) show(k, !plate); }
       else if (plate) for (const k of GARMENTS[g]) show(k, false); } };
   for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
   if (AO.on) wear("armor", true);
