@@ -311,7 +311,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     { const heel = [f[0], f[1] - 0.02, f[2] - 0.035], toe = [f[0], Math.max(0.03, f[1] - 0.04), f[2] + 0.1], ra = legReach(f) + 0.03 + CM;   // the foot with the shoe (and the cloth's own thickness: its inner side rides on the outer), heel to toe
       out.push({ bone: `foot.${s}`, a: heel, b: toe, ra, rb: ra * 0.8, thigh: false, outward: "back" }); }
     return out; };
-  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m, bodyRegion: { yMax: ST.fwd(0.58) } }) : null;   // (the mesh is stretched: so is the height the hips reach)
+  // between the thighs: a bridge from one to the other at a few points along them, as thick as they are there, so the skirt's front spans the
+  // lap instead of sinking between the legs and showing each thigh's shape (2026-10-05, Saori: "足の形がくっきり浮き出る")
+  const lapCols = () => { const at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), out = [];
+    for (const t of [0.45, 0.7, 0.9]) { const a = at(Jr["upperLeg.L"], Jr["lowerLeg.L"], t), b = at(Jr["upperLeg.R"], Jr["lowerLeg.R"], t), r = Math.min(legReach(a), legReach(b)) * 0.9 + CM;
+      out.push({ bone: "upperLeg.L", boneB: "upperLeg.R", a, b, ra: r, rb: r, thigh: true }); }
+    return out; };
+  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R"), ...lapCols()], body: parts.body.m, bodyRegion: { yMax: ST.fwd(0.58) } }) : null;   // (the mesh is stretched: so is the height the hips reach)
   // the cape: cloth too, hanging from the shoulders; it keeps clear of the legs and the arms, and of the body's surface from the hips to the
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;

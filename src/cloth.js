@@ -50,8 +50,8 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   const bones = skeleton.bones, BM = new Float32Array(bones.length * 16), inv = new THREE.Matrix4(), tmp = new THREE.Matrix4();
   // the capsules' ends kept in their bones' own space (the bones rest unturned), so they turn with the bones
   root.updateMatrixWorld(true);
-  const COL = colliders.map((c) => { const b = bones.find((x) => x.name === c.bone), w = b.getWorldPosition(new THREE.Vector3());
-    return { ...c, b, oa: new THREE.Vector3(...c.a).sub(w), ob: new THREE.Vector3(...c.b).sub(w) }; }), wp = new THREE.Vector3();
+  const COL = colliders.map((c) => { const b = bones.find((x) => x.name === c.bone), bb = c.boneB ? bones.find((x) => x.name === c.boneB) : b, w = b.getWorldPosition(new THREE.Vector3()), wb = bb.getWorldPosition(new THREE.Vector3());
+    return { ...c, b, bb, oa: new THREE.Vector3(...c.a).sub(w), ob: new THREE.Vector3(...c.b).sub(wb) }; }), wp = new THREE.Vector3();   // boneB: the far end rides on another bone (a bridge between the thighs)
   let first = true;
 
   function targets() {   // the usual skinning (the same as the GPU does), into root space
@@ -67,7 +67,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   }
   function capsules() {   // the capsules now (root space): [ax, ay, az, bx, by, bz, ra, rb, thigh?]
     const at = (b, v) => root.worldToLocal(b.localToWorld(wp.copy(v))).toArray();
-    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0, c.outward === "back" ? 2 : c.outward ? 1 : 0]);
+    return COL.map((c) => [...at(c.b, c.oa), ...at(c.bb, c.ob), c.ra, c.rb, c.thigh ? 1 : 0, c.outward === "back" ? 2 : c.outward ? 1 : 0]);
   }
   // a point of the skirt already inside a capsule when standing (the skirt's top over the thigh's root) may stay as close to its axis as it was
   // then, but no closer: KEEP[v * NC + ci] = the share of the radius it must keep (1 = all of it). Before, such points ignored that capsule
