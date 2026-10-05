@@ -130,7 +130,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
     const share = (name === "cape" || (name === "pants" && skirtOf(OPT))) ? Math.max(simplify, Math.min(1, simplify * 4)) : simplify;
-    const [out] = MS.simplify(idx, pos, 3, Math.min(idx.length, Math.max(3, Math.floor(idx.length * share / 3) * 3)), 1, []);   // error 1 = let the triangle count decide
+    // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
+    // as the positions, so the toon bands and the outline keep their shape where the surface turns
+    let lock = null;
+    if (name === "body") { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
+      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1; }
+    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, Math.min(idx.length, Math.max(3, Math.floor(idx.length * share / 3) * 3)), 1, []);   // error 1 = let the triangle count decide
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
     for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }
