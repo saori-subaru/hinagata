@@ -679,3 +679,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Editor, face tab: "表情セット" rows: "今の顔を登録" stores the current face under that name, "見る" shows it, "戻す" drops it. It is one value in the schema (`whole`: not walked into), applied by `setExpressions` without a rebuild.
 - body.head.scale goes down to 0.6 (was 0.8): about 0.7 makes a tall body some 5 heads tall ("もうちょっと頭小さく").
 
+### No outlines inside the hair (2026-10-05, Saori: "髪の部分にやたら線がおおいね。内側の房には輪郭線出さないとかできないかな")
+- Every lock has its own outline shell, so wherever a lock lay over another lock or over the hair's block, a line crossed the hair. Now the hair's surfaces (hair, locks, bangs, drawn, tails) write 1 into the stencil where they are drawn, and their outline shells are drawn after them (renderOrder 1) only where the stencil isn't 1: the outer edge, and the edges over the face, the body and the clothes, keep their line; between the locks there is none. Ties keep theirs everywhere.
+- `outline.hairInner` (default false; true: the old lines everywhere), applied by setOutline and checked every update (rebuilds and setShading replace the hair's materials). Needs a stencil buffer (three's default until r163); without one nothing changes.
+

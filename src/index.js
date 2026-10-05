@@ -395,6 +395,19 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // hair as locks (hair/locks.js): flat ribbons with sharp tips, each a chain that swings. Long hair: locks hanging from the back of the head
   // over the short hair's block (hair/index.js leaves the long curtain out when hair.sculpt.long.locks is on). The nendo bangs: one lock
   // per tip of hair.sculpt.nendo.tips (with nendo.locks on), lying over the forehead
+  // the hair's outline off the hair only (outline.hairInner false; 2026-10-05, Saori: "髪の部分にやたら線がおおい、内側の房には輪郭線出さない"):
+  // every lock has its own outline shell, and where a lock lies over another lock (or over the hair's block) its shell drew a line across
+  // the hair. The hair's surfaces mark the pixels they draw (stencil 1); the hair's outlines are drawn after them, only where no hair was
+  // drawn: its outer edge and where it lies over the face, the body or the clothes keep their line. (The ties keep theirs everywhere.)
+  // Checked each update: the hair's materials are replaced by rebuilds (locks, tails, bangs) and by setShading
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"];
+  function hairLines() {
+    const on = !OPT.outline.hairInner;
+    for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
+      if (f.userData.hairStencil !== on) { Object.assign(f, { stencilWrite: on, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = on; }
+      if (o.userData.hairStencil !== on) { Object.assign(o, { stencilWrite: on, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = on; }
+      x.o.renderOrder = on ? 1 : 0; }
+  }
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
@@ -565,7 +578,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself. */
     update(dt, { t, instant = false, pose, camera, detail } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
-      syncCover();
+      syncCover(); hairLines();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
       if (!ST.identity && lastPose.seat != null) lastPose = { ...lastPose, seat: ST.fwd(lastPose.seat) };   // a seat as high as the knees: higher for longer legs
@@ -635,8 +648,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
     /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
-    setOutline({ on, width, color } = {}) {
-      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color }).filter(([, v]) => v !== undefined)));
+    setOutline({ on, width, color, hairInner } = {}) {
+      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner }).filter(([, v]) => v !== undefined))); hairLines();
       root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:

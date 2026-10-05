@@ -56,6 +56,9 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); r
 </script>
 ```
 - three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
+- The hair's outline is drawn along its outer edge only, not between its locks (`outline.hairInner`: true draws them all); that uses the
+  stencil buffer, so keep the renderer's (`new THREE.WebGLRenderer({ stencil: true })`: the default in 0.160, not after 0.163). Without
+  one the lines inside the hair simply show.
 - Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world as you like.
 - A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).

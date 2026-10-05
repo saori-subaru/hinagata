@@ -20,7 +20,8 @@ export const DEFAULTS = {
   "outline": {
     "on": true,
     "width": 1,
-    "color": "#3a2a3a"
+    "color": "#3a2a3a",
+    "hairInner": false
   },
   "shading": {
     "style": "toon",
