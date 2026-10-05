@@ -311,7 +311,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     { const heel = [f[0], f[1] - 0.02, f[2] - 0.035], toe = [f[0], Math.max(0.03, f[1] - 0.04), f[2] + 0.1], ra = legReach(f) + 0.03 + CM;   // the foot with the shoe (and the cloth's own thickness: its inner side rides on the outer), heel to toe
       out.push({ bone: `foot.${s}`, a: heel, b: toe, ra, rb: ra * 0.8, thigh: false, outward: "back" }); }
     return out; };
-  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
+  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m, bodyRegion: { yMax: ST.fwd(0.58) } }) : null;   // (the mesh is stretched: so is the height the hips reach)
   // the cape: cloth too, hanging from the shoulders; it keeps clear of the legs and the arms, and of the body's surface from the hips to the
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
