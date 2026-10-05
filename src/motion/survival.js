@@ -3,7 +3,7 @@
 //   body:   pant (hands on the knees, heaving) / shiver (hugging itself, trembling) / limp (one leg stiff) / lookAround / listen / hide
 //   ground: balance, balanceWalk (arms out on something narrow) / slide (down a steep slope on the feet) / stumble (one trip, caught) /
 //           roll (a forward roll, also to take a fall) / hang, shimmy (hanging from an edge by the hands, moving sideways)
-//   water:  drink (kneeling, scooping water to the mouth) / dive (swimming under water, a frog kick)
+//   water:  drink (kneeling, scooping water to the mouth) / dive (swimming under water, a frog kick) / breaststroke (one stroke at the surface: the arms sweep, the legs flutter, then a glide)
 //   hands:  pickUp / carry, carryWalk (a log in both arms) / throw / push / chop (an axe, two hands) / eat / fireDrill (a hand drill) /
 //           sleep (on the side, curled) / stab (a spear, two hands, thrust forward and down) / knockdown (knocked onto the back by a charge, then up again)
 // One-shot moves (stumble, roll, throw, pickUp) loop over their length (*.T s here as ONE_SHOT): the game plays from t = 0 and stops after one.
@@ -31,7 +31,7 @@ const lerpArm = (a, b, k) => ({ sh: mix(a.sh, b.sh, k), ua: mix(a.ua, b.ua, k), 
 // the roll turns the body about the hips, so the hips go up and down to keep the lowest point (the back, the head) on the ground: measured, per a quarter turn
 const ROLL_YS = [0.01, 0.138, 0.449, 0.402, 0.086, -0.202, -0.217, -0.084, 0.009];
 const ROLL_Y = (a) => { const x = ((a / (2 * PI)) % 1) * 8, i = Math.floor(x), f = x - i; return ROLL_YS[i] + (ROLL_YS[Math.min(8, i + 1)] - ROLL_YS[i]) * f; };
-export const ONE_SHOT = { stumble: 0.9, roll: 1.0, throw: 1.1, pickUp: 1.6, stab: 0.9, knockdown: 2.4 };
+export const ONE_SHOT = { stumble: 0.9, roll: 1.0, throw: 1.1, pickUp: 1.6, stab: 0.9, knockdown: 2.4, breaststroke: 1.0 };
 const once = (name, t) => Math.min(1, Math.max(0, (t % ONE_SHOT[name]) / ONE_SHOT[name]));
 
 Object.assign(POSES, {
@@ -116,6 +116,17 @@ Object.assign(POSES, {
     return { b: { hips: [1.45, 0, 0], head: [-1.2, 0, 0], ...both({ "shoulder.L": [0, 0, 0.25 * glide], "upperArm.L": ua, "lowerArm.L": la }),
       "upperLeg.L": [-0.5 * kick, 0.3 * kick, 0.06 + 0.45 * kick], "upperLeg.R": [-0.5 * kick, -0.3 * kick, -0.06 - 0.45 * kick],   // frog kick: knees out and bent, then the legs snap together
       "lowerLeg.L": [0.15 + 1.6 * kick, 0, 0], "lowerLeg.R": [0.15 + 1.6 * kick, 0, 0], "foot.L": [0.9 - 1.2 * kick, 0, 0], "foot.R": [0.9 - 1.2 * kick, 0, 0] }, y: 0 }; },
+
+  // one stroke at the surface (the game plays it from t = 0 on each press): the arms reach ahead, sweep out and pull back under the chest, the hands come together
+  // under the chin and shoot forward again into a glide; the legs flutter kick hard through the pull and trail in the glide. The head stays up, eyes ahead
+  breaststroke: (t) => { const u = once("breaststroke", t), P = 1.15;
+    const K = [[0, [0, 0, 2.05], [0, 0, 0.1]], [0.12, [0.1, 0, 0.85], [0, 0, 0.2]], [0.32, [-1.1, 0.3, -0.1], [-1.6, 0, -0.3]], [0.5, [-0.6, 0, 1.2], [-0.8, 0, 0]], [0.66, [0, 0, 2.05], [0, 0, 0.1]], [1, [0, 0, 2.05], [0, 0, 0.1]]];
+    let k = 0; while (k < K.length - 2 && u > K[k + 1][0]) k++;
+    const f = ss(K[k][0], K[k + 1][0], u), ua = mix(K[k][1], K[k + 1][1], f), la = mix(K[k][2], K[k + 1][2], f);
+    const kick = (1 - ss(0.55, 0.8, u)) * sin(t * 17), kk = 0.4 * (1 - ss(0.55, 0.8, u));   // flutter: fast, both legs in turn, fading into the glide
+    return { b: { hips: [P, 0, 0], spine: [0.05, 0, 0], head: [-P - 0.05, 0, 0], ...both({ "shoulder.L": [0, 0, 0.2 * ss(0.55, 0.7, u)], "upperArm.L": ua, "lowerArm.L": la }),
+      "upperLeg.L": [-P + 0.35 + kk * kick, 0, 0.06], "upperLeg.R": [-P + 0.35 - kk * kick, 0, -0.06],
+      "lowerLeg.L": [0.25 + 0.4 * mx(0, -kick) * kk / 0.4, 0, 0], "lowerLeg.R": [0.25 + 0.4 * mx(0, kick) * kk / 0.4, 0, 0], "foot.L": [0.75, 0, 0], "foot.R": [0.75, 0, 0] }, y: 0, grip: { L: 0.2, R: 0.2 } }; },
 
   // ── the hands' work ──
   // picking something up: squat down (back fairly straight), both hands to the ground in front, close them, stand up holding it at the belly
