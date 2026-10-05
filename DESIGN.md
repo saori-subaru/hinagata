@@ -58,7 +58,7 @@ site/avatar/
 ## API
 
 ```ts
-createAvatar(options?: AvatarOptions, settings?: { quality?: "game" | "high" | "low", cell?: number, simplify?: number, cache?: boolean, cull?: boolean, onProgress?: (p: number) => void }): Promise<Avatar>
+createAvatar(options?: AvatarOptions, settings?: { quality?: "game" | "lite" | "high" | "low", cell?: number, simplify?: number, cache?: boolean, cull?: boolean, onProgress?: (p: number) => void }): Promise<Avatar>
 
 interface Avatar {
   object: THREE.Group          // add to your scene; contains the skinned meshes and the skeleton
@@ -138,8 +138,9 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 | settings | first build | vertices drawn |
 |---|---|---|
 | `quality: "high"` (6.8 mm cells, the old default; the playground still uses it) | ~5.4 s | ~156,000 |
-| `quality: "game"` (13.6 mm cells, **default**), one thread (`workers: false`) | ~1.2–1.7 s | ~34,000 |
-| `"game"` with workers (**default**) | ~0.86 s (~1.2 s the very first time on a page: the workers load) | same |
+| `quality: "game"` until 2026-10-05 (13.6 mm cells), one thread (`workers: false`) | ~1.2–1.7 s | ~34,000 |
+| the same with workers | ~0.86 s (~1.2 s the very first time on a page: the workers load) | same |
+| `quality: "game"` since 2026-10-05 (**default**: built as "high", thinned to 22%, with workers) | ~5 s (+ meshoptimizer's download the first time) | ~37,000 |
 | `"game"` + `simplify: 0.4` (one thread) | ~1.9 s | ~14,000 |
 | any of the above, second time (`cache`) | **~0.05 s** | same |
 
@@ -148,7 +149,7 @@ Measured on the default character (browser, software GL, 4 cores; Node gives sim
 - **cache**: built meshes (and which body vertices the clothes cover) go to IndexedDB under a key made of the resolved options (without colors, outline, shading and blush) and the source text of the generator modules (`src/cache.js`), so editing the sculpt code never returns a stale mesh. The newest 12 characters are kept.
 - **the body's cell table** (`blendFast`): the list of parts that matter in each 4 cm cell is now built per cell on first use (a whole table cost ~0.25 s, paid again by every worker and by a cached build that never meshes).
 - **cull**: body triangles deep (6 mm) inside a visible shirt, pants or shoes are left out of the body's index (about 4,000 at game quality). It follows each garment's `.m.visible`, so hiding a garment brings the body back. Socks are skipped (the leg is only ~2 mm inside).
-- **simplify**: meshoptimizer after building. Simplifying the high-quality mesh to 1/10 (~15,000) looked the same as the original in a side-by-side check; it is optional because it needs the extra package (and it keeps the build on the main thread).
+- **simplify**: meshoptimizer after building. Simplifying the high-quality mesh to 1/10 (~15,000) looked the same as the original in a side-by-side check; it needs the extra package (since 2026-10-05 the workers' meshes are thinned after they come back, so the build stays on the workers).
 - `avatar.TIMES` shows where a build spent its time (ms per step).
 
 ## Playground
@@ -651,3 +652,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 **Its own site (2026-10-04)**: the engine's pages were only online through the station (devlog deploys the latest hinagata `main` into `/avatar/` when the station itself deploys), so a push here waited for some devlog push. Now hinagata deploys itself to Cloudflare Pages on every push to `main`: `https://hinagata.pages.dev` → the editor, `/body.html` → the test page (`.github/workflows/site.yml`; the project is made on the first run; secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in this repository). `build_site.sh` serves the same files devlog serves from it — notes, PSDs, scripts, `tools/ docs/ facekit/ examples/` and the reference sheet stay out (the repository is private, the site is public). The station keeps taking the engine into `/avatar/` as before (its games load it from there). (Saori: サイトを持たせたい)
 
+### "game" = "high" thinned (2026-10-05, Saori: "geminiは原神のキャラでも三万〜五万頂点、高画質版でも三万あれば十分のはずって"; done)
+- Gemini was right in principle: a grid spends its vertices evenly, flat or curved, while a hand-made model (or meshoptimizer) spends them where the surface turns. So "game" now builds at the high quality's 6.8 mm cells and thins to 22% (`simplifyWithAttributes`: the normals count, the face is kept as built): about the vertices the old 13.6 mm game had (the default character 41k → 37k, a Nahida trial 53k → 50k), and side by side it can't be told from "high".
+- Cloth is the exception: the skirt and the cape are built at the cells they had (`partClothCell(13.6 mm)` = 10.5 mm, `clothH` in partSpec) and not thinned. Thinned (to 45% or 70%), their uneven triangles drew broken outline strokes over a seated lap, and unthinned at the high cells the cloth simulation cost a third more (a dress with a cape and long hair: 29 → 41 ms an update). As built, it costs what it did.
+- The cost: the first build takes ~5 s instead of ~1.5 s (the high grid; thinning itself is a few hundred ms). The cache returns it at once after that. Without meshoptimizer (offline, blocked CDN), "game" warns and builds the old way (13.6 mm, unthinned) instead of failing; an explicit `simplify` still fails loudly.

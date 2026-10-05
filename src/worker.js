@@ -21,7 +21,7 @@ onmessage = ({ data: m }) => {
         hairKit: buildHair(m.opt, { P: B.P, CUT: B.CUT, PLANES: B.PLANES, faceWarp: B.faceWarp, bodySdf: B.bodySdfRaw }) };
       kitKey = m.key;
     }
-    const s = partSpec(m.part, { OPT: m.opt, H: m.H, kit, bodyAt: m.grid ? gridSampler(m.grid, kit.bodySdf) : null });
+    const s = partSpec(m.part, { OPT: m.opt, H: m.H, clothH: m.clothH, kit, bodyAt: m.grid ? gridSampler(m.grid, kit.bodySdf) : null });
     if (m.type === "sample") {
       const V = sampleGrid(s.fast || s.sdf, s.lo, s.hi, s.h, m.opt.quality.band, m.k0, m.k1);
       postMessage({ id: m.id, V }, [V.buffer]);
