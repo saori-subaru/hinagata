@@ -1,8 +1,10 @@
 // Drawing locks of hair on the character (2026-10-05, Saori: "draw the tufts like a picture instead of sliders").
 // With the tool on, a stroke on the 3D view from a lock's root to its tip becomes one lock (options.hair.drawn). Where the stroke runs over
-// the character it sticks to what it touches (the hair, the face, the clothes), lifted by half the lock's thickness; where it leaves the
-// character it stays in the plane facing the camera through the last point it touched, so a lock drawn from the side bends the way it was
-// drawn, and one drawn from the front hangs flat to the view. The points are kept in head space (they follow the head's shape and turn with it).
+// the hair it sticks to it, lifted by half the lock's thickness; elsewhere it stays in the plane facing the camera through the last bit of
+// hair it touched, so a lock drawn from the side bends the way it was drawn, and one drawn from the front hangs flat to the view. Over the
+// face, the body and the clothes it only comes forward onto them where that plane would put it behind them (a side lock drawn down to the
+// shoulders stuck to the face's outline and the neck instead of hanging, 2026-10-05, Saori). A stroke starts on the character.
+// The points are kept in head space (they follow the head's shape and turn with it).
 // The camera doesn't turn while drawing; turn it with the tool off (or hold the right button / two fingers, which OrbitControls keeps).
 import * as THREE from "three";
 
@@ -16,18 +18,19 @@ export function createDrawTool({ vp, store, onChange = () => {} }) {
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x4b4acf, depthTest: false }));
   line.renderOrder = 20; line.frustumCulled = false;
   const toNdc = (e) => { const r = vp.canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, vp.camera); };
-  const targets = () => av ? Object.values(av.parts).filter((x) => x.m.visible).map((x) => x.m) : [];
-  // a point on the screen → a world point: on the character (lifted off it) or, off it, on the plane through the last point that touched
+  const HAIR = new Set(["hair", "locks", "bangs", "drawn", "tails", "tailTie"]);
+  const targets = () => av ? Object.entries(av.parts).filter(([, x]) => x.m.visible).map(([k, x]) => { x.m.userData.drawHair = HAIR.has(k); return x.m; }) : [];
+  const lifted = (hit) => { const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : ray.ray.direction.clone().negate(); return hit.point.clone().addScaledVector(n, 0.5 * S.width * S.thick + 0.002); };
+  // a point on the screen → a world point: on the hair (lifted off it) or, off it, on the plane through the last bit of hair it touched
+  // (brought forward onto the face / body / clothes only where they are in front of that plane)
   function pick(e) {
     toNdc(e);
-    const hit = ray.intersectObjects(targets(), false)[0];
-    if (hit) {
-      const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : ray.ray.direction.clone().negate();
-      const p = hit.point.clone().addScaledVector(n, 0.5 * S.width * S.thick + 0.002);
-      plane.setFromNormalAndCoplanarPoint(vp.camera.getWorldDirection(v).negate(), p); return p;
-    }
-    if (!stroke) return null;   // a stroke starts on the character
-    return ray.ray.intersectPlane(plane, new THREE.Vector3());
+    const hits = ray.intersectObjects(targets(), false), hit = hits[0];
+    if (hit && (hit.object.userData.drawHair || !stroke)) { const p = lifted(hit); plane.setFromNormalAndCoplanarPoint(vp.camera.getWorldDirection(v).negate(), p); return p; }   // a stroke starts on anything
+    if (!stroke) return null;
+    const q = ray.ray.intersectPlane(plane, new THREE.Vector3()); if (!q) return null;
+    if (hit && hit.distance < ray.ray.origin.distanceTo(q)) return lifted(hit);   // the plane is behind the face / body here
+    return q;
   }
   // world → head space (as the engine builds the hair: the head bone's rest, then the head's own scaling)
   function toHead(w) {

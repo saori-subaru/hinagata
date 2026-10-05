@@ -82,15 +82,21 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
   const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk, fl, wd]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0, fl: fl ?? 0, wd: wd ?? 1 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
   const HY = B.lockHangY ?? 0.86;   // below this (head space) a tuft hangs straight down: off the head, over the shoulders and the chest
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
+  // where a tuft leaves the head to hang: at its height, but no closer in than the head is anywhere above it (at the sides HY is below the
+  // jaw, and the surface there is the neck: a side tuft hung from the neck, as narrow as the neck's radius made it, a row of strings)
+  const leave = (y, th) => { const p = horiz(y, th); if (y > HY) return p; let R = Math.hypot(p[0], p[2] - center[2]);
+    for (let yy = y + 0.03; yy <= center[1]; yy += 0.03) { const q = horiz(yy, th); R = Math.max(R, Math.hypot(q[0], q[2] - center[2])); }
+    return [Math.sin(th) * R, y, center[2] + Math.cos(th) * R]; };
   T.forEach((tp, i) => {
     const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
     // a wide clump is several locks side by side whose tips gather toward the clump's tip (the outer ones end a little higher): strands, not a sheet.
     // A tuft made narrow (its width wd) splits into fewer
     const k = Math.max(1, Math.round(2 * half * tp.wd / ((B.lockSpan ?? 13) * deg)));
+    const mid = leave(Math.max(tp.y, HY), tp.a - tp.sw);   // where the clump's middle leaves the head: its hanging locks gather under it
     for (let j = 0; j < k; j++) {
       const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45 * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
       const yH = Math.max(tipY, HY), hang = yH - tipY;   // the part on the head ends at yH; the rest (hang) falls straight down from there
-      const tip = horiz(yH, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
+      const tip = leave(yH, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
       const ph = (B.lockRoot ?? 70) * deg, ra = (tp.a + f * half) * (B.lockRootSpread ?? 0.45),   // they grow from near the crown (where the back's locks start too)
         rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
@@ -104,7 +110,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
           px = center[0] + u[0] * at; py = center[1] + u[1] * at; pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
           if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
           last = [px, py, pz]; }
-        else { const th = (t - share) / (1 - share); px = last[0]; pz = last[2]; py = last[1] - (last[1] - tipY) * th; }   // hanging straight down
+        else { const th = (t - share) / (1 - share), gt = 0.7 * Math.sin(0.5 * Math.PI * th); px = last[0] + (mid[0] - last[0]) * gt; pz = last[2] + (mid[2] - last[2]) * gt; py = last[1] - (last[1] - tipY) * th; }   // hanging down, the clump's locks gathering into one tuft (else they hung apart, a row of strings)
         // flick (the row's 8th value, m): toward the tip the lock bends away from the head (> 0: flicked out, a little up too) or in toward it
         // (< 0: curled in, the tip tucked toward the face), never into the head (it keeps 2 mm over what it lies on)
         if (tp.fl) { const e = Math.pow(t, 2.2) * tp.fl, hx = px, hz = pz - center[2], h = Math.hypot(hx, hz) || 1;
@@ -113,7 +119,8 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
           px += dx; pz += dz; }
         pts.push(toRoot(px, py, pz)); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1 });   // a tuft hanging long is softer: it swings like long hair
+      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
+        front: hang > 0.02 ? 0.9 : 0, frontFrom: share });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
   return out;
@@ -175,8 +182,9 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
  *  just outside the hair and the head there. For an editor's handles (the same surface the bang locks lie on). */
 export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   // below hangY the tuft hangs straight down: the tip is under where it leaves the head
-  const th = angle * Math.PI / 180, yH = Math.max(y, hangY), c = [0, yH, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d) + 0.012;
-  return toRoot(c[0] + d[0] * t, y, c[2] + d[2] * t);
+  const th = angle * Math.PI / 180, yH = Math.max(y, hangY), d = [Math.sin(th), 0, Math.cos(th)];
+  let t = 0; for (let yy = yH; yy <= Math.max(yH, center[1]) + 1e-9; yy += 0.03) { t = Math.max(t, surfaceAlong(surf, [0, yy, center[2]], d)); if (y > hangY) break; }   // a hanging tuft leaves the head where it is widest above (bangLocks' leave)
+  return toRoot(d[0] * (t + 0.012), y, center[2] + d[2] * (t + 0.012));
 }
 
 // hang one lock under gravity in the rest pose, against the same colliders it meets when moving (so the first frame doesn't jump)
@@ -300,7 +308,9 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       { const r = ringsPer - 1, a = at(N - 2), b = at(N - 1); for (let q = 0; q < 3; q++) { C[r * 3 + q] = X[b + q]; Dd[r * 3 + q] = X[b + q] - X[a + q]; } }
       for (let r = 0; r < ringsPer; r++) { const t = r / (ringsPer - 1), cx = C[r * 3], cy = C[r * 3 + 1], cz = C[r * 3 + 2];
         let dx = Dd[r * 3], dy = Dd[r * 3 + 1], dz = Dd[r * 3 + 2]; const dl = Math.hypot(dx, dy, dz) || 1; dx /= dl; dy /= dl; dz /= dl;
-        let [ox, oy, oz] = outward(cx, cy, cz, M); const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
+        let [ox, oy, oz] = outward(cx, cy, cz, M);
+        if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
+        const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
         const hw = 0.5 * s.w * width(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
         for (let k = 0; k < RING.length; k++) { const [u, w] = RING[k], v = (l * VPL + r * RING.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
