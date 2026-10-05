@@ -101,9 +101,15 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const shoeCore = blend(pick("foot", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB"] : []))), soleCore = blend(pick("foot", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
   const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], a = [f.cx, -0.001, f.cz - 0.05], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
     return C(a, a.map((v, i) => v + d[i] * HP.heel), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
-  const shoeSdf = (x, y, z) => { let d = Math.max(shoeCore(x, y, z) - SHOE.off - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0), y - (TOP - TILT * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (boots: a little looser, flared at the top)
+  // heels: a pointed toe (a flat cone forward and a little toward the big toe, smoothly joined), and no rubber sole: the shoe itself goes down
+  // to the floor, all one color (2026-10-05, Saori: "ゴム部分がついてる、先も尖ってない")
+  const toePoints = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03], b = [f.cx - m * 0.01, 0.006, 0.128], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
+    return (x, y, z) => { const p = [x - a[0], y - a[1], z - a[2]], t = Math.min(1, Math.max(0, (p[0] * u[0] + p[1] * u[1] + p[2] * u[2]) / L)), q = [0, 1, 2].map((i) => p[i] - u[i] * t * L), r = 0.042 * (1 - t) + 0.003;
+      return (Math.hypot(q[0], q[2], q[1] / FY) - r) * FY; }; }) : [];
+  const shoeSdf = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE.off - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top)
+    let d = Math.max(c, y - (TOP - TILT * z), HEELS ? -0.003 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
-  const soleSdf = (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);
+  const soleSdf = HEELS ? () => 1 : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
   const lacesSdf = KIND === "laced" ? (() => { const parts = [], surf = (x, z) => { let lo = 0.025, hi = 0.14; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (shoeSdf(x, m, z) < 0) lo = m; else hi = m; } return lo; };
