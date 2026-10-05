@@ -83,7 +83,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // skullTop: a slightly wider piece over the upper head (above the forehead), so the head widens there without changing the face
   { const ST = OPT.body.sculpt.skullTop; if (ST.extra) P.skullTop = E([0, ST.y, ST.z], [SK.width + ST.extra, ST.ry, ST.rz], "head", 0.06); }   // 頭(大きな丸。横幅・前後とも見本どおり)
   { const OC = OPT.body.sculpt.occiput ?? {}; P.occiput = E([0, OC.y ?? 1.0, OC.z ?? -0.07], [OC.rx ?? 0.17, OC.ry ?? 0.09, OC.rz ?? 0.14], "head", 0.08); }   // 後頭部の下(首の上まで丸くふくらむ)
-  P.face = E([0, 0.935, 0.08], [OPT.body.sculpt.cheeks.width, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
+  P.face = E([0, OPT.body.sculpt.cheeks.y ?? 0.935, 0.08], [OPT.body.sculpt.cheeks.width, OPT.body.sculpt.cheeks.height ?? 0.115, 0.168], "head", 0.08);   // y / height: where the cheeks are fullest and how far down they reach (higher and shorter: a face that narrows to the chin)   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
   P.jaw = E([0, 0.868, 0.094], [OPT.body.sculpt.jaw.width, 0.062, 0.142], "head", 0.07);
   // chinTip: a small round piece at the bottom of the chin, so the face ends in a small point below round cheeks (Saori, after Nahida). The chin
   // cut's middle comes down with it (chin.point), else the cut would take it off again
