@@ -1,0 +1,10 @@
+{
+  "colors": { "hair": "#3b3552", "eyes": "#b8434f" },
+  "hair": { "bangs": "nendo", "back": "flip" },
+  "outfit": {
+    "shirt": { "color": "#e2535c" },
+    "pants": { "color": "#2d2d3a" },
+    "socks": { "color": "#ffffff", "top": 0.1 },
+    "shoes": { "color": "#2d2d3a" }
+  }
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hinagata Tennis</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8fc9ef; font-family: system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 18px; align-items: center;
+    background: rgba(20, 30, 50, .72); color: #fff; padding: 8px 18px; border-radius: 12px; font-size: 18px; font-weight: 600; white-space: nowrap; }
+  #hud .you { color: #9fd0ff; } #hud .cpu { color: #ffb0b4; } #hud small { opacity: .75; font-weight: 400; font-size: 13px; }
+  #msg { position: fixed; top: 38%; left: 0; right: 0; text-align: center; color: #fff; font-size: 44px; font-weight: 800;
+    text-shadow: 0 3px 0 #23324a, 0 0 16px rgba(0,0,0,.4); pointer-events: none; }
+  #help { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(20, 30, 50, .6); color: #fff;
+    padding: 6px 14px; border-radius: 10px; font-size: 13px; white-space: nowrap; }
+  #pad { position: fixed; left: 14px; bottom: 54px; width: 150px; height: 150px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); gap: 4px; touch-action: none; }
+  #pad button, #swingBtn { border: 0; border-radius: 14px; background: rgba(20, 30, 50, .55); color: #fff; font-size: 20px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #pad button.on, #swingBtn:active { background: rgba(75, 74, 207, .85); }
+  #pad .u { grid-area: 1 / 2; } #pad .l { grid-area: 2 / 1; } #pad .r { grid-area: 2 / 3; } #pad .d { grid-area: 3 / 2; }
+  #swingBtn { position: fixed; right: 18px; bottom: 64px; width: 96px; height: 96px; border-radius: 50%; font-size: 20px; font-weight: 700; }
+  @media (max-width: 640px) { #hud { font-size: 14px; gap: 10px; } #help { font-size: 11px; white-space: normal; width: calc(100% - 32px); text-align: center; } }
+</style>
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<div id="hud">
+  <span class="you">YOU</span><span id="pts">0 - 0</span><span class="cpu">CPU</span>
+  <small id="games">Games 0 - 0</small>
+</div>
+<div id="msg">キャラを作っています…</div>
+<div id="help">← → ↑ ↓ / WASD: 移動 &nbsp;·&nbsp; Space: スイング / サーブ &nbsp;·&nbsp; 打つ瞬間に ←→ で左右、↑ で深く、↓ で短く</div>
+<script type="module" src="game.js"></script>
+</body>
+</html>
