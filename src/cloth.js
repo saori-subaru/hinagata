@@ -187,12 +187,14 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       T[i] += (bx * (0.32 + fl) ) * f; T[i + 1] += 0.24 * f * u; T[i + 2] += (bz * (0.32 + fl)) * f; }
     return true;
   }
-  function carry() {
+  function carry(dt) {
     MD.copy(root.matrixWorld).invert().multiply(M0); const e = MD.elements; M0.copy(root.matrixWorld);
     const moved = Math.abs(e[12]) + Math.abs(e[13]) + Math.abs(e[14]) + Math.abs(e[0] - 1) + Math.abs(e[5] - 1) + Math.abs(e[10] - 1);
     if (moved < 1e-7 || Math.hypot(e[12], e[13], e[14]) > 0.3) return false;
     MOVE[0] -= e[12]; MOVE[1] -= e[13]; MOVE[2] -= e[14];   // how far the character moved this frame (root space now)
-    for (const A_ of [X, P]) for (let v = 0, i = 0; v < n; v++, i += 3) { if (!W[v]) continue; const s = sway * W[v], x = A_[i], y = A_[i + 1], z = A_[i + 2];
+    // carried back by at most a run's worth (3 of its own units a second): a tennis player's 7 m/s blew the cape out flat and straight (2026-10-05)
+    const d = Math.hypot(e[12], e[13], e[14]), most = 3 * Math.max(dt, 1 / 240), cap = d > most ? most / d : 1;
+    for (const A_ of [X, P]) for (let v = 0, i = 0; v < n; v++, i += 3) { if (!W[v]) continue; const s = sway * W[v] * cap, x = A_[i], y = A_[i + 1], z = A_[i + 2];
       A_[i] = x + (e[0] * x + e[4] * y + e[8] * z + e[12] - x) * s; A_[i + 1] = y + (e[1] * x + e[5] * y + e[9] * z + e[13] - y) * s; A_[i + 2] = z + (e[2] * x + e[6] * y + e[10] * z + e[14] - z) * s; }
     return true;
   }
@@ -223,7 +225,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       root.updateMatrixWorld(true); targets(); if (BD) bodySkin(); const C = capsules(); PROF.targets = now() - t0;
       let moved = 0; for (let i = 0; i < T.length; i++) { const d = Math.abs(T[i] - T0[i]); if (d > moved) moved = d; } T0.set(T);
       if (first || instant) { X.set(T); P.set(T); for (let s = 0; s < (first ? 30 : 10); s++) step(0, 2, C, seat); first = false; still = 0; if (sway) { M0.copy(root.matrixWorld); hasM0 = true; } }   // settle: no motion carried over
-      else { if (sway && hasM0 && carry()) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
+      else { if (sway && hasM0 && carry(dt)) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
         if (air && blow(dt)) moved = 1;
         still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
         const nf = Math.max(1, Math.round(dt * 60)); if (nf > 1 && nf !== an) { an = nf; AN = A.map((a) => 1 - (1 - a) ** nf); } AS = nf > 1 ? AN : A;   // one step for nf frames (a far character, see the avatar's update)

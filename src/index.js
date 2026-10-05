@@ -549,7 +549,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const SEAT_PROBE = ["body", "pants"].map((k) => { const m = parts[k].m, A = m.geometry.attributes.position, idx = [];
     for (let i = 0; i < A.count; i++) { const x = A.getX(i), y = A.getY(i), z = A.getZ(i); if (Math.abs(x) < 0.17 && y > 0.22 && y < 0.5 && z > -0.16 && z < 0.12) idx.push(i); }
     const step = Math.max(1, Math.ceil(idx.length / 500)); return { m, idx: idx.filter((_, j) => j % step === 0) }; });
-  const seatV = new THREE.Vector3(); let seatAdj = 0, lastRoot = null; const wind = [0, 0, 0];
+  const seatV = new THREE.Vector3(); let seatAdj = 0, lastRoot = null; const wind = [0, 0, 0], rootV = [0, 0];
   // the simulation's level of detail (update's camera): the character's height on the screen, as a share of the view's height
   let simDt = 0, simN = Math.floor(Math.random() * 4), detailNow = "full";   // (simN starts anywhere: several characters at "half" or "low" take their frames in turns)
   const dC = new THREE.Vector3(), dE = new THREE.Vector3(), dS = new THREE.Sphere(), dF = new THREE.Frustum(), dM = new THREE.Matrix4();
@@ -593,11 +593,16 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       detailNow = detail ?? (camera ? detailFor(camera) : "full"); const every = { full: 1, half: 2, low: 4, off: 0 }[detailNow] ?? 1;
       simDt += dt; simN++; const sim = every > 0 && (instant || simN >= every), sdt = instant ? dt : simDt; if (sim || !every) { simDt = 0; simN = 0; }
       if (sim) { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
-      // the wind the hair meets: a pose that goes somewhere (run, walk: lastPose.air, m/s) played in place still streams the hair back. When
-      // the avatar really moves that fast, its own motion does it (the locks trail in world space): only what it lacks is added
-      { root.updateMatrixWorld(true); const e = root.matrixWorld.elements, fw = [e[8], 0, e[10]], fl = Math.hypot(fw[0], fw[2]) || 1, pos = [e[12], e[13], e[14]];
-        const v = !instant && lastRoot && dt > 0 ? ((pos[0] - lastRoot[0]) * fw[0] + (pos[2] - lastRoot[2]) * fw[2]) / fl / dt : 0; lastRoot = pos;
-        const a = Math.max(0, (lastPose.air ?? 0) - Math.max(0, v)); wind[0] = -fw[0] / fl * a; wind[1] = 0; wind[2] = -fw[2] / fl * a; }
+      // the wind the hair meets: the avatar's own motion through the air (its locks swing against the head, so the stream comes from here),
+      // and a pose that goes somewhere (run, walk: lastPose.air, units / s) played in place streams it too. Softly capped at about a run's
+      // (in the avatar's own size): a tennis player's 7 m/s laid the hair out in a straight line (2026-10-05, Saori)
+      { root.updateMatrixWorld(true); const e = root.matrixWorld.elements, fl = Math.hypot(e[8], e[10]) || 1, fx = e[8] / fl, fz = e[10] / fl, pos = [e[12], e[13], e[14]], sc = Math.hypot(e[0], e[1], e[2]) || 1;
+        const ok = !instant && lastRoot && dt > 0 && Math.hypot(pos[0] - lastRoot[0], pos[2] - lastRoot[2]) < 0.5 * sc, k = ok ? 1 - Math.exp(-dt * 8) : 1;
+        const vx = ok ? (pos[0] - lastRoot[0]) / dt : 0, vz = ok ? (pos[2] - lastRoot[2]) / dt : 0; lastRoot = pos;
+        rootV[0] += (vx - rootV[0]) * k; rootV[1] += (vz - rootV[1]) * k;   // (smoothed: frame times vary)
+        const fwd = rootV[0] * fx + rootV[1] * fz, extra = Math.max(0, (lastPose.air ?? 0) * sc - Math.max(0, fwd));
+        let wx = -rootV[0] - fx * extra, wz = -rootV[1] - fz * extra; const w = Math.hypot(wx, wz), CAP = 3 * sc, s = w > 1e-6 ? CAP * Math.tanh(w / CAP) / w : 0;
+        wind[0] = wx * s; wind[1] = 0; wind[2] = wz * s; }
       if (sim) for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }

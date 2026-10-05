@@ -15,7 +15,7 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
-const DRAG = 2.4, VDAMP = 0.5;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
+const DRAG = 10, VDAMP = 0.5;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
@@ -315,8 +315,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     const g = 9.8 * h * h * fk, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
     for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
-      for (let q = 0; q < 3; q++) { let v = (X[j + q] - P[j + q]) * keep; if (q === 1 && keep) { const tv = (T[j + 1] - TP[j + 1]) / sub; v = tv + (v - tv) * VDAMP; } P[j + q] = X[j + q]; X[j + q] += v; }   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
-      X[j] += gx + AIR[0] * h * h * fk; X[j + 1] += gy + AIR[1] * h * h * fk; X[j + 2] += gz + AIR[2] * h * h * fk;   // the wind (air drag pulling it along)
+      for (let q = 0; q < 3; q++) { const raw = X[j + q] - P[j + q], tv = (T[j + q] - TP[j + q]) / sub; let v = raw * keep;
+        if (keep) v = q === 1 ? tv + (v - tv) * VDAMP : tv + (raw - tv) * keep;   // its swing is kept against the head's motion, not the world's: moving fast, the world's drag
+        P[j + q] = X[j + q]; X[j + q] += v; }                                     // had laid it out flat behind like a stick (the tennis player's 7 m/s, 2026-10-05); the wind (AIR) streams it now   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
+      const fl = 1 + 0.35 * Math.sin(clock * 7 + l * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + l * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
+      X[j] += gx + AIR[0] * fl * h * h * fk; X[j + 1] += gy + (AIR[1] * fl + up) * h * h * fk; X[j + 2] += gz + AIR[2] * fl * h * h * fk;   // the wind (air drag pulling it along)
       for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
@@ -355,14 +358,14 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (const a of ["position", "normal", "shadeN"]) g.attributes[a].needsUpdate = true;
     g.computeBoundingSphere();
   }
-  let first = true, acc = 0;
+  let first = true, acc = 0, clock = 0, airN = 0;
   const H = 1 / 60;
   return {
     geometry: g,
     /** Each frame after the pose is set. instant: settle at once (no swing carried over). */
     update(dt, instant = false, wind = null, coarse = false) {   // coarse: one step for all the time since the last (a far or small character: see the avatar's update)
       matrices();
-      for (let q = 0; q < 3; q++) AIR[q] = (wind?.[q] ?? 0) * DRAG;
+      for (let q = 0; q < 3; q++) AIR[q] = (wind?.[q] ?? 0) * DRAG; airN = Math.hypot(AIR[0], AIR[1], AIR[2]); clock += dt;
       let jump = 0; for (let i = 0; i < NP * 3; i += 3 * N) jump = Math.max(jump, Math.abs(T[i] - X[i]) + Math.abs(T[i + 1] - X[i + 1]) + Math.abs(T[i + 2] - X[i + 2]));   // the roots against where they were
       if (first || instant || jump > 0.5) { X.set(T); P.set(T); for (let s = 0; s < (first ? 40 : 20); s++) step(H, 0); first = false; acc = 0; }   // settle (also when the avatar was moved far at once: no whip across the scene)
       else if (coarse) { acc = Math.min(acc + dt, 4 * H); const n = Math.floor(acc / H); if (n) { sub = 1; if (n !== kn) { kn = n; KN = K.map((k) => 1 - (1 - k) ** n); } KS = n > 1 ? KN : K; step(n * H, damping ** n, (n + 1) / (2 * n)); KS = K; acc -= n * H; } }
