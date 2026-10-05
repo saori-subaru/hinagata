@@ -351,6 +351,8 @@ Not yet: sitting on a chair, the cloth tents over each knee and sags between the
 - `cape.sway`: the free points keep their place in the world when the whole character moves (the root's move since last frame is undone for them), so it trails behind walking and running. The skirt has 0 (unchanged). A move over 30 cm in a frame is a teleport.
 - Sitting on a chair it isn't lifted onto the seat (it stood out sideways like a table): it hangs behind.
 
+- `cape.air` (0.8; 2026-10-05, Saori: "もっと靡いて上に上がるようにすれば"): running, the hand swinging back went through the cape. Inertia alone (`sway`) only lagged it a little, the pull back to its shape won. Now the character's speed (root space, smoothed) moves each point's target back against the motion and up, growing toward the hem, with a small flutter; the collar is pinned and the cloth doesn't stretch, so the cape streams back and up around the collar (out of the arms' way), and settles back when the character stops. The skirt has none.
+
 Not yet: it doesn't collide with the skirt as cloth (only its shape is wide enough); long hair lies over it without touching it.
 
 ### The robe (ローブ) (2026-10-05, Saori; done)

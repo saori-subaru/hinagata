@@ -23,8 +23,9 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
  *  the shins are in front and the nearest way keeps the skirt off them as before). 
  *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
  *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
- *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind). */
-export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0 }) {
+ *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind).
+ *  air: how much the moving air lifts it (a cape streams back and up when running, 2026-10-05 Saori: "もっと靡いて上に上がるように"). 0 = none. */
+export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0, air = 0 }) {
   const g0 = m.geometry, GP = g0.attributes.position.array, GN = g0.attributes.normal.array, R = Float32Array.from(GP), SI = g0.attributes.skinIndex.array, SW = g0.attributes.skinWeight.array, n = R.length / 3;   // GP / GN: what is drawn; R / NR: the built mesh (kept)
   // the skirt is a shell 1-2 cm thick: only its outer side is moved as cloth; each point of the inner side rides along with the nearest outer
   // point (keeping its offset from it, as skinned). Half the points and edges: the cost is about halved and the look is the same
@@ -173,10 +174,23 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   // sway: the character's own move since last frame (root space now ← root space then); the free points are carried back by it (they stay
   // where they were in the world), so the cloth trails behind and swings. A jump of more than 30 cm in a frame is a teleport: not carried
   const M0 = new THREE.Matrix4(), MD = new THREE.Matrix4(); let hasM0 = false;
+  // air: the character's speed (root space, smoothed) moves each point's target back against the motion and up, more toward the hem; the
+  // cloth can't stretch and the collar is pinned, so the cape swings back and up around it, and flutters a little
+  const MOVE = [0, 0, 0], VEL = [0, 0, 0], UH = new Float32Array(n); let clock = 0;
+  for (let v = 0; v < n; v++) UH[v] = Math.min(1, Math.max(0, (top - R[v * 3 + 1]) / (top - hem)));
+  function blow(dt) {
+    const k0 = 1 - Math.exp(-Math.min(dt, 0.1) * 5), inv = 1 / Math.max(dt, 1e-3); for (let q = 0; q < 3; q++) VEL[q] += (MOVE[q] * inv - VEL[q]) * k0; MOVE.fill(0); clock += dt;
+    const sp = Math.hypot(VEL[0], VEL[2]); if (sp < 0.05) return false;
+    const k = air * Math.min(1, sp / 3), bx = -VEL[0] / sp, bz = -VEL[2] / sp;
+    for (let v = 0, i = 0; v < n; v++, i += 3) { const u = UH[v]; if (!u) continue; const f = k * u, fl = 0.025 * Math.sin(clock * 9 + u * 5 + R[i] * 25);   // fl: a flutter, along the stream
+      T[i] += (bx * (0.32 + fl) ) * f; T[i + 1] += 0.24 * f * u; T[i + 2] += (bz * (0.32 + fl)) * f; }
+    return true;
+  }
   function carry() {
     MD.copy(root.matrixWorld).invert().multiply(M0); const e = MD.elements; M0.copy(root.matrixWorld);
     const moved = Math.abs(e[12]) + Math.abs(e[13]) + Math.abs(e[14]) + Math.abs(e[0] - 1) + Math.abs(e[5] - 1) + Math.abs(e[10] - 1);
     if (moved < 1e-7 || Math.hypot(e[12], e[13], e[14]) > 0.3) return false;
+    MOVE[0] -= e[12]; MOVE[1] -= e[13]; MOVE[2] -= e[14];   // how far the character moved this frame (root space now)
     for (const A_ of [X, P]) for (let v = 0, i = 0; v < n; v++, i += 3) { if (!W[v]) continue; const s = sway * W[v], x = A_[i], y = A_[i + 1], z = A_[i + 2];
       A_[i] = x + (e[0] * x + e[4] * y + e[8] * z + e[12] - x) * s; A_[i + 1] = y + (e[1] * x + e[5] * y + e[9] * z + e[13] - y) * s; A_[i + 2] = z + (e[2] * x + e[6] * y + e[10] * z + e[14] - z) * s; }
     return true;
@@ -207,6 +221,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       let moved = 0; for (let i = 0; i < T.length; i++) { const d = Math.abs(T[i] - T0[i]); if (d > moved) moved = d; } T0.set(T);
       if (first || instant) { X.set(T); P.set(T); for (let s = 0; s < (first ? 30 : 10); s++) step(0, 2, C, seat); first = false; still = 0; if (sway) { M0.copy(root.matrixWorld); hasM0 = true; } }   // settle: no motion carried over
       else { if (sway && hasM0 && carry()) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
+        if (air && blow(dt)) moved = 1;
         still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
         step(Math.pow(0.55, Math.min(dt, 0.05) * 60), 2, C, seat); }   // keep a little of the motion (55% per 1/60 s)
       t0 = now(); normals(); unskin(); PROF.normals = now() - t0;

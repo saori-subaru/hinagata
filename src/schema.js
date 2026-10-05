@@ -178,6 +178,7 @@ const MAIN = [
   ["outfit.cape.hem", L("すその高さ", "Hem height"), { when: { "outfit.cape.on": true }, min: 0.02, max: 0.5, step: 0.005, section: L("マント", "Cape") }],
   ["outfit.cape.flare", L("広がり", "Flare"), { when: { "outfit.cape.on": true }, min: 0, max: 0.8, step: 0.01, section: L("マント", "Cape") }],
   ["outfit.cape.wrap", L("肩の前への回り込み", "Wrap over the shoulders"), { when: { "outfit.cape.on": true }, min: -0.04, max: 0.1, step: 0.005, section: L("マント", "Cape"), help: L("肩の上で前へどこまで回るか(m)", "how far forward it reaches over the shoulders (m)") }],
+  ["outfit.cape.air", L("風になびく", "Streams in the wind"), { when: { "outfit.cape.on": true }, min: 0, max: 1.5, step: 0.05, section: L("マント", "Cape"), help: L("走ると後ろへ流れて持ち上がる量", "how far it streams back and lifts when running") }],
   ["outfit.cape.sway", L("なびき", "Sway"), { when: { "outfit.cape.on": true }, min: 0, max: 1, step: 0.05, section: L("マント", "Cape"), help: L("動いたときに後ろへ残る量", "how much it trails behind when the character moves") }],
   ["outfit.cape.gradient.on", L("すそグラデ", "Hem gradient"), { when: { "outfit.cape.on": true }, section: L("マント", "Cape") }],
   ["outfit.cape.gradient.color", L("すそグラデの色", "Hem gradient color"), { when: { "outfit.cape.gradient.on": true }, section: L("マント", "Cape") }],

@@ -446,7 +446,8 @@ export const DEFAULTS = {
       "wrap": 0.05,
       "collar": 0.78,
       "thick": 0.018,
-      "sway": 1
+      "sway": 1,
+      "air": 0.8
     },
     "dress": {
       "texture": {

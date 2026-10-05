@@ -303,7 +303,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
-    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1 }) : null;
+    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
   // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts
   { const gradT = (list, key) => { const U = GRAD[key]; let lo = Infinity, hi = -Infinity; for (const x of list) { const P = x.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) { lo = Math.min(lo, P[i]); hi = Math.max(hi, P[i]); } }
       for (const x of list) { const P = x.m.geometry.attributes.position.array, G = new Float32Array(P.length / 3); for (let v = 0; v < G.length; v++) G[v] = (hi - P[v * 3 + 1]) / ((hi - lo) || 1);
