@@ -375,6 +375,10 @@ How (`makeStretch`, body/index.js): a smooth monotone map of the height (fwd / i
 
 Defaults render pixel-identical. Not yet: lock hair is as long as before (in head space), so on a tall body long locks end higher; weapons held in the hands stretch with the torso band.
 
+### Tails: ponytail, twin tails, side tail (2026-10-05, Saori; done)
+
+`hair.tail.kind`: "pony" (one, high at the back), "twin" (two, a little behind the ears), "side" (one, `side` L / R). Each is a bundle of locks (hair/locks.js `tailLocks`, the same moving ribbons as the other locks, part "tails") from a tie on the hair: the tie's place is found on the hair's surface at an angle around the head and a height (head space; `angle` / `y`, null = each kind's own), and the bundle leaves it outward (a ponytail more upward), arcs over and falls (a cubic Bezier), its tips fanning out (`spread`), then is pushed off the head and the body. A hair tie (`tie`: a ring on the head bone, part "tailTie") wraps the bundle where it has left the head (at the root it was buried in the hair). `avatar.setTails(values)` rebuilds only them, so the editor's sliders apply at once. They work with any back hair; a ponytail reads best over short back hair.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

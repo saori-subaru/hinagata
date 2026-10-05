@@ -111,6 +111,15 @@ const MAIN = [
   ["hair.bangs", L("前髪", "Bangs"), { options: opts({ nendo: ["ふさ", "Clumps"], hime: ["姫カット", "Hime cut"], parted: ["分け目", "Parted"], side: ["横流し", "Side-swept"], none: ["なし", "None"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.back", L("後ろ髪", "Back"), { options: opts({ hang: ["ショート(たらし)", "Short, hanging"], short: ["ショート", "Short"], bob: ["ボブ", "Bob"], flip: ["外ハネ", "Flip"], long: ["ロング", "Long"] }), section: L("髪型", "Style"), apply: "setHair" }],
   ["hair.ahoge", L("アホ毛", "Ahoge"), { section: L("髪型", "Style"), apply: "setHair" }],
+  ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"] }), section: L("結び髪", "Tails") }],
+  ["hair.tail.side", L("結ぶ側", "Side"), { when: { "hair.tail.kind": "side" }, options: opts({ L: ["左", "Left"], R: ["右", "Right"] }), section: L("結び髪", "Tails") }],
+  ["hair.tail.length", L("長さ", "Length"), { min: 0.1, max: 0.9, step: 0.01, section: L("結び髪", "Tails") }],
+  ["hair.tail.volume", L("毛量", "Volume"), { min: 0.02, max: 0.07, step: 0.002, section: L("結び髪", "Tails"), help: L("結び目での束の太さ(m)", "the bundle's radius at the tie (m)") }],
+  ["hair.tail.lift", L("はね上がり", "Lift"), { min: 0, max: 0.12, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から外へ張り出してから落ちるまで(m)", "how far it stands out from the tie before falling (m)") }],
+  ["hair.tail.y", L("結ぶ高さ", "Tie height"), { min: 0.95, max: 1.22, step: 0.005, nullable: true, section: L("結び髪", "Tails"), help: L("null = 種類ごとの高さ", "null = each kind's own height") }],
+  ["hair.tail.angle", L("結ぶ位置(後ろへ)", "Tie position (toward the back)"), { min: 60, max: 180, step: 1, nullable: true, section: L("結び髪", "Tails"), help: L("頭のまわりの角度。90 = 真横、180 = 真後ろ。null = 種類ごと", "degrees around the head: 90 = the side, 180 = the back. null = each kind's own") }],
+  ["hair.tail.tie.on", L("髪ゴム", "Hair tie"), { section: L("結び髪", "Tails") }],
+  ["hair.tail.tie.color", L("髪ゴムの色", "Tie color"), { when: { "hair.tail.tie.on": true }, section: L("結び髪", "Tails") }],
   ["hair.sculpt.shortLocks.count", L("毛束の数", "Lock count"), { when: { "hair.back": "hang" }, min: 6, max: 30, step: 1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.shortLocks.width", L("毛束の幅", "Lock width"), { when: { "hair.back": "hang" }, min: 0.03, max: 0.16, step: 0.005, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.shortLocks.thick", L("毛束の厚み", "Lock thickness"), { when: { "hair.back": "hang" }, min: 0.1, max: 0.6, step: 0.01, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("幅に対する厚さ", "thickness for the width") }],
@@ -198,6 +207,7 @@ function place(path) {
   if (top === "quality") return { group: "quality", cost: "body" };
   if (top === "body") return { group: "body", cost: "body" };
   if (path.startsWith("hair.sculpt.nendo.")) return { group: "hair", cost: "hair", apply: "setBangs" };   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
+  if (path.startsWith("hair.tail.")) return { group: "hair", cost: "hair", apply: "setTails" };   // tails: avatar.setTails rebuilds only them
   if (path === "hair.drawn") return { group: "hair", cost: "hair", apply: "setDrawn" };   // locks drawn by hand: avatar.setDrawnHair
   if (/^hair\.sculpt\.(shortLocks|long)\.(lie\.)?edits$/.test(path)) return { group: "hair", cost: "hair", apply: "setLocks" };   // the back locks' own changes (editor/src/backs.js)   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
   if (top === "hair") return { group: "hair", cost: p[1] === "paint" ? "paint" : "hair" };

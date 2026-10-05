@@ -496,6 +496,25 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "tail": {
+      "kind": "none",
+      "side": "L",
+      "angle": null,
+      "y": null,
+      "length": 0.34,
+      "volume": 0.04,
+      "count": 14,
+      "width": 0.055,
+      "thick": 0.45,
+      "lift": 0.05,
+      "spread": 1.5,
+      "stiff": 1,
+      "tie": {
+        "on": true,
+        "color": "#c94a4a",
+        "size": 1
+      }
+    },
     "back": "hang",
     "ahoge": true,
     "sculpt": {
