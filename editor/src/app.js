@@ -53,7 +53,7 @@ async function rebuild() {
   try {
     do {
       again = false;
-      const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
+      const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality, spare: true });
       av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }

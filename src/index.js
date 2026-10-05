@@ -41,12 +41,14 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 /**
  * Build an avatar.
  * options:  see DEFAULTS (src/options.js); anything left out uses the default.
- * settings: { quality: "game" (default) | "lite" | "high" | "low" — mesh density. "high": 6.8 mm cells, "low": 9.5 mm. "game": built as "high",
- *              then thinned to about a fifth (meshoptimizer; the face kept as built, skirts and capes built at 10.5 mm and not thinned): close to "high" in looks at a quarter to a third of
- *              its vertices; the first build takes longer (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about
- *              a third to a fifth of the game's vertices. Without meshoptimizer (offline), "game" and "lite" build unthinned at 13.6 mm.
+ * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
+ *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
+ *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
+ *              long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
+ *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr),
+ *             spare: false (default) — armor that isn't worn is built only when it is put on (setWorn); true builds it now (an editor),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
@@ -61,18 +63,19 @@ function shapeOnly(OPT) {
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
-export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
-  // "game" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to
-  // about a fifth (meshoptimizer): about the vertices it had at its own coarser cells, the look of "high" (the thinning keeps the triangles
-  // where the surface turns and spends few on flat parts, which a coarser grid can't). Costs a longer first build (cached after that).
-  // "lite": the coarser cells thinned to 15% and lighter hair locks, about a fifth of those vertices; the same look at a game's distance
-  const LITE = quality === "lite", GAME = quality === "game" && !cell;
-  let H = cell || { game: 0.0068, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
-  let simplify = simplifyAsked ?? (LITE ? 0.15 : GAME ? 0.22 : 1);
+  // "fine" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to
+  // about a fifth (meshoptimizer): the vertices "game" has, the look of "high" (the thinning keeps the triangles where the surface turns
+  // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the
+  // tennis: 3.5 s → 9.9 s), and a game's players wait for that; so "game" stays the fast one.
+  // "lite": the game's cells thinned to 15% and lighter hair locks, about a fifth of those vertices; the same look at a game's distance
+  const LITE = quality === "lite", FINE = quality === "fine" && !cell;
+  let H = cell || { game: 0.0136, fine: 0.0068, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.22 : 1);
   let MS = null;   // meshoptimizer's simplifier, only when thinning
   if (simplify < 1) {
     const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)
@@ -81,16 +84,20 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const why = `the "meshoptimizer" package couldn't be loaded from your import map or ${MO}`;
       if (simplifyAsked != null) throw new Error(`settings.simplify needs it: ${why}. ` + e.message);
       console.warn(`Hinagata: ${why}; building "${quality}" unthinned at the coarser cells.`, e);   // offline: still an avatar
-      simplify = 1; if (GAME) H = 0.0136;
+      simplify = 1; if (FINE) H = 0.0136;
     }
   }
-  // the game's skirt and cape: built at the cells the coarser grid gives cloth and not thinned (thinned, the cloth's uneven triangles drew
+  // the fine quality's skirt and cape: built at the cells the coarser grid gives cloth and not thinned (thinned, the cloth's uneven triangles drew
   // broken lines over a seated lap; 2026-10-05). The same cost to simulate as before.
-  const clothH = GAME && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
+  const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
   const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
+  // armor that isn't worn is not built now (2026-10-05: the tennis game waited for a suit of armor nobody wore, as long as for the clothes):
+  // it is built when it is put on (setWorn), here on the main thread. settings.spare builds it anyway (the editor: everything ready to put
+  // on at once). What the cache has comes anyway (it costs nothing)
+  const LATER = new Set(!spare && !OPT.outfit.armor.on ? ARMOR.filter((k) => !hit?.[k]) : []);
   let building = true;
 
   lap("cache");
@@ -229,7 +236,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, clothH, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
     const hairN = hairPartName(hairPick), jh = need(hairN) ? run(hairN) : null;   // the hair doesn't need the body: start it together with the body
     if (need("body")) await run("body");
-    await Promise.all([jh, ...CLOTHES.filter(need).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
+    await Promise.all([jh, ...CLOTHES.filter((n) => need(n) && !LATER.has(n)).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
   }
   lap("workers");
   // hair paint (anime style, not lighting): thin darker strands flowing from the crown, and a bright band (angel ring) around the top.
@@ -317,7 +324,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
-  const meshPart = (name, h = H) => { const s = partSpec(name, { OPT, H: h, clothH, kit, bodyAt }); return mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft); };   // the part table (parts.js) is shared with the workers
+  const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
+  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft);
+    if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
   addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin); paintable(parts.body, "body");
@@ -368,7 +377,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.laces = skinned(meshPart("laces"), OPT.outfit.shoes.laceColor, 0.002);   // laced sneakers' laces (empty otherwise)
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
-  for (const k of ARMOR) { parts[k] = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, AO.color); } }   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
+  const armorPart = (k) => { const x = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, AO.color); } return x; };
+  for (const k of ARMOR) parts[k] = armorPart(k);   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
   const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" || k === "weaponLGrip" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : WO.color;
   for (const k of WEAPONS) { parts[k] = skinned(meshPart(k), weaponColor(k), 0.004); if (k === "weaponR" || k === "weaponL") { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, WO.color); } }   // in the hands (clothes/weapons.js)
   lap("shadeAndClothes");
@@ -438,7 +448,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
   const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => OPT.outfit[g].on !== false || isDress(g);
-  const wear = (g, on) => { OPT.outfit[g].on = on; for (const k of GARMENTS[g]) show(k, on || isDress(g));
+  const wear = (g, on) => { OPT.outfit[g].on = on;
+    if (g === "armor" && on && LATER.size) for (const k of ARMOR) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } x.m.material.dispose(); x.o.material.dispose(); LATER.delete(k); parts[k] = armorPart(k); }   // built now (see LATER)
+    for (const k of GARMENTS[g]) show(k, on || isDress(g));
     if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
       if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes", "cape"]) for (const k of GARMENTS[h]) show(k, !plate && worn(h)); show("hair", !plate); for (const k of LOCK_PARTS) if (parts[k]) show(k, !plate); }
       else if (plate) for (const k of GARMENTS[g]) show(k, false); } };

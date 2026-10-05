@@ -133,7 +133,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     if (tab === "look") {
       return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("quality")), h("span", { class: "cost" }, t("cost_body"))),
-        h("div", { class: "seg full", role: "group", "aria-label": t("quality") }, ["lite", "game", "high"].map((q) => h("button", { type: "button", "aria-pressed": String(ctx.quality() === q), onclick: () => ctx.onQuality(q) }, t(`q_${q}`)))));
+        h("div", { class: "seg full", role: "group", "aria-label": t("quality") }, ["lite", "game", "fine", "high"].map((q) => h("button", { type: "button", "aria-pressed": String(ctx.quality() === q), onclick: () => ctx.onQuality(q) }, t(`q_${q}`)))));
     }
     return null;
   }
