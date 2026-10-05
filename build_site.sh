@@ -3,7 +3,7 @@
 #  build_site.sh — the files the site serves, into dist/ (no upload): sh build_site.sh
 #
 #  The site carries what pages load (and llms.txt, the agents' guide); notes and working files stay out (the same list as devlog's build_site.sh):
-#  ⛔ notes (*.md), working data (*.psd *.py), tools (tools/ docs/ facekit/ examples/), the reference sheet (sotai-ref.jpg)
+#  ⛔ notes (*.md), working data (*.psd *.py), tools (tools/ docs/ facekit/), the reference sheet (sotai-ref.jpg). examples/ is in: llms.txt links it
 #  ⚠️ don't drop what a page loads: before excluding something new, grep the html / js for it
 #  The top page (/) goes to the editor; the test page is /body.html
 # ============================================================
@@ -14,7 +14,7 @@ mkdir dist
 tar -cf - \
   --exclude='./.git' --exclude='./.github' --exclude='./dist' --exclude='.gitignore' --exclude='./build_site.sh' \
   --exclude='*.md' --exclude='*.psd' --exclude='*.py' \
-  --exclude='./tools' --exclude='./docs' --exclude='./facekit' --exclude='./examples' \
+  --exclude='./tools' --exclude='./docs' --exclude='./facekit' \
   --exclude='sotai-ref.jpg' \
   . | tar -C dist -xf -
 # the live-sync helper is a tool, but people run it from the site (one file, no clone): curl -O https://hinagata.pages.dev/sync.mjs

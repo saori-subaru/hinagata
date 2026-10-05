@@ -13,10 +13,11 @@ Source: https://github.com/saori-subaru/hinagata (public). Everything below is s
    ```sh
    curl -O https://hinagata.pages.dev/sync.mjs        # Node 18+, no dependencies
    node sync.mjs character.json                       # keep it running (in the background); it prints a link
+                                                      # (port 8790; --port 8800 for another, e.g. when the game's server is on 8790)
    ```
    Give the user the link it prints (`https://hinagata.pages.dev/editor/?sync=…&key=…`). From then on, every save you make to the file shows
    in their editor at once, and what they change there is written back into the file (only what differs from the defaults, keys sorted):
-   read the file again before you change it, and expect their edits in `git diff`.
+   read the file again before you change it (with git, their edits show in `git diff`).
 3. Optional, if the user wants you to see the character: run the same helper as an MCP server instead of the plain one (not both: one port):
    `claude mcp add hinagata -- node /abs/path/sync.mjs /abs/path/character.json --mcp`. Tools: `editor_link`, `get_recipe`,
    `update_recipe` ({ set: { "dotted.path": value }, reset: [paths] }), `check_recipe`, `find_options` (by words, Japanese or English) and
@@ -44,7 +45,11 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta()); renderer.rend
 - three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
 - `createAvatar(recipe, { quality: "game" })`: "game" (default, lighter) or "high". Scale `avatar.object` to your world as you like.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine.
-- A complete minimal page: `examples/minimal.html` in the repository.
+- A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).
+- Weight: one avatar at "game" quality is about 100k triangles, and `update` takes about 5 ms (10 with a skirt or long hair: hair and cloth
+  are simulated on the CPU; measured on a 2.8 GHz cloud CPU). Budget for it with several on screen; don't update avatars nobody sees.
+  To thin the meshes: `createAvatar(recipe, { simplify: 0.3 })` keeps 30% of the triangles (add `"meshoptimizer":
+  "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.module.js"` to the import map). Headless browsers draw it slowly; a real GPU doesn't.
 
 ## The recipe
 
@@ -57,8 +62,9 @@ Only what differs from the defaults, nested as the options are. Example:
 ```
 - Every option, its type, range or choices, default and what it does (Japanese and English): https://hinagata.pages.dev/options.schema.json
   (`options` by dotted path; `tier: "main"` are the ones the editor shows first). Prefer main options; the rest is fine-tuning.
-- Check a recipe: `import { checkOptions } from ".../src/index.js"; checkOptions(recipe)` → [{ path, problem }] (empty = fine). Unknown keys are
-  ignored by the engine, so check: a typo silently does nothing.
+- Check a recipe: `checkOptions(recipe)` → [{ path, problem }] (empty = fine). In a page it comes from `src/index.js`; in Node (no three.js)
+  import it from `https://hinagata.pages.dev/src/schema.js` (or the repository's `src/schema.js`). Unknown keys are ignored by the engine, so
+  check: a typo silently does nothing.
 - Body types: `import { BODY_TYPES }` (standard, toddler, girl, sturdy, and …Tall versions): merge `BODY_TYPES.girlTall` into the recipe.
 - Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
   by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
@@ -70,16 +76,24 @@ Only what differs from the defaults, nested as the options are. Example:
 - `avatar.play(name)`; `avatar.update(dt)` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
   crawl, jumpRise, jumpAir, jumpLand, fall, hardLand, climb, climbOver, sitChair, sitChairGirl, sitFloor, hugKnees, wave, cheer, banzai, guard,
   throw, chop, stab, pickUp, carry, carryWalk, push, roll, stumble, knockdown, swim, treadWater, wade, glide, sleep, drink, eat, pant, shiver,
-  limp, lookAround, listen, hide, balance. One-shot moves (`ONE_SHOT`: stumble, roll, throw, pickUp, stab, knockdown…) loop over their length:
-  play from t = 0 and switch away after `ONE_SHOT[name]` seconds.
+  limp, lookAround, listen, hide, balance. A pose is a function of the avatar's clock; `avatar.play(name)` doesn't reset it. To start a move
+  from its beginning: `avatar.play(name); avatar.update(0, { t: 0 })` (`update(dt, { t })` sets the clock to t; later updates go on from
+  there). One-shot moves (`ONE_SHOT`: stumble, roll, throw, pickUp, stab, knockdown…) loop over their length: start them that way and switch
+  away after `ONE_SHOT[name]` seconds.
 - Moving the avatar: move `avatar.object` yourself. So the feet don't slide, play the gait at the speed that matches:
   `const g = measureGait(avatar, "run")` (units / s at playback speed 1; `measureStride(avatar, "walk")` for the walk; measure once after
   createAvatar, it plays the pose to measure) → each frame `avatar.update(dt * v / g)`
   while you move the object `v * dt`. The hair, skirts and capes trail behind by themselves when the object moves.
 - Turning: rotate `avatar.object` about y (it faces +z).
-- Your own pose: `POSES.swing = (t) => ({ b: { "upperArm.R": [x, y, z], … }, y: 0 })` — Euler angles (radians) per bone (hips, spine, chest,
-  upperChest, neck, head, shoulder.L/R, upperArm.L/R, lowerArm.L/R, hand.L/R, upperLeg.L/R, lowerLeg.L/R, foot.L/R; fingers.L/R…), y: hip lift.
-  There's no racket or ball swing built in: make one this way (look at `throw` / `chop` in src/motion for how they're written).
+- Your own pose: `POSES.swing = (t) => ({ b: { "upperArm.R": [x, y, z], … }, y: 0 })` — Euler angles (radians, XYZ) per bone (hips, spine,
+  chest, upperChest, neck, head, shoulder.L/R, upperArm.L/R, lowerArm.L/R, hand.L/R, upperLeg.L/R, lowerLeg.L/R, foot.L/R; fingers.L/R…),
+  y: hip lift; bones not listed rest. Each bone turns about its joint in axes that are the world's at rest (the character faces +z, its left
+  is +x): +x tips a bone that points up (spine, neck, head) forward and swings one that points down (thigh, shin) back (a knee bends with
+  +x on the shin; a thigh swings forward with −x); y turns about the vertical; z rolls sideways. The arms rest out to the sides (an A-pose,
+  about 44° down from level), so an arm's swings are easiest found by trying. There's no racket or ball swing built in: make one this way
+  (`throw` and `chop` in https://hinagata.pages.dev/src/motion/survival.js, `run` in src/motion/run.js show how poses are written).
+- Something in a hand (a racket, a sword): add it to the bone, `avatar.bones["hand.R"].add(racket)`, positioned from the wrist joint in
+  those rest axes (the fingers point down-out along the arm); it moves with the hand. (The engine's own weapons: `outfit.weapon`.)
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
   `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
