@@ -4855,6 +4855,86 @@
     "en": "quality"
    }
   },
+  "paint.body.src": {
+   "path": "paint.body.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "body › src"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": "setPaint",
+   "nullable": true,
+   "section": {
+    "en": "body"
+   }
+  },
+  "paint.shirt.src": {
+   "path": "paint.shirt.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "shirt › src"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": "setPaint",
+   "nullable": true,
+   "section": {
+    "en": "shirt"
+   }
+  },
+  "paint.pants.src": {
+   "path": "paint.pants.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "pants › src"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": "setPaint",
+   "nullable": true,
+   "section": {
+    "en": "pants"
+   }
+  },
+  "paint.dress.src": {
+   "path": "paint.dress.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "dress › src"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": "setPaint",
+   "nullable": true,
+   "section": {
+    "en": "dress"
+   }
+  },
+  "paint.cape.src": {
+   "path": "paint.cape.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "cape › src"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": "setPaint",
+   "nullable": true,
+   "section": {
+    "en": "cape"
+   }
+  },
   "outfit.shirt.on": {
    "path": "outfit.shirt.on",
    "type": "boolean",

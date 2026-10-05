@@ -376,6 +376,13 @@ export const DEFAULTS = {
     "hairCell": 0.85,
     "shirtCell": 0.75
   },
+  "paint": {
+    "body": { "src": null },
+    "shirt": { "src": null },
+    "pants": { "src": null },
+    "dress": { "src": null },
+    "cape": { "src": null }
+  },
   "outfit": {
     "shirt": {
       "on": true,

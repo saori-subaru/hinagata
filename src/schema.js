@@ -260,6 +260,7 @@ function place(path) {
   if (top === "quality") return { group: "quality", cost: "body" };
   if (top === "body") return { group: "body", cost: "body" };
   if (path.startsWith("hair.sculpt.nendo.")) return { group: "hair", cost: "hair", apply: "setBangs" };   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)
+  if (top === "paint") return { group: "outfit", cost: "instant", apply: "setPaint" };   // paint drawn on the character (src/paint.js): avatar.setPaint
   if (/^outfit\.\w+\.texture\./.test(path)) return { group: "outfit", cost: "instant", apply: "setTexture" };   // pictures on the garments: avatar.setTexture
   if (/^(hair|outfit\.\w+)\.gradient\./.test(path)) return { group: p[0] === "hair" ? "hair" : "outfit", cost: "instant", apply: "setGradient" };   // gradients: avatar.setGradient
   if (path.startsWith("hair.tail.")) return { group: "hair", cost: "hair", apply: "setTails" };   // tails: avatar.setTails rebuilds only them

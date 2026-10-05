@@ -71,6 +71,19 @@ vec4 tSample() {
   m.customProgramCacheKey = () => "tex|" + key;
   return m;
 }
+/** Paint over everything (src/paint.js): the part's atlas, looked up from paintP / paintN (each vertex's place, base proportions, and normal
+ *  when the mesh was made). Drawn after the color, the picture and the gradient (it hooks in at the alpha map, after them all).
+ *  U: { on, map } as uniforms / glsl: paintGLSL(layout) */
+export function withPaint(m, U, glsl) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { pOn: U.on, pMap: U.map });
+    sh.vertexShader = "attribute vec3 paintP;\nattribute vec3 paintN;\nvarying vec3 vPaintP;\nvarying vec3 vPaintN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaintP = paintP; vPaintN = paintN;");
+    sh.fragmentShader = "uniform float pOn;\nuniform sampler2D pMap;\nvarying vec3 vPaintP;\nvarying vec3 vPaintN;\n" + glsl + "\n" + sh.fragmentShader.replace("#include <alphamap_fragment>",
+      "if (pOn > 0.5) { vec4 pc = texture2D(pMap, paintUV(vPaintP, vPaintN)); diffuseColor.rgb = mix(diffuseColor.rgb, pow(pc.rgb, vec3(2.2)), pc.a); }\n#include <alphamap_fragment>"); };
+  m.customProgramCacheKey = () => "paint|" + glsl + "|" + key;   // (the layout differs between the body and the garments)
+  return m;
+}
 // metal (the armor): toon bands with more contrast, a darker rim where the surface turns away, and a hard white glint (anime-style shine)
 const metalRamp = (() => { const d = new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {

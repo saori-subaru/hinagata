@@ -402,6 +402,14 @@ Uniforms are shared per garment, so `avatar.setTexture` is instant; a new src lo
 
 A sharper blend between the projections (normal^8 instead of ^4) broke the shader on the test GPU (only a patch of the picture showed): kept at ^4.
 
+### Painting on the character (2026-10-05, Saori: "VRoid みたくアプリ上でテクスチャを描けるといい"; done)
+
+The meshes have no UVs, so each paintable part (`paint.body / shirt / pants / dress / cape .src`) has an atlas of six views of it (src/paint.js `paintLayout`): front, back, its left, its right, above, below, 600 px per m over a fixed box. A point of the surface shows the view its normal faces most (`paintGLSL`, in `withPaint`, materials.js, drawn over the color, the picture and the gradient). Points are taken where they were when the mesh was made, at the base proportions (`paintP`, before `body.proportion` stretches the body) with their normal (`paintN`), so paint stays put when the body moves, when its proportions change (it stretches with the body) and mostly when its shape changes a little.
+
+The editor's brush (editor/src/paint.js, the outfit tab's "ペイント"): the left button paints whatever part it touches (`avatar.paintTargets()`). The touched point is turned back into the part's terms by interpolating `paintP` / `paintN` over the posed triangle, and a soft dab is drawn into every view that point could show in (`paintViews`: its own, and the next where the normal is nearly between), clipped to each view; so a stroke runs on across where the views meet, and from one part onto another (shorts → skin). Dabs fill the gaps between touches. The part's canvas shows at once (`avatar.paintSurface`); releasing writes it into the recipe as a PNG (one undo step; `sync` keeps the engine from reloading what it already shows). Eraser, color, size, opacity, softness; each painted part can be cleared.
+
+Not yet: a view paints every surface of the part facing that way at that place (a garment's inside behind its outside gets the same paint; mostly unseen); hair isn't paintable.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

@@ -9,6 +9,7 @@ import { createBangTool } from "./bangs.js";
 import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
 import { createTieTool } from "./ties.js";
+import { createPaintTool } from "./paint.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -50,7 +51,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -76,6 +77,7 @@ function applyInstant(av, p, v) {
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
+    case "setPaint": av.setPaint(k[1], v); return true;
     case "setTexture": av.setTexture(k[1], { [last]: v }); return true;
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
@@ -102,7 +104,8 @@ store.subscribe((paths, why) => {
 const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   // moving the bangs' tufts on the face (bangs.js)
 const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
 const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
-const ties = createTieTool({ vp, store, onChange: () => panel.render() });   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
+const ties = createTieTool({ vp, store, onChange: () => panel.render() });
+const paint = createPaintTool({ vp, store, onChange: () => panel.render() });   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
 // my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
 const HAIRS_KEY = "hinagata.editor.hairs";
 const hairs = {
@@ -121,7 +124,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
-  bangs, draw, hairs, backs, ties,
+  bangs, draw, hairs, backs, ties, paint,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)

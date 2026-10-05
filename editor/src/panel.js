@@ -184,6 +184,24 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return h("div", { class: "sec" }, kids);
   }
+  // painting on the character (editor/src/paint.js)
+  function paintBlock() {
+    const P = ctx.paint; if (!P) return null; const S = P.state, painted = P.painted();
+    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("paintTitle"))),
+      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => P.toggle() }, t("paintOn")),
+        h("button", { class: "chip", type: "button", "aria-pressed": String(S.erase), onclick: () => P.set("erase", !S.erase) }, t("paintErase")))];
+    if (S.on) kids.push(h("div", { class: "help" }, t("paintHelp")));
+    { const id = `f${uid++}`, inp = h("input", { id, type: "color", value: S.color }); inp.addEventListener("change", () => P.set("color", inp.value));
+      kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t("paintColor"))), h("div", { class: "row" }, inp))); }
+    for (const [k, key, min, max, step] of [["size", "paintSize", 0.002, 0.06, 0.001], ["opacity", "paintOpacity", 0.05, 1, 0.01], ["soft", "paintSoft", 0, 1, 0.01]]) {
+      const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
+      const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
+      rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
+      rng.addEventListener("change", () => P.set(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) P.set(k, +num.value); });
+      kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
+    if (painted.length) kids.push(h("div", { class: "chips" }, painted.map((k) => h("button", { class: "chip", type: "button", title: t("paintClear"), onclick: () => { if (confirm(t("paintClearQ", t(`paint_${k}`)))) P.clear(k); } }, `${t(`paint_${k}`)} ×`))));
+    return h("div", { class: "sec" }, kids);
+  }
   // the tails' ties by hand (editor/src/ties.js): only with tails
   function tiesBlock() {
     const T = ctx.ties; if (!T || !T.usable) return null;
@@ -265,6 +283,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
     if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
+    if (tab === "outfit") { const b = paintBlock(); if (b) panelEl.append(b); }
     if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), tiesBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
     const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]);   // drawn locks: their own block if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
     panelEl.scrollTop = scroll;

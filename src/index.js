@@ -11,7 +11,8 @@ import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex } from "./materials.js";
+import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
+import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch } from "./body/index.js";
@@ -53,7 +54,7 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
+  const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
@@ -234,6 +235,24 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       im.onerror = () => { console.warn(`Hinagata: couldn't load the picture for ${k} (outfit.${k}.texture.src)`); if (U.src === src) U.on.value = 0; ok(); };
       im.src = src; }));
   }
+  // paint (src/paint.js): one atlas per paintable part, shown through uniforms; the editor's brush draws into a canvas behind it (paintSurface)
+  const PAINT = Object.fromEntries(PAINT_TARGETS.map((k) => { const L = paintLayout(k); return [k, { on: { value: 0 }, map: { value: texObj() }, L, glsl: paintGLSL(L), src: null, surface: null, load: Promise.resolve() }]; }));
+  const paintSrc = (k) => OPT.paint?.[k]?.src ?? null;
+  function loadPaint(k) {   // the paint's picture into the part's atlas (or its canvas, when the brush has one)
+    const U = PAINT[k], src = paintSrc(k); if (src === U.src) return U.load; U.src = src;
+    const S = U.surface;
+    if (!src) { if (S) { S.ctx.clearRect(0, 0, S.canvas.width, S.canvas.height); S.update(); } else U.on.value = 0; return (U.load = Promise.resolve()); }
+    return (U.load = new Promise((ok) => { const im = new Image(); im.crossOrigin = "anonymous";
+      im.onload = () => { if (U.src === src) { if (U.surface) { const C = U.surface; C.ctx.clearRect(0, 0, C.canvas.width, C.canvas.height); C.ctx.drawImage(im, 0, 0, C.canvas.width, C.canvas.height); C.update(); }
+        else { const t = U.map.value; t.dispose(); t.image = im; t.needsUpdate = true; U.on.value = 1; } } ok(); };
+      im.onerror = () => { console.warn(`Hinagata: couldn't load the paint for ${k} (paint.${k}.src)`); ok(); };
+      im.src = src; }));
+  }
+  // a part's points for the paint: where each was when made, at the base proportions, and its normal
+  const paintable = (x, k) => { const g = x.m.geometry, P = g.attributes.position.array, Q = new Float32Array(P.length);
+    for (let i = 0; i < P.length; i += 3) { Q[i] = P[i]; Q[i + 1] = ST.inv(P[i + 1]); Q[i + 2] = P[i + 2]; }
+    g.setAttribute("paintP", new THREE.BufferAttribute(Q, 3)); g.setAttribute("paintN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3));
+    x.m.material = withPaint(x.m.material, PAINT[k], PAINT[k].glsl); x.paint = k; };
   GRAD.bangs = { ...GRAD.hair, on: { value: OPT.hair.gradient?.on && OPT.hair.gradient.bangs !== false ? 1 : 0 } };   // the bangs: the hair's, unless gradient.bangs is off
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
@@ -257,7 +276,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const meshPart = (name, h = H) => { const s = partSpec(name, { OPT, H: h, kit, bodyAt }); return mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft); };   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
-  addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
+  addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin); paintable(parts.body, "body");
   const SKO = skirtOf(OPT);   // a skirt or a dress's skirt (options.js), or null
   parts.shirt = skinned(meshPart("shirt"), SKO?.dress ? SKO.color : OPT.outfit.shirt.color, 0.005, "shirt");   // a dress: the top is the dress's color too
   parts.pants = skinned(meshPart("pants"), SKO?.color ?? OPT.outfit.pants.color, 0.005, SKO ? null : "pants");   // a skirt moves as cloth (its normals too): it keeps the mesh's own
@@ -286,10 +305,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       for (const x of list) { const P = x.m.geometry.attributes.position.array, G = new Float32Array(P.length / 3); for (let v = 0; v < G.length; v++) G[v] = (hi - P[v * 3 + 1]) / ((hi - lo) || 1);
         x.m.geometry.setAttribute("gradT", new THREE.BufferAttribute(G, 1));
         x.m.geometry.setAttribute("texP", new THREE.BufferAttribute(Float32Array.from(P), 3)); x.m.geometry.setAttribute("texN", new THREE.BufferAttribute(Float32Array.from(x.m.geometry.attributes.normal.array), 3));   // where each point was when made (the picture stays on the cloth when it moves)
-        x.m.material = withTex(withGrad(x.m.material, U), TEX[key]); } };
+        x.m.material = withTex(withGrad(x.m.material, U), TEX[key]); paintable(x, key); } };
     if (SKO?.dress) gradT([parts.shirt, parts.pants], "dress"); else { gradT([parts.shirt], "shirt"); gradT([parts.pants], "pants"); }
     if (CA.on) gradT([parts.cape], "cape"); }
-  await Promise.all(Object.keys(TEX).map(loadTex));   // the pictures given in the options show from the first frame
+  await Promise.all([...Object.keys(TEX).map(loadTex), ...PAINT_TARGETS.map(loadPaint)]);   // the pictures given in the options show from the first frame
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color, 0.005, "shoes");
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
@@ -545,6 +564,24 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       Object.assign(T, values); U.mode.value = TEX_MODE[T.mode] ?? 0; U.scale.value = T.scale; U.rot.value = (T.rotate ?? 0) * Math.PI / 180; U.off.value.set(T.x ?? 0, T.y ?? 0); U.opacity.value = T.opacity ?? 1; U.blend.value = TEX_BLEND[T.blend] ?? 0;
       return loadTex(target);
     },
+    /** Paint (instant): the picture of a part's atlas (src/paint.js), as a path or data URL, null = none. target: "body" | "shirt" | "pants" | "dress" | "cape".
+     *  Kept in options (paint.<target>.src). Resolves when it shows. */
+    setPaint(target, src) {
+      if (!PAINT[target]) throw new Error(`Unknown paint target "${target}". Available: ${PAINT_TARGETS.join(", ")}`);
+      (OPT.paint ??= {})[target] = { src: src ?? null }; return loadPaint(target);
+    },
+    /** For a brush: the part's atlas as a canvas that shows on the character (drawn at once; call update() after drawing).
+     *  { canvas, ctx, layout, update(), sync(src) } — sync: the canvas now shows this src (so setting it in the options doesn't reload it). */
+    paintSurface(target) {
+      const U = PAINT[target]; if (!U) throw new Error(`Unknown paint target "${target}"`);
+      if (!U.surface) { const canvas = Object.assign(document.createElement("canvas"), { width: U.L.W, height: U.L.H }), ctx = canvas.getContext("2d"), old = U.map.value;
+        if (U.on.value && old.image) ctx.drawImage(old.image, 0, 0, canvas.width, canvas.height);
+        const tex = new THREE.CanvasTexture(canvas); tex.anisotropy = 4; old.dispose(); U.map.value = tex; U.on.value = 1;
+        U.surface = { canvas, ctx, layout: U.L, update() { tex.needsUpdate = true; }, sync(src) { U.src = src; U.load = Promise.resolve(); } }; }
+      return U.surface;
+    },
+    /** The meshes a brush can paint, each with its paint target (a dress's top and skirt both paint "dress"). */
+    paintTargets() { return Object.values(parts).filter((x) => x.paint && x.m.visible).map((x) => ({ target: x.paint, mesh: x.m })); },
     /** Tails (options.hair.tail: { kind: "none" | "pony" | "twin" | "side", side, angle, y, length, volume, count, width, thick, lift, spread, stiff, tie: { on, color, size } }).
      *  Rebuilds only them and their ties. */
     setTails(values) {
@@ -591,7 +628,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** Fingerprint of mesh positions and skin weights (for checking refactors). */
     checksum() { return ["body", "shirt", "pants", "socks", "shoes", "soles", "hair"].map((k) => parts[k]).map((x) => { const a = x.m.geometry.attributes; let h = 0; for (const k of ["position", "skinIndex", "skinWeight"]) { const v = a[k].array; for (let i = 0; i < v.length; i++) h = (h * 31 + Math.round(v[i] * 1e5)) % 1000000007; } return h; }); },
 
-    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); for (const U of Object.values(TEX)) U.map.value.dispose(); root.removeFromParent(); },
+    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT)]) U.map.value.dispose(); root.removeFromParent(); },
   };
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
