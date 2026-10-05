@@ -218,15 +218,19 @@ function renderViewControls() {
   const M = vp.motion;
   $("poses").replaceChildren(
     h("button", { class: "play", type: "button", "aria-label": M.playing ? t("pause") : t("play"), title: M.playing ? t("pause") : t("play"), html: M.playing ? ICON.pause : ICON.play, onclick: () => { M.playing = !M.playing; renderViewControls(); } }),
-    h("button", { class: "cur", type: "button", "aria-haspopup": "true", "aria-expanded": String(motionOpen), title: t("pickMotion"), onclick: () => { motionOpen = !motionOpen; renderViewControls(); } }, poseName(M.pose), h("span", { html: ICON.caret })),
+    h("div", { class: "quick" }, QUICK.filter((k) => POSES[k]).map((k) => h("button", { type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))),   // (a narrow screen scrolls these; play and "more" stay)
+    h("button", { class: "more", type: "button", "aria-haspopup": "true", "aria-expanded": String(motionOpen), "aria-pressed": String(!QUICK.includes(M.pose)), title: t("pickMotion"),
+      onclick: () => { motionOpen = !motionOpen; renderViewControls(); } }, QUICK.includes(M.pose) ? t("moreMotions") : poseName(M.pose), h("span", { html: ICON.caret })),
     h("select", { "aria-label": t("speed"), title: t("speed"), onchange: (e) => { M.speed = +e.target.value; } }, [0.25, 0.5, 1, 1.5].map((s) => h("option", { value: s, selected: s === M.speed }, `${s}×`))));
   const L = $("motionList"); L.hidden = !motionOpen;
   if (motionOpen) L.replaceChildren(...motionGroups().map(([g, ks]) => h("section", {}, h("h3", {}, groupName(g)),
     h("div", { class: "chips" }, ks.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))))));
 }
-// the motions, in groups (2026-10-05, Saori: "下に横並びだと動きが全部入らない" — 57 of them in one row ran off the screen). The bar at the
-// bottom shows the one playing; it opens this list. First the ones played through with what they need (a ledge, a wall: demos.js);
-// a motion not listed here goes under "other"
+// the motions (2026-10-05, Saori: "下に横並びだと動きが全部入らない" / "中央に動きリスト出すとキャラが隠れるから左端" / "下に歩き走りみたいな基本の
+// よく使うポーズは並べておきたい、クイックランチャー的な感じで"): the bar under the view has the everyday ones (QUICK) and "more", which opens
+// the whole list at the left edge (out of the character's way), in groups. First the ones played through with what they need (a ledge, a
+// wall: demos.js); a motion not listed here goes under "other". When the motion playing is from the list, "more" shows its name
+const QUICK = ["idle", "walk", "run", "wave", "cheer", "sitChair"];
 const MOTION_GROUPS = [
   ["demo", null],
   ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
