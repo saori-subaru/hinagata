@@ -184,20 +184,20 @@ export const DEFAULTS = {
       },
       "temple": {
         "minZ": 0.09,
-        "depth": 0.006,
+        "depth": 0,
         "x": 0.19,
         "y": 0.98,
         "height": 0.13
       },
       "cheekTrim": {
-        "depth": 0.008,
+        "depth": 0,
         "x": 0.2,
         "y": 0.9,
         "width": 0.05,
         "height": 0.08
       },
       "cheekFill": {
-        "depth": 0.008,
+        "depth": 0,
         "x": 0.125,
         "y": 0.905,
         "width": 0.095,
