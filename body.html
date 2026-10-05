@@ -511,12 +511,12 @@ const LIMB_SLIDERS = [["torso", "chest", "胸板", 0.8, 1.4, 0.01], ["torso", "b
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "thighTop", "太ももの付け根", 0.5, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }; SHAPE.thickness.thighTop ??= SHAPE.thickness.thigh; const SHAPE0 = structuredClone(SHAPE);   // thighTop: null = same as the thigh
 function curOpts() { const o = merge(merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT), PARTS_OPT), SOCKET_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
-const TYPE_LABEL = { standard: "標準", toddler: "幼児", kid: "子ども", girl: "女の子", sturdy: "がっしり" };
+const TYPE_LABEL = { standard: "標準", toddler: "幼児", girl: "女の子", sturdy: "がっしり" };
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
   for (const b of $("bodyTypes").children) b.setAttribute("aria-pressed", String(LIMB_SLIDERS.every(([g, k]) => BODY_TYPES[b.dataset.t].body[g][k] === SHAPE[g][k])));
   $("limbOut").value = Object.keys(d).length ? JSON.stringify({ body: d }) : "(はじめのまま)"; }
-for (const [t, o] of Object.entries(BODY_TYPES)) { const b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.dataset.t = t; b.textContent = TYPE_LABEL[t] ?? t;
+for (const [t, o] of Object.entries(BODY_TYPES).filter(([t]) => !t.endsWith("Tall"))) { const b = document.createElement("button");   // (the chibi ones: this page sets the torso and the limbs only) b.className = "btn"; b.type = "button"; b.dataset.t = t; b.textContent = TYPE_LABEL[t] ?? t;
   b.addEventListener("click", () => { Object.assign(SHAPE.torso, o.body.torso); Object.assign(SHAPE.thickness, o.body.thickness); limbSync(); rebuildBody(); }); $("bodyTypes").append(b); }
 let building = false, again = false;
 async function rebuildBody() {

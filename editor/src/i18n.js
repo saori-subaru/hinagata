@@ -15,7 +15,7 @@ const T = {
     bg_warm: "Warm", bg_white: "White", bg_grey: "Grey", bg_dark: "Dark",
     play: "Play", pause: "Pause", speed: "Speed",
     tab_body: "Body", tab_face: "Face", tab_hair: "Hair", tab_outfit: "Outfit", tab_look: "Look",
-    bodyType: "Body type", garment: "Garment", g_plain: "Shirt + pants", g_dress: "Dress", g_robe: "Robe", expression: "Expression", advanced: "Advanced", advancedSub: "fine-tuning", filter: "Filter by name…", noMatch: "Nothing matches",
+    bodyType: "Body type", bodyChibi: "Chibi", bodyTall: "Tall", garment: "Garment", g_plain: "Shirt + pants", g_dress: "Dress", g_robe: "Robe", expression: "Expression", advanced: "Advanced", advancedSub: "fine-tuning", filter: "Filter by name…", noMatch: "Nothing matches",
     resetTab: "Reset this tab", resetValue: "Reset to default", diffN: (n) => n === 1 ? "1 value differs from default" : `${n} values differ from default`, diff0: "All defaults",
     cost_hair: "Rebuilds the hair", cost_clothes: "Rebuilds the clothes · about 1 s", cost_body: "Rebuilds the body · about 1 s", cost_paint: "Rebuilds · about 1 s",
     softRange: "Guessed range: you can type values outside it", auto: "Auto", load: "Load PNG…", clear: "Clear", none: "None",
@@ -63,7 +63,7 @@ const T = {
     bg_warm: "暖色", bg_white: "白", bg_grey: "グレー", bg_dark: "暗い",
     play: "再生", pause: "一時停止", speed: "速さ",
     tab_body: "体", tab_face: "顔", tab_hair: "髪", tab_outfit: "服", tab_look: "見た目",
-    bodyType: "体型", garment: "服のかたち", g_plain: "シャツとズボン", g_dress: "ワンピース", g_robe: "ローブ", expression: "表情", advanced: "詳細設定", advancedSub: "細かい調整", filter: "名前でしぼりこむ…", noMatch: "見つからない",
+    bodyType: "体型", bodyChibi: "ちび", bodyTall: "高頭身", garment: "服のかたち", g_plain: "シャツとズボン", g_dress: "ワンピース", g_robe: "ローブ", expression: "表情", advanced: "詳細設定", advancedSub: "細かい調整", filter: "名前でしぼりこむ…", noMatch: "見つからない",
     resetTab: "このタブを戻す", resetValue: "デフォルトに戻す", diffN: (n) => `デフォルトと違う値: ${n}個`, diff0: "すべてデフォルト",
     cost_hair: "髪を作り直す", cost_clothes: "服を作り直す・約1秒", cost_body: "体を作り直す・約1秒", cost_paint: "作り直す・約1秒",
     softRange: "仮の範囲: 外の値も入力できる", auto: "自動", load: "PNGを読む…", clear: "外す", none: "なし",
@@ -106,7 +106,7 @@ const POSE = {
   sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"], guard: ["Guard", "構え"],
   run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpCrouch: ["Jump (wind-up)", "跳ぶ(ため)"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpLeap: ["Running jump", "走って跳ぶ"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], sneak: ["Sneak (crouched walk)", "しのび足"], crawl: ["Crawl (base)", "はう構え"], mantleReach: ["Pull-up: reach", "よじ登る(手をかける)"], mantlePull: ["Pull-up: haul", "よじ登る(引き上げる)"], mantleKnee: ["Pull-up: knee on the edge", "よじ登る(ひざをかける)"], vault: ["Vault", "乗り越える"], glide: ["Glide (hanging overhead)", "滑空(頭の上の物にぶら下がる)"], swim: ["Swim (dog paddle)", "泳ぐ(犬かき)"], treadWater: ["Tread water", "立ち泳ぎ"], wade: ["Wade", "水の中を歩く"], pant: ["Out of breath", "息が上がる"], shiver: ["Shiver (cold)", "寒くて震える"], limp: ["Limp", "足を引きずる"], lookAround: ["Look around", "見回す"], listen: ["Listen", "耳をすます"], hide: ["Hide (still)", "隠れる(じっと)"], balance: ["Balance", "バランスをとる"], balanceWalk: ["Walk a narrow beam", "細い所を渡る"], slide: ["Slide down a slope", "坂をすべり降りる"], stumble: ["Stumble", "つまずく"], roll: ["Forward roll", "前転(受け身)"], hang: ["Hang from an edge", "ぶら下がる"], shimmy: ["Shimmy along an edge", "ぶら下がって横へ"], drink: ["Drink (scoop water)", "水を飲む(手ですくう)"], dive: ["Swim under water", "潜って泳ぐ"], pickUp: ["Pick up", "拾う"], carry: ["Carry in both arms", "両手で抱える"], carryWalk: ["Walk carrying", "抱えて歩く"], throw: ["Throw", "投げる"], push: ["Push", "押す"], chop: ["Chop (axe)", "斧を振る"], eat: ["Eat", "食べる"], fireDrill: ["Make fire (hand drill)", "火をおこす(きりもみ)"], sleep: ["Sleep", "眠る"], stab: ["Spear thrust", "槍で突く"], breaststroke: ["Breaststroke (one stroke)", "平泳ぎ(ひとかき)"], knockdown: ["Knocked down", "突き飛ばされる"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
 };
-const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], kid: ["Kid", "子ども"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
+const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
 
 let lang = "en";
 try { const l = localStorage.getItem("hinagata.editor.lang"); if (l === "en" || l === "ja") lang = l; } catch {}

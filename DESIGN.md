@@ -431,6 +431,10 @@ A frame left empty keeps its old picture (as with a loaded template): erasing a 
 
 `body.sculpt.foot.toes` (on): four toes along the front of the foot (chibi style: a fifth was below the grid and only blurred the edge), the big toe on the inside, each a small round piece with a narrow blend so the gaps show; big enough to read at the "game" grid too. Under a shoe the body isn't drawn (the clothes' culling already left out the body inside shoes), and the toes stay inside the shoe's shape (a shoe is made around the foot without them, 1.2 cm out; they sit 6 mm back so the sock over them doesn't poke out at the shoe's front). Socks follow them (toe bumps); clipping the sock to the toeless foot showed the toes' skin through it instead. With shoes on the default renders the same but for a few outline pixels at the soles.
 
+### Body types: chibi and tall (2026-10-05, Saori; done)
+
+Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js. "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only).
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

@@ -110,10 +110,12 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   function presetBlock() {
     const r = store.recipe;
     if (tab === "body") {
-      const on = (b) => ["torso", "thickness"].every((g) => Object.entries(b.body[g]).every(([k, v]) => r.body[g][k] === v));
-      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))),
-        h("div", { class: "chips" }, Object.entries(BODY_TYPES).map(([k, b]) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => {
-          const ch = {}; for (const g of ["torso", "thickness"]) for (const [kk, v] of Object.entries(b.body[g])) ch[`body.${g}.${kk}`] = v; set(ch); } }, bodyTypeName(k)))));
+      // every value a type sets (torso, limbs, proportions, head size), as paths
+      const leaves = (o, pre, out = {}) => { for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object") leaves(v, `${pre}.${k}`, out); else out[`${pre}.${k}`] = v; } return out; };
+      const on = (b) => Object.entries(leaves(b.body, "body")).every(([p, v]) => store.get(p) === v);
+      const row = (tall) => h("div", { class: "chips" }, h("span", { class: "cost" }, t(tall ? "bodyTall" : "bodyChibi")), Object.entries(BODY_TYPES).filter(([k]) => k.endsWith("Tall") === tall).map(([k, b]) =>
+        h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => set(leaves(b.body, "body")) }, bodyTypeName(k.replace(/Tall$/, "")))));
+      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row(false), row(true));
     }
     if (tab === "face") {
       const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
