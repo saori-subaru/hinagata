@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { clayMat } from "../../src/materials.js";
+import { createDemos } from "./demos.js";
 
 const VIEWS = {   // [camera position, target]
   free: [[1.15, 0.95, 2.75], [0, 0.62, 0]], front: [[0, 0.72, 3.0], [0, 0.62, 0]], side: [[3.0, 0.72, 0], [0, 0.62, 0]],
@@ -28,6 +29,7 @@ export function createViewport(canvas, stage) {
   const chair = new THREE.Group(); { const wood = new THREE.MeshToonMaterial({ color: 0xc49a6c }), box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wood); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; chair.add(m); };
     box(0.4, 0.04, 0.26, 0, 0.18, -0.03); box(0.4, 0.36, 0.035, 0, 0.36, -0.16); for (const [x, z] of [[-0.17, 0.08], [0.17, 0.08], [-0.17, -0.14], [0.17, -0.14]]) box(0.035, 0.18, 0.035, x, 0.09, z); }
   chair.visible = false; scene.add(chair);
+  const demos = createDemos(scene);   // motions played through with a ledge, a wall... (demos.js)
 
   const size = () => { const r = stage.getBoundingClientRect(), w = Math.max(1, r.width), h = Math.max(1, r.height); renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 0.8 ? 42 : 32; camera.updateProjectionMatrix(); };
   new ResizeObserver(size).observe(stage); size();
@@ -60,7 +62,7 @@ export function createViewport(canvas, stage) {
     if (avatar.faceLayer) avatar.faceLayer.visible = !D.clay;
     if (avatar.earLine) avatar.earLine.visible = !D.clay && !D.wire;
     if (helper) helper.visible = D.bones;
-    floor.visible = D.floor;
+    floor.visible = D.floor && demos.floor();
   }
   function setAvatar(next) {
     const old = avatar; avatar = next; scene.add(next.object);
@@ -69,9 +71,18 @@ export function createViewport(canvas, stage) {
     helper = new THREE.SkeletonHelper(next.object); helper.material.depthTest = false; helper.renderOrder = 10; scene.add(helper);
     apply();
     if (old) { scene.remove(old.object); old.dispose(); }
+    demos.reset(next);
   }
   function display(k, on) { lift(); D[k] = on; apply(); }
   function background(name) { const [bg, fl] = BACKGROUNDS[name] ?? BACKGROUNDS.warm; stage.style.background = bg; floorMat.color.set(fl); }
+
+  /** play a motion through with what it needs (demos.js), or none (null). The camera steps back to take in the whole move */
+  function demo(name) {
+    demos.set(name, avatar); apply();
+    const V = demos.view(avatar); if (!V) return;
+    const dir = new THREE.Vector3(...V.dir).normalize();
+    tween = { p0: camera.position.clone(), t0: controls.target.clone(), t1: new THREE.Vector3(0, V.y, 0), p1: new THREE.Vector3(0, V.y, 0).addScaledVector(dir, V.d * 2.6), s: performance.now() };
+  }
 
   // ── motion clock ──
   const M = { pose: "idle", playing: true, speed: 1 };
@@ -80,7 +91,7 @@ export function createViewport(canvas, stage) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (tween) { const k = Math.min(1, (now - tween.s) / 380), e = 1 - (1 - k) ** 3; camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e); if (k >= 1) tween = null; }
-    if (avatar) { avatar.update(M.playing ? dt * M.speed : 0); chair.visible = !!avatar.lastPose?.chair; }
+    if (avatar) { const d = M.playing ? dt * M.speed : 0; if (!demos.step(avatar, d)) avatar.update(d); chair.visible = !!avatar.lastPose?.chair; }
     controls.update(); renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
@@ -108,5 +119,5 @@ export function createViewport(canvas, stage) {
     return url.slice(url.indexOf(",") + 1);
   }
 
-  return { view, display, background, setAvatar, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  return { view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }
