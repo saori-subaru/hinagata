@@ -1,0 +1,54 @@
+{
+  "hinagata": 1,
+  "name": "CPU",
+  "options": {
+    "body": {
+      "torso": {
+        "chest": 0.95,
+        "belly": 0.62,
+        "waist": 0.028,
+        "hips": 0.85,
+        "bust": 0,
+        "butt": 1,
+        "back": 1
+      },
+      "thickness": {
+        "upperArm": 0.71,
+        "forearm": 0.71,
+        "thigh": 0.61,
+        "thighTop": 0.61,
+        "calf": 0.6
+      },
+      "proportion": {
+        "legs": 1.65,
+        "torso": 1.3
+      },
+      "head": {
+        "scale": 0.7
+      }
+    },
+    "colors": {
+      "skin": "#c98d62",
+      "hair": "#1a120c",
+      "eyes": "#4a3424"
+    },
+    "hair": {
+      "bangs": "nendo",
+      "back": "short"
+    },
+    "outfit": {
+      "shirt": {
+        "color": "#2f6fe0"
+      },
+      "pants": {
+        "color": "#1b2a44"
+      },
+      "socks": {
+        "color": "#ffffff"
+      },
+      "shoes": {
+        "color": "#2a2a2a"
+      }
+    }
+  }
+}

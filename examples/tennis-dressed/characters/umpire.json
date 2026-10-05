@@ -1,0 +1,52 @@
+{
+  "hinagata": 1,
+  "name": "主審",
+  "options": {
+    "body": {
+      "torso": {
+        "chest": 0.95,
+        "belly": 0.62,
+        "waist": 0.028,
+        "hips": 0.85,
+        "bust": 0,
+        "butt": 1,
+        "back": 1
+      },
+      "thickness": {
+        "upperArm": 0.71,
+        "forearm": 0.71,
+        "thigh": 0.61,
+        "thighTop": 0.61,
+        "calf": 0.6
+      },
+      "proportion": {
+        "legs": 1.65,
+        "torso": 1.3
+      },
+      "head": {
+        "scale": 0.7
+      }
+    },
+    "colors": {
+      "skin": "#e6b98f",
+      "hair": "#8a8a8a"
+    },
+    "hair": {
+      "bangs": "nendo",
+      "back": "short"
+    },
+    "outfit": {
+      "shirt": {
+        "color": "#1d2d4f",
+        "sleeve": "long"
+      },
+      "pants": {
+        "color": "#5d616b",
+        "length": "long"
+      },
+      "shoes": {
+        "color": "#222222"
+      }
+    }
+  }
+}

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ひなテニス — Hina Tennis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet">
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<style>
+  :root { --teal: #22b0a0; --red: #e5484d; --ink: #17202c; --paper: #fffdf7; --gold: #f2b134; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3f0; font-family: "M PLUS Rounded 1c", system-ui, sans-serif; color: var(--ink);
+    -webkit-user-select: none; user-select: none; touch-action: none; }
+  canvas#c { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+  /* scoreboard */
+  #score { position: fixed; left: 16px; top: 14px; background: rgba(23, 32, 44, 0.88); color: #fff; border-radius: 10px; padding: 6px 4px; font-weight: 800;
+    font-size: 17px; box-shadow: 0 4px 14px rgba(0,0,0,0.25); min-width: 220px; }
+  #score .row { display: grid; grid-template-columns: 14px 1fr 34px 46px; align-items: center; gap: 6px; padding: 3px 10px; }
+  #score .row + .row { border-top: 1px solid rgba(255,255,255,0.12); }
+  #score .sv { width: 9px; height: 9px; border-radius: 50%; background: #d8f03a; visibility: hidden; }
+  #score .sv.on { visibility: visible; }
+  #score .nm { display: flex; align-items: center; gap: 7px; }
+  #score .chip { width: 10px; height: 18px; border-radius: 3px; }
+  #score .g { text-align: center; background: rgba(255,255,255,0.12); border-radius: 5px; }
+  #score .p { text-align: center; color: #d8f03a; }
+  #info { position: fixed; right: 16px; top: 14px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); font-size: 13px; text-align: right; line-height: 1.5; }
+  /* messages */
+  #msg { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; }
+  #msg.low { top: auto; bottom: 7%; }
+  #msg span { display: inline-block; font-size: clamp(34px, 7vw, 76px); font-weight: 800; color: #fff; letter-spacing: 0.04em;
+    -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 rgba(23,32,44,0.35); animation: pop 0.35s cubic-bezier(.2,1.6,.4,1); }
+  #msg small { display: block; font-size: clamp(16px, 2.6vw, 26px); color: #fff; -webkit-text-stroke: 1px var(--ink); paint-order: stroke fill; margin-top: 6px; }
+  #msg span.good { color: var(--gold); } #msg span.bad { color: #9fb6d6; }
+  @keyframes pop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #hint { position: fixed; left: 0; right: 0; bottom: 14px; text-align: center; color: #fff; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); pointer-events: none; }
+  #power { position: fixed; left: 50%; bottom: 44px; width: 180px; height: 10px; margin-left: -90px; border-radius: 6px; background: rgba(23,32,44,0.5); overflow: hidden; }
+  #power i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #d8f03a, var(--gold), var(--red)); }
+  /* screens */
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: flex-start; padding: 24px 5vw; pointer-events: none; }
+  .panel { pointer-events: auto; background: rgba(255, 253, 247, 0.94); border-radius: 18px; padding: 22px 26px; box-shadow: 0 10px 40px rgba(23,32,44,0.25); max-width: 420px; width: 100%; max-height: calc(100vh - 24px); overflow: auto; }
+  .logo { font-size: clamp(40px, 6vw, 64px); font-weight: 800; line-height: 1; margin: 0 0 4px; color: var(--teal); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; letter-spacing: 0.02em; }
+  .logo b { color: var(--red); }
+  .sub { margin: 0 0 16px; font-size: 14px; opacity: 0.7; }
+  .opt { margin: 10px 0; }
+  .opt label { display: block; font-size: 13px; font-weight: 800; margin-bottom: 5px; opacity: 0.75; }
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; }
+  button { font: inherit; font-weight: 800; border: 2px solid var(--ink); background: #fff; color: var(--ink); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+  button.sel { background: var(--ink); color: #fff; }
+  button.big { width: 100%; margin-top: 14px; padding: 12px; font-size: 20px; background: var(--teal); color: #fff; box-shadow: 0 4px 0 var(--ink); }
+  button.big:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .keys { font-size: 12.5px; line-height: 1.7; margin-top: 14px; opacity: 0.8; }
+  kbd { font: inherit; font-size: 11px; font-weight: 800; border: 1.5px solid var(--ink); border-bottom-width: 3px; border-radius: 5px; padding: 0 5px; background: #fff; }
+  .keys-touch { display: none; font-size: 12.5px; line-height: 1.6; margin-top: 10px; opacity: 0.8; }
+  body.touch .keys { display: none; } body.touch .keys-touch { display: block; }
+  body.touch #mute { bottom: auto; top: 96px; }
+  .edit { font-size: 12px; margin-top: 10px; opacity: 0.8; } .edit a { color: var(--teal); font-weight: 800; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #fff; font-weight: 800; font-size: 22px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+  #loading .ball { width: 28px; height: 28px; border-radius: 50%; background: #d8f03a; margin-bottom: 14px; animation: bob 0.6s ease-in-out infinite alternate; box-shadow: inset -4px -4px 0 rgba(0,0,0,0.15); }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-26px); } }
+  #result .panel { text-align: center; }
+  #result h2 { font-size: 48px; margin: 0; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
+  #result .final { font-size: 38px; font-weight: 800; margin: 6px 0; }
+  #result .stats { font-size: 14px; opacity: 0.8; line-height: 1.7; }
+  #result .row2 { display: flex; gap: 8px; } #result .row2 button { flex: 1; }
+  #pause { position: fixed; inset: 0; background: rgba(23,32,44,0.45); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 40px; font-weight: 800; }
+  /* touch */
+  #touch { position: fixed; inset: auto 0 0 0; height: 190px; pointer-events: none; }
+  #stick { position: absolute; left: 22px; bottom: 26px; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,0.18); border: 2px solid rgba(255,255,255,0.5); pointer-events: auto; touch-action: none; }
+  #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.75); }
+  #touch [data-btn] { position: absolute; pointer-events: auto; border-radius: 50%; width: 92px; height: 92px; font-size: 18px; background: rgba(34,176,160,0.85); color: #fff; border: 3px solid #fff; touch-action: none; }
+  #touch [data-btn="shot"] { right: 24px; bottom: 34px; }
+  #touch [data-btn="lob"] { right: 128px; bottom: 18px; width: 72px; height: 72px; font-size: 15px; background: rgba(229,72,77,0.85); }
+  #touch [data-btn].on { transform: scale(0.92); filter: brightness(1.2); }
+  #mute { position: fixed; right: 16px; bottom: 14px; padding: 4px 9px; font-size: 13px; background: rgba(255,255,255,0.85); }
+  @media (max-height: 560px) { .panel { padding: 12px 18px; } .logo { font-size: 36px; } .sub { margin-bottom: 6px; } .opt { margin: 5px 0; } button { padding: 5px 8px; } button.big { margin-top: 8px; padding: 8px; font-size: 17px; } .keys { margin-top: 8px; font-size: 11.5px; line-height: 1.55; } }
+  @media (max-width: 640px) { #score { font-size: 14px; min-width: 180px; left: 8px; top: 8px; } .screen { padding: 12px; justify-content: center; align-items: flex-end; } .panel { padding: 16px; } #info { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="score" class="hidden">
+  <div class="row"><i class="sv" id="sv0"></i><span class="nm"><i class="chip" style="background:var(--teal)"></i><span id="n0">ひな</span></span><span class="g" id="g0">0</span><span class="p" id="p0">0</span></div>
+  <div class="row"><i class="sv" id="sv1"></i><span class="nm"><i class="chip" style="background:var(--red)"></i><span id="n1">レン</span></span><span class="g" id="g1">0</span><span class="p" id="p1">0</span></div>
+</div>
+<div id="info" class="hidden"></div>
+<div id="msg"></div>
+<div id="power" class="hidden"><i></i></div>
+<div id="hint" class="hidden"></div>
+
+<div id="loading"><div class="ball"></div><div id="loadText">キャラクターを作っています…</div></div>
+
+<div id="title" class="screen hidden">
+  <div class="panel">
+    <h1 class="logo">ひな<b>テニス</b></h1>
+    <p class="sub">HINA TENNIS — ちびキャラ 3D テニス</p>
+    <div class="opt"><label>CPU のつよさ</label>
+      <div class="seg" id="diff"><button data-v="easy">かんたん</button><button data-v="normal" class="sel">ふつう</button><button data-v="hard">つよい</button></div></div>
+    <div class="opt"><label>試合の長さ(先取ゲーム数)</label>
+      <div class="seg" id="len"><button data-v="1">1</button><button data-v="2" class="sel">2</button><button data-v="4">4</button><button data-v="6">6</button></div></div>
+    <button class="big" id="start">スタート</button>
+    <div class="keys">
+      <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> / <kbd>WASD</kbd> 移動 ・ <kbd>Space</kbd>/<kbd>J</kbd> ショット ・ <kbd>K</kbd> ロブ<br>
+      早めに押すと構えてためる(強打)。打つ瞬間の <kbd>←</kbd><kbd>→</kbd> でコース、<kbd>↑</kbd> 深く・<kbd>↓</kbd> ドロップ。<br>
+      サーブ: <kbd>Space</kbd> でトス → 一番上でもう一度 <kbd>Space</kbd>。 <kbd>P</kbd> 一時停止 ・ <kbd>M</kbd> 音
+    </div>
+    <div class="keys-touch">左のスティックで移動、<b>ショット</b>(早めに押すとためて強打)・<b>ロブ</b>。打つ瞬間のスティックの向きでコース。サーブは <b>ショット</b> でトス → 一番上でもう一度。</div>
+    <div class="edit">キャラを編集: <a id="edit0" target="_blank" rel="noopener">ひな</a> ・ <a id="edit1" target="_blank" rel="noopener">レン</a> (Hinagata エディタ → 書き出し JSON を character.json / rival.json に置きかえ)</div>
+  </div>
+</div>
+
+<div id="result" class="screen hidden">
+  <div class="panel">
+    <h2 id="resTitle">WIN!</h2>
+    <div class="final" id="resScore">2 - 0</div>
+    <div class="stats" id="resStats"></div>
+    <div class="row2"><button class="big" id="again">もう一度</button><button class="big" id="toTitle" style="background:#fff;color:var(--ink)">タイトル</button></div>
+  </div>
+</div>
+<div id="pause" class="hidden">一時停止</div>
+
+<div id="touch" class="hidden">
+  <div id="stick"><div id="knob"></div></div>
+  <button data-btn="lob">ロブ</button>
+  <button data-btn="shot">ショット</button>
+</div>
+<button id="mute">🔊</button>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>

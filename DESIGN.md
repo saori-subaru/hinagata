@@ -688,3 +688,13 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Now a lock's swing is damped against the head's motion (horizontally too, as it already was vertically), and the stream comes from the wind alone: the avatar's own horizontal motion through the air (smoothed), plus a pose's `air` played in place, softly capped at 3 of the avatar's own units a second (`3·tanh(w/3)`, scaled with the avatar). DRAG 2.4 → 10 (the wind now does what the world's drag did). The wind flutters along each lock (±35%, and a little up and down), so the hair streams in waves, not a ruler line.
 - The cape's carry (its free points left behind as the character moves) is capped the same way: at most 3 units a second's worth per frame.
 
+### The retest, and what is next (2026-10-05)
+- `examples/tennis-agent/`: a fresh agent told only 「https://github.com/saori-subaru/hinagata のツールでキャラを作って、three.jsでテニスゲーム作って」 with the rewritten llms.txt (it read only the internet: checked in its transcript). 55 min, full rules, crowd and boards, a title / close-up / results, a bot played every level without errors; two Hinagata characters with their own swings. Far better than the first attempt (`examples/tennis/`, whose serve didn't work), but Saori still finds the plain three.js game (`examples/tennis-dressed/` is that game, dressed in Hinagata with `follow`) the better game.
+- Why, as far as we can tell: (1) the chibi default pulls the whole game toward a toy (the agent titled it "ちびキャラ 3D テニス" and shrank the court to the chibi's height); (2) the engine has no sports moves, so the agent spent its time writing swings instead of the game.
+- To do next:
+  - Poses switch in about 0.35 s (createPosePlayer's ease); fast swings went soft. Document `sharp`, or let `play(name, { blend: 0 })` switch at once.
+  - Something held in a hand: its orientation had to be found by trial (the racket's tilt and twist). A helper (`avatar.hold(object, "hand.R", { along, face })`) or a clear recipe in llms.txt.
+  - The sync helper serves one file; the agent wanted both characters live in the editor. Several files (or a folder) in one helper.
+  - A sports pose set (forehand, backhand, serve, kick…) or guidance to dress the game's own rig with `follow` (what made `examples/tennis-dressed/` work in about 100 lines).
+  - The guide could say: pick the body type the game needs (tall for a sports game), don't let the default chibi set the game's scale.
+

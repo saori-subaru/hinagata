@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Hinagata Tennis</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "hinagata": "../../src/index.js" } }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud" class="hidden">
+    <div id="scoreboard">
+      <table>
+        <tr id="row-p"><td class="srv"></td><td class="name">あなた</td><td class="games">0</td><td class="pts">0</td></tr>
+        <tr id="row-c"><td class="srv"></td><td class="name">CPU</td><td class="games">0</td><td class="pts">0</td></tr>
+      </table>
+    </div>
+    <div id="info"><div id="speed"></div><div id="cam"></div></div>
+    <div id="power"><div id="power-fill"></div></div>
+    <div id="hint"></div>
+    <div id="touch">
+      <div id="stick"><div id="knob"></div></div>
+      <div id="tbtns">
+        <button data-shot="slice">スライス</button>
+        <button data-shot="lob">ロブ</button>
+        <button data-shot="top" class="main">ショット</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="message"><div id="msg-main"></div><small id="msg-sub"></small></div>
+
+  <div id="title" class="overlay">
+    <div class="panel">
+      <div class="logo"><span class="ball"></span></div>
+      <h1>THREE<span>.</span>JS TENNIS</h1>
+      <p class="tag">ブラウザで遊べる 3D テニス</p>
+      <div class="opt">
+        <label>CPU の強さ</label>
+        <div class="seg" id="opt-level">
+          <button data-v="easy">かんたん</button>
+          <button data-v="normal" class="on">ふつう</button>
+          <button data-v="hard">むずかしい</button>
+        </div>
+      </div>
+      <div class="opt">
+        <label>試合の長さ</label>
+        <div class="seg" id="opt-games">
+          <button data-v="1">1 ゲーム</button>
+          <button data-v="3" class="on">3 ゲーム先取</button>
+          <button data-v="6">1 セット</button>
+        </div>
+      </div>
+      <div class="opt">
+        <label>あなたのキャラ</label>
+        <div class="seg" id="opt-char">
+          <button data-v="default" class="on">用意されたキャラ</button>
+          <button data-v="mine">自分のキャラ</button>
+        </div>
+        <div id="mine-box" hidden>
+          <textarea id="mine" rows="3" placeholder="雛形エディタの「コードをコピー」のコード、または「書き出し → リンクをコピー」のリンクを貼ってください"></textarea>
+          <label class="file">または書き出した JSON ファイルを選ぶ（描いた顔の絵もそのまま）<input type="file" id="mine-file" accept=".json,application/json"></label>
+        </div>
+        <small id="mine-msg"></small>
+      </div>
+      <button id="btn-start" class="primary">試合開始</button>
+      <table class="keys">
+        <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 矢印</td><td>移動</td></tr>
+        <tr><td><kbd>J</kbd> / <kbd>Space</kbd></td><td>ショット（長押しで強打）・サーブ</td></tr>
+        <tr><td><kbd>K</kbd></td><td>ロブ ・ スピンサーブ</td></tr>
+        <tr><td><kbd>L</kbd></td><td>スライス</td></tr>
+        <tr><td><kbd>C</kbd> <kbd>P</kbd> <kbd>M</kbd></td><td>カメラ切替 ・ 一時停止 ・ 消音</td></tr>
+      </table>
+      <p class="tip touch-only">左のスティックで移動、右のボタンで打球（長押しで強打）。サーブはボタンでトス→もう一度押して打つ。</p>
+      <p class="tip">打つ瞬間に方向キーでコースを狙えます。ボールの横に立って、ボールが来る前にキーを押しておくのがコツ。</p>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="panel small">
+      <h2>一時停止</h2>
+      <button id="btn-resume" class="primary">再開</button>
+      <button id="btn-quit" class="secondary">タイトルへ</button>
+    </div>
+  </div>
+
+  <div id="result" class="overlay hidden">
+    <div class="panel small">
+      <h2 id="result-title"></h2>
+      <p id="result-sub"></p>
+      <button id="btn-again" class="primary">もう一度</button>
+      <button id="btn-title" class="secondary">タイトルへ</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

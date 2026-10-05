@@ -1,0 +1,14 @@
+{
+  "body": {
+    "torso": { "chest": 0.92, "belly": 0.62, "waist": 0.02, "hips": 0.92, "bust": 0.77, "butt": 0.96, "back": 0.56 },
+    "thickness": { "upperArm": 0.92, "forearm": 0.88, "thigh": 0.95, "thighTop": 0.73, "calf": 0.72 }
+  },
+  "colors": { "hair": "#e3a25f", "eyes": "#2f8f7c" },
+  "hair": { "bangs": "nendo", "back": "short", "tail": { "kind": "pony", "tie": { "color": "#22b0a0" } } },
+  "outfit": {
+    "shirt": { "color": "#fbfbf7", "sleeve": "short" },
+    "pants": { "kind": "skirt", "color": "#22b0a0" },
+    "socks": { "color": "#ffffff" },
+    "shoes": { "color": "#fbfbf7", "soleColor": "#22b0a0" }
+  }
+}
