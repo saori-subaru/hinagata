@@ -433,6 +433,7 @@ export const DEFAULTS = {
       }
     },
     "bangs": "nendo",
+    "drawn": [],
     "back": "hang",
     "ahoge": true,
     "sculpt": {

@@ -116,6 +116,29 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
   return out;
 }
 
+/**
+ * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side) }.
+ * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
+ */
+export function drawnLocks(list, { toRoot, N = 16 }) {
+  const out = [];
+  for (const d of list ?? []) {
+    if (!d?.pts || d.pts.length < 2) continue;
+    for (const m of d.mirror ? [1, -1] : [1]) {
+      const P = d.pts.map(([x, y, z]) => [x * m, y, z]), acc = [0];
+      for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
+      const L = acc.at(-1); if (L < 0.01) continue;
+      const pts = []; let j = 0;
+      for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
+        pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
+      let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1 });
+    }
+  }
+  return out;
+}
+
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
  *  just outside the hair and the head there. For an editor's handles (the same surface the bang locks lie on). */
 export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   // below hangY the tuft hangs straight down: the tip is under where it leaves the head

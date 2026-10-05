@@ -6011,6 +6011,21 @@
     "en": "Style"
    }
   },
+  "hair.drawn": {
+   "path": "hair.drawn",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "drawn"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setDrawn",
+   "section": {
+    "en": "hair"
+   }
+  },
   "hair.back": {
    "path": "hair.back",
    "type": "enum",

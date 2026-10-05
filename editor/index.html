@@ -84,6 +84,7 @@ button { cursor: pointer; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { padding: 6px 13px; border-radius: var(--pill); border: 1.5px solid var(--line); background: var(--raised); color: var(--ink-2); font-size: 12.5px; }
 .chip:hover { border-color: #d5ccbf; }
+.chip-pair { display: inline-flex; } .chip-pair .chip:first-child { border-radius: var(--pill) 0 0 var(--pill); } .chip-pair .chip:last-child { border-radius: 0 var(--pill) var(--pill) 0; border-left: 0; padding: 6px 9px; }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 
 /* ── viewport overlays ── */

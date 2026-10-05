@@ -6,6 +6,7 @@ import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, compact } fro
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
 import { createBangTool } from "./bangs.js";
+import { createDrawTool } from "./draw.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -47,7 +48,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -73,6 +74,7 @@ function applyInstant(av, p, v) {
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
+    case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
       const ch = k.length > 4 ? { [k[3]]: { [last]: v } } : { [last]: v }; clearTimeout(locksT); locksT = setTimeout(() => { try { av.setLocks(k[2], ch); vp.apply(); } catch (e) { console.warn(e); } }, 150); return true; }
   }
@@ -93,6 +95,18 @@ store.subscribe((paths, why) => {
 
 // ── inspector ──
 const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   // moving the bangs' tufts on the face (bangs.js)
+const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
+// my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
+const HAIRS_KEY = "hinagata.editor.hairs";
+const hairs = {
+  list() { try { const L = JSON.parse(localStorage.getItem(HAIRS_KEY)); return Array.isArray(L) ? L : []; } catch { return []; } },
+  write(L) { try { localStorage.setItem(HAIRS_KEY, JSON.stringify(L)); return true; } catch { toast(t("notSaved")); return false; } },
+  save(name) { const L = hairs.list(); L.push({ id: Date.now().toString(36), name: name || t("myHairN", L.length + 1), hair: structuredClone(store.recipe.hair) }); if (hairs.write(L)) toast(t("myHairSaved", L.at(-1).name)); panel.render(); },
+  apply(id) { const h = hairs.list().find((x) => x.id === id); if (!h) return; const ch = {};
+    for (const p of Object.keys(SCHEMA)) if (p.startsWith("hair.")) { const v = p.split(".").slice(1).reduce((o, k) => o?.[k], h.hair); if (v !== undefined) ch[p] = structuredClone(v); }
+    store.set(ch, { commit: true }); },
+  remove(id) { const h = hairs.list().find((x) => x.id === id); if (!h || !confirm(t("myHairDel", h.name))) return; hairs.write(hairs.list().filter((x) => x.id !== id)); panel.render(); },
+};
 let imagePath = null;
 const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("diffCount"), resetEl: $("resetTab") }, {
   store, quality: () => prefs.quality,
@@ -100,7 +114,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into; $("fileTpl").click(); },
-  bangs,
+  bangs, draw, hairs,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう)
