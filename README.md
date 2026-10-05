@@ -41,4 +41,6 @@ Design notes, API and decisions: [`DESIGN.md`](DESIGN.md).
 
 Used by: the saon site (`saori-subaru/devlog`, as a git submodule at `site/avatar/`) and the forest game.
 
-Private for now; the license is not decided yet.
+Public; the license is not decided yet.
+
+**For agents**: [`llms.txt`](llms.txt) (also https://hinagata.pages.dev/llms.txt) — how to use it in a game, the recipe, and keeping the character live in the user's editor.

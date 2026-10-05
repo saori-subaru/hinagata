@@ -2,7 +2,7 @@
 # ============================================================
 #  build_site.sh — the files the site serves, into dist/ (no upload): sh build_site.sh
 #
-#  The repository is private; the site is public. So notes and working files stay out (the same list as devlog's build_site.sh):
+#  The site carries what pages load (and llms.txt, the agents' guide); notes and working files stay out (the same list as devlog's build_site.sh):
 #  ⛔ notes (*.md), working data (*.psd *.py), tools (tools/ docs/ facekit/ examples/), the reference sheet (sotai-ref.jpg)
 #  ⚠️ don't drop what a page loads: before excluding something new, grep the html / js for it
 #  The top page (/) goes to the editor; the test page is /body.html
@@ -17,7 +17,7 @@ tar -cf - \
   --exclude='./tools' --exclude='./docs' --exclude='./facekit' --exclude='./examples' \
   --exclude='sotai-ref.jpg' \
   . | tar -C dist -xf -
-# the live-sync helper is a tool, but people run it from the site (the repository is private): curl -O https://hinagata.pages.dev/sync.mjs
+# the live-sync helper is a tool, but people run it from the site (one file, no clone): curl -O https://hinagata.pages.dev/sync.mjs
 cp tools/sync.mjs dist/sync.mjs
 cp docs/options.schema.json dist/options.schema.json   # (its MCP tools check recipes and find options with it)
 

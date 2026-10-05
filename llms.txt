@@ -1,0 +1,91 @@
+# Hinagata
+
+> A chibi 3D character engine for the browser (three.js). A character is a recipe: a small JSON object of options, built into a skinned,
+> animated avatar at runtime. Made for vibe coding: you (the agent) make the character and the game; the user fine-tunes the character in
+> the editor at https://hinagata.pages.dev, live, while you keep working.
+
+Source: https://github.com/saori-subaru/hinagata (public). Everything below is served from https://hinagata.pages.dev with CORS open.
+
+## Do this by default when you make a character for the user
+
+1. Keep the character in its own file, `character.json` (the recipe), and have the game load it (`fetch("character.json")`). Don't bury it in code.
+2. Start the live sync so the user can fine-tune it in the editor while you work (they don't need to ask for it):
+   ```sh
+   curl -O https://hinagata.pages.dev/sync.mjs        # Node 18+, no dependencies
+   node sync.mjs character.json                       # keep it running (in the background); it prints a link
+   ```
+   Give the user the link it prints (`https://hinagata.pages.dev/editor/?sync=…&key=…`). From then on, every save you make to the file shows
+   in their editor at once, and what they change there is written back into the file (only what differs from the defaults, keys sorted):
+   read the file again before you change it, and expect their edits in `git diff`.
+3. Optional, if the user wants you to see the character: run the same helper as an MCP server instead of the plain one (not both: one port):
+   `claude mcp add hinagata -- node /abs/path/sync.mjs /abs/path/character.json --mcp`. Tools: `editor_link`, `get_recipe`,
+   `update_recipe` ({ set: { "dotted.path": value }, reset: [paths] }), `check_recipe`, `find_options` (by words, Japanese or English) and
+   `screenshot` (view: free | front | side | back | face; pose: idle, walk, run, …; needs the editor open from the link).
+
+The sync works when you run on the user's own machine (the editor in their browser reaches 127.0.0.1). A cloud agent can't reach it:
+then hand the user an editor link with the recipe in it instead: `https://hinagata.pages.dev/editor/?o=` + encodeURIComponent(JSON).
+
+## Use it in a page
+
+```html
+<script type="importmap">{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { createAvatar } from "https://hinagata.pages.dev/src/index.js";
+const recipe = await (await fetch("character.json")).json();
+const avatar = await createAvatar(recipe);          // async: builds the meshes (in workers, cached), a second or two
+scene.add(avatar.object);                           // a THREE.Group: feet at y = 0, facing +z, about 1.3–1.4 units tall
+avatar.play("walk");
+renderer.setAnimationLoop(() => { avatar.update(clock.getDelta()); renderer.render(scene, camera); });
+</script>
+```
+- three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
+- `createAvatar(recipe, { quality: "game" })`: "game" (default, lighter) or "high". Scale `avatar.object` to your world as you like.
+- `avatar.dispose()` when you drop it. Several avatars at once are fine.
+- A complete minimal page: `examples/minimal.html` in the repository.
+
+## The recipe
+
+Only what differs from the defaults, nested as the options are. Example:
+```json
+{ "colors": { "hair": "#f3f1ee", "eyes": "#4fb36a" },
+  "body": { "proportion": { "legs": 1.65, "torso": 1.3 }, "head": { "scale": 0.82 } },
+  "hair": { "bangs": "nendo", "back": "long", "tail": { "kind": "side", "side": "L" }, "gradient": { "on": true, "color": "#5fae6a" } },
+  "outfit": { "dress": { "on": true, "color": "#f8f6f0" }, "shoes": { "kind": "boots" } } }
+```
+- Every option, its type, range or choices, default and what it does (Japanese and English): https://hinagata.pages.dev/options.schema.json
+  (`options` by dotted path; `tier: "main"` are the ones the editor shows first). Prefer main options; the rest is fine-tuning.
+- Check a recipe: `import { checkOptions } from ".../src/index.js"; checkOptions(recipe)` → [{ path, problem }] (empty = fine). Unknown keys are
+  ignored by the engine, so check: a typo silently does nothing.
+- Body types: `import { BODY_TYPES }` (standard, toddler, girl, sturdy, and …Tall versions): merge `BODY_TYPES.girlTall` into the recipe.
+- Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
+  by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
+  armor, weapon), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
+- Faces can be drawn: the user does that in the editor (face tab); you can pick part ids (`face.parts`) or expressions with `avatar.setFace("happy")`.
+
+## Moving it in a game
+
+- `avatar.play(name)`; `avatar.update(dt)` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
+  crawl, jumpRise, jumpAir, jumpLand, fall, hardLand, climb, climbOver, sitChair, sitChairGirl, sitFloor, hugKnees, wave, cheer, banzai, guard,
+  throw, chop, stab, pickUp, carry, carryWalk, push, roll, stumble, knockdown, swim, treadWater, wade, glide, sleep, drink, eat, pant, shiver,
+  limp, lookAround, listen, hide, balance. One-shot moves (`ONE_SHOT`: stumble, roll, throw, pickUp, stab, knockdown…) loop over their length:
+  play from t = 0 and switch away after `ONE_SHOT[name]` seconds.
+- Moving the avatar: move `avatar.object` yourself. So the feet don't slide, play the gait at the speed that matches:
+  `const g = measureGait(avatar, "run")` (units / s at playback speed 1; `measureStride(avatar, "walk")` for the walk; measure once after
+  createAvatar, it plays the pose to measure) → each frame `avatar.update(dt * v / g)`
+  while you move the object `v * dt`. The hair, skirts and capes trail behind by themselves when the object moves.
+- Turning: rotate `avatar.object` about y (it faces +z).
+- Your own pose: `POSES.swing = (t) => ({ b: { "upperArm.R": [x, y, z], … }, y: 0 })` — Euler angles (radians) per bone (hips, spine, chest,
+  upperChest, neck, head, shoulder.L/R, upperArm.L/R, lowerArm.L/R, hand.L/R, upperLeg.L/R, lowerLeg.L/R, foot.L/R; fingers.L/R…), y: hip lift.
+  There's no racket or ball swing built in: make one this way (look at `throw` / `chop` in src/motion for how they're written).
+- Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
+- Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
+  `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
+
+## The editor
+
+https://hinagata.pages.dev (the editor) — the user's tool: sliders for every main option, dragging hair tufts and tails on the head,
+drawing locks of hair and face parts, painting on the clothes, accessories by clicking, poses to preview, export to code or GLB.
+`?o=<recipe JSON>` opens a recipe as a new character; `?sync=<port>&key=<key>` (the sync helper's link) follows a file.
