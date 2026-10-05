@@ -23,7 +23,7 @@ import { PART_LABELS, partIds } from "./face/names.js";
    apply     the avatar method that applies it without a rebuild ("setColors" …), or null (needs a new build for now)
    alsoShapes  set when an instant change also moves a shape on the next build (eye position → eye sockets)
    order     main values: their place in the editor's panels
-   when      { path: value, … }: the value only matters (and an editor only shows it) when those other values are set so
+   when      { path: value, … }: the value only matters (and an editor only shows it) when those other values are set so ("*set": anything but null)
  }
 */
 
