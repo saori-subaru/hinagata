@@ -187,7 +187,7 @@ button { cursor: pointer; }
 .fp-stage { position: relative; width: min(100%, calc(62vh * 4 / 3)); aspect-ratio: 4 / 3; margin: 0 auto; overflow: hidden; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
 .fp-inner { position: absolute; inset: 0; transition: transform .2s ease; }
 .fp-inner canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.fp-ink { touch-action: none; cursor: crosshair; } .fp-ui { pointer-events: none; } .fp-tools { align-items: center; margin-bottom: 6px; }
+.fp-ink { touch-action: none; cursor: crosshair; } .fp-ui { pointer-events: none; } .fp-tools, .fp-layers { align-items: center; margin-bottom: 6px; } .fp-layers .rng { width: 90px; }
 .fp-bar { align-items: center; } .fp-bar input[type=color] { width: 36px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; } .fp-bar .rng { width: 120px; }
 .scrim { position: fixed; inset: 0; z-index: 30; background: #231d2633; }
 .drawer { position: fixed; z-index: 31; left: 12px; top: 12px; bottom: 12px; width: min(380px, calc(100% - 24px)); background: var(--surface); border-radius: var(--r-panel); box-shadow: var(--shadow-2); display: flex; flex-direction: column; overflow: hidden; }

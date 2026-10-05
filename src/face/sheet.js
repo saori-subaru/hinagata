@@ -74,8 +74,11 @@ function guideFace(avatar, parts) {
 
 /** One tile: the head, the guide face (faint), the frames (red; a dashed grey one where the other side is drawn for you), a title. */
 function drawTile(g, avatar, head, tile, lang, title) {
-  const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height;
   g.drawImage(head, 0, 0); g.globalAlpha = 0.35; g.drawImage(guideFace(avatar, tile.guide), 0, 0); g.globalAlpha = 1;
+  drawFrames(g, avatar, tile, lang, title);
+}
+function drawFrames(g, avatar, tile, lang, title) {   // the frames, their labels, the face's middle line (and a title)
+  const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height;
   g.font = "bold 18px sans-serif"; g.textBaseline = "bottom";
   for (const k of tile.frames) { const [x, y, w, h] = frameRect(face, k), F = FRAMES[k], name = F.label[lang === "ja" ? 0 : 1];
     g.setLineDash([]); g.lineWidth = 3; g.strokeStyle = "#ff3b6b"; g.strokeRect(x, y, w, h); g.fillStyle = "#ff3b6b"; g.fillText(lang === "ja" ? `${name}をここに描く` : `Draw the ${name.toLowerCase()} here`, x + 4, y - 3);
@@ -83,6 +86,15 @@ function drawTile(g, avatar, head, tile, lang, title) {
   g.setLineDash([6, 6]); g.strokeStyle = "#0003"; g.lineWidth = 1; g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, H); g.stroke(); g.setLineDash([]);   // the face's middle
   if (title) { g.font = "bold 40px sans-serif"; g.textBaseline = "bottom"; const tw = g.measureText(title).width; g.fillStyle = "#ffffffd0"; g.fillRect(16, H - 74, tw + 28, 58); g.fillStyle = "#2b2230"; g.fillText(title, 30, H - 24); }   // bottom left (clear of the frames)
   g.strokeStyle = "#0002"; g.lineWidth = 2; g.strokeRect(1, 1, W - 2, H - 2);
+}
+
+/** The "parts" template as separate layers, for an editor that draws over it (2026-10-05, Saori: the face and its parts each shown or hidden,
+ *  each with its own opacity): { face (the head from the front, skin only), parts (the guide face's parts at full strength, the rest clear),
+ *  frames (the frames, their labels and the middle line, the rest clear) }, each a canvas the face picture's size. */
+export function faceSheetLayers(avatar, { lang = "ja" } = {}) {
+  const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height, tile = sheetTiles(avatar)[0];
+  const fr = document.createElement("canvas"); fr.width = W; fr.height = H; drawFrames(fr.getContext("2d"), avatar, tile, lang, null);
+  return { face: headShot(avatar), parts: guideFace(avatar, tile.guide), frames: fr };
 }
 
 /** Make a template. kind "parts" = the ふつう face alone (1024×768) / "sheet" = ふつう and every drawn expression. Returns a canvas. */

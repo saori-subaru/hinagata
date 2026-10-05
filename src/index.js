@@ -27,7 +27,7 @@ import { accessoryGeometries } from "./accessories.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { BODY_TYPES } from "./body/types.js";
-export { faceSheet, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
+export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)

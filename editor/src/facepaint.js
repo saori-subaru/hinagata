@@ -6,8 +6,10 @@
 // Tools (2026-10-05, Saori: "下のサンプル絵があると描きづらいから表示非表示、バケツツールとかパスみたいな最低限のお絵描きツール"):
 //   pen, eraser, bucket (fills the touched area of the drawing layer, inside the frame it is in), path (click points: a smooth line through
 //   them; clicking the first point closes it, filled if "fill" is on; double-click / Enter ends it, Backspace takes the last point back,
-//   Esc drops it) and eyedropper. "下絵" shows or hides the template under the drawing (the frames stay, drawn on top).
-import { faceSheet, sheetLayout } from "../../src/index.js";
+//   Esc drops it) and eyedropper.
+// The template under the drawing is in layers (2026-10-05, Saori: "下絵はレイヤー形式にして、顔、顔のパーツで表示非表示と透明度"): the face
+// (the head, skin only) and its parts (the guide face), each shown or hidden and with its own opacity; the frames always on top of them.
+import { faceSheetLayers, sheetLayout } from "../../src/index.js";
 
 const PARTS = ["eye", "eyeClosed", "brow", "mouth", "nose"];
 const TOOLS = ["pen", "eraser", "fill", "path", "pick"];
@@ -15,14 +17,17 @@ const TOOLS = ["pen", "eraser", "fill", "path", "pick"];
 /** getAvatar(): the shown avatar / store: the recipe / apply(canvas, into) → the expression id it went into / t: the strings / h: the DOM helper */
 export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => "ja" }) {
   let into = null, W = 1024, H = 768, zoom = null, undo = [], drawing = null, path = null, frames = [];
-  const S = { color: "#2b2230", size: 6, tool: "pen", guide: true, pathFill: false };
-  try { const saved = JSON.parse(localStorage.getItem("hinagata.editor.facepaint")) ?? {}; if (saved.erase) saved.tool = "eraser"; delete saved.erase; Object.assign(S, saved); } catch {}
+  const S = { color: "#2b2230", size: 6, tool: "pen", pathFill: false, layers: { face: { on: true, a: 1 }, parts: { on: true, a: 0.35 } } };
+  try { const saved = JSON.parse(localStorage.getItem("hinagata.editor.facepaint")) ?? {}; if (saved.erase) saved.tool = "eraser"; delete saved.erase; delete saved.guide;
+    Object.assign(S, saved, { layers: { face: { ...S.layers.face, ...saved.layers?.face }, parts: { ...S.layers.parts, ...saved.layers?.parts } } }); } catch {}
   if (!TOOLS.includes(S.tool)) S.tool = "pen";
   const save = () => { try { localStorage.setItem("hinagata.editor.facepaint", JSON.stringify(S)); } catch {} };
 
-  const bg = h("canvas", { class: "fp-bg" }), ink = h("canvas", { class: "fp-ink" }), ui = h("canvas", { class: "fp-ui" }), inner = h("div", { class: "fp-inner" }, bg, ink, ui), stage = h("div", { class: "fp-stage" }, inner);
-  const title = h("b", {}), bar = h("div", { class: "chips fp-bar" }), tools = h("div", { class: "chips fp-tools" }), zooms = h("div", { class: "chips fp-zoom" }), help = h("p", {}), shut = h("button", { class: "btn small ghost", type: "button", onclick: () => close() });
-  const modal = h("div", { class: "tpl fp", hidden: true, role: "dialog", "aria-modal": "true" }, h("div", { class: "tpl-in" }, h("div", { class: "tpl-h" }, title, shut), help, zooms, tools, stage, bar));
+  const L = { face: h("canvas", { class: "fp-bg" }), parts: h("canvas", { class: "fp-bg" }) }, frameC = h("canvas", { class: "fp-ui" });   // the template's layers, bottom up, and its frames
+  const ink = h("canvas", { class: "fp-ink" }), ui = h("canvas", { class: "fp-ui" }), inner = h("div", { class: "fp-inner" }, L.face, L.parts, frameC, ink, ui), stage = h("div", { class: "fp-stage" }, inner);
+  const title = h("b", {}), bar = h("div", { class: "chips fp-bar" }), tools = h("div", { class: "chips fp-tools" }), layersEl = h("div", { class: "chips fp-layers" }), zooms = h("div", { class: "chips fp-zoom" }), help = h("p", {}), shut = h("button", { class: "btn small ghost", type: "button", onclick: () => close() });
+  const modal = h("div", { class: "tpl fp", hidden: true, role: "dialog", "aria-modal": "true" }, h("div", { class: "tpl-in" }, h("div", { class: "tpl-h" }, title, shut), help, zooms, tools, layersEl, stage, bar));
+  const showLayers = () => { for (const k of ["face", "parts"]) { L[k].hidden = !S.layers[k].on; L[k].style.opacity = S.layers[k].a; } };
   document.body.append(modal);
   const g = ink.getContext("2d", { willReadFrequently: true }), gu = ui.getContext("2d");   // (undo and the bucket read the drawing back)
 
@@ -38,10 +43,13 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
   function renderBars() {
     zooms.replaceChildren(...[null, ...PARTS].map((k) => chip(k ? t(`f_${k}`) : t("fpAll"), zoom === k, () => setZoom(k))));
     tools.replaceChildren(...[...TOOLS.map((k) => chip(t(`fpTool_${k}`), S.tool === k, () => { endPath(false); S.tool = k; save(); renderBars(); drawUI(); })),
-      chip(t("fpGuide"), S.guide, () => { S.guide = !S.guide; save(); bg.hidden = !S.guide; renderBars(); drawUI(); }, t("fpGuideTitle")),
       S.tool === "path" ? chip(t("fpPathFill"), S.pathFill, () => { S.pathFill = !S.pathFill; save(); renderBars(); drawUI(); }) : null,
       S.tool === "path" && path?.pts.length ? h("button", { class: "btn small", type: "button", onclick: () => endPath(true) }, t("fpPathDone")) : null,
       S.tool === "path" && path?.pts.length ? h("button", { class: "btn small ghost", type: "button", onclick: () => endPath(false) }, t("fpPathCancel")) : null].filter(Boolean));   // (replaceChildren would write "null")
+    layersEl.replaceChildren(h("span", { class: "cost" }, t("fpGuide")), ...["face", "parts"].flatMap((k) => {   // each layer: shown or not, and its opacity
+      const Y = S.layers[k], rng = h("input", { class: "rng", type: "range", min: 0.05, max: 1, step: 0.05, value: Y.a, "aria-label": t(`fpLayerA_${k}`), disabled: !Y.on });
+      rng.addEventListener("input", () => { Y.a = +rng.value; showLayers(); }); rng.addEventListener("change", save);
+      return [chip(t(`fpLayer_${k}`), Y.on, () => { Y.on = !Y.on; save(); showLayers(); renderBars(); }, t("fpGuideTitle")), rng]; }));
     const color = h("input", { type: "color", value: S.color, "aria-label": t("paintColor") }); color.addEventListener("change", () => { S.color = color.value; if (S.tool === "eraser" || S.tool === "pick") S.tool = "pen"; save(); renderBars(); drawUI(); });
     const size = h("input", { class: "rng", type: "range", min: 1, max: 40, step: 1, value: S.size, "aria-label": t("fpSize") }); size.addEventListener("change", () => { S.size = +size.value; save(); drawUI(); });
     bar.replaceChildren(color, h("span", { class: "cost" }, t("fpSize")), size,
@@ -61,10 +69,9 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
       im.onerror = () => ok(); im.src = s; })));
   }
 
-  // the layer over the drawing: the frames when the template is hidden, and the path being drawn
+  // the layer over the drawing: the path being drawn
   function drawUI(hover = null) {
     gu.clearRect(0, 0, W, H);
-    if (!S.guide) { gu.save(); gu.strokeStyle = "rgba(220, 40, 40, .8)"; gu.lineWidth = 2; gu.setLineDash([8, 6]); for (const f of frames) gu.strokeRect(f.x + 0.5, f.y + 0.5, f.w - 1, f.h - 1); gu.restore(); }
     if (path?.pts.length) {
       const P = hover && !path.closed ? [...path.pts, hover] : path.pts;
       gu.save(); curve(gu, P, path.closed); gu.lineCap = gu.lineJoin = "round";
@@ -103,9 +110,9 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
     push(); for (let p = 0; p < G.length; p++) if (G[p]) { const i = p * 4; D[i] = r; D[i + 1] = gg; D[i + 2] = b; D[i + 3] = 255; }
     g.putImageData(img, bx, by); renderBars();
   }
-  function pick(x, y) {   // the drawing's colour there, else the template's
+  function pick(x, y) {   // the drawing's colour there, else the shown template layers' (the parts, then the face)
     const px = (c) => c.getContext("2d", { willReadFrequently: true }).getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
-    let d = px(ink); if (d[3] < 24 && S.guide) d = px(bg); if (d[3] < 24) return;
+    let d = px(ink); for (const k of ["parts", "face"]) if (d[3] < 24 && S.layers[k].on) d = px(L[k]); if (d[3] < 24) return;
     S.color = "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join(""); S.tool = "pen"; save(); renderBars();
   }
 
@@ -146,9 +153,10 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
     async open(target = null) {
       const av = getAvatar(); if (!av) return;
       into = target === "new" ? apply.NEW : target; undo = []; zoom = null; path = null; inner.style.transform = "";
-      const tpl = faceSheet(av, { kind: "parts", lang: lang() }); W = tpl.width; H = tpl.height; frames = layout();
-      for (const c of [bg, ink, ui]) { c.width = W; c.height = H; }
-      bg.getContext("2d").drawImage(tpl, 0, 0); g.clearRect(0, 0, W, H); bg.hidden = !S.guide;
+      const T = faceSheetLayers(av, { lang: lang() }); W = T.face.width; H = T.face.height; frames = layout();
+      for (const c of [L.face, L.parts, frameC, ink, ui]) { c.width = W; c.height = H; }
+      for (const k of ["face", "parts"]) { const c = L[k].getContext("2d"); if (k === "face") { c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); } c.drawImage(T[k], 0, 0); }
+      frameC.getContext("2d").drawImage(T.frames, 0, 0); g.clearRect(0, 0, W, H); showLayers();
       const d = into != null && into !== apply.NEW ? (av.options.face.drawn ?? []).find((q) => String(q?.id) === String(into)) : null;
       title.textContent = target === "new" ? t("fpTitleNew") : into == null ? t("fpTitle", t("normalPic")) : t("fpTitle", d?.name ?? String(into));
       if (target !== "new") await prefill(av);
