@@ -375,6 +375,7 @@ export const DEFAULTS = {
       "on": true,
       "color": "#7fb6e8",
       "sleeve": "short",
+      "bell": 0.08,
       "length": "tuck",
       "underarm": "fit",
       "collar": {

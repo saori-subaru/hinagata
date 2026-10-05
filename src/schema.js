@@ -138,7 +138,8 @@ const MAIN = [
   // outfit
   ["outfit.shirt.on", L("着る", "Wear"), { section: L("シャツ", "Shirt"), apply: "setWorn" }],
   ["outfit.shirt.color", L("シャツの色", "Shirt color"), { section: L("シャツ", "Shirt"), apply: "setColors" }],
-  ["outfit.shirt.sleeve", L("袖", "Sleeves"), { options: opts({ short: ["半袖", "Short"], none: ["そでなし", "None"], long: ["長袖", "Long"] }), section: L("シャツ", "Shirt") }],
+  ["outfit.shirt.sleeve", L("袖", "Sleeves"), { options: opts({ short: ["半袖", "Short"], none: ["そでなし", "None"], long: ["長袖", "Long"], bell: ["ベル袖", "Bell"] }), section: L("シャツ", "Shirt") }],
+  ["outfit.shirt.bell", L("袖口の広がり", "Bell width"), { when: { "outfit.shirt.sleeve": "bell" }, min: 0.02, max: 0.12, step: 0.005, section: L("シャツ", "Shirt"), help: L("ベル袖の袖口が手首からどれだけ広がるか(m)", "how much wider than the wrist the bell's opening is (m)") }],
   ["outfit.shirt.length", L("丈", "Length"), { options: opts({ tuck: ["入れる", "Tucked in"], out: ["出す", "Out"], crop: ["短い", "Cropped"] }), section: L("シャツ", "Shirt") }],
   ["outfit.shirt.underarm", L("わきの下", "Underarm"), { options: opts({ fit: ["ぴったり", "Fitted"], loose: ["ゆったり", "Loose"] }), section: L("シャツ", "Shirt") }],
   ["outfit.cape.on", L("着る", "Wear"), { cost: "clothes", section: L("マント", "Cape"), help: L("着たときだけ作る(オンにすると服を作り直す)", "built only when worn (turning it on rebuilds the clothes)") }],
@@ -149,7 +150,7 @@ const MAIN = [
   ["outfit.cape.sway", L("なびき", "Sway"), { when: { "outfit.cape.on": true }, min: 0, max: 1, step: 0.05, section: L("マント", "Cape"), help: L("動いたときに後ろへ残る量", "how much it trails behind when the character moves") }],
   ["outfit.dress.on", L("ワンピースにする", "Dress"), { cost: "clothes", section: L("ワンピース", "Dress"), help: L("シャツとスカートをひと続きの1着にする(ズボンの種類は無視)。袖・えりはシャツの設定", "makes the shirt and a skirt one garment (the pants' kind is ignored). Sleeves and collar come from the shirt") }],
   ["outfit.dress.color", L("ワンピースの色", "Dress color"), { when: { "outfit.dress.on": true }, nullable: true, section: L("ワンピース", "Dress"), apply: "setColors", help: L("null = シャツの色", "null = the shirt's color") }],
-  ["outfit.dress.hem", L("すその高さ", "Hem height"), { when: { "outfit.dress.on": true }, min: 0.12, max: 0.4, step: 0.005, section: L("ワンピース", "Dress") }],
+  ["outfit.dress.hem", L("すその高さ", "Hem height"), { when: { "outfit.dress.on": true }, min: 0.03, max: 0.4, step: 0.005, section: L("ワンピース", "Dress") }],
   ["outfit.dress.flare", L("すその広がり", "Flare"), { when: { "outfit.dress.on": true }, min: 0, max: 0.8, step: 0.01, section: L("ワンピース", "Dress") }],
   ["outfit.dress.pleats", L("ひだの数", "Pleats"), { when: { "outfit.dress.on": true }, min: 0, max: 32, step: 1, section: L("ワンピース", "Dress") }],
   ["outfit.pants.on", L("はく", "Wear"), { section: L("ズボン", "Pants"), apply: "setWorn" }],

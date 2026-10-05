@@ -353,6 +353,12 @@ Not yet: sitting on a chair, the cloth tents over each knee and sags between the
 
 Not yet: it doesn't collide with the skirt as cloth (only its shape is wide enough); long hair lies over it without touching it.
 
+### The robe (ローブ) (2026-10-05, Saori; done)
+
+A robe is a dress down to the ankles (`dress.hem` now goes down to 0.03) with bell sleeves (`shirt.sleeve: "bell"`, any shirt can have them). The editor's outfit tab has "服のかたち" chips (shirt and pants / dress / robe) that set those values at once.
+
+Bell sleeve (clothes/index.js, in the shirt): the long sleeve, plus a shell around the forearm from the elbow (as wide as the sleeve) widening to the cuff by `shirt.bell`. A symmetric bell read as a puff sleeve (its opening faced down the arm, unseen from the front), so it hangs: toward the cuff its middle drops below the arm (straight down across the forearm, in the rest pose) and its lower side reaches further, a slanted opening. It is rigid (skinned to the forearm): raising the arms, the bell's long side hangs along the arm.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

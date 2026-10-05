@@ -122,6 +122,13 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => {
           const ch = {}; for (const [kk, v] of Object.entries(x.parts)) ch[`face.parts.${kk}`] = v; set(ch); } }, L(x)))));
     }
+    if (tab === "outfit") {   // the whole garment at once: a robe is a dress down to the ankles with bell sleeves
+      const G = { plain: { "outfit.dress.on": false, "outfit.shirt.sleeve": "short" }, dress: { "outfit.dress.on": true, "outfit.dress.hem": 0.28, "outfit.dress.flare": 0.45, "outfit.shirt.sleeve": "short" },
+        robe: { "outfit.dress.on": true, "outfit.dress.hem": 0.04, "outfit.dress.flare": 0.3, "outfit.shirt.sleeve": "bell" } };
+      const on = (g) => Object.entries(g).every(([p, v]) => store.get(p) === v);
+      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("garment")), h("span", { class: "cost" }, t("cost_clothes"))),
+        h("div", { class: "chips" }, Object.entries(G).map(([k, g]) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(g)), onclick: () => set({ ...g }) }, t(`g_${k}`)))));
+    }
     if (tab === "look") {
       return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("quality")), h("span", { class: "cost" }, t("cost_body"))),
         h("div", { class: "seg full", role: "group", "aria-label": t("quality") }, ["game", "high"].map((q) => h("button", { type: "button", "aria-pressed": String(ctx.quality() === q), onclick: () => ctx.onQuality(q) }, t(`q_${q}`)))));
