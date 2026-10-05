@@ -1,6 +1,8 @@
 // The body: joints (bones) and the signed-distance parts that make the naked body, head and face sculpt.
 import { handFrame } from "../clothes/weapons.js";
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
+import { DEFAULTS } from "../options.js";
+const HEAD_SCALE0 = DEFAULTS.body.head.scale;   // the head size the neck width is set for (neck.follow)
 
 /**
  * Build the body from options.
@@ -19,6 +21,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
     "upperLeg.L": [0.11, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
   };
+  // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
+  const NK = OPT.body.sculpt.neck, LIFT = NK.length ?? 0; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
   // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
@@ -52,10 +56,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const SOCK_BAND = { on: !oldSock, len: OPT.body.sculpt.socketBand.length, lift: OPT.body.sculpt.socketBand.lift };   // 眼窩の目じり側: 届く長さ / 外側を浅くする(前へ出す)割合
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: OPT.body.sculpt.socketLow.y ?? 0.035, w: OPT.body.sculpt.socketLow.width ?? 0.085, h: OPT.body.sculpt.socketLow.height ?? 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
   const EAR = { flare: 0.7, tilt: 0.3, x: OPT.body.sculpt.ears.x ?? 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
-  P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057 * OPT.body.sculpt.neck.width, 0.056 * OPT.body.sculpt.neck.width, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+  // neck.follow: the neck gets thinner with a smaller head (and thicker with a bigger one), relative to the default head size (2026-10-05, Saori:
+  // "頭を小さくすると首が太く見える"); 0 = the same width whatever the head
+  const NW = NK.width * Math.pow(OPT.body.head.scale / HEAD_SCALE0, NK.follow ?? 0);
+  P.neck = C([0, 0.725, -0.032], [0, 0.845 + LIFT, 0.006], 0.057 * NW, 0.056 * NW, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
   // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
-  { const NN = OPT.body.sculpt.neck.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1, NN.z1], NN.r * OPT.body.sculpt.neck.width, NN.r * OPT.body.sculpt.neck.width, "neck", NN.k); }
+  { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }
   P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
@@ -255,7 +262,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform(OPT.body.head), HEAD_RAW = { ...HEAD };
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT }), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
@@ -278,21 +285,22 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
 }
 
 /**
- * Scale the head around a pivot at the top of the neck. h = { scale, width (x), depth (z), pivotY, pivotZ, shift: { z, z0, z1 } }.
+ * Scale the head around a pivot at the top of the neck. h = { scale, width (x), depth (z), pivotY, pivotZ, shift: { z, z0, z1 }, lift }.
+ * lift: then move it up (a longer neck).
  * shift: everything in front of z1 (head space) moves back by z, fading in between z0 and z1, so the head gets shorter front to back
  * while the side silhouette keeps its shape (skin, hair and face picture move together).
  * toHead: world point → head-space point. fromHead: the reverse. wrap(sdf): a head-space distance function seen in world space.
  */
 export function headTransform(h) {
-  const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 };
+  const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 }, ly = h.lift ?? 0;
   const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
   const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z, k = Math.min(sx, sy, sz) / stretch;
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly, k = Math.min(sx, sy, sz) / stretch;
   return {
     identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
-    toHead: (x, y, z) => [x / sx, py + (y - py) / sy, warp(pz + (z - pz) / sz)],
-    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy, pz + (unwarp(z) - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - py) / sy, warp(pz + (z - pz) / sz)) * k,
+    toHead: (x, y, z) => [x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)],
+    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)) * k,
   };
 }
 

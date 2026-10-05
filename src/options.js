@@ -69,6 +69,8 @@ export const DEFAULTS = {
       },
       "neck": {
         "width": 0.85,
+        "length": 0,
+        "follow": 1,
         "nape": {
           "on": true,
           "y0": 0.82,
