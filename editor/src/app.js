@@ -13,7 +13,7 @@ import { createPaintTool } from "./paint.js";
 import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
 import { connectSync } from "./sync.js";
-import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
+import { t, setLang, getLang, translatePage, poseName, groupName } from "./i18n.js";
 
 const VERSION = "0.1";
 const $ = (id) => document.getElementById(id);
@@ -54,7 +54,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -146,7 +146,7 @@ if (SYNC) connectSync({ ...SYNC, store,
     if (a.pose && !POSES[a.pose]) throw new Error(`unknown pose "${a.pose}"; poses: ${Object.keys(POSES).join(", ")}`);
     if (a.pose) { av.play(a.pose); av.update(0, { t: 1.2, instant: true }); }
     try { return { png: vp.capture({ view: a.view, size: a.size, bg: BACKGROUNDS[prefs.bg]?.[0] ?? "#ebe5dc" }) }; }
-    finally { if (a.pose) { av.play(was); av.update(0, { instant: true }); } }
+    finally { if (a.pose) { av.play(POSES[was] ? was : "idle"); av.update(0, { instant: true }); } }
   } });
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
@@ -205,6 +205,7 @@ const ICON = {
   bones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="7" cy="19" r="2"></circle><circle cx="17" cy="19" r="2"></circle><path d="M12 7v6l-5 6M12 13l5 6"></path></svg>',
   floor: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="16" rx="9" ry="3.5"></ellipse></svg>',
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>',
+  caret: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>',
   pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"></path></svg>',
 };
 let curView = "free";
@@ -217,9 +218,41 @@ function renderViewControls() {
   const M = vp.motion;
   $("poses").replaceChildren(
     h("button", { class: "play", type: "button", "aria-label": M.playing ? t("pause") : t("play"), title: M.playing ? t("pause") : t("play"), html: M.playing ? ICON.pause : ICON.play, onclick: () => { M.playing = !M.playing; renderViewControls(); } }),
-    ...Object.keys(POSES).map((k) => h("button", { type: "button", "aria-pressed": String(k === M.pose), onclick: () => { M.pose = k; vp.avatar?.play(k); renderViewControls(); } }, poseName(k))),
+    h("button", { class: "cur", type: "button", "aria-haspopup": "true", "aria-expanded": String(motionOpen), title: t("pickMotion"), onclick: () => { motionOpen = !motionOpen; renderViewControls(); } }, poseName(M.pose), h("span", { html: ICON.caret })),
     h("select", { "aria-label": t("speed"), title: t("speed"), onchange: (e) => { M.speed = +e.target.value; } }, [0.25, 0.5, 1, 1.5].map((s) => h("option", { value: s, selected: s === M.speed }, `${s}×`))));
+  const L = $("motionList"); L.hidden = !motionOpen;
+  if (motionOpen) L.replaceChildren(...motionGroups().map(([g, ks]) => h("section", {}, h("h3", {}, groupName(g)),
+    h("div", { class: "chips" }, ks.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))))));
 }
+// the motions, in groups (2026-10-05, Saori: "下に横並びだと動きが全部入らない" — 57 of them in one row ran off the screen). The bar at the
+// bottom shows the one playing; it opens this list. First the ones played through with what they need (a ledge, a wall: demos.js);
+// a motion not listed here goes under "other"
+const MOTION_GROUPS = [
+  ["demo", null],
+  ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
+  ["sit", ["sitChair", "sitChairGirl", "sitFloor", "hugKnees", "sleep"]],
+  ["jump", ["jumpCrouch", "jumpRise", "jumpLeap", "jumpAir", "jumpLand", "fall", "hardLand", "stumble", "roll", "knockdown"]],
+  ["climb", ["climb", "mantleReach", "mantlePull", "mantleKnee", "climbOver", "vault", "hang", "shimmy", "glide", "balance", "balanceWalk", "slide"]],
+  ["low", ["crouch", "crawl", "hide"]],
+  ["water", ["swim", "breaststroke", "treadWater", "dive", "wade", "drink"]],
+  ["hands", ["pickUp", "carry", "carryWalk", "throw", "push", "chop", "eat", "fireDrill"]],
+  ["fight", ["guard", "stab"]],
+  ["state", ["pant", "shiver", "limp", "lookAround", "listen"]],
+];
+function motionGroups() {
+  const seen = new Set(), out = [];
+  for (const [g, list] of MOTION_GROUPS) { const ks = g === "demo" ? vp.demos.names : list.filter((k) => POSES[k]); ks.forEach((k) => seen.add(k)); if (ks.length) out.push([g, ks]); }
+  const rest = Object.keys(POSES).filter((k) => !seen.has(k)); if (rest.length) out.push(["other", rest]);
+  return out;
+}
+let motionOpen = false;
+function pickMotion(k) {
+  const M = vp.motion, wasDemo = vp.demos.has(M.pose); M.pose = k; motionOpen = false;
+  if (vp.demos.has(k)) vp.demo(k); else { vp.demo(null); vp.avatar?.play(k); if (wasDemo) vp.view(curView); }   // back from a demo: the camera too
+  renderViewControls();
+}
+addEventListener("pointerdown", (e) => { if (motionOpen && !e.target.closest("#motionList, #poses")) { motionOpen = false; renderViewControls(); } });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && motionOpen) { motionOpen = false; renderViewControls(); } });
 $("bg").addEventListener("change", (e) => { prefs.bg = e.target.value; savePrefs(); vp.background(prefs.bg); });
 vp.background(prefs.bg); if (!prefs.floor) vp.display("floor", false);
 

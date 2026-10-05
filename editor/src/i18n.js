@@ -13,7 +13,7 @@ const T = {
     v_free: "Free", v_front: "Front", v_side: "Side", v_back: "Back", v_face: "Face",
     d_clay: "Clay", d_wire: "Wireframe", d_bones: "Bones", d_floor: "Floor",
     bg_warm: "Warm", bg_white: "White", bg_grey: "Grey", bg_dark: "Dark",
-    play: "Play", pause: "Pause", speed: "Speed",
+    play: "Play", pause: "Pause", speed: "Speed", pickMotion: "Choose a motion",
     tab_body: "Body", tab_face: "Face", tab_hair: "Hair", tab_outfit: "Outfit", tab_look: "Look",
     bodyType: "Body type", bodyChibi: "Chibi", bodyTall: "Tall", garment: "Garment", g_plain: "Shirt + pants", g_dress: "Dress", g_robe: "Robe", expression: "Expression", advanced: "Advanced", advancedSub: "fine-tuning", filter: "Filter by name…", noMatch: "Nothing matches",
     resetTab: "Reset this tab", resetValue: "Reset to default", diffN: (n) => n === 1 ? "1 value differs from default" : `${n} values differ from default`, diff0: "All defaults",
@@ -66,7 +66,7 @@ const T = {
     v_free: "自由", v_front: "正面", v_side: "横", v_back: "後ろ", v_face: "顔",
     d_clay: "ねんど", d_wire: "網目", d_bones: "骨", d_floor: "床",
     bg_warm: "暖色", bg_white: "白", bg_grey: "グレー", bg_dark: "暗い",
-    play: "再生", pause: "一時停止", speed: "速さ",
+    play: "再生", pause: "一時停止", speed: "速さ", pickMotion: "モーションを選ぶ",
     tab_body: "体", tab_face: "顔", tab_hair: "髪", tab_outfit: "服", tab_look: "見た目",
     bodyType: "体型", bodyChibi: "ちび", bodyTall: "高頭身", garment: "服のかたち", g_plain: "シャツとズボン", g_dress: "ワンピース", g_robe: "ローブ", expression: "表情", advanced: "詳細設定", advancedSub: "細かい調整", filter: "名前でしぼりこむ…", noMatch: "見つからない",
     resetTab: "このタブを戻す", resetValue: "デフォルトに戻す", diffN: (n) => `デフォルトと違う値: ${n}個`, diff0: "すべてデフォルト",
@@ -116,6 +116,17 @@ const POSE = {
   sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"], guard: ["Guard", "構え"],
   run: ["Run", "走る"], banzai: ["Banzai", "バンザイ"], jumpCrouch: ["Jump (wind-up)", "跳ぶ(ため)"], jumpRise: ["Jump (take-off)", "跳ぶ(踏み切り)"], jumpLeap: ["Running jump", "走って跳ぶ"], jumpAir: ["Jump (in the air)", "跳ぶ(空中)"], jumpLand: ["Land", "着地"], fall: ["Fall", "落ちる"], hardLand: ["Hard landing", "強い着地"], crouch: ["Crouch", "しゃがむ"], sneak: ["Sneak (crouched walk)", "しのび足"], crawl: ["Crawl (base)", "はう構え"], mantleReach: ["Pull-up: reach", "よじ登る(手をかける)"], mantlePull: ["Pull-up: haul", "よじ登る(引き上げる)"], mantleKnee: ["Pull-up: knee on the edge", "よじ登る(ひざをかける)"], vault: ["Vault", "乗り越える"], glide: ["Glide (hanging overhead)", "滑空(頭の上の物にぶら下がる)"], swim: ["Swim (dog paddle)", "泳ぐ(犬かき)"], treadWater: ["Tread water", "立ち泳ぎ"], wade: ["Wade", "水の中を歩く"], pant: ["Out of breath", "息が上がる"], shiver: ["Shiver (cold)", "寒くて震える"], limp: ["Limp", "足を引きずる"], lookAround: ["Look around", "見回す"], listen: ["Listen", "耳をすます"], hide: ["Hide (still)", "隠れる(じっと)"], balance: ["Balance", "バランスをとる"], balanceWalk: ["Walk a narrow beam", "細い所を渡る"], slide: ["Slide down a slope", "坂をすべり降りる"], stumble: ["Stumble", "つまずく"], roll: ["Forward roll", "前転(受け身)"], hang: ["Hang from an edge", "ぶら下がる"], shimmy: ["Shimmy along an edge", "ぶら下がって横へ"], drink: ["Drink (scoop water)", "水を飲む(手ですくう)"], dive: ["Swim under water", "潜って泳ぐ"], pickUp: ["Pick up", "拾う"], carry: ["Carry in both arms", "両手で抱える"], carryWalk: ["Walk carrying", "抱えて歩く"], throw: ["Throw", "投げる"], push: ["Push", "押す"], chop: ["Chop (axe)", "斧を振る"], eat: ["Eat", "食べる"], fireDrill: ["Make fire (hand drill)", "火をおこす(きりもみ)"], sleep: ["Sleep", "眠る"], stab: ["Spear thrust", "槍で突く"], breaststroke: ["Breaststroke (one stroke)", "平泳ぎ(ひとかき)"], knockdown: ["Knocked down", "突き飛ばされる"], climb: ["Climb (base)", "よじ登る構え"], climbOver: ["Over the edge", "乗り越えてしゃがむ"],
 };
+// Motions played through with what they need (demos.js), and the groups of the motion list
+Object.assign(POSE, {
+  demoMantle: ["Pull up onto a ledge", "段によじ登る"], demoVault: ["Vault over a box", "箱を乗り越える"], demoClimb: ["Climb a wall", "壁を登る"],
+  demoCrawl: ["Crawl", "はって進む"], demoJump: ["Jump", "ジャンプ"], demoHang: ["Hang and move along an edge", "縁にぶら下がって横へ"], demoGlide: ["Glide under a leaf", "葉っぱで滑空"],
+});
+const GROUP = {
+  demo: ["Played through (with a ledge, a wall…)", "通しで見る(段や壁といっしょに)"], basic: ["Stand, walk, run", "立つ・歩く・走る"], sit: ["Sit and rest", "座る・休む"],
+  jump: ["Jump and fall", "跳ぶ・落ちる"], climb: ["Climb, get over, hang", "登る・越える・ぶら下がる"], low: ["Low: crouch, crawl, hide", "かがむ・はう・隠れる"],
+  water: ["Water", "水"], hands: ["With the hands", "手を使う"], fight: ["Fight", "戦う"], state: ["How the body is", "体の様子"], other: ["Other", "その他"],
+};
+export const groupName = (k) => (GROUP[k] ?? [k, k])[lang === "ja" ? 1 : 0];
 const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
 
 let lang = "en";
