@@ -115,13 +115,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const lacesSdf = KIND === "laced" ? (() => { const parts = [], surf = (x, z) => { let lo = 0.025, hi = 0.14; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (shoeSdf(x, m, z) < 0) lo = m; else hi = m; } return lo; };
     // shoes.lacing (2026-10-05, Saori: "リボン、バッテン、よこ棒"): "bow" = straight bars and a big bow / "cross" = criss-cross and the bow /
     // "bar" = straight bars only. The bow sits a little in front of the top row and above it (at the row itself the leg hid it)
-    const LC = OPT.outfit.shoes.lacing ?? "bow", ZS = [0.046, 0.058, 0.07, 0.082], nrm = (v) => { const l = Math.hypot(...v); return v.map((c) => c / l); };
+    const LC = OPT.outfit.shoes.lacing ?? "bow", ZS = LC === "cross" ? [0.046, 0.065, 0.084] : [0.046, 0.058, 0.07, 0.082], nrm = (v) => { const l = Math.hypot(...v); return v.map((c) => c / l); };   // criss-cross: three rows further apart (with four its crosses and the end bar ran into one lump)
     for (const s of ["L", "R"]) { const cx = P[`foot.${s}`].cx, r = 0.0038, bn = `foot.${s}`, k = 0.003;
-      const pt = (x, z) => [x, surf(x, z) + 0.0025, z], w = (i) => 0.018 - 0.0025 * i;
+      const pt = (x, z) => [x, surf(x, z) + 0.0025, z], w = (i) => 0.018 - (LC === "cross" ? 0.003 : 0.0025) * i;
       const seg = (a, b) => { const m = pt(cx, (a[2] + b[2]) / 2); parts.push(C(a, m, r, r, bn, k), C(m, b, r, r, bn, k)); };   // from one eyelet over the top to another
       ZS.forEach((z, i) => { const L = pt(cx - w(i), z), R = pt(cx + w(i), z);
-        if (LC !== "cross") seg(L, R);
-        else if (i + 1 < ZS.length) { const z2 = ZS[i + 1]; seg(L, pt(cx + w(i + 1), z2)); seg(R, pt(cx - w(i + 1), z2)); } });   // each row to the other side of the next
+        if (LC !== "cross" || i === ZS.length - 1) seg(L, R);   // (criss-cross: a straight bar across the last row, toward the toe, as real laces start)
+        if (LC === "cross" && i + 1 < ZS.length) { const z2 = ZS[i + 1]; seg(L, pt(cx + w(i + 1), z2)); seg(R, pt(cx - w(i + 1), z2)); } });   // each row to the other side of the next
       if (LC !== "bar") { const z = ZS[0] + 0.012, b = [cx, surf(cx, z) + 0.01, z];   // the bow: a knot, two loops out and up, two ends hanging forward
         parts.push(E(b, [0.006, 0.005, 0.006], bn, k));
         for (const sx of [-1, 1]) { const u = nrm([sx, 0.55, 0]), v = [0, 0, 1], ww = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
