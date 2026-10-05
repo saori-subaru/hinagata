@@ -184,6 +184,13 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return h("div", { class: "sec" }, kids);
   }
+  // the tails' ties by hand (editor/src/ties.js): only with tails
+  function tiesBlock() {
+    const T = ctx.ties; if (!T || !T.usable) return null;
+    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("tieTitle"))), h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(T.on), onclick: () => T.toggle() }, t("tieMove")))];
+    if (T.on) kids.push(h("div", { class: "help" }, t("tieHelp")));
+    return h("div", { class: "sec" }, kids);
+  }
   // the back hair's locks one by one (editor/src/backs.js)
   function backsBlock() {
     const B = ctx.backs; if (!B) return null;
@@ -258,7 +265,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
     if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
-    if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
+    if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), tiesBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
     const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]);   // drawn locks: their own block if (adv) panelEl.append(adv);   // one picture at a time: in Advanced
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });

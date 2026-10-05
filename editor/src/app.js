@@ -8,6 +8,7 @@ import { createPanel } from "./panel.js";
 import { createBangTool } from "./bangs.js";
 import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
+import { createTieTool } from "./ties.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -49,7 +50,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality });
-      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(vp.motion.pose); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -75,7 +76,7 @@ function applyInstant(av, p, v) {
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
-    case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); return true;
+    case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
       const ch = k.length > 4 ? { [k[3]]: { [last]: v } } : { [last]: v }; clearTimeout(locksT); locksT = setTimeout(() => { try { av.setLocks(k[2], ch); vp.apply(); backs.refresh(); } catch (e) { console.warn(e); } }, 150); return true; }
@@ -90,7 +91,7 @@ store.subscribe((paths, why) => {
     if (av) { vp.lift(); for (const p of paths) if (SCHEMA[p]?.apply) { try { applyInstant(av, p, store.get(p)); } catch (e) { console.warn(e); } } vp.apply(); }
   }
   if (why !== "set" && paths.some(needsBuild)) rebuild();   // shapes rebuild when the gesture ends (slider released)
-  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
+  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); setTimeout(() => ties.refresh(), 0); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
   if (why === "set") { panel.renderFoot(); return; }
   panel.render(); persist(); syncUndo();
 });
@@ -98,7 +99,8 @@ store.subscribe((paths, why) => {
 // ── inspector ──
 const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   // moving the bangs' tufts on the face (bangs.js)
 const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
-const backs = createBackTool({ vp, store, onSelect: () => panel.render() });   // moving the back hair's locks one by one (backs.js)
+const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
+const ties = createTieTool({ vp, store, onChange: () => panel.render() });   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
 // my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
 const HAIRS_KEY = "hinagata.editor.hairs";
 const hairs = {
@@ -117,7 +119,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
-  bangs, draw, hairs, backs,
+  bangs, draw, hairs, backs, ties,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)

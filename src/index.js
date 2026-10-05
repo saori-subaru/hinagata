@@ -273,7 +273,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // per tip of hair.sculpt.nendo.tips (with nendo.locks on), lying over the forehead
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
-  let bangKitMemo = null;   // the same until the hair under the bangs changes (setHair)
+  let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
@@ -281,6 +281,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && (hairPick.back === "short" || hairPick.back === "hang") && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
+    if (which.includes("tails") && !tailsOn) tailAnchors = [];
     if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
@@ -306,6 +307,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const d = [Math.sin(a * D2R), 0, Math.cos(a * D2R)], c0 = [0, y, -0.005], t = surfaceAlong(K.surf, c0, d) + 0.004;
         const up = TL.kind === "pony" ? 0.35 : 0.12, ol = Math.hypot(d[0], up, d[2]);   // outward: away from the head, a little up (a ponytail more)
         return { p: HTr.fromHead(c0[0] + d[0] * t, c0[1], c0[2] + d[2] * t), o: [d[0] / ol, up / ol, d[2] / ol] }; });
+      tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
       out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9 });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
@@ -503,6 +505,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       for (const k of ["tails", "tailTie"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks(["tails"]))) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
+    /** Where the tails are tied (avatar space, rest pose): [{ p, o }] (o: the way the bundle leaves the head), [] without tails. For an editor's handles. */
+    tailTies() { return tailAnchors.map((a) => ({ p: [...a.p], o: [...a.o] })); },
     setDrawnHair(list) {
       OPT.hair.drawn = structuredClone(list ?? []);
       const on = parts.hair.on, vis = parts.hair.m.visible;
