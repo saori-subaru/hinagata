@@ -1265,7 +1265,7 @@
   "body.sculpt.chin.v.on": {
    "path": "body.sculpt.chin.v.on",
    "type": "boolean",
-   "default": true,
+   "default": false,
    "label": {
     "ja": "あごをV字に",
     "en": "V-shaped chin"

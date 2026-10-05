@@ -98,7 +98,7 @@ export const DEFAULTS = {
         "pointW": 0.022,
         "sides": 0,
         "v": {
-          "on": true,
+          "on": false,
           "halfW": 0.02,
           "slope": 1.3,
           "y0": 0.97,
