@@ -8137,50 +8137,6 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 217,
-   "section": {
-    "ja": "靴",
-    "en": "Shoes"
-   },
-   "when": {
-    "outfit.shoes.kind": "laced"
-   }
-  },
-  "outfit.shoes.lacing": {
-   "path": "outfit.shoes.lacing",
-   "type": "enum",
-   "default": "bow",
-   "label": {
-    "ja": "靴紐の結び方",
-    "en": "Lacing"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "clothes",
-   "apply": null,
-   "options": [
-    {
-     "value": "bow",
-     "label": {
-      "ja": "リボン",
-      "en": "Bow"
-     }
-    },
-    {
-     "value": "cross",
-     "label": {
-      "ja": "バッテン",
-      "en": "Criss-cross"
-     }
-    },
-    {
-     "value": "bar",
-     "label": {
-      "ja": "横棒",
-      "en": "Straight bars"
-     }
-    }
-   ],
    "order": 216,
    "section": {
     "ja": "靴",
@@ -8205,7 +8161,7 @@
    "min": 0.12,
    "max": 0.3,
    "step": 0.005,
-   "order": 218,
+   "order": 217,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8233,7 +8189,7 @@
    "min": 8,
    "max": 40,
    "step": 1,
-   "order": 219,
+   "order": 218,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8294,7 +8250,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 220,
+   "order": 219,
    "section": {
     "ja": "靴",
     "en": "Shoes"
