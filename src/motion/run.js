@@ -45,7 +45,8 @@ Object.assign(POSES, {
  *  on the ground (near the lowest a foot gets), its front-to-back speed, averaged. Play the pose at speed / this and the feet don't slide. */
 export function measureGait(avatar, pose = "run", period = 2 * Math.PI / RUN_W) {
   const root = avatar.object, F = [avatar.bones["foot.L"], avatar.bones["foot.R"]], N = 96, dt = period / N, v = new THREE.Vector3();
-  const at = (i) => { avatar.update(0, { t: i * dt, pose, instant: true }); root.updateMatrixWorld(true); return F.map((f) => root.worldToLocal(f.getWorldPosition(v)).clone()); };
+  const at = (i) => { avatar.update(0, { t: i * dt, pose, instant: true, detail: "off" });   // (only the bones: settling the hair and cloth at each of the 97 took 10 s of a tennis game's start, 2026-10-05)
+    root.updateMatrixWorld(true); return F.map((f) => root.worldToLocal(f.getWorldPosition(v)).clone()); };
   const P = []; for (let i = 0; i <= N; i++) P.push(at(i));
   const floor = Math.min(...P.map((f) => Math.min(f[0].y, f[1].y))), tol = 0.012;   // a foot counts as planted within 1.2 cm of the lowest it gets (in flight, both are up)
   let sum = 0, n = 0;

@@ -27,7 +27,7 @@ Object.assign(POSES, {
  *  shX / shY: a shoulder joint's distance from the middle and height; arm: shoulder → wrist; hipX / hipY, leg: hip joint → ankle. */
 export function measureBody(avatar) {
   const root = avatar.object, B = avatar.bones;
-  avatar.update(0, { t: 0, pose: "aPose", instant: true }); root.updateMatrixWorld(true);
+  avatar.update(0, { t: 0, pose: "aPose", instant: true, detail: "off" }); root.updateMatrixWorld(true);
   const p = (n) => root.worldToLocal(B[n].getWorldPosition(new THREE.Vector3()));
   const sh = p("upperArm.L"), el = p("lowerArm.L"), wr = p("hand.L"), hp = p("upperLeg.L"), kn = p("lowerLeg.L"), an = p("foot.L");
   avatar.update(0, { t: 0, pose: "idle", instant: true });
@@ -40,7 +40,7 @@ export function measureStride(avatar, pose = "walk", period = 2 * Math.PI / 6.2)
   const root = avatar.object, foot = avatar.bones["foot.L"], v = new THREE.Vector3(), N = 32;
   let z0 = Infinity, z1 = -Infinity;
   for (let i = 0; i < N; i++) {
-    avatar.update(0, { t: (i / N) * period, pose, instant: true }); root.updateMatrixWorld(true);
+    avatar.update(0, { t: (i / N) * period, pose, instant: true, detail: "off" }); root.updateMatrixWorld(true);   // (only the bones: the hair and cloth not simulated)
     root.worldToLocal(foot.getWorldPosition(v)); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z);
   }
   avatar.update(0, { t: 0, pose: "idle", instant: true });

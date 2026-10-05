@@ -566,7 +566,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       // how much of the hair and cloth to simulate this frame (2026-10-05, Saori: a game's players spent more time on swaying hair and skirts
       // than the whole game: a dress, a cape and long hair took 25 ms a frame). Small on the screen, the sway isn't seen at a lower rate
       detailNow = detail ?? (camera ? detailFor(camera) : "full"); const every = { full: 1, half: 2, low: 4, off: 0 }[detailNow] ?? 1;
-      simDt += dt; simN++; const sim = instant || (every > 0 && simN >= every), sdt = instant ? dt : simDt; if (sim || !every) { simDt = 0; simN = 0; }
+      simDt += dt; simN++; const sim = every > 0 && (instant || simN >= every), sdt = instant ? dt : simDt; if (sim || !every) { simDt = 0; simN = 0; }
       if (sim) { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
       // the wind the hair meets: a pose that goes somewhere (run, walk: lastPose.air, m/s) played in place still streams the hair back. When
       // the avatar really moves that fast, its own motion does it (the locks trail in world space): only what it lacks is added

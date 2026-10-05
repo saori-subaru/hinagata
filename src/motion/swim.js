@@ -42,7 +42,7 @@ Object.assign(POSES, {
 /** The chin's height above the feet point in the swim pose (avatar units): put the feet point at water level − this × scale, and the head rides the surface. */
 export function swimHead(avatar) {
   const root = avatar.object, v = new THREE.Vector3();
-  avatar.update(0, { t: 0, pose: "swim", instant: true }); root.updateMatrixWorld(true);
+  avatar.update(0, { t: 0, pose: "swim", instant: true, detail: "off" }); root.updateMatrixWorld(true);
   const y = root.worldToLocal(avatar.bones.head.getWorldPosition(v)).y;
   avatar.update(0, { t: 0, pose: "idle", instant: true });
   return y;
