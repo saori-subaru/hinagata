@@ -275,8 +275,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [];
     const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("drawTitle")), h("span", { class: "cost" }, t("drawN", list.length))),
       h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => D.toggle() }, t("drawOn")),
+        list.length ? h("button", { class: "chip", type: "button", "aria-pressed": String(S.move), onclick: () => D.toggleMove() }, t("drawMove")) : null,
         h("button", { class: "chip", type: "button", "aria-pressed": String(S.mirror), onclick: () => D.set("mirror", !S.mirror) }, t("drawMirror")))];
     if (S.on) kids.push(h("div", { class: "help" }, t("drawHelp")));
+    if (S.move) kids.push(h("div", { class: "help" }, t("drawMoveHelp")));
     for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1]]) {   // the brush for the next lock
       const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));

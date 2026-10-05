@@ -98,7 +98,7 @@ store.subscribe((paths, why) => {
     if (av) { vp.lift(); for (const p of paths) if (SCHEMA[p]?.apply) { try { applyInstant(av, p, store.get(p)); } catch (e) { console.warn(e); } } vp.apply(); }
   }
   if (why !== "set" && paths.some(needsBuild)) rebuild();   // shapes rebuild when the gesture ends (slider released)
-  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); setTimeout(() => ties.refresh(), 0); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
+  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); draw.refresh(); setTimeout(() => ties.refresh(), 0); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
   if (why === "set") { panel.renderFoot(); return; }
   panel.render(); persist(); syncUndo();
 });
