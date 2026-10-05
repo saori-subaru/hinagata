@@ -90,12 +90,14 @@ export const DEFAULTS = {
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.015,
+        "k": 0.03,
+        "sharp": 0.3,
+        "sharpZ": [-0.02, 0.14],
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
-        "point": 0,
-        "pointW": 0.022,
+        "point": 0.055,
+        "pointW": 0.02,
         "sides": 0,
         "v": {
           "on": false,
@@ -131,13 +133,13 @@ export const DEFAULTS = {
         "width": 0.112
       },
       "chinTip": {
-        "on": false,
-        "y": 0.84,
+        "on": true,
+        "y": 0.805,
         "z": 0.16,
-        "rx": 0.03,
-        "ry": 0.03,
+        "rx": 0.013,
+        "ry": 0.038,
         "rz": 0.05,
-        "k": 0.04
+        "k": 0.03
       },
       "backPlane": {
         "z": 0,
@@ -668,7 +670,7 @@ export const DEFAULTS = {
     },
     "eyeSize": 1.25,
     "layout": {
-      "eyeX": 0.096,
+      "eyeX": 0.088,
       "eyeY": 0.998,
       "browX": 0.088,
       "browY": 1.092,
