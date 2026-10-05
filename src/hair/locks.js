@@ -307,16 +307,17 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, c.r + r); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
     if (X[j + 1] < floorY + r) X[j + 1] = floorY + r;   // the floor (the avatar's feet)
   }
-  function step(h, keep) {   // one step of h seconds
+  let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
+  function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
     // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
     // gravity the head's turn has taken away acts here: world down less the rest's down turned with the head. Upright that is nothing (no sag
     // off the rest shape: before, the locks sank a few cm and left the head); a head bent forward or lying down lets the hair fall
-    const g = 9.8 * h * h, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
+    const g = 9.8 * h * h * fk, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
     for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
       for (let q = 0; q < 3; q++) { let v = (X[j + q] - P[j + q]) * keep; if (q === 1 && keep) { const tv = (T[j + 1] - TP[j + 1]) / sub; v = tv + (v - tv) * VDAMP; } P[j + q] = X[j + q]; X[j + q] += v; }   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
-      X[j] += gx + AIR[0] * h * h; X[j + 1] += gy + AIR[1] * h * h; X[j + 2] += gz + AIR[2] * h * h;   // the wind (air drag pulling it along)
-      for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * K[p]; }
+      X[j] += gx + AIR[0] * h * h * fk; X[j + 1] += gy + AIR[1] * h * h * fk; X[j + 2] += gz + AIR[2] * h * h * fk;   // the wind (air drag pulling it along)
+      for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
         if (i === 2) { X[b] -= dx * f; X[b + 1] -= dy * f; X[b + 2] -= dz * f; }   // the one before rides on the head: only this one moves
@@ -359,11 +360,12 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   return {
     geometry: g,
     /** Each frame after the pose is set. instant: settle at once (no swing carried over). */
-    update(dt, instant = false, wind = null) {
+    update(dt, instant = false, wind = null, coarse = false) {   // coarse: one step for all the time since the last (a far or small character: see the avatar's update)
       matrices();
       for (let q = 0; q < 3; q++) AIR[q] = (wind?.[q] ?? 0) * DRAG;
       let jump = 0; for (let i = 0; i < NP * 3; i += 3 * N) jump = Math.max(jump, Math.abs(T[i] - X[i]) + Math.abs(T[i + 1] - X[i + 1]) + Math.abs(T[i + 2] - X[i + 2]));   // the roots against where they were
       if (first || instant || jump > 0.5) { X.set(T); P.set(T); for (let s = 0; s < (first ? 40 : 20); s++) step(H, 0); first = false; acc = 0; }   // settle (also when the avatar was moved far at once: no whip across the scene)
+      else if (coarse) { acc = Math.min(acc + dt, 4 * H); const n = Math.floor(acc / H); if (n) { sub = 1; if (n !== kn) { kn = n; KN = K.map((k) => 1 - (1 - k) ** n); } KS = n > 1 ? KN : K; step(n * H, damping ** n, (n + 1) / (2 * n)); KS = K; acc -= n * H; } }
       else { acc = Math.min(acc + dt, 4 * H); sub = Math.max(1, Math.floor(acc / H)); while (acc >= H) { step(H, damping); acc -= H; } }
       mesh();
     },

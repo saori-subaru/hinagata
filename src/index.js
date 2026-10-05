@@ -526,6 +526,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i < A.count; i++) { const x = A.getX(i), y = A.getY(i), z = A.getZ(i); if (Math.abs(x) < 0.17 && y > 0.22 && y < 0.5 && z > -0.16 && z < 0.12) idx.push(i); }
     const step = Math.max(1, Math.ceil(idx.length / 500)); return { m, idx: idx.filter((_, j) => j % step === 0) }; });
   const seatV = new THREE.Vector3(); let seatAdj = 0, lastRoot = null; const wind = [0, 0, 0];
+  // the simulation's level of detail (update's camera): the character's height on the screen, as a share of the view's height
+  let simDt = 0, simN = Math.floor(Math.random() * 4), detailNow = "full";   // (simN starts anywhere: several characters at "half" or "low" take their frames in turns)
+  const dC = new THREE.Vector3(), dE = new THREE.Vector3(), dS = new THREE.Sphere(), dF = new THREE.Frustum(), dM = new THREE.Matrix4();
+  function detailFor(cam) {
+    root.updateMatrixWorld(); cam.updateMatrixWorld();
+    const h = 1.4 * root.matrixWorld.getMaxScaleOnAxis(); dC.setFromMatrixPosition(root.matrixWorld); dC.y += h * 0.5;
+    dF.setFromProjectionMatrix(dM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    if (!dF.intersectsSphere(dS.set(dC, h * 0.7))) return "off";
+    const f = cam.isOrthographicCamera ? h * cam.zoom / (cam.top - cam.bottom) : h * (cam.zoom ?? 1) / (2 * Math.max(1e-3, dC.distanceTo(dE.setFromMatrixPosition(cam.matrixWorld))) * Math.tan(cam.fov * Math.PI / 360));
+    return f >= 0.25 ? "full" : f >= 0.1 ? "half" : "low";
+  }
   function seatLow(front) { root.updateMatrixWorld(true); let lo = Infinity;   // front: the seat's front edge (z); the thighs beyond it are not on the seat
     for (const { m, idx } of SEAT_PROBE) { if (!m.visible) continue; for (const i of idx) { m.getVertexPosition(i, seatV); seatV.applyMatrix4(m.matrixWorld); root.worldToLocal(seatV); if (seatV.z < front && seatV.y < lo) lo = seatV.y; } }
     return lo; }
@@ -538,9 +549,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     get pose() { return poseName; },
     get lastPose() { return lastPose; },
     get faceSel() { return faceSel; },
+    /** how much of the hair and cloth the last update simulated: "full" | "half" | "low" | "off" (see update's camera) */
+    get detail() { return detailNow; },
 
-    /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose. */
-    update(dt, { t, instant = false, pose } = {}) {
+    /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose.
+     *  camera: the camera the scene is drawn with: the hair and cloth are simulated less when the character is small on the screen
+     *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself. */
+    update(dt, { t, instant = false, pose, camera, detail } = {}) {
       syncCover();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
@@ -548,13 +563,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
       else seatAdj *= instant ? 0 : Math.exp(-dt * 9);
-      { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(dt, instant, seat); capeCloth?.update(dt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
+      // how much of the hair and cloth to simulate this frame (2026-10-05, Saori: a game's players spent more time on swaying hair and skirts
+      // than the whole game: a dress, a cape and long hair took 25 ms a frame). Small on the screen, the sway isn't seen at a lower rate
+      detailNow = detail ?? (camera ? detailFor(camera) : "full"); const every = { full: 1, half: 2, low: 4, off: 0 }[detailNow] ?? 1;
+      simDt += dt; simN++; const sim = instant || (every > 0 && simN >= every), sdt = instant ? dt : simDt; if (sim || !every) { simDt = 0; simN = 0; }
+      if (sim) { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
       // the wind the hair meets: a pose that goes somewhere (run, walk: lastPose.air, m/s) played in place still streams the hair back. When
       // the avatar really moves that fast, its own motion does it (the locks trail in world space): only what it lacks is added
       { root.updateMatrixWorld(true); const e = root.matrixWorld.elements, fw = [e[8], 0, e[10]], fl = Math.hypot(fw[0], fw[2]) || 1, pos = [e[12], e[13], e[14]];
         const v = !instant && lastRoot && dt > 0 ? ((pos[0] - lastRoot[0]) * fw[0] + (pos[2] - lastRoot[2]) * fw[2]) / fl / dt : 0; lastRoot = pos;
         const a = Math.max(0, (lastPose.air ?? 0) - Math.max(0, v)); wind[0] = -fw[0] / fl * a; wind[1] = 0; wind[2] = -fw[2] / fl * a; }
-      for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(dt, instant, wind);
+      if (sim) for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },

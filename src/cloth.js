@@ -196,8 +196,9 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       A_[i] = x + (e[0] * x + e[4] * y + e[8] * z + e[12] - x) * s; A_[i + 1] = y + (e[1] * x + e[5] * y + e[9] * z + e[13] - y) * s; A_[i + 2] = z + (e[2] * x + e[6] * y + e[10] * z + e[14] - z) * s; }
     return true;
   }
+  let AS = A, AN = null, an = 1;   // AS: the pull toward the targets for this step: A, or what n frames of it add up to (a step for several frames, AN)
   function step(keep, iters, C, seat) {
-    for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * A[v]; X[i] = W[v] ? x : T[i]; }
+    for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * AS[v]; X[i] = W[v] ? x : T[i]; }
     for (let k = 0; k < iters; k++) { let t0 = now(); edges(); PROF.edges += now() - t0; t0 = now(); collide(C, seat); PROF.collide += now() - t0; }
     { const t0 = now(); for (let k = 0; k < EXTRA; k++) edges(); PROF.edges += now() - t0; }   // the cloth gets the last word: a heel kicked up behind caught a few hem points and the collision, last, left them pulled out of the hem in a thin spike (2026-10-05, Saori: "布が伸びて千切れそう")
     { const t0 = now(); if (BD) collideBody(); PROF.collide += now() - t0; }   // the body's surface: once, after the rounds (it only nudges)
@@ -225,7 +226,8 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       else { if (sway && hasM0 && carry()) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
         if (air && blow(dt)) moved = 1;
         still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
-        step(Math.pow(0.55, Math.min(dt, 0.05) * 60), 2, C, seat); }   // keep a little of the motion (55% per 1/60 s)
+        const nf = Math.max(1, Math.round(dt * 60)); if (nf > 1 && nf !== an) { an = nf; AN = A.map((a) => 1 - (1 - a) ** nf); } AS = nf > 1 ? AN : A;   // one step for nf frames (a far character, see the avatar's update)
+        step(Math.pow(0.55, Math.min(dt, 0.05) * 60), 2, C, seat); AS = A; }   // keep a little of the motion (55% per 1/60 s)
       t0 = now(); normals(); unskin(); PROF.normals = now() - t0;
     },
     /** Put the built mesh back (as skinned from the rest pose; e.g. for the glTF export). The next update moves the cloth again. */
