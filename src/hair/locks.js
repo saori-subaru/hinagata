@@ -145,22 +145,23 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
 /**
  * Tails (hair.tail, 2026-10-05, Saori: side tails, twin tails, ponytails): a bundle of locks from a tie on the head. Each lock leaves the tie
  * outward (o: away from the head, a little up), arcs over and falls, the tips fanning out; then it is pushed out of the head and the body.
- * T: { count, length, volume (the bundle's radius at the tie, m), width, thick, lift (how far it stands out before falling), spread, stiff }
+ * T: { count, length, volume (the bundle's radius at the tie, m), width, thick, lift (how far it stands out before falling), spread, stiff,
+ *      size (×: the bundle and each lock's width together, how thick the tail looks) }
  * anchors: [{ p, o }] the ties (root space, rest) and their outward directions / coll, ell: as for the other locks (colliders(), the head)
  */
 export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
-  const out = [], n = Math.max(1, Math.round(T.count ?? 9)), hash = (i) => { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
+  const out = [], n = Math.max(1, Math.round(T.count ?? 9)), S = T.size ?? 1, VOL = T.volume * S, hash = (i) => { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
   for (const { p, o } of anchors) {
     const ul = Math.hypot(o[2], o[0]) || 1, u = [o[2] / ul, 0, -o[0] / ul], v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];   // across the tie: u sideways (level), v
     for (let i = 0; i < n; i++) {
       const a = i * 2.39996 + 0.3, r = Math.sqrt((i + 0.5) / n), dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
-      const len = T.length * (0.82 + 0.3 * hash(i)), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * T.volume * r;
-      const root = p.map((x, k) => x + dir[k] * T.volume * r * 0.45);
+      const len = T.length * (0.82 + 0.3 * hash(i)), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
+      const root = p.map((x, k) => x + dir[k] * VOL * r * 0.45);
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 : 0)),   // a cubic Bezier: out from the tie, over, and down
         root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * fan - (k === 1 ? len : 0))];
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
-      const w = T.width * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
+      const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)
         if (ell) pushOutEllipsoid(P[q], ell.c, ell.r, rad(q)); for (const c of coll) pushOutSphere(P[q], c.c, c.r + rad(q));
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }

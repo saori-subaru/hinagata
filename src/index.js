@@ -309,7 +309,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
       out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9 });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
-        const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
+        const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
           g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026); return g; });
         const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
         g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);

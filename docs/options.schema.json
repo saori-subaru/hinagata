@@ -7165,24 +7165,18 @@
    "type": "number",
    "default": 0.04,
    "label": {
-    "ja": "毛量",
-    "en": "Volume"
+    "en": "tail › volume"
    },
    "group": "hair",
-   "tier": "main",
+   "tier": "advanced",
    "cost": "hair",
    "apply": "setTails",
    "min": 0.02,
-   "max": 0.07,
-   "step": 0.002,
-   "order": 74,
+   "max": 0.06,
+   "step": 0.001,
+   "soft": true,
    "section": {
-    "ja": "結び髪",
-    "en": "Tails"
-   },
-   "help": {
-    "ja": "結び目での束の太さ(m)",
-    "en": "the bundle's radius at the tie (m)"
+    "en": "tail"
    }
   },
   "hair.tail.count": {
@@ -7303,6 +7297,31 @@
    "soft": true,
    "section": {
     "en": "tail"
+   }
+  },
+  "hair.tail.size": {
+   "path": "hair.tail.size",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "太さ",
+    "en": "Thickness"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setTails",
+   "min": 0.5,
+   "max": 2,
+   "step": 0.05,
+   "order": 74,
+   "section": {
+    "ja": "結び髪",
+    "en": "Tails"
+   },
+   "help": {
+    "ja": "束ごと太く・細く(倍)。髪ゴムも合わせて変わる",
+    "en": "the whole bundle thicker or thinner (×); the tie follows"
    }
   },
   "hair.tail.tie.on": {

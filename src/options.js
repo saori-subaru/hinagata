@@ -509,6 +509,7 @@ export const DEFAULTS = {
       "lift": 0.05,
       "spread": 1.5,
       "stiff": 1,
+      "size": 1,
       "tie": {
         "on": true,
         "color": "#c94a4a",

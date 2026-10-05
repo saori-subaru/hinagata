@@ -114,7 +114,7 @@ const MAIN = [
   ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.side", L("結ぶ側", "Side"), { when: { "hair.tail.kind": "side" }, options: opts({ L: ["左", "Left"], R: ["右", "Right"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.length", L("長さ", "Length"), { min: 0.1, max: 0.9, step: 0.01, section: L("結び髪", "Tails") }],
-  ["hair.tail.volume", L("毛量", "Volume"), { min: 0.02, max: 0.07, step: 0.002, section: L("結び髪", "Tails"), help: L("結び目での束の太さ(m)", "the bundle's radius at the tie (m)") }],
+  ["hair.tail.size", L("太さ", "Thickness"), { min: 0.5, max: 2, step: 0.05, section: L("結び髪", "Tails"), help: L("束ごと太く・細く(倍)。髪ゴムも合わせて変わる", "the whole bundle thicker or thinner (×); the tie follows") }],
   ["hair.tail.lift", L("はね上がり", "Lift"), { min: 0, max: 0.12, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から外へ張り出してから落ちるまで(m)", "how far it stands out from the tie before falling (m)") }],
   ["hair.tail.y", L("結ぶ高さ", "Tie height"), { min: 0.95, max: 1.22, step: 0.005, nullable: true, section: L("結び髪", "Tails"), help: L("null = 種類ごとの高さ", "null = each kind's own height") }],
   ["hair.tail.angle", L("結ぶ位置(後ろへ)", "Tie position (toward the back)"), { min: 60, max: 180, step: 1, nullable: true, section: L("結び髪", "Tails"), help: L("頭のまわりの角度。90 = 真横、180 = 真後ろ。null = 種類ごと", "degrees around the head: 90 = the side, 180 = the back. null = each kind's own") }],
