@@ -85,18 +85,20 @@ export const DEFAULTS = {
         "rz": 0.2
       },
       "cheeks": {
-        "width": 0.175
+        "width": 0.175,
+        "y": 0.935,
+        "height": 0.115
       },
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.03,
-        "sharp": 0.3,
+        "k": 0.015,
+        "sharp": 0,
         "sharpZ": [-0.02, 0.14],
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
-        "point": 0.055,
+        "point": 0,
         "pointW": 0.02,
         "sides": 0,
         "v": {
@@ -133,7 +135,7 @@ export const DEFAULTS = {
         "width": 0.112
       },
       "chinTip": {
-        "on": true,
+        "on": false,
         "y": 0.805,
         "z": 0.16,
         "rx": 0.013,
@@ -186,20 +188,20 @@ export const DEFAULTS = {
       },
       "temple": {
         "minZ": 0.09,
-        "depth": 0,
+        "depth": 0.006,
         "x": 0.19,
         "y": 0.98,
         "height": 0.13
       },
       "cheekTrim": {
-        "depth": 0,
+        "depth": 0.008,
         "x": 0.2,
         "y": 0.9,
         "width": 0.05,
         "height": 0.08
       },
       "cheekFill": {
-        "depth": 0,
+        "depth": 0.008,
         "x": 0.125,
         "y": 0.905,
         "width": 0.095,
@@ -670,7 +672,7 @@ export const DEFAULTS = {
     },
     "eyeSize": 1.25,
     "layout": {
-      "eyeX": 0.088,
+      "eyeX": 0.096,
       "eyeY": 0.998,
       "browX": 0.088,
       "browY": 1.092,
