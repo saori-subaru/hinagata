@@ -60,7 +60,16 @@ export const DEFAULTS = {
         "y": 1.108
       },
       "neck": {
-        "width": 0.85
+        "width": 0.85,
+        "nape": {
+          "on": true,
+          "y0": 0.82,
+          "y1": 0.96,
+          "z0": -0.025,
+          "z1": -0.035,
+          "r": 0.04,
+          "k": 0.04
+        }
       },
       "socketScale": 1,
       "faceNarrow": {
@@ -81,10 +90,16 @@ export const DEFAULTS = {
       "chin": {
         "y": 0.835,
         "curve": 0.95,
-        "k": 0.015
+        "k": 0.015,
+        "backZ": 0.12,
+        "backRise": 0.7,
+        "backMax": 0.07,
+        "napeY": 0.95,
+        "napeZ": 0,
+        "napeDrop": 0
       },
       "jawU": {
-        "on": 0,
+        "on": 1,
         "rx": 0.165,
         "ry": 0.12,
         "y": 0.96,
@@ -418,7 +433,8 @@ export const DEFAULTS = {
       }
     },
     "bangs": "nendo",
-    "back": "short",
+    "drawn": [],
+    "back": "hang",
     "ahoge": true,
     "sculpt": {
       "hime": {
@@ -465,6 +481,7 @@ export const DEFAULTS = {
         "lockStiff": 4,
         "lockSpan": 13,
         "lockRise": 0.03,
+        "lockHangY": 0.86,
         "lockRoot": 70,
         "lockRootSpread": 0.45,
         "lockTaper": 0.08,
@@ -490,9 +507,10 @@ export const DEFAULTS = {
         "span": 115,
         "width": 0.075,
         "thick": 0.25,
-        "hang": true,
         "ph": [64, 44],
         "below": 0.01,
+        "flick": 0,
+        "edits": [],
         "lie": {
           "count": 17,
           "span": 135,
@@ -500,6 +518,7 @@ export const DEFAULTS = {
           "thick": 0.32,
           "puff": 0.006,
           "flick": 0.02,
+          "edits": [],
           "ph": [74, 54]
         },
         "vary": 0.15,
@@ -519,10 +538,13 @@ export const DEFAULTS = {
       "ahogeDir": 90,
       "long": {
         "locks": true,
+        "hug": false,
         "count": 13,
         "span": 110,
         "width": 0.075,
         "thick": 0.3,
+        "flick": 0,
+        "edits": [],
         "stiff": 1,
         "damping": 0.9,
         "yc": 1.0,

@@ -53,6 +53,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const SOCKET_LOW = { d: OPT.body.sculpt.socketLow.depth, y: OPT.body.sculpt.socketLow.y ?? 0.035, w: OPT.body.sculpt.socketLow.width ?? 0.085, h: OPT.body.sculpt.socketLow.height ?? 0.06, hu: OPT.body.sculpt.socketLow.heightUp };   // 上側は広くゆっくり消す(段が出ないように)   // 眼窩の下側を沈める量 / 中心の下がり / 横・縦の広がり   // 眼窩の外側(こめかみ側)への広がり
   const EAR = { flare: 0.7, tilt: 0.3, x: OPT.body.sculpt.ears.x ?? 0.24 * OPT.body.sculpt.skull.width / 0.249, y: OPT.body.sculpt.ears.y, lean: 0.6 };   // 耳: 後ろの縁の開き / 上ほど外へ倒す量 / 位置
   P.neck = C([0, 0.725, -0.032], [0, 0.845, 0.006], 0.057 * OPT.body.sculpt.neck.width, 0.056 * OPT.body.sculpt.neck.width, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+  // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
+  // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
+  { const NN = OPT.body.sculpt.neck.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1, NN.z1], NN.r * OPT.body.sculpt.neck.width, NN.r * OPT.body.sculpt.neck.width, "neck", NN.k); }
   P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
@@ -79,7 +82,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
   // skullTop: a slightly wider piece over the upper head (above the forehead), so the head widens there without changing the face
   { const ST = OPT.body.sculpt.skullTop; if (ST.extra) P.skullTop = E([0, ST.y, ST.z], [SK.width + ST.extra, ST.ry, ST.rz], "head", 0.06); }   // 頭(大きな丸。横幅・前後とも見本どおり)
-  P.occiput = E([0, 1.0, -0.07], [0.17, 0.09, 0.14], "head", 0.08);   // 後頭部の下(首の上まで丸くふくらむ)
+  { const OC = OPT.body.sculpt.occiput ?? {}; P.occiput = E([0, OC.y ?? 1.0, OC.z ?? -0.07], [OC.rx ?? 0.17, OC.ry ?? 0.09, OC.rz ?? 0.14], "head", 0.08); }   // 後頭部の下(首の上まで丸くふくらむ)
   P.face = E([0, 0.935, 0.08], [OPT.body.sculpt.cheeks.width, 0.115, 0.168], "head", 0.08);   // ほお〜あご(頭と同じ幅のまま下りて、なめらかにすぼまる)
   P.jaw = E([0, 0.868, 0.094], [OPT.body.sculpt.jaw.width, 0.062, 0.142], "head", 0.07);      // あご先(下は平らぎみ)
   P.muzzle = E([0, OPT.body.sculpt.muzzle.y, 0.17], [OPT.body.sculpt.muzzle.width, 0.075, 0.1], "head", 0.05);   // 口まわりのふくらみ(鼻の下がへこまず、あごまでなめらかに続く)
@@ -96,7 +99,18 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   CUT.nasion = cut(E([0, 1.005 + NOSE_DY, 0.266], [0.05, 0.035, 0.025], "head", 0.025));   // 鼻の付け根(凹みのいちばん深いところ)
   CUT.brow = cut(E([0, 1.012 + NOSE_DY, 0.314], [0.19, 0.05, 0.07], "head", 0.05));   // 目の高さを横にゆるく凹ませる
   const CH = OPT.body.sculpt.chin;   // under the chin: height at the middle, how fast it rises toward the sides (rounder U), softness of the corner
-  CUT.chin = plane((x, y) => (y - CH.y + 0.014 * Math.exp(-x * x / 0.0032) - CH.curve * x * x) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
+  // backRise: seen from the side the underside of the jaw rises from the chin toward the ear (by backRise per m behind backZ, at most backMax),
+  // so there is no corner under the ear: the jaw line runs up to it and the neck sits behind (2026-10-04, Saori: "the jaw looks heavy, under the ear bulges")
+  const rise = (z) => { if (!CH.backRise) return 0; const s = (CH.backZ ?? 0.12) - z, r = CH.backRise * 0.5 * (s + Math.sqrt(s * s + 0.0004)), m = CH.backMax ?? 0.06;
+    return r - 0.5 * (r - m + Math.sqrt((r - m) ** 2 + 0.0001)); };   // a smooth ramp, then a smooth cap
+  // napeY: behind the ear (z behind napeZ) the bottom of the head is level at this height, as a real skull's base is (about the ear's
+  // height, cut off level, the neck below; Saori, with a photo of a skull). Before, the skull's ball reached down below the earlobe and
+  // showed under the ear seen from below. The neck reaches up to it (neck.top)
+  // napeDrop: at the back, toward the middle, the level base slopes down to the neck (a chamfer seen from the side, so the head doesn't end
+  // in a flat shelf over the neck): lower by napeDrop at the neck's back (z napeNeckZ), nothing at the back of the head (napeBackZ) or behind the ears
+  const chamfer = (x, z) => CH.napeDrop ? CH.napeDrop * sstep(CH.napeBackZ ?? -0.2, CH.napeNeckZ ?? -0.07, z) * (1 - sstep(CH.napeDropX?.[0] ?? 0.05, CH.napeDropX?.[1] ?? 0.13, Math.abs(x))) : 0;
+  const level = (x, z, base) => { if (CH.napeY == null) return base; const t = CH.napeY - chamfer(x, z); return base + Math.max(0, t - base) * sstep(CH.napeZ ?? 0, (CH.napeZ ?? 0) - 0.04, z); };
+  CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) + CH.curve * x * x)) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;

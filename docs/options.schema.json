@@ -772,6 +772,135 @@
     "en": "neck"
    }
   },
+  "body.sculpt.neck.nape.on": {
+   "path": "body.sculpt.neck.nape.on",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "en": "neck › nape › on"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.y0": {
+   "path": "body.sculpt.neck.nape.y0",
+   "type": "number",
+   "default": 0.82,
+   "label": {
+    "en": "neck › nape › y 0"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.41,
+   "max": 1.23,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.y1": {
+   "path": "body.sculpt.neck.nape.y1",
+   "type": "number",
+   "default": 0.96,
+   "label": {
+    "en": "neck › nape › y 1"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.48,
+   "max": 1.44,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.z0": {
+   "path": "body.sculpt.neck.nape.z0",
+   "type": "number",
+   "default": -0.025,
+   "label": {
+    "en": "neck › nape › z 0"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.0375,
+   "max": -0.0125,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.z1": {
+   "path": "body.sculpt.neck.nape.z1",
+   "type": "number",
+   "default": -0.035,
+   "label": {
+    "en": "neck › nape › z 1"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.0525,
+   "max": -0.0175,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.r": {
+   "path": "body.sculpt.neck.nape.r",
+   "type": "number",
+   "default": 0.04,
+   "label": {
+    "en": "neck › nape › r"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.02,
+   "max": 0.06,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
+  "body.sculpt.neck.nape.k": {
+   "path": "body.sculpt.neck.nape.k",
+   "type": "number",
+   "default": 0.04,
+   "label": {
+    "en": "neck › nape › k"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.02,
+   "max": 0.06,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "neck › nape"
+   }
+  },
   "body.sculpt.socketScale": {
    "path": "body.sculpt.socketScale",
    "type": "number",
@@ -1019,12 +1148,88 @@
     "en": "chin"
    }
   },
-  "body.sculpt.jawU.on": {
-   "path": "body.sculpt.jawU.on",
+  "body.sculpt.chin.backZ": {
+   "path": "body.sculpt.chin.backZ",
+   "type": "number",
+   "default": 0.12,
+   "label": {
+    "en": "chin › back z"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.06,
+   "max": 0.18,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.backRise": {
+   "path": "body.sculpt.chin.backRise",
+   "type": "number",
+   "default": 0.7,
+   "label": {
+    "en": "chin › back rise"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.35,
+   "max": 1.05,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.backMax": {
+   "path": "body.sculpt.chin.backMax",
+   "type": "number",
+   "default": 0.07,
+   "label": {
+    "en": "chin › back max"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.035,
+   "max": 0.105,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.napeY": {
+   "path": "body.sculpt.chin.napeY",
+   "type": "number",
+   "default": 0.95,
+   "label": {
+    "en": "chin › nape y"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.475,
+   "max": 1.425,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.napeZ": {
+   "path": "body.sculpt.chin.napeZ",
    "type": "number",
    "default": 0,
    "label": {
-    "en": "jaw u › on"
+    "en": "chin › nape z"
    },
    "group": "body",
    "tier": "advanced",
@@ -1033,6 +1238,44 @@
    "min": -0.05,
    "max": 0.05,
    "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.chin.napeDrop": {
+   "path": "body.sculpt.chin.napeDrop",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "en": "chin › nape drop"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": -0.05,
+   "max": 0.05,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "chin"
+   }
+  },
+  "body.sculpt.jawU.on": {
+   "path": "body.sculpt.jawU.on",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "en": "jaw u › on"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.5,
+   "max": 1.5,
+   "step": 0.01,
    "soft": true,
    "section": {
     "en": "jaw u"
@@ -4064,7 +4307,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 71,
+   "order": 86,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4082,7 +4325,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 72,
+   "order": 87,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4123,7 +4366,7 @@
      }
     }
    ],
-   "order": 73,
+   "order": 88,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4164,7 +4407,7 @@
      }
     }
    ],
-   "order": 74,
+   "order": 89,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4198,7 +4441,7 @@
      }
     }
    ],
-   "order": 75,
+   "order": 90,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -4406,7 +4649,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 76,
+   "order": 91,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4424,7 +4667,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 77,
+   "order": 92,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4458,7 +4701,7 @@
      }
     }
    ],
-   "order": 78,
+   "order": 93,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4499,7 +4742,7 @@
      }
     }
    ],
-   "order": 79,
+   "order": 94,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4523,7 +4766,7 @@
    "min": 0.2,
    "max": 0.4,
    "step": 0.005,
-   "order": 82,
+   "order": 97,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4551,7 +4794,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 83,
+   "order": 98,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4579,7 +4822,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 84,
+   "order": 99,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4664,7 +4907,7 @@
    "min": 0.22,
    "max": 0.4,
    "step": 0.005,
-   "order": 80,
+   "order": 95,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4731,7 +4974,7 @@
    "min": 0,
    "max": 0.4,
    "step": 0.01,
-   "order": 81,
+   "order": 96,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -4753,7 +4996,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 85,
+   "order": 100,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4787,7 +5030,7 @@
      }
     }
    ],
-   "order": 86,
+   "order": 101,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4805,7 +5048,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 87,
+   "order": 102,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4823,7 +5066,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 91,
+   "order": 106,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4845,7 +5088,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 92,
+   "order": 107,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4907,7 +5150,7 @@
      }
     }
    ],
-   "order": 88,
+   "order": 103,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4959,7 +5202,7 @@
      }
     }
    ],
-   "order": 89,
+   "order": 104,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -4981,7 +5224,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 90,
+   "order": 105,
    "nullable": true,
    "section": {
     "ja": "鎧",
@@ -5007,7 +5250,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 93,
+   "order": 108,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -5028,7 +5271,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 94,
+   "order": 109,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -5090,7 +5333,7 @@
      }
     }
    ],
-   "order": 95,
+   "order": 110,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5142,7 +5385,7 @@
      }
     }
    ],
-   "order": 96,
+   "order": 111,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5176,7 +5419,7 @@
      }
     }
    ],
-   "order": 97,
+   "order": 112,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5198,7 +5441,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 98,
+   "order": 113,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5216,7 +5459,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 99,
+   "order": 114,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5234,7 +5477,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 100,
+   "order": 115,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -5252,7 +5495,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 104,
+   "order": 119,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5270,7 +5513,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 105,
+   "order": 120,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5288,7 +5531,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 106,
+   "order": 121,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -5401,7 +5644,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 101,
+   "order": 116,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5419,7 +5662,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 102,
+   "order": 117,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5440,7 +5683,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 103,
+   "order": 118,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -5458,7 +5701,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 65,
+   "order": 80,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5479,7 +5722,7 @@
    "min": 10,
    "max": 60,
    "step": 1,
-   "order": 66,
+   "order": 81,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5522,7 +5765,7 @@
    "min": 0,
    "max": 0.6,
    "step": 0.01,
-   "order": 67,
+   "order": 82,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5581,7 +5824,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 68,
+   "order": 83,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5599,7 +5842,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 69,
+   "order": 84,
    "nullable": true,
    "section": {
     "ja": "塗り",
@@ -5628,7 +5871,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 70,
+   "order": 85,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -5768,10 +6011,25 @@
     "en": "Style"
    }
   },
+  "hair.drawn": {
+   "path": "hair.drawn",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "drawn"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setDrawn",
+   "section": {
+    "en": "hair"
+   }
+  },
   "hair.back": {
    "path": "hair.back",
    "type": "enum",
-   "default": "short",
+   "default": "hang",
    "label": {
     "ja": "後ろ髪",
     "en": "Back"
@@ -5781,6 +6039,13 @@
    "cost": "hair",
    "apply": "setHair",
    "options": [
+    {
+     "value": "hang",
+     "label": {
+      "ja": "ショート(たらし)",
+      "en": "Short, hanging"
+     }
+    },
     {
      "value": "short",
      "label": {
@@ -6597,7 +6862,7 @@
    "min": 0.08,
    "max": 0.6,
    "step": 0.01,
-   "order": 60,
+   "order": 76,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -6626,7 +6891,7 @@
    "min": 0.8,
    "max": 2,
    "step": 0.01,
-   "order": 58,
+   "order": 74,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -6655,7 +6920,7 @@
    "min": 0,
    "max": 0.04,
    "step": 0.001,
-   "order": 61,
+   "order": 77,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -6703,7 +6968,7 @@
    "min": 6,
    "max": 40,
    "step": 0.5,
-   "order": 59,
+   "order": 75,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -6730,6 +6995,25 @@
    "apply": "setBangs",
    "min": 0.015,
    "max": 0.045,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "nendo"
+   }
+  },
+  "hair.sculpt.nendo.lockHangY": {
+   "path": "hair.sculpt.nendo.lockHangY",
+   "type": "number",
+   "default": 0.86,
+   "label": {
+    "en": "nendo › lock hang y"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setBangs",
+   "min": 0.43,
+   "max": 1.29,
    "step": 0.001,
    "soft": true,
    "section": {
@@ -6968,18 +7252,23 @@
    "type": "number",
    "default": 15,
    "label": {
-    "en": "short locks › count"
+    "ja": "毛束の数",
+    "en": "Lock count"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0,
+   "apply": "setLocks",
+   "min": 6,
    "max": 30,
    "step": 1,
-   "soft": true,
+   "order": 58,
    "section": {
-    "en": "short locks"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "hang"
    }
   },
   "hair.sculpt.shortLocks.span": {
@@ -7006,18 +7295,23 @@
    "type": "number",
    "default": 0.075,
    "label": {
-    "en": "short locks › width"
+    "ja": "毛束の幅",
+    "en": "Lock width"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.0375,
-   "max": 0.1125,
-   "step": 0.0001,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.03,
+   "max": 0.16,
+   "step": 0.005,
+   "order": 59,
    "section": {
-    "en": "short locks"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "hang"
    }
   },
   "hair.sculpt.shortLocks.thick": {
@@ -7025,43 +7319,27 @@
    "type": "number",
    "default": 0.25,
    "label": {
-    "en": "short locks › thick"
-   },
-   "group": "hair",
-   "tier": "advanced",
-   "cost": "hair",
-   "apply": null,
-   "min": 0.125,
-   "max": 0.375,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "short locks"
-   }
-  },
-  "hair.sculpt.shortLocks.hang": {
-   "path": "hair.sculpt.shortLocks.hang",
-   "type": "boolean",
-   "default": true,
-   "label": {
-    "ja": "後ろ髪をたらす",
-    "en": "Hang the back hair"
+    "ja": "毛束の厚み",
+    "en": "Lock thickness"
    },
    "group": "hair",
    "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "order": 62,
+   "apply": "setLocks",
+   "min": 0.1,
+   "max": 0.6,
+   "step": 0.01,
+   "order": 60,
    "section": {
-    "ja": "髪型",
-    "en": "Style"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
    },
    "help": {
-    "ja": "オン = 後頭部から垂らす(刈り上げが下からのぞく) / オフ = 頭にそわせる",
-    "en": "on = hanging from the back of the head (the nape shows under it) / off = lying along the head"
+    "ja": "幅に対する厚さ",
+    "en": "thickness for the width"
    },
    "when": {
-    "hair.back": "short"
+    "hair.back": "hang"
    }
   },
   "hair.sculpt.shortLocks.ph": {
@@ -7087,16 +7365,64 @@
    "type": "number",
    "default": 0.01,
    "label": {
-    "en": "short locks › below"
+    "ja": "長さ(足す)",
+    "en": "Length (extra)"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": -0.04,
+   "max": 0.12,
+   "step": 0.005,
+   "order": 61,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "すそより下へ伸ばす(m)",
+    "en": "how far below the hem (m)"
+   },
+   "when": {
+    "hair.back": "hang"
+   }
+  },
+  "hair.sculpt.shortLocks.flick": {
+   "path": "hair.sculpt.shortLocks.flick",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "はね(+) / 内巻き(−)",
+    "en": "Flick out (+) / curl in (−)"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": -0.04,
+   "max": 0.06,
+   "step": 0.002,
+   "order": 62,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "hang"
+   }
+  },
+  "hair.sculpt.shortLocks.edits": {
+   "path": "hair.sculpt.shortLocks.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "short locks › edits"
    },
    "group": "hair",
    "tier": "advanced",
    "cost": "hair",
-   "apply": null,
-   "min": 0.005,
-   "max": 0.015,
-   "step": 0.001,
-   "soft": true,
+   "apply": "setLocks",
    "section": {
     "en": "short locks"
    }
@@ -7106,18 +7432,23 @@
    "type": "number",
    "default": 17,
    "label": {
-    "en": "short locks › lie › count"
+    "ja": "毛束の数",
+    "en": "Lock count"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0,
-   "max": 34,
+   "apply": "setLocks",
+   "min": 6,
+   "max": 30,
    "step": 1,
-   "soft": true,
+   "order": 64,
    "section": {
-    "en": "short locks › lie"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "short"
    }
   },
   "hair.sculpt.shortLocks.lie.span": {
@@ -7144,18 +7475,23 @@
    "type": "number",
    "default": 0.09,
    "label": {
-    "en": "short locks › lie › width"
+    "ja": "毛束の幅",
+    "en": "Lock width"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.045,
-   "max": 0.135,
-   "step": 0.001,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.03,
+   "max": 0.16,
+   "step": 0.005,
+   "order": 65,
    "section": {
-    "en": "short locks › lie"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "short"
    }
   },
   "hair.sculpt.shortLocks.lie.thick": {
@@ -7163,18 +7499,27 @@
    "type": "number",
    "default": 0.32,
    "label": {
-    "en": "short locks › lie › thick"
+    "ja": "毛束の厚み",
+    "en": "Lock thickness"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.16,
-   "max": 0.48,
-   "step": 0.001,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.1,
+   "max": 0.6,
+   "step": 0.01,
+   "order": 66,
    "section": {
-    "en": "short locks › lie"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "幅に対する厚さ",
+    "en": "thickness for the width"
+   },
+   "when": {
+    "hair.back": "short"
    }
   },
   "hair.sculpt.shortLocks.lie.puff": {
@@ -7201,16 +7546,36 @@
    "type": "number",
    "default": 0.02,
    "label": {
-    "en": "short locks › lie › flick"
+    "ja": "はね(+) / 内巻き(−)",
+    "en": "Flick out (+) / curl in (−)"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": -0.02,
+   "max": 0.06,
+   "step": 0.002,
+   "order": 67,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "short"
+   }
+  },
+  "hair.sculpt.shortLocks.lie.edits": {
+   "path": "hair.sculpt.shortLocks.lie.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "short locks › lie › edits"
    },
    "group": "hair",
    "tier": "advanced",
    "cost": "hair",
-   "apply": null,
-   "min": 0.01,
-   "max": 0.03,
-   "step": 0.001,
-   "soft": true,
+   "apply": "setLocks",
    "section": {
     "en": "short locks › lie"
    }
@@ -7257,18 +7622,27 @@
    "type": "number",
    "default": 3,
    "label": {
-    "en": "short locks › stiff"
+    "ja": "硬さ",
+    "en": "Stiffness"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 2,
-   "max": 5,
-   "step": 1,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.3,
+   "max": 6,
+   "step": 0.1,
+   "order": 63,
    "section": {
-    "en": "short locks"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "小さいほどよく揺れる",
+    "en": "lower swings more"
+   },
+   "when": {
+    "hair.back": "hang"
    }
   },
   "hair.sculpt.nape.on": {
@@ -7434,7 +7808,7 @@
    "min": 0.6,
    "max": 1.6,
    "step": 0.01,
-   "order": 63,
+   "order": 78,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -7458,7 +7832,7 @@
    "min": -180,
    "max": 180,
    "step": 5,
-   "order": 64,
+   "order": 79,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -7486,23 +7860,43 @@
     "en": "long"
    }
   },
-  "hair.sculpt.long.count": {
-   "path": "hair.sculpt.long.count",
-   "type": "number",
-   "default": 13,
+  "hair.sculpt.long.hug": {
+   "path": "hair.sculpt.long.hug",
+   "type": "boolean",
+   "default": false,
    "label": {
-    "en": "long › count"
+    "en": "long › hug"
    },
    "group": "hair",
    "tier": "advanced",
    "cost": "hair",
    "apply": null,
-   "min": 0,
-   "max": 26,
-   "step": 1,
-   "soft": true,
    "section": {
     "en": "long"
+   }
+  },
+  "hair.sculpt.long.count": {
+   "path": "hair.sculpt.long.count",
+   "type": "number",
+   "default": 13,
+   "label": {
+    "ja": "毛束の数",
+    "en": "Lock count"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": 6,
+   "max": 24,
+   "step": 1,
+   "order": 68,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "long"
    }
   },
   "hair.sculpt.long.span": {
@@ -7529,18 +7923,23 @@
    "type": "number",
    "default": 0.075,
    "label": {
-    "en": "long › width"
+    "ja": "毛束の幅",
+    "en": "Lock width"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.0375,
-   "max": 0.1125,
-   "step": 0.0001,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.03,
+   "max": 0.16,
+   "step": 0.005,
+   "order": 69,
    "section": {
-    "en": "long"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "long"
    }
   },
   "hair.sculpt.long.thick": {
@@ -7548,16 +7947,64 @@
    "type": "number",
    "default": 0.3,
    "label": {
-    "en": "long › thick"
+    "ja": "毛束の厚み",
+    "en": "Lock thickness"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": 0.1,
+   "max": 0.6,
+   "step": 0.01,
+   "order": 70,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "幅に対する厚さ",
+    "en": "thickness for the width"
+   },
+   "when": {
+    "hair.back": "long"
+   }
+  },
+  "hair.sculpt.long.flick": {
+   "path": "hair.sculpt.long.flick",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "はね(+) / 内巻き(−)",
+    "en": "Flick out (+) / curl in (−)"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "hair",
+   "apply": "setLocks",
+   "min": -0.06,
+   "max": 0.08,
+   "step": 0.002,
+   "order": 72,
+   "section": {
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "when": {
+    "hair.back": "long"
+   }
+  },
+  "hair.sculpt.long.edits": {
+   "path": "hair.sculpt.long.edits",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "long › edits"
    },
    "group": "hair",
    "tier": "advanced",
    "cost": "hair",
-   "apply": null,
-   "min": 0.15,
-   "max": 0.45,
-   "step": 0.01,
-   "soft": true,
+   "apply": "setLocks",
    "section": {
     "en": "long"
    }
@@ -7567,18 +8014,27 @@
    "type": "number",
    "default": 1,
    "label": {
-    "en": "long › stiff"
+    "ja": "硬さ",
+    "en": "Stiffness"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.5,
-   "max": 1.5,
-   "step": 0.01,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.3,
+   "max": 4,
+   "step": 0.1,
+   "order": 73,
    "section": {
-    "en": "long"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "小さいほどよく揺れる",
+    "en": "lower swings more"
+   },
+   "when": {
+    "hair.back": "long"
    }
   },
   "hair.sculpt.long.damping": {
@@ -7643,18 +8099,27 @@
    "type": "number",
    "default": 0.55,
    "label": {
-    "en": "long › bottom"
+    "ja": "毛先の高さ",
+    "en": "Tip height"
    },
    "group": "hair",
-   "tier": "advanced",
+   "tier": "main",
    "cost": "hair",
-   "apply": null,
-   "min": 0.275,
-   "max": 0.825,
-   "step": 0.001,
-   "soft": true,
+   "apply": "setLocks",
+   "min": 0.47,
+   "max": 0.85,
+   "step": 0.005,
+   "order": 71,
    "section": {
-    "en": "long"
+    "ja": "後ろ髪の毛束",
+    "en": "Back locks"
+   },
+   "help": {
+    "ja": "低いほど長い(腰まで)",
+    "en": "lower is longer (down to the waist)"
+   },
+   "when": {
+    "hair.back": "long"
    }
   },
   "hair.sculpt.long.spread": {
