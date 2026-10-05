@@ -421,6 +421,12 @@ Not yet: a view paints every surface of the part facing that way at that place (
 
 `body.sculpt.ears.elf`: a flat blade (`earTip.L/R`, a head part, added with the ears after the shape cuts) from the ear's middle out to the side, up by `angle` and back by `back` (degrees), tapering to a point like a leaf (widest at the ear), the tip bent up by `curve`, flat with its face toward the front. Its length counts from the ear's middle: the ear's own plate already reaches about 6 cm that way, so a first try at 8.5 cm hardly showed. Swept back 40° it hid behind the side hair from the front; 25° sticks out past it. The hair keeps off the tips as off the ears (`earDist`, hair/index.js).
 
+### Drawing the face parts in the app (2026-10-05, Saori: "テンプレをダウンロードできるけど、アプリ上でも描けたら便利"; done)
+
+editor/src/facepaint.js: the same "parts" template as the download (the head from the front, a red frame per part) under a clear drawing layer, in a dialog. The layer starts with the parts as they are now (each picture in its frame; the closed eye mirrored back onto the other eye), so drawing adds to them or redraws them. Pen (color, size, a pen's pressure), eraser, undo, clear; the part buttons zoom onto their frame (CSS, so the canvas keeps its pixels). "顔に反映" hands the drawing layer alone to the same reading as a loaded template (`applyTemplate` in app.js, `readFaceSheet`): every frame with something in it becomes that part, one undo step; drawing can go on and be put on again. It opens on ふつう, on a drawn expression (its row's "描く") or on a new expression (the first "顔に反映" makes it, later ones go into it).
+
+A frame left empty keeps its old picture (as with a loaded template): erasing a part entirely doesn't remove it; "外す" does.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

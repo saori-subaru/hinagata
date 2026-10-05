@@ -10,6 +10,7 @@ import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
 import { createTieTool } from "./ties.js";
 import { createPaintTool } from "./paint.js";
+import { createFacePainter } from "./facepaint.js";
 import { t, setLang, getLang, translatePage, poseName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -124,6 +125,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
+  onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
   bangs, draw, hairs, backs, ties, paint,
 });
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
@@ -143,13 +145,13 @@ $("tplClose").addEventListener("click", closeTpl);
 $("tplModal").addEventListener("click", (e) => { if (e.target === $("tplModal")) closeTpl(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("tplModal").hidden) closeTpl(); });
 // a drawn template: only the frames with something in them are read; the face then shows the drawn parts (unless it already does)
-$("fileTpl").addEventListener("change", (e) => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
-  const im = new Image(); im.onload = () => {
-    const list = (store.get("face.drawn") ?? []).filter((d) => d && d.id != null), fresh = tplInto === NEW;   // NEW: the drawing becomes a new expression
-    let into = tplInto;
+// a drawn template (an image, or the in-app drawing's canvas) into ふつう (into null), a drawn expression (its id) or a new one (NEW).
+// Returns the expression id it went into (null = ふつう), or undefined when nothing was read
+function applyTemplate(im, into0) {
+    const list = (store.get("face.drawn") ?? []).filter((d) => d && d.id != null), fresh = into0 === NEW;   // NEW: the drawing becomes a new expression
+    let into = into0;
     if (fresh) { const ids = new Set(list.map((d) => String(d.id))); let n = list.length + 1; do into = `e${n++}`; while (ids.has(into)); }
-    let r; try { r = readFaceSheet(vp.avatar, im, { into }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; } finally { URL.revokeObjectURL(im.src); }
+    let r; try { r = readFaceSheet(vp.avatar, im, { into }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; }
     if (!r.read.length) { toast(t("tplRead0")); return; }
     let ch;
     if (fresh) {   // named "新しい表情" (2, 3 … if taken); renamed in its row
@@ -160,7 +162,12 @@ $("fileTpl").addEventListener("change", (e) => {
     Object.assign(ch, { "face.parts.eyes": id, "face.parts.brows": id, "face.parts.mouth": id });
     if (into != null) ch["face.parts.cheeks"] = fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none";
     store.set(ch, { commit: true }); toast(fresh ? t("tplNewExpr", ch["face.drawn"].at(-1).name) : t("tplReadN", r.read.length));
-  };
+    return into;
+}
+const facePaint = createFacePainter({ getAvatar: () => vp.avatar, store, t, h, lang: getLang, apply: Object.assign((c, into) => applyTemplate(c, into), { NEW }) });
+$("fileTpl").addEventListener("change", (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f || !vp.avatar) return;
+  const im = new Image(); im.onload = () => { try { applyTemplate(im, tplInto); } finally { URL.revokeObjectURL(im.src); } };
   im.onerror = () => toast(t("tplBad")); im.src = URL.createObjectURL(f);
 });
 const IMAGE_SLOT = { eye: "eyes", brow: "brows", mouth: "mouth", nose: "nose" };
