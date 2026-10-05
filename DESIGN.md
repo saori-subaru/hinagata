@@ -452,6 +452,8 @@ The skirt's front bones copied the thighs' turn. An A-line skirt's front already
 
 **The lap (2026-10-05, Saori: "足の形がくっきり浮き出る")**: sitting, the skirt's front sank between the thighs and showed each one's shape. Three bridges from one thigh to the other (at 45%, 70% and 90% along them, as thick as the thinner one there) keep the front spanning the lap; a collider's far end may ride on another bone (`boneB`, cloth.js). They count as thighs (the front goes over them). Walking and running don't notice them (they lie inside the skirt between the legs).
 
+**Cloth gets the last word (2026-10-05, Saori: "走った時後ろ足一番蹴り上げた時のスカートとかマントの布が伸びて千切れそう")**: each step ran its rounds as edges then collisions, so the colliders spoke last: a heel kicked up behind caught a few hem points and left them pulled out of the hem in a thin spike (the cape bunched around the shoe the same way). Three more edge rounds close each step (`EXTRA`, cloth.js): the hem lifts over the heel as a whole. Sitting is unchanged.
+
 ### Hair on the run: streaming back, not bobbing (2026-10-05, Saori: "走ってる時の靡き方が、後ろじゃなくて上下にポヨンポヨンと流体のように動く"; done)
 The locks are springs toward the shape the head carries; on a run's steps the head bobs, and nothing pushed the hair back (the editor plays the run in place). Now a pose can say how fast it would go (`air`, m/s: run 2.6, walk 1), and the avatar gives the locks the wind of that speed (less what the avatar itself is moving forward: in a game that moves it, its own motion trails the hair already). The wind pulls the free points along it (`DRAG` m/s² per m/s, hair/locks.js), and up and down a lock keeps only half its own motion against the head's per step (`VDAMP`), so it rides the bob instead of bouncing on it.
 

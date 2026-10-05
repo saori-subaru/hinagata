@@ -42,6 +42,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   const EA = new Uint32Array(E), EL = new Float32Array(EA.length / 2);
   for (let e = 0; e < EL.length; e++) { const a = EA[e * 2] * 3, b = EA[e * 2 + 1] * 3; EL[e] = Math.hypot(R[a] - R[b], R[a + 1] - R[b + 1], R[a + 2] - R[b + 2]); }
   // how firmly each point follows its target per frame: 1 at the waistband (pinned) → PULL_HEM at the hem
+  const EXTRA = 3;   // edge rounds after the collisions in each step
   const PULL_HEM = 0.18, A = new Float32Array(n), W = new Float32Array(n);   // W: 0 = pinned (doesn't move for the edges), 1 = free
   for (let v = 0; v < n; v++) { const u = (top - R[v * 3 + 1]) / (top - hem); A[v] = 1 - (1 - PULL_HEM) * sstep(0.02, 0.7, u); W[v] = u < 0.02 || !OUT[v] ? 0 : 1; }   // pinned: only the waistband's top edge (a wider pinned band
   //   couldn't give way where the hip bulges when sitting: the cloth just below it was pushed out and the band folded open over the body). Inner points: placed after (ride)
@@ -198,6 +199,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   function step(keep, iters, C, seat) {
     for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * A[v]; X[i] = W[v] ? x : T[i]; }
     for (let k = 0; k < iters; k++) { let t0 = now(); edges(); PROF.edges += now() - t0; t0 = now(); collide(C, seat); PROF.collide += now() - t0; }
+    { const t0 = now(); for (let k = 0; k < EXTRA; k++) edges(); PROF.edges += now() - t0; }   // the cloth gets the last word: a heel kicked up behind caught a few hem points and the collision, last, left them pulled out of the hem in a thin spike (2026-10-05, Saori: "布が伸びて千切れそう")
     { const t0 = now(); if (BD) collideBody(); PROF.collide += now() - t0; }   // the body's surface: once, after the rounds (it only nudges)
     for (let v = 0; v < n; v++) { const u = NE[v]; if (u < 0) continue; for (let q = 0; q < 3; q++) X[v * 3 + q] = X[u * 3 + q] + T[v * 3 + q] - T[u * 3 + q]; }   // the inner side rides on the outer
   }
