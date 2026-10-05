@@ -256,6 +256,16 @@ export const DEFAULTS = {
           "inner": 0.9,
           "soft": 0.25
         },
+        "elf": {
+          "on": false,
+          "length": 0.19,
+          "width": 0.034,
+          "angle": 28,
+          "back": 25,
+          "flat": 0.5,
+          "curve": 0.25,
+          "k": 0.012
+        },
         "turn": 0,
         "blend": 0.02,
         "lobe": 0,

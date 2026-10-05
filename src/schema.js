@@ -45,6 +45,12 @@ const MAIN = [
   ["shading.soften", L("影のなめらかさ", "Shadow smoothing"), { when: { "shading.style": "toon" }, min: 0, max: 2, step: 0.05, apply: "setShading", help: L("影の境目を大きな形にそわせる(0 = メッシュの凹凸のまま)", "how much the shadow follows the big shapes instead of small bumps (0 = the mesh as is)") }],
 
   // body
+  ["body.sculpt.ears.elf.on", L("とがった耳(エルフ耳)", "Pointed (elf) ears"), { section: L("耳", "Ears") }],
+  ["body.sculpt.ears.elf.length", L("耳の長さ", "Ear length"), { when: { "body.sculpt.ears.elf.on": true }, min: 0.08, max: 0.32, step: 0.005, section: L("耳", "Ears"), help: L("耳の真ん中から先まで(m)", "from the ear's middle to the tip (m)") }],
+  ["body.sculpt.ears.elf.angle", L("耳の上向き", "Ear lift"), { when: { "body.sculpt.ears.elf.on": true }, min: -20, max: 70, step: 1, section: L("耳", "Ears"), help: L("水平から上へ(度)", "degrees up from level") }],
+  ["body.sculpt.ears.elf.back", L("耳の後ろ向き", "Ear sweep back"), { when: { "body.sculpt.ears.elf.on": true }, min: 0, max: 70, step: 1, section: L("耳", "Ears"), help: L("真横から後ろへ(度)", "degrees back from straight out") }],
+  ["body.sculpt.ears.elf.width", L("耳の幅", "Ear width"), { when: { "body.sculpt.ears.elf.on": true }, min: 0.015, max: 0.06, step: 0.001, section: L("耳", "Ears") }],
+  ["body.sculpt.ears.elf.curve", L("先の反り", "Tip curl"), { when: { "body.sculpt.ears.elf.on": true }, min: -0.3, max: 0.8, step: 0.01, section: L("耳", "Ears") }],
   ["body.proportion.legs", L("脚の長さ", "Leg length"), { min: 0.8, max: 2, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで脚を伸ばす(倍)。頭を小さくするのと合わせると頭身が上がる", "lengthens the legs, keeping their width (×). With a smaller head, the figure gets more heads tall") }],
   ["body.proportion.torso", L("胴の長さ", "Torso length"), { min: 0.8, max: 1.6, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで胴を伸ばす(倍)。腕も少し長くなる", "lengthens the torso, keeping its width (×). The arms get a little longer too") }],
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.8, max: 1.05, step: 0.01, section: L("頭", "Head") }],

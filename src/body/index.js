@@ -168,6 +168,19 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // lobeFill: a straight piece from the lobe up to the ear's widest point, so the edge between them has no dip (without it: a big "lucky" earlobe)
       const LF = OPT.body.sculpt.ears.lobeFill;
       if (LF) { const tip = ec.map((v, i) => v + (eu[i] * LF.out + ev[i] * LF.up) * ES); P[`earFill.${s}`] = C(lc, tip, 0.011 * ES, 0.009 * ES, "head", 0.01); } }
+    // elf ears (ears.elf, 2026-10-05, Saori): a flat blade from inside the ear out to the side, up and a little back, tapering to a point, its
+    // tip bent up a little (curve), flat (its face toward the front). It starts at the ear's middle: the ear's own plate already reaches ~6 cm
+    // that way, so length is from there. The hair keeps off it as off the ear
+    const EL = OPT.body.sculpt.ears.elf;
+    if (EL?.on) { const up = EL.angle * Math.PI / 180, bk = EL.back * Math.PI / 180, L = EL.length * ES, W = EL.width * ES, FL = EL.flat, CV = EL.curve;
+      const a = [m * Math.cos(bk) * Math.cos(up), Math.sin(up), -Math.sin(bk) * Math.cos(up)];   // out to the side, up by angle, back by back (degrees)
+      const bu = nrm([-a[0] * a[1], 1 - a[1] * a[1], -a[2] * a[1]]), bn = nrm([a[1] * bu[2] - a[2] * bu[1], a[2] * bu[0] - a[0] * bu[2], a[0] * bu[1] - a[1] * bu[0]]);   // bu: up across the blade (the tip bends that way), bn: its face
+      const s0 = ec.slice(), mid = s0.map((v, i) => v + a[i] * L * 0.5 + bu[i] * CV * L * 0.25);
+      P[`earTip.${s}`] = { t: 3, k: EL.k, bone: "head", bx0: mid[0], by0: mid[1], bz0: mid[2], br: L * 0.6 + W + CV * L,
+        f: (x, y, z) => { const d = [x - s0[0], y - s0[1], z - s0[2]], t = Math.min(1, Math.max(0, (d[0] * a[0] + d[1] * a[1] + d[2] * a[2]) / L));
+          const q = [0, 1, 2].map((i) => d[i] - a[i] * t * L - bu[i] * CV * L * t * t), qa = q[0] * a[0] + q[1] * a[1] + q[2] * a[2], qw = q[0] * bn[0] + q[1] * bn[1] + q[2] * bn[2];
+          const qb = Math.sqrt(Math.max(0, q[0] * q[0] + q[1] * q[1] + q[2] * q[2] - qa * qa - qw * qw)), r = W * (1 - Math.pow(t, 1.3)) + 0.0015;   // a leaf: widest at the ear, to a point
+          return (Math.hypot(qa, qb, qw / FL) - r) * FL * 0.9; } }; }
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     { const B = TO.butt ?? 1; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B)], [0.08, 0.066, 0.075 * B], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet)
@@ -235,7 +248,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     return -(k1 < 1e-9 ? -Math.min(rx, ry) : k0 * (k0 - 1) / k1); } }));
   if (FB.sideX) planeCuts.push(cut({ t: 3, k: FB.sideK, bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => Math.max((FB.sideX + FB.sideSlope * ramp(FB.sideZ - z) - Math.abs(x)) / Math.hypot(1, FB.sideSlope * ramp1(FB.sideZ - z)), 0.86 - y) }));
   // ears go on after the shape cuts (so the chin cut and flat planes don't clip them), their hollows right after
-  const isEar = (k) => /^ear(Lobe|Fill)?\./.test(k);
+  const isEar = (k) => /^ear(Lobe|Fill|Tip)?\./.test(k);
   const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
     ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)

@@ -7,6 +7,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   //  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
   //  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
   const KX = OPT.body.sculpt.skull.width / 0.249;   // hair follows the skull width
+  const EAR_PARTS = ["ear.L", "ear.R", "earTip.L", "earTip.R"].map((k) => P[k]).filter(Boolean), earDist = (x, y, z) => { let d = 1e9; for (const e of EAR_PARTS) d = Math.min(d, dPrim(e, x, y, z)); return d; };   // the ears and elf ears' tips
   const SK = OPT.body.sculpt.skull, HC = { c: [0, SK.y, -0.005], r: [0.255 * KX, SK.height, SK.depth] };   // 毛束の通り道に使う頭の丸(頭の部品と同じ)
   const deg = Math.PI / 180;
   function onScalp(th, ph, off) {   // th: 頭のまわりの角度(0=正面, +=キャラの左) / ph: 高さの角度 / off: 頭の表面からの浮き
@@ -61,7 +62,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
         let groove = 0; for (const a of notches) groove += B.groove * Math.exp(-(((th - a) / (B.grooveW * deg)) ** 2));
         const thick = B.thick + backExtra(y) + backFlare(y) + B.extra * sstep(B.top, hem, y) - groove * sstep(hem + 0.1, hem, y) + (TK.length ? tipThick(th) : 0);
         const shell = (B.smooth ? skullSmooth : skullOnly)(x, y, z) - thick, side = (Math.abs(th) - B.span * deg) * rr;   // smooth: follow the head without the face's cut planes (a layer hugging the cheeks folded at their edges)
-        const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // keep off the ears
+        const ear = earDist(x, y, z) - EAR_GAP.gap;   // keep off the ears
         const d = smax(smax(shell, hem - y, 0.006), side, 0.01); return B.overEars ? d : smax(d, -ear, EAR_GAP.k); } }]; },   // overEars: no cut around the ears (the hime's side locks: the cut left folds in them)
     // nendoStrands: the same idea made of separate strands (thin tips break up on a coarse mesh)
     "nendoStrands": () => { const B = OPT.hair.sculpt.nendo;   // wide, flat clumps that overlap, tips at the brows, longer locks at the sides
@@ -101,7 +102,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
     const L = o.long, e = (x, z) => skullOnly(x, L.yc, z) - (o.r[0] - 0.282 * KX) - SHELL;
     const f = (x, y, z) => { const sp = 1 + L.spread * Math.max(0, L.yc - y), th = Math.atan2(x, z);
       const bottom = L.bottom + L.tips * (1 - Math.pow(Math.abs(Math.cos(th * L.teeth)), 2)) + L.curve * x * x;   // points along the lower edge, the sides a little higher
-      const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;
+      const ear = earDist(x, y, z) - EAR_GAP.gap;
       return smax(smax(smax(smax(e(x / sp, z), z - L.zc, 0.03), bottom - y, 0.012), y - L.yc - 0.04, 0.05), -ear, EAR_GAP.k); };
     return { ...base, by0: 0.85, br: 0.65, f: (x, y, z) => smin(base.f(x, y, z), f(x, y, z), 0.03) };
   }
@@ -121,7 +122,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
       if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * (o.teeth ?? 6))), o.sharp ?? 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
-      const ear = Math.min(dPrim(P["ear.L"], x, y, z), dPrim(P["ear.R"], x, y, z)) - EAR_GAP.gap;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
+      const ear = earDist(x, y, z) - EAR_GAP.gap;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
       // shell: the hair thins toward the hairline (front and sides), so it blends into the skin instead of ending in a thick step
       // thinning toward the hairline: measured from smooth hairline curves (no hair tips), front and back blended by z, so nothing jumps
       // (the hem's angle flips from front to back right on top of the head, so it can't be used for this)
