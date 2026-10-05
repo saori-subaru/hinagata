@@ -542,8 +542,26 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cover");
   // motion
   const HEEL = OPT.outfit.shoes.kind === "heels" ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
-  let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null;   // follower: the rig this avatar dresses (follow)
+  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip });
+  let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null, blendT = null;   // follower: the rig this avatar dresses (follow); blendT: play's blend
+  // The joints to pose by hand (avatar.joints, 2026-10-06, Saori: Hinagata is there to save a game's makers time, and an agent writing a
+  // tennis swing straight onto the bones lost ~20 min to the A-pose rest (arms 44° down: "forward" with x swung them out sideways), the
+  // twist and the racket's angle). The bind pose stays as it is (it is the one the body is built and skinned in); the joints are a plain
+  // tree of Groups inside the avatar's object, rotations zero at rest, axes the world's, the arms hanging at the sides (as in idle: straight
+  // down they'd be in the hips), and the avatar follows them (follow.js, its own rig). A game poses them as it would its own mannequin.
+  const RIG = ["hips", "spine", "chest", "upperChest", "neck", "head", ...["L", "R"].flatMap((s) => ["upperArm", "lowerArm", "hand", "upperLeg", "lowerLeg", "foot"].map((b) => `${b}.${s}`))];
+  let rig = null, heldGrip = null; const held = {};   // held: what avatar.hold put in each hand ({ wrap, object })
+  function makeRig() {
+    const V = (a) => new THREE.Vector3(...a), Qe = (a) => new THREE.Quaternion().setFromEuler(new THREE.Euler(...(a ?? [0, 0, 0]))), idle = POSES.idle(0).b, at = {};
+    for (const b of RIG) at[b] = V(Jr[b]);
+    for (const s of ["L", "R"]) { const ua = `upperArm.${s}`, la = `lowerArm.${s}`, h = `hand.${s}`, qU = Qe(idle[ua]), qL = qU.clone().multiply(Qe(idle[la]));
+      at[la] = at[ua].clone().add(V(Jr[la]).sub(V(Jr[ua])).applyQuaternion(qU)); at[h] = at[la].clone().add(V(Jr[h]).sub(V(Jr[la])).applyQuaternion(qL)); }
+    const g = {}, up = (b) => { for (let p = PARENT[b]; p; p = PARENT[p]) if (g[p]) return p; return null; };
+    for (const b of RIG) { const o = g[b] = new THREE.Group(); o.name = `joint:${b}`; const p = up(b); o.position.copy(at[b]).sub(p ? at[p] : new THREE.Vector3()); (p ? g[p] : root).add(o); }
+    const f = createFollower({ avatar, POSES, J: Jr, PARENT, BONES, legK: ST.legK ?? 1, joints: g, root, fit: false, hide: false, place: false });
+    return { f, joints: g, hipsY: g.hips.position.y };
+  }
+  const rigOf = () => rig ??= makeRig();
   // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
   // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)
   const SEAT_PROBE = ["body", "pants"].map((k) => { const m = parts[k].m, A = m.geometry.attributes.position, idx = [];
@@ -581,9 +599,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself. */
     update(dt, { t, instant = false, pose, camera, detail } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
+      if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
       syncCover(); hairLines();
       time = t ?? time + dt;
-      lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj);
+      lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
+      if (heldGrip) { root.updateMatrixWorld(); const k = 1 / (root.matrixWorld.getMaxScaleOnAxis() || 1); for (const h of Object.values(held)) h.wrap.scale.setScalar(k * h.scale); }   // held things keep their size in the world
       if (!ST.identity && lastPose.seat != null) lastPose = { ...lastPose, seat: ST.fwd(lastPose.seat) };   // a seat as high as the knees: higher for longer legs
       if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly
         const e = lastPose.seat - lo, k = instant ? 1 : 1 - Math.exp(-dt * 9); seatAdj = Math.max(-0.08, Math.min(0.08, bone.hips.position.y - HIPS0.y - (lastPose.y || 0) + e)); bone.hips.position.y += e * k; } }
@@ -607,7 +627,45 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
-    play(name) { if (!POSES[name]) throw new Error(`Unknown motion "${name}". Available: ${Object.keys(POSES).join(", ")}`); poseName = name; },
+    /** Play a pose (a motion): a name in POSES, or "joints" (the avatar follows avatar.joints). blend: seconds to ease into it (default ~0.35,
+     *  0 = at once: a fast move switched to mid-game). */
+    play(name, { blend = null } = {}) {
+      if (name === "joints") name = rigOf().f.pose;
+      if (!POSES[name]) throw new Error(`Unknown motion "${name}". Available: ${Object.keys(POSES).join(", ")}, joints`); poseName = name; blendT = blend;
+    },
+    /** The joints to pose by hand, then play("joints"): { hips, spine, chest, upperChest, neck, head, upperArm / lowerArm / hand / upperLeg /
+     *  lowerLeg / foot .L / .R } → THREE.Group. At rest every rotation is zero and the axes are the world's (the character faces +z, its
+     *  left is +x): the arms hang at the sides, the legs straight down. A limb's −x swings it forward (arms and thighs); +x on a shin or
+     *  forearm... see llms.txt. joints.hips.position.y moves the body up and down (crouching). */
+    get joints() { return rigOf().joints; },
+    /** Set the joints to a built-in pose at time t (the avatar's clock if left out): a start to change a few joints on (run, then a swing on the arm). */
+    copyMotion(name, t = time) {
+      const P = POSES[name]; if (!P) throw new Error(`Unknown motion "${name}"`);
+      const R = rigOf(), p0 = P(t), Qb = (b) => new THREE.Quaternion().setFromEuler(new THREE.Euler(...(p0.b[b] ?? [0, 0, 0])));
+      for (const b of RIG) { const u = R.f.up(b), chain = new THREE.Quaternion();
+        for (let c = b; c && c !== u; c = PARENT[c]) chain.premultiply(Qb(c));   // the bone turns between the joint above and this one (the collarbone)
+        R.joints[b].quaternion.copy(R.f.offOf(u)).multiply(chain).multiply(R.f.offOf(b).clone().invert()); }
+      R.joints.hips.position.y = R.hipsY + (p0.y ?? 0) * (ST.legK ?? 1);
+    },
+    /** Put something in a hand ("hand.R" / "hand.L"); null takes it out. The thing's origin is where the hand holds it (the middle of its
+     *  grip), sized in the world's units. along: its axis that runs through the fist and out past the thumb (forward, with the arm hanging);
+     *  face: its axis that faces the way the palm does (a racket's strings, a blade's flat). The hand closes on it. Returns the wrapper group. */
+    hold(object, hand = "hand.R", { along = "+y", face = "+z" } = {}) {
+      const s = hand.endsWith("L") ? "L" : "R";
+      if (held[s]) { held[s].wrap.removeFromParent(); delete held[s]; }
+      if (object) {
+        const ax = (a) => { const v = new THREE.Vector3(); v[a.slice(-1)] = a.startsWith("-") ? -1 : 1; return v; };
+        const H = HANDS[s], A = new THREE.Vector3(...H.S).normalize(), N = new THREE.Vector3(...H.N), F = N.addScaledVector(A, -N.dot(A)).normalize();
+        const a = ax(along), f = ax(face); if (Math.abs(a.dot(f)) > 1e-6) throw new Error("hold: along and face must be different axes");
+        const mo = new THREE.Matrix4().makeBasis(a, f, a.clone().cross(f)), mt = new THREE.Matrix4().makeBasis(A, F, A.clone().cross(F));
+        const G = [H.G[0], ST.fwd(H.G[1]), H.G[2]], wrap = new THREE.Group(); wrap.name = `held:${object.name || "item"}`;
+        wrap.position.set(G[0] - Jr[`hand.${s}`][0], G[1] - Jr[`hand.${s}`][1], G[2] - Jr[`hand.${s}`][2]);
+        wrap.quaternion.setFromRotationMatrix(mt.multiply(mo.transpose())); wrap.add(object); bone[`hand.${s}`].add(wrap);
+        held[s] = { wrap, object, scale: 1 };
+      }
+      heldGrip = held.L || held.R ? { L: held.L ? 1 : 0, R: held.R ? 1 : 0 } : null;
+      return held[s]?.wrap ?? null;
+    },
     /** Dress another rig in this character (src/follow.js): joints { hips, spine, head, "upperArm.L", "lowerArm.L", "hand.L", "upperLeg.L",
      *  "lowerLeg.L", "foot.L", … .R } → that rig's Object3Ds, in their rest pose now; { root, fit = true, hide = true, grip }. From then on every
      *  update copies the rig's joints and place (its own code keeps animating it). Returns { attach(object, bone), scale, … }; follow(null) stops. */

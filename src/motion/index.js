@@ -124,21 +124,25 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised)
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
   const FLARE = Math.atan(skirtFlare);   // the skirt's own slant out from the body at the front (an A-line: flare × 0.8 front to back, clothes): a thigh swinging less than that doesn't reach its front
   const HOLD = { L: left !== "none", R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
-  let cur = null, held = 0;   // いまのポーズと、それに切りかえてからの時間
-  return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
-    if (name !== cur) { cur = name; held = 0; } else held += dt;
-    let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK }; const k = instant || (P0.sharp && held > 0.35) ? 1 : 1 - Math.exp(-dt * 9);   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
+  let cur = null, heldT = 0;   // いまのポーズと、それに切りかえてからの時間
+  // blend: seconds the switch to a pose eases over (about; the default ~0.35 s), 0 = the pose at once (2026-10-06: a tennis swing started
+  //   0.35 s late, softened, when its pose was switched to)
+  return function apply(name, t, dt, instant = false, yAdd = 0, blend = null) {   // yAdd: extra hip height (the seat fit in index.js)
+    if (name !== cur) { cur = name; heldT = 0; } else heldT += dt;
+    let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK };
+    const k = instant || blend === 0 || (P0.sharp && heldT > (blend ?? 0.35)) ? 1 : 1 - Math.exp(-dt * (blend ? 3 / blend : 9));   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
     if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
       P0 = { ...P0, b }; }
-    if (P0.grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = P0.grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
+    const hg = held(), grip = hg ? { L: Math.max(P0.grip?.L ?? 0, hg.L ?? 0), R: Math.max(P0.grip?.R ?? 0, hg.R ?? 0) } : P0.grip;
+    if (grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
     const ft = footTilt();
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;

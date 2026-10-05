@@ -33,7 +33,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 指の骨(左右に3本): 4本の指の付け根(fingers)・指の中ほど(fingerTips)・親指の付け根(thumb)。ポーズで指を曲げてグーにする(motion の grip)
   //   指4本は1本の骨でまとめて曲げる(1本ずつは動かさない)。手の向き(D=指の向き N=手のひら S=親指の側)は weapons.js の handFrame と同じ
   const HANDS = {};
-  for (const s of ["L", "R"]) { const H = handFrame(J, s), at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0)); HANDS[s] = { D: H.D, N: H.N, S: H.S };
+  for (const s of ["L", "R"]) { const H = handFrame(J, s), at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0)); HANDS[s] = { D: H.D, N: H.N, S: H.S, G: H.G };   // G: the middle of the fist (where a held thing's grip goes: avatar.hold)
     J[`fingers.${s}`] = at(H.palm, [H.D, 0.022]); J[`fingerTips.${s}`] = at(H.palm, [H.D, 0.042], [H.N, 0.003]); J[`thumb.${s}`] = at(H.palm, [H.S, 0.04], [H.D, -0.008], [H.N, 0.006]);
     Object.assign(PARENT, { [`fingers.${s}`]: `hand.${s}`, [`fingerTips.${s}`]: `fingers.${s}`, [`thumb.${s}`]: `hand.${s}` }); }
   const BONES = Object.keys(PARENT);
