@@ -331,6 +331,16 @@ Cost on the test machine (3-4× slower than a desktop), girl body, whole avatar 
 
 Not yet: hugging the knees shows the tops of the thighs (as a real skirt would); the space between the legs under a short skirt when sitting on the floor; the glTF export has the built skirt, not the cloth's motion.
 
+### The dress (ワンピース) (2026-10-05, Saori: "ワンピースとかマントやローブ的な服がないね"; done)
+
+`outfit.dress.on`: the shirt and a skirt as one garment, in one color (`dress.color`, null = the shirt's). Not a new mesh: the shirt is its top (sleeves and collar from `outfit.shirt`), and the pants mesh becomes its skirt whatever `pants.kind` is. `skirtOf(OPT)` (options.js) gives the skirt either way (a plain skirt or a dress's), and the clothes, the parts' bounds and weights and the cloth all read it.
+
+- Its skirt starts under the chest (`dress.waist`, 0.57; an empire line), not at the pants' waist. Starting at the waist, the top hugged the chibi's round belly and the skirt flared out below it: a maternity dress. From under the chest the cloth falls over the belly.
+- Its top ellipse is measured off the body at that height (just over the shirt), centered on the body. The plain skirt's ellipse is the hips', centered behind; at the chest it stood off the back as a ledge and let the belly push out in front.
+- The front follows the thighs less (`dress.follow` 0.3; the plain skirt's 0.85). A dress is longer and wider, and when the thighs turned up (sitting) the front's flare turned up with them and stood out like a shelf. At 0.3 the colliders lay it over the thighs and the rest hangs past the knees; at 0.5 the hem rode up over the thighs.
+
+Not yet: sitting on a chair, the cloth tents over each knee and sags between them (the cloth doesn't resist being squeezed, and the middle follows the hips); a real dress would stretch flat across. The outline speckles a little at those tents.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

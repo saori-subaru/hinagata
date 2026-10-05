@@ -2,6 +2,14 @@
 // User options are deep-merged over DEFAULTS. `sculpt` sections are fine-tuning; most users never touch them.
 import { partIds } from "./face/names.js";
 
+/** The skirt this outfit has, or null: the pants made a skirt (pants.kind "skirt"), or a dress (outfit.dress.on: the shirt and a skirt as one
+ *  garment, in one color; its skirt takes the dress's hem, flare and pleats). { hem, flare, pleats, pleatDepth, thick, follow, top, tilt, color, dress }
+ *  A dress's skirt starts higher (dress.waist: under the chest), so it falls over the belly instead of hugging it. */
+export function skirtOf(OPT) {
+  const PT = OPT.outfit.pants, D = OPT.outfit.dress, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, ...(PT.skirt ?? {}) };
+  if (D?.on) return { ...base, hem: D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: D.waist ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
+  return PT.kind === "skirt" ? { ...base, top: PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
+}
 export const DEFAULTS = {
   "colors": {
     "skin": "#ffe0c8",
@@ -383,6 +391,17 @@ export const DEFAULTS = {
         "y0": 0.67,
         "y1": 0.75
       }
+    },
+    "dress": {
+      "on": false,
+      "color": null,
+      "waist": 0.57,
+      "tilt": 0.05,
+      "hem": 0.28,
+      "flare": 0.45,
+      "pleats": 12,
+      "pleatDepth": 0.006,
+      "follow": 0.3
     },
     "pants": {
       "on": true,

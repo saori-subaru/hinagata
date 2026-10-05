@@ -1,6 +1,7 @@
 // Clothes: shirt, pants, shoes (upper + sole) and socks, as signed distances built around the body.
 // Functions taking B (the body distance) can be given a faster lookup of the same body while meshing.
 import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
+import { skirtOf } from "../options.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
@@ -47,15 +48,21 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).
   // Its cross-section is an ellipse around the hips that widens toward the hem (flare per m of drop); pleats are folds around it that
   // deepen toward the hem. Where the body sticks out of the cone (the bottom at the back) the cloth follows the body instead.
-  const SK = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, ...(OPT.outfit.pants.skirt ?? {}) }, TO = OPT.body.torso;
-  const SK_AX = 0.158 * (TO.hips ?? 1) + 0.022, SK_AZ = 0.128, SK_ZC = -0.012, SK_Y0 = PANTS_TOP;
+  const SK = skirtOf(OPT) ?? { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018 }, TO = OPT.body.torso;   // a dress's skirt is the same (skirtOf, options.js)
+  const SK_Y0 = SK.top ?? PANTS_TOP, SK_TILT = SK.tilt ?? PANTS_TILT;   // a dress's skirt starts higher (skirtOf)
+  let SK_AX = 0.158 * (TO.hips ?? 1) + 0.022, SK_AZ = 0.128, SK_ZC = -0.012;
+  // a dress's skirt starts under the chest: its top ellipse is measured off the body there (just over the shirt), so it neither stands off
+  // the back as a ledge (the hips' ellipse is wider than the chest) nor lets the belly push out under it (it is centered on the body, not on the hips)
+  if (SK.dress) { const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, SK_Y0, -0.01 + dz * t) < 0) t += 0.001; return t; };
+    const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.02;   // m: over the shirt (1.4 cm) and a little air
+    SK_AX = out(1, 0) + m; SK_ZC = (zf + zb) / 2; SK_AZ = (zf - zb) / 2 + m; }
   const skirtSdf = (x, y, z, B = bodySdf) => {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const cone = (Math.hypot(x / ax, dz / az) - 1) * Math.min(ax, az) + pl;   // < 0 inside the cone
     const outer = Math.min(cone, Math.max(B(x, y, z) - PANTS_OFF, skirtMask(x, y, z) - 0.03));   // the cloth: the cone, or the hips pushed out where they stick out of it (only the hips: not the hands hanging beside them)
-    return Math.max(outer, -(cone + SK.thick), y - (PANTS_TOP - PANTS_TILT * z), SK.hem - y); };
-  const SKIRT = OPT.outfit.pants.kind === "skirt", skirtMask = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null;
+    return Math.max(outer, -(cone + SK.thick), y - (SK_Y0 - SK_TILT * z), SK.hem - y); };
+  const SKIRT = !!skirtOf(OPT), skirtMask = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null;
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し

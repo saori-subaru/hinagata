@@ -12,7 +12,7 @@ import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN } from "./materials.js";
-import { DEFAULTS, resolveOptions, diff } from "./options.js";
+import { DEFAULTS, resolveOptions, diff, skirtOf } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody } from "./body/index.js";
 import { buildClothes } from "./clothes/index.js";
@@ -53,7 +53,7 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: strip(OPT.outfit) };
+  const { colors, outline, shading, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, ...hair } = OPT.hair; return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on } };   // a dress is a shape (its skirt), not just worn
 }
 
 export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify = 1, cache = true, cull = true, workers = true, debug = {} } = {}) {
@@ -223,8 +223,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
   addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin);
-  parts.shirt = skinned(meshPart("shirt"), OPT.outfit.shirt.color, 0.005, "shirt");
-  parts.pants = skinned(meshPart("pants"), OPT.outfit.pants.color, 0.005, OPT.outfit.pants.kind === "skirt" ? null : "pants");   // a skirt moves as cloth (its normals too): it keeps the mesh's own
+  const SKO = skirtOf(OPT);   // a skirt or a dress's skirt (options.js), or null
+  parts.shirt = skinned(meshPart("shirt"), SKO?.dress ? SKO.color : OPT.outfit.shirt.color, 0.005, "shirt");   // a dress: the top is the dress's color too
+  parts.pants = skinned(meshPart("pants"), SKO?.color ?? OPT.outfit.pants.color, 0.005, SKO ? null : "pants");   // a skirt moves as cloth (its normals too): it keeps the mesh's own
   // a skirt drapes as cloth (cloth.js): it stays over the thighs when they turn up (sitting) instead of tearing open or letting them poke through
   // The legs it keeps clear of: capsules measured off this body (rest pose), so every body type fits (a single thigh capsule from the root to the knee
   // missed the girl's full mid-thigh). Along each thigh, at a few points from just below the hip joint to the knee: how far the body reaches
@@ -237,7 +238,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i + 1 < thigh.length; i++) out.push({ bone: `upperLeg.${s}`, a: thigh[i][0], b: thigh[i + 1][0], ra: thigh[i][1], rb: thigh[i + 1][1], thigh: true });
     for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false });
     return out; };
-  const cloth = PT.kind === "skirt" ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: PT.top, hem: PT.skirt?.hem ?? 0.3, colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
+  const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: SKO.top, hem: SKO.hem, colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
   parts.shoes = skinned(meshPart("shoes"), OPT.outfit.shoes.color, 0.005, "shoes");
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
@@ -398,11 +399,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
-    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield } = {}) {
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, dress } = {}) {
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
       if (hair) { OPT.colors.hair = hair; for (const k of LOCK_PARTS) parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
-      for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { parts[k].m.material.color.set(c); OPT.outfit[k].color = c; }
+      const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
+      for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { OPT.outfit[k].color = c; if (!(DR && (k === "pants" || k === "shirt"))) parts[k].m.material.color.set(c); }
+      if (dress !== undefined) OPT.outfit.dress.color = dress;   // null: the shirt's color
+      if (DR && (shirt || dress !== undefined)) for (const k of ["shirt", "pants"]) parts[k].m.material.color.set(skirtOf(OPT).color);
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
       if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
       for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip", "weaponLGrip"], "gripColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }

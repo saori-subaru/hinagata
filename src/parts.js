@@ -4,6 +4,7 @@
 //   kit:  { bodySdf, HT, hairKit, clothes } (from buildBody / buildHair / buildClothes)
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
+import { skirtOf } from "./options.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", ...ARMOR, ...WEAPONS];
@@ -16,8 +17,9 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
     case "shirt": { const long = OPT.outfit.shirt.sleeve === "long", w = long ? 0.37 : 0.3;   // long sleeves reach the wrists (and follow the forearms)
       return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), lo: [-w, 0.33, -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
-      if (PT.kind === "skirt") { const SK = PT.skirt ?? {}, hem = SK.hem ?? 0.3, w = 0.17 + (SK.flare ?? 0.4) * (PT.top - hem) + 0.04;   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
-        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, 0.55, w], h: H * 1.2, only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => (SK.follow ?? 0.55) * Math.min(1, Math.max(0, (PT.top - 0.04 - y) / (PT.top - 0.04 - hem))) } }; }
+      const SKO = skirtOf(OPT);
+      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04;   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
+        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, top + 0.05, w], h: H * 1.2, only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => (SK.follow ?? 0.55) * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
       const y0 = { knee: 0.17, long: 0.07 }[PT.length] ?? 0.2;   // long pants reach the ankles
       return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "shoes": return { sdf: C.shoeSdf, lo: foot0, hi: [0.22, 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
