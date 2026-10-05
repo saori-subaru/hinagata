@@ -26,6 +26,23 @@ const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its 
 // one lock's own changes (L.edits: [{ i, dy, da, w, th, fl }], i = the lock's number, outer layer first): dy moves its tip up (m, < 0 = longer),
 // da turns it around the head (degrees), w and th scale its width and thickness, fl flicks it out (m, > 0) or curls it in (< 0)
 const editOf = (L, i) => (L.edits ?? []).find((e) => e?.i === i) ?? {};
+/**
+ * Flick out / curl in (2026-10-05, Saori: "全体がななめに移動してる。途中からカーブしてくるんとはねる、顔に沿うみたいに"): the lock stays as it is
+ * down to its middle, then bends: each link a little more than the one before, so it curves, tighter toward the tip. fl (m, as the sliders
+ * have always given it): ±0.04 turns the tip about 150° (> 0 out from the head and up, a flip; < 0 in toward it). keepOut(p): keeps a
+ * point out of what is under it, so a lock curling in slides along the head and the face instead of into them.
+ */
+export function bendLock(P, fl, { center, keepOut = null, from = 0.5 }) {
+  const N = P.length, TH = Math.max(-1.25, Math.min(1.25, fl / 0.04)) * 150 * Math.PI / 180; if (!TH || N < 3) return P;
+  const k0 = Math.max(1, Math.min(N - 2, Math.round((N - 1) * from))), sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], nrm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
+  const d = nrm(sub3(P[k0], P[k0 - 1])); let o = [P[k0][0] - center[0], 0, P[k0][2] - center[2]]; const od = o[0] * d[0] + o[2] * d[2]; o = nrm([o[0] - d[0] * od, -d[1] * od, o[2] - d[2] * od]);   // out from the head, across the lock
+  const a = nrm([d[1] * o[2] - d[2] * o[1], d[2] * o[0] - d[0] * o[2], d[0] * o[1] - d[1] * o[0]]);   // turning about a (d × o) by + takes the lock toward "out"
+  const rot = (v, t) => { const c = Math.cos(t), s = Math.sin(t), k = a[0] * v[0] + a[1] * v[1] + a[2] * v[2];   // Rodrigues
+    return [0, 1, 2].map((i) => v[i] * c + (a[(i + 1) % 3] * v[(i + 2) % 3] - a[(i + 2) % 3] * v[(i + 1) % 3]) * s + a[i] * k * (1 - c)); };
+  const Q = P.map((p) => [...p]);
+  for (let i = k0 + 1; i < N; i++) { const u = (i - k0) / (N - 1 - k0), r = rot(sub3(P[i], P[i - 1]), TH * Math.pow(u, 1.3)); Q[i] = [Q[i - 1][0] + r[0], Q[i - 1][1] + r[1], Q[i - 1][2] + r[2]]; if (keepOut) keepOut(Q[i], i); }
+  return Q;
+}
 export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null, N = 12 }) {
   const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, PH = L.ph ?? [52, 30];
   let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // the same small differences every build
@@ -38,9 +55,10 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
     specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0) });   // rise: it gets its thickness gently (no ridge at the root)
   }
-  // flick (m): toward the tip the locks bend away from the head (> 0, a little up too) or in under it (< 0)
-  return specs.map((s) => { const pts = drape(s, coll, ellipsoid, N, hugY), fl = s.fl;
-    if (fl) pts.forEach((p, i) => { const e = Math.pow(i / (N - 1), 2.2) * fl, hx = p[0] - center[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1; p[0] += hx / h * e; p[2] += hz / h * e; p[1] += Math.max(0, e) * 0.5; });
+  // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
+  const keepOut = (p, i) => { const r = 0.004; pushOutEllipsoid(p, ellipsoid.c, ellipsoid.r, r); for (const c of coll) pushOutSphere(p, c.c, c.r + r); };
+  return specs.map((s) => { let pts = drape(s, coll, ellipsoid, N, hugY);
+    if (s.fl) pts = bendLock(pts, s.fl, { center, keepOut });
     return { ...s, pts }; });
 }
 /**
@@ -78,7 +96,8 @@ export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
  * to that tip, as wide as the gap between its neighbours (and a little more, so they overlap), lying over the hair and the forehead with
  * a little puff in the middle. surf: the hair under the bangs and the head (distance, head space) / center: the head's center (head space)
  */
-export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
+export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
+  const N = B.tips.some((t) => t[7]) ? 14 : N0;   // a flick needs the points for its curve (every lock of the mesh has as many)
   const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk, fl, wd, wv]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0, fl: fl ?? 0, wd: wd ?? 1, wv: wv ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
   const HY = B.lockHangY ?? 0.86;   // below this (head space) a tuft hangs straight down: off the head, over the shoulders and the chest
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
@@ -112,13 +131,12 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
           last = [px, py, pz]; }
         else { const th = (t - share) / (1 - share), gt = 0.7 * Math.sin(0.5 * Math.PI * th); px = last[0] + (mid[0] - last[0]) * gt; pz = last[2] + (mid[2] - last[2]) * gt; py = last[1] - (last[1] - tipY) * th;   // hanging down, the clump's locks gathering into one tuft (else they hung apart, a row of strings)
           if (tp.wv) { const nx = Math.sin(tp.a), nz = Math.cos(tp.a) + 0.9, nl = Math.hypot(nx, nz), e = tp.wv * Math.sin(2 * Math.PI * (B.waves ?? 1.5) * th) * sstep(0, 0.3, th); px += nz / nl * e; pz -= nx / nl * e; } }   // wave (the row's 10th value, m): the hanging part snakes side to side across its flat side
-        // flick (the row's 8th value, m): toward the tip the lock bends away from the head (> 0: flicked out, a little up too) or in toward it
-        // (< 0: curled in, the tip tucked toward the face), never into the head (it keeps 2 mm over what it lies on)
-        if (tp.fl) { const e = Math.pow(t, 2.2) * tp.fl, hx = px, hz = pz - center[2], h = Math.hypot(hx, hz) || 1;
-          let dx = hx / h * e, dz = hz / h * e; py += Math.max(0, e) * 0.5;
-          if (e < 0) { const c = [0, py, center[2]], dir = [hx / h, 0, hz / h], floor = surfaceAlong(surf, c, dir) + 0.002, nh = Math.max(floor, h + e); dx = hx / h * (nh - h); dz = hz / h * (nh - h); }
-          px += dx; pz += dz; }
-        pts.push(toRoot(px, py, pz)); }
+        pts.push([px, py, pz]); }
+      // flick (the row's 8th value, m): from its middle (or where it starts to hang) the lock curves out and up (> 0) or in (< 0: along the
+      // forehead, the cheek, the jaw: it stays 2 mm over whatever it meets, so it follows the face)
+      if (tp.fl) { const keepOut = (p) => { const hx = p[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1, floor = surfaceAlong(surf, [0, p[1], center[2]], [hx / h, 0, hz / h]) + 0.002 + 0.25 * w * thick; if (h < floor) { p[0] = hx / h * floor; p[2] = center[2] + hz / h * floor; } };
+        const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
+      for (let q = 0; q < N; q++) pts[q] = toRoot(...pts[q]);
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
         front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
