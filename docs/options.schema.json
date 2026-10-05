@@ -4891,6 +4891,234 @@
     "en": "Shirt"
    }
   },
+  "outfit.shirt.texture.src": {
+   "path": "outfit.shirt.texture.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "柄の画像",
+    "en": "Pattern picture"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "order": 123,
+   "nullable": true,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "help": {
+    "ja": "画像を投影して貼る(png / jpg)。透明な部分は下の色が見える",
+    "en": "a picture projected onto it (png / jpg); clear parts show the color under it"
+   }
+  },
+  "outfit.shirt.texture.mode": {
+   "path": "outfit.shirt.texture.mode",
+   "type": "enum",
+   "default": "tile",
+   "label": {
+    "ja": "柄の貼り方",
+    "en": "How it is put on"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "tile",
+     "label": {
+      "ja": "タイル(並べる)",
+      "en": "Tiled"
+     }
+    },
+    {
+     "value": "wrap",
+     "label": {
+      "ja": "巻きつけ",
+      "en": "Wrapped around"
+     }
+    },
+    {
+     "value": "front",
+     "label": {
+      "ja": "正面に1枚",
+      "en": "Once, on the front"
+     }
+    }
+   ],
+   "order": 124,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.scale": {
+   "path": "outfit.shirt.texture.scale",
+   "type": "number",
+   "default": 0.08,
+   "label": {
+    "ja": "柄の大きさ",
+    "en": "Pattern size"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0.01,
+   "max": 0.6,
+   "step": 0.005,
+   "order": 125,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "help": {
+    "ja": "1枚の大きさ(m)",
+    "en": "one picture's size (m)"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.rotate": {
+   "path": "outfit.shirt.texture.rotate",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の回転",
+    "en": "Pattern rotation"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -180,
+   "max": 180,
+   "step": 1,
+   "order": 126,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.x": {
+   "path": "outfit.shirt.texture.x",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の左右位置",
+    "en": "Pattern x"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -0.3,
+   "max": 0.3,
+   "step": 0.002,
+   "order": 127,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.y": {
+   "path": "outfit.shirt.texture.y",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の上下位置",
+    "en": "Pattern y"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1.6,
+   "step": 0.002,
+   "order": 128,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.opacity": {
+   "path": "outfit.shirt.texture.opacity",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "柄の濃さ",
+    "en": "Pattern opacity"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 129,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
+  "outfit.shirt.texture.blend": {
+   "path": "outfit.shirt.texture.blend",
+   "type": "enum",
+   "default": "over",
+   "label": {
+    "ja": "柄の重ね方",
+    "en": "Pattern blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "over",
+     "label": {
+      "ja": "上に重ねる",
+      "en": "Over"
+     }
+    },
+    {
+     "value": "multiply",
+     "label": {
+      "ja": "色にかける(乗算)",
+      "en": "Multiply"
+     }
+    }
+   ],
+   "order": 130,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "when": {
+    "outfit.shirt.texture.src": "*set"
+   }
+  },
   "outfit.shirt.gradient.on": {
    "path": "outfit.shirt.gradient.on",
    "type": "boolean",
@@ -5323,6 +5551,237 @@
     "en": "shirt › shoulder fit"
    }
   },
+  "outfit.cape.texture.src": {
+   "path": "outfit.cape.texture.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "柄の画像",
+    "en": "Pattern picture"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "order": 141,
+   "nullable": true,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "help": {
+    "ja": "画像を投影して貼る(png / jpg)。透明な部分は下の色が見える",
+    "en": "a picture projected onto it (png / jpg); clear parts show the color under it"
+   },
+   "when": {
+    "outfit.cape.on": true
+   }
+  },
+  "outfit.cape.texture.mode": {
+   "path": "outfit.cape.texture.mode",
+   "type": "enum",
+   "default": "tile",
+   "label": {
+    "ja": "柄の貼り方",
+    "en": "How it is put on"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "tile",
+     "label": {
+      "ja": "タイル(並べる)",
+      "en": "Tiled"
+     }
+    },
+    {
+     "value": "wrap",
+     "label": {
+      "ja": "巻きつけ",
+      "en": "Wrapped around"
+     }
+    },
+    {
+     "value": "front",
+     "label": {
+      "ja": "正面に1枚",
+      "en": "Once, on the front"
+     }
+    }
+   ],
+   "order": 142,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.scale": {
+   "path": "outfit.cape.texture.scale",
+   "type": "number",
+   "default": 0.08,
+   "label": {
+    "ja": "柄の大きさ",
+    "en": "Pattern size"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0.01,
+   "max": 0.6,
+   "step": 0.005,
+   "order": 143,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "help": {
+    "ja": "1枚の大きさ(m)",
+    "en": "one picture's size (m)"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.rotate": {
+   "path": "outfit.cape.texture.rotate",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の回転",
+    "en": "Pattern rotation"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -180,
+   "max": 180,
+   "step": 1,
+   "order": 144,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.x": {
+   "path": "outfit.cape.texture.x",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の左右位置",
+    "en": "Pattern x"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -0.3,
+   "max": 0.3,
+   "step": 0.002,
+   "order": 145,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.y": {
+   "path": "outfit.cape.texture.y",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の上下位置",
+    "en": "Pattern y"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1.6,
+   "step": 0.002,
+   "order": 146,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.opacity": {
+   "path": "outfit.cape.texture.opacity",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "柄の濃さ",
+    "en": "Pattern opacity"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 147,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
+  "outfit.cape.texture.blend": {
+   "path": "outfit.cape.texture.blend",
+   "type": "enum",
+   "default": "over",
+   "label": {
+    "ja": "柄の重ね方",
+    "en": "Pattern blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "over",
+     "label": {
+      "ja": "上に重ねる",
+      "en": "Over"
+     }
+    },
+    {
+     "value": "multiply",
+     "label": {
+      "ja": "色にかける(乗算)",
+      "en": "Multiply"
+     }
+    }
+   ],
+   "order": 148,
+   "section": {
+    "ja": "マント",
+    "en": "Cape"
+   },
+   "when": {
+    "outfit.cape.texture.src": "*set"
+   }
+  },
   "outfit.cape.gradient.on": {
    "path": "outfit.cape.gradient.on",
    "type": "boolean",
@@ -5335,7 +5794,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 129,
+   "order": 137,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5356,7 +5815,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 130,
+   "order": 138,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5380,7 +5839,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 131,
+   "order": 139,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5408,7 +5867,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 132,
+   "order": 140,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5429,7 +5888,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 123,
+   "order": 131,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5451,7 +5910,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 124,
+   "order": 132,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5475,7 +5934,7 @@
    "min": 0.02,
    "max": 0.5,
    "step": 0.005,
-   "order": 125,
+   "order": 133,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5499,7 +5958,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 126,
+   "order": 134,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5523,7 +5982,7 @@
    "min": -0.04,
    "max": 0.1,
    "step": 0.005,
-   "order": 127,
+   "order": 135,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5589,7 +6048,7 @@
    "min": 0,
    "max": 1,
    "step": 0.05,
-   "order": 128,
+   "order": 136,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -5600,6 +6059,237 @@
    },
    "when": {
     "outfit.cape.on": true
+   }
+  },
+  "outfit.dress.texture.src": {
+   "path": "outfit.dress.texture.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "柄の画像",
+    "en": "Pattern picture"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "order": 158,
+   "nullable": true,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "help": {
+    "ja": "画像を投影して貼る(png / jpg)。透明な部分は下の色が見える",
+    "en": "a picture projected onto it (png / jpg); clear parts show the color under it"
+   },
+   "when": {
+    "outfit.dress.on": true
+   }
+  },
+  "outfit.dress.texture.mode": {
+   "path": "outfit.dress.texture.mode",
+   "type": "enum",
+   "default": "tile",
+   "label": {
+    "ja": "柄の貼り方",
+    "en": "How it is put on"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "tile",
+     "label": {
+      "ja": "タイル(並べる)",
+      "en": "Tiled"
+     }
+    },
+    {
+     "value": "wrap",
+     "label": {
+      "ja": "巻きつけ",
+      "en": "Wrapped around"
+     }
+    },
+    {
+     "value": "front",
+     "label": {
+      "ja": "正面に1枚",
+      "en": "Once, on the front"
+     }
+    }
+   ],
+   "order": 159,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.scale": {
+   "path": "outfit.dress.texture.scale",
+   "type": "number",
+   "default": 0.08,
+   "label": {
+    "ja": "柄の大きさ",
+    "en": "Pattern size"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0.01,
+   "max": 0.6,
+   "step": 0.005,
+   "order": 160,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "help": {
+    "ja": "1枚の大きさ(m)",
+    "en": "one picture's size (m)"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.rotate": {
+   "path": "outfit.dress.texture.rotate",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の回転",
+    "en": "Pattern rotation"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -180,
+   "max": 180,
+   "step": 1,
+   "order": 161,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.x": {
+   "path": "outfit.dress.texture.x",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の左右位置",
+    "en": "Pattern x"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -0.3,
+   "max": 0.3,
+   "step": 0.002,
+   "order": 162,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.y": {
+   "path": "outfit.dress.texture.y",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の上下位置",
+    "en": "Pattern y"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1.6,
+   "step": 0.002,
+   "order": 163,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.opacity": {
+   "path": "outfit.dress.texture.opacity",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "柄の濃さ",
+    "en": "Pattern opacity"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 164,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
+   }
+  },
+  "outfit.dress.texture.blend": {
+   "path": "outfit.dress.texture.blend",
+   "type": "enum",
+   "default": "over",
+   "label": {
+    "ja": "柄の重ね方",
+    "en": "Pattern blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "over",
+     "label": {
+      "ja": "上に重ねる",
+      "en": "Over"
+     }
+    },
+    {
+     "value": "multiply",
+     "label": {
+      "ja": "色にかける(乗算)",
+      "en": "Multiply"
+     }
+    }
+   ],
+   "order": 165,
+   "section": {
+    "ja": "ワンピース",
+    "en": "Dress"
+   },
+   "when": {
+    "outfit.dress.texture.src": "*set"
    }
   },
   "outfit.dress.gradient.on": {
@@ -5614,7 +6304,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 138,
+   "order": 154,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5635,7 +6325,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 139,
+   "order": 155,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5659,7 +6349,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 140,
+   "order": 156,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5687,7 +6377,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 141,
+   "order": 157,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5708,7 +6398,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 133,
+   "order": 149,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5730,7 +6420,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 134,
+   "order": 150,
    "nullable": true,
    "section": {
     "ja": "ワンピース",
@@ -5797,7 +6487,7 @@
    "min": 0.03,
    "max": 0.4,
    "step": 0.005,
-   "order": 135,
+   "order": 151,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5821,7 +6511,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 136,
+   "order": 152,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5845,7 +6535,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 137,
+   "order": 153,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -5892,6 +6582,234 @@
     "en": "dress"
    }
   },
+  "outfit.pants.texture.src": {
+   "path": "outfit.pants.texture.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "ja": "柄の画像",
+    "en": "Pattern picture"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "order": 179,
+   "nullable": true,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "画像を投影して貼る(png / jpg)。透明な部分は下の色が見える",
+    "en": "a picture projected onto it (png / jpg); clear parts show the color under it"
+   }
+  },
+  "outfit.pants.texture.mode": {
+   "path": "outfit.pants.texture.mode",
+   "type": "enum",
+   "default": "tile",
+   "label": {
+    "ja": "柄の貼り方",
+    "en": "How it is put on"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "tile",
+     "label": {
+      "ja": "タイル(並べる)",
+      "en": "Tiled"
+     }
+    },
+    {
+     "value": "wrap",
+     "label": {
+      "ja": "巻きつけ",
+      "en": "Wrapped around"
+     }
+    },
+    {
+     "value": "front",
+     "label": {
+      "ja": "正面に1枚",
+      "en": "Once, on the front"
+     }
+    }
+   ],
+   "order": 180,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.scale": {
+   "path": "outfit.pants.texture.scale",
+   "type": "number",
+   "default": 0.08,
+   "label": {
+    "ja": "柄の大きさ",
+    "en": "Pattern size"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0.01,
+   "max": 0.6,
+   "step": 0.005,
+   "order": 181,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "help": {
+    "ja": "1枚の大きさ(m)",
+    "en": "one picture's size (m)"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.rotate": {
+   "path": "outfit.pants.texture.rotate",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の回転",
+    "en": "Pattern rotation"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -180,
+   "max": 180,
+   "step": 1,
+   "order": 182,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.x": {
+   "path": "outfit.pants.texture.x",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の左右位置",
+    "en": "Pattern x"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": -0.3,
+   "max": 0.3,
+   "step": 0.002,
+   "order": 183,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.y": {
+   "path": "outfit.pants.texture.y",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "柄の上下位置",
+    "en": "Pattern y"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1.6,
+   "step": 0.002,
+   "order": 184,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.opacity": {
+   "path": "outfit.pants.texture.opacity",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "柄の濃さ",
+    "en": "Pattern opacity"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
+   "order": 185,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
+  "outfit.pants.texture.blend": {
+   "path": "outfit.pants.texture.blend",
+   "type": "enum",
+   "default": "over",
+   "label": {
+    "ja": "柄の重ね方",
+    "en": "Pattern blend"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setTexture",
+   "options": [
+    {
+     "value": "over",
+     "label": {
+      "ja": "上に重ねる",
+      "en": "Over"
+     }
+    },
+    {
+     "value": "multiply",
+     "label": {
+      "ja": "色にかける(乗算)",
+      "en": "Multiply"
+     }
+    }
+   ],
+   "order": 186,
+   "section": {
+    "ja": "ズボン",
+    "en": "Pants"
+   },
+   "when": {
+    "outfit.pants.texture.src": "*set"
+   }
+  },
   "outfit.pants.gradient.on": {
    "path": "outfit.pants.gradient.on",
    "type": "boolean",
@@ -5904,7 +6822,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 151,
+   "order": 175,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5922,7 +6840,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 152,
+   "order": 176,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5946,7 +6864,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 153,
+   "order": 177,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5974,7 +6892,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 154,
+   "order": 178,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -5995,7 +6913,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 142,
+   "order": 166,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6013,7 +6931,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 143,
+   "order": 167,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6047,7 +6965,7 @@
      }
     }
    ],
-   "order": 144,
+   "order": 168,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6088,7 +7006,7 @@
      }
     }
    ],
-   "order": 145,
+   "order": 169,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6112,7 +7030,7 @@
    "min": 0.2,
    "max": 0.4,
    "step": 0.005,
-   "order": 148,
+   "order": 172,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6140,7 +7058,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 149,
+   "order": 173,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6168,7 +7086,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 150,
+   "order": 174,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6253,7 +7171,7 @@
    "min": 0.22,
    "max": 0.4,
    "step": 0.005,
-   "order": 146,
+   "order": 170,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6320,7 +7238,7 @@
    "min": 0,
    "max": 0.4,
    "step": 0.01,
-   "order": 147,
+   "order": 171,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -6342,7 +7260,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 155,
+   "order": 187,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6376,7 +7294,7 @@
      }
     }
    ],
-   "order": 156,
+   "order": 188,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6394,7 +7312,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 157,
+   "order": 189,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6412,7 +7330,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 161,
+   "order": 193,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6434,7 +7352,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 162,
+   "order": 194,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6496,7 +7414,7 @@
      }
     }
    ],
-   "order": 158,
+   "order": 190,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6548,7 +7466,7 @@
      }
     }
    ],
-   "order": 159,
+   "order": 191,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6570,7 +7488,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 160,
+   "order": 192,
    "nullable": true,
    "section": {
     "ja": "鎧",
@@ -6596,7 +7514,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 163,
+   "order": 195,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6617,7 +7535,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 164,
+   "order": 196,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -6679,7 +7597,7 @@
      }
     }
    ],
-   "order": 165,
+   "order": 197,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6731,7 +7649,7 @@
      }
     }
    ],
-   "order": 166,
+   "order": 198,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6765,7 +7683,7 @@
      }
     }
    ],
-   "order": 167,
+   "order": 199,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6787,7 +7705,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 168,
+   "order": 200,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6805,7 +7723,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 169,
+   "order": 201,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6823,7 +7741,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 170,
+   "order": 202,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -6841,7 +7759,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 174,
+   "order": 206,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6859,7 +7777,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 175,
+   "order": 207,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6877,7 +7795,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 176,
+   "order": 208,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -6990,7 +7908,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 171,
+   "order": 203,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -7008,7 +7926,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 172,
+   "order": 204,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -7029,7 +7947,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 173,
+   "order": 205,
    "section": {
     "ja": "靴下",
     "en": "Socks"

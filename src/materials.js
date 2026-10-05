@@ -43,6 +43,34 @@ export function withGrad(m, U) {
   m.customProgramCacheKey = () => "grad|" + key;
   return m;
 }
+/** A picture on a garment, projected (the meshes have no UVs: they are remade from shapes on every change). From texP / texN, each vertex's
+ *  place and normal when the mesh was made (they stay with the cloth when it moves). U.mode: 0 = tile (from the three axes, blended by the
+ *  normal: patterns), 1 = wrap (around the body's upright axis, like a label), 2 = front (once, from the front: a print).
+ *  U: { on, map, mode, scale (m per repeat / the print's size), rot (radians), off (vec2, m), opacity, blend (0 = over, 1 = multiply) } as shared uniforms. */
+export function withTex(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { tOn: U.on, tMap: U.map, tMode: U.mode, tScale: U.scale, tRot: U.rot, tOff: U.off, tOpacity: U.opacity, tBlend: U.blend });
+    sh.vertexShader = "attribute vec3 texP;\nattribute vec3 texN;\nvarying vec3 vTexP;\nvarying vec3 vTexN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vTexP = texP; vTexN = texN;");
+    sh.fragmentShader = `uniform float tOn, tMode, tScale, tRot, tOpacity, tBlend;
+uniform vec2 tOff;
+uniform sampler2D tMap;
+varying vec3 vTexP;
+varying vec3 vTexN;
+vec2 tUV(vec2 p) { float c = cos(tRot), s = sin(tRot); p -= tOff; return vec2(c * p.x - s * p.y, s * p.x + c * p.y) / max(tScale, 0.001); }
+vec4 tSample() {
+  vec3 n = normalize(vTexN), p = vTexP;
+  if (tMode < 0.5) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-5);
+    return texture2D(tMap, tUV(vec2(-p.z * sign(n.x), p.y))) * w.x + texture2D(tMap, tUV(p.xz)) * w.y + texture2D(tMap, tUV(vec2(p.x * sign(n.z), p.y))) * w.z; }   // each face seen from outside, not mirrored
+  if (tMode < 1.5) { float a = atan(p.x, p.z) / 6.2831853; return texture2D(tMap, tUV(vec2(a * 6.2831853 * 0.15, p.y))); }   // around: 0.15 m of the image's width per radian (about a body's girth)
+  vec2 uv = tUV(p.xy) + 0.5; if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 || n.z < 0.0) return vec4(0.0);   // once, from the front, centered at the offset
+  return texture2D(tMap, uv) * smoothstep(0.0, 0.3, n.z);
+}
+` + sh.fragmentShader.replace("#include <color_fragment>",
+      "#include <color_fragment>\n  if (tOn > 0.5) { vec4 tc = tSample(); tc.rgb = pow(tc.rgb, vec3(2.2)); float a = tc.a * tOpacity; diffuseColor.rgb = tBlend > 0.5 ? diffuseColor.rgb * mix(vec3(1.0), tc.rgb, a) : mix(diffuseColor.rgb, tc.rgb, a); }"); };
+  m.customProgramCacheKey = () => "tex|" + key;
+  return m;
+}
 // metal (the armor): toon bands with more contrast, a darker rim where the surface turns away, and a hard white glint (anime-style shine)
 const metalRamp = (() => { const d = new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {

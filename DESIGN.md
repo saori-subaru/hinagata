@@ -391,6 +391,17 @@ Asked whether a loaded texture should do the gradients: not for the hair. Projec
 
 Defaults render pixel-identical (off: the mix is by 0).
 
+### Pictures on the garments (textures) (2026-10-05, Saori; done)
+
+`outfit.shirt / pants / dress / cape .texture`: { src (path or data URL), mode, scale (m), rotate, x, y, opacity, blend: "over" | "multiply" }. The meshes have no UVs (they are remade from shapes on every change, so a hand-made UV layout like VRoid's can't exist), so the picture is projected (`withTex`, materials.js), from each vertex's place and normal when the mesh was made (`texP` / `texN`: they stay with the cloth when the skirt or the cape moves):
+- tile: from the three axes, blended by the normal (patterns: checks, stripes, prints). Where two faces meet the two projections overlap a little.
+- wrap: around the body's upright axis (a label, a border around a hem).
+- front: once, from the front, centered at x / y (a print on the chest).
+
+Uniforms are shared per garment, so `avatar.setTexture` is instant; a new src loads in the background into the garment's one texture object (disposed first: the GPU keeps a texture's size). The textures aren't in the mesh cache's key. A dress's covers both its parts. In the editor each garment's section has a "柄の画像" picture field; the rest of its controls show only once a picture is loaded (`when: { path: "*set" }` = anything but null).
+
+A sharper blend between the projections (normal^8 instead of ^4) broke the shader on the test GPU (only a patch of the picture showed): kept at ^4.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

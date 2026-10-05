@@ -380,6 +380,16 @@ export const DEFAULTS = {
     "shirt": {
       "on": true,
       "color": "#7fb6e8",
+      "texture": {
+        "src": null,
+        "mode": "tile",
+        "scale": 0.08,
+        "rotate": 0,
+        "x": 0,
+        "y": 0,
+        "opacity": 1,
+        "blend": "over"
+      },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -406,6 +416,16 @@ export const DEFAULTS = {
       }
     },
     "cape": {
+      "texture": {
+        "src": null,
+        "mode": "tile",
+        "scale": 0.08,
+        "rotate": 0,
+        "x": 0,
+        "y": 0,
+        "opacity": 1,
+        "blend": "over"
+      },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -422,6 +442,16 @@ export const DEFAULTS = {
       "sway": 1
     },
     "dress": {
+      "texture": {
+        "src": null,
+        "mode": "tile",
+        "scale": 0.08,
+        "rotate": 0,
+        "x": 0,
+        "y": 0,
+        "opacity": 1,
+        "blend": "over"
+      },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -439,6 +469,16 @@ export const DEFAULTS = {
       "follow": 0.3
     },
     "pants": {
+      "texture": {
+        "src": null,
+        "mode": "tile",
+        "scale": 0.08,
+        "rotate": 0,
+        "x": 0,
+        "y": 0,
+        "opacity": 1,
+        "blend": "over"
+      },
       "gradient": {
         "on": false,
         "color": "#ffffff",

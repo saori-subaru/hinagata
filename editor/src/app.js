@@ -76,6 +76,7 @@ function applyInstant(av, p, v) {
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
+    case "setTexture": av.setTexture(k[1], { [last]: v }); return true;
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;

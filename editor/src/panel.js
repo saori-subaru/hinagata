@@ -42,7 +42,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
   const labelOf = (e, id) => h("label", { class: "lab", for: id }, h("span", { title: e.path }, L(e.label)), resetDot(e));
   const helpOf = (e) => e.help ? h("div", { class: "help" }, L(e.help).replace(/^null\b/, t("auto"))) : null;   // "null = …" reads as "Auto = …"
-  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => store.get(p) === v);   // only when the values it depends on are set so
+  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => v === "*set" ? store.get(p) != null : store.get(p) === v);   // only when the values it depends on are set so ("*set": anything but null)
 
   function numberField(e, v) {
     const id = `f${uid++}`;
