@@ -78,7 +78,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -193,7 +193,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons } };
   if (workers && !MS) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H };
     const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
@@ -290,7 +290,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const legCols = (s) => { const h = Jr[`upperLeg.${s}`], k = Jr[`lowerLeg.${s}`], f = Jr[`foot.${s}`], at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t), out = [];
     const thigh = [0.12, 0.35, 0.6, 0.85, 1].map((t) => { const c = at(h, k, t); return [c, legReach(c) + CM]; }), shin = [0, 0.5, 0.9].map((t) => { const c = at(k, f, t); return [c, legReach(c) + CM]; });
     for (let i = 0; i + 1 < thigh.length; i++) out.push({ bone: `upperLeg.${s}`, a: thigh[i][0], b: thigh[i + 1][0], ra: thigh[i][1], rb: thigh[i + 1][1], thigh: true });
-    for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false });
+    // the shins and the feet keep the back of the cloth on their outside (away from the body's middle): a leg kicked back fast went through a long
+    // skirt or robe in one step, and pushed the nearest way the cloth then lay in front of it (2026-10-05, Saori: "走ると後ろ足がローブを貫通")
+    for (let i = 0; i + 1 < shin.length; i++) out.push({ bone: `lowerLeg.${s}`, a: shin[i][0], b: shin[i + 1][0], ra: shin[i][1], rb: shin[i + 1][1], thigh: false, outward: "back" });
+    { const heel = [f[0], f[1] - 0.02, f[2] - 0.035], toe = [f[0], Math.max(0.03, f[1] - 0.04), f[2] + 0.1], ra = legReach(f) + 0.03 + CM;   // the foot with the shoe (and the cloth's own thickness: its inner side rides on the outer), heel to toe
+      out.push({ bone: `foot.${s}`, a: heel, b: toe, ra, rb: ra * 0.8, thigh: false, outward: "back" }); }
     return out; };
   const cloth = SKO ? createCloth({ m: parts.pants.m, o: parts.pants.o, skeleton, root, top: ST.fwd(SKO.top), hem: ST.fwd(SKO.hem), colliders: [...legCols("L"), ...legCols("R")], body: parts.body.m }) : null;
   // the cape: cloth too, hanging from the shoulders; it keeps clear of the legs and the arms, and of the body's surface from the hips to the

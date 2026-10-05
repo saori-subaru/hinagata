@@ -18,7 +18,9 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
 /** m, o: the skinned skirt and its outline. top / hem: the skirt's waist and hem heights (rest).
  *  colliders: [{ bone, a, b, ra, rb, thigh }] capsules in the rest pose (root space, radii with a margin for the cloth), each turning with its bone;
  *  thigh: a thigh's piece (the skirt's front goes over it when it turns up). outward: the cloth goes round it on the side away from the body's
- *  middle line (an arm swinging back pushes a cape back; pushed the nearest way, the cape slipped in front of the arm and it poked through). 
+ *  middle line (an arm swinging back pushes a cape back; pushed the nearest way, the cape slipped in front of the arm and it poked through);
+ *  "back": only the back of the skirt, and only while the leg is behind the body (a leg kicked back keeps a long skirt behind it; sitting,
+ *  the shins are in front and the nearest way keeps the skirt off them as before). 
  *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
  *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
  *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind). */
@@ -64,14 +66,14 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   }
   function capsules() {   // the capsules now (root space): [ax, ay, az, bx, by, bz, ra, rb, thigh?]
     const at = (b, v) => root.worldToLocal(b.localToWorld(wp.copy(v))).toArray();
-    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0, c.outward ? 1 : 0]);
+    return COL.map((c) => [...at(c.b, c.oa), ...at(c.b, c.ob), c.ra, c.rb, c.thigh ? 1 : 0, c.outward === "back" ? 2 : c.outward ? 1 : 0]);
   }
   // a point of the skirt already inside a capsule when standing (the skirt's top over the thigh's root) may stay as close to its axis as it was
   // then, but no closer: KEEP[v * NC + ci] = the share of the radius it must keep (1 = all of it). Before, such points ignored that capsule
   // altogether, and sitting the root of the thigh bulged out through them (most on the girl's body)
   const NC = COL.length, KEEP = new Float32Array(n * NC).fill(1);
   { const C0 = capsules(); for (let v = 0; v < n; v++) C0.forEach((c, ci) => { const x = R[v * 3], y = R[v * 3 + 1], z = R[v * 3 + 2], bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / (bx * bx + by * by + bz * bz)));
-      const d = Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t), r = c[6] + (c[7] - c[6]) * t; if (d < r && !c[9]) KEEP[v * NC + ci] = d / r; }); }   // (not an arm: the cape's edge near the arm in the A-pose would let the arm through it)
+      const d = Math.hypot(x - c[0] - bx * t, y - c[1] - by * t, z - c[2] - bz * t), r = c[6] + (c[7] - c[6]) * t; if (d < r && c[9] !== 1) KEEP[v * NC + ci] = d / r; }); }   // (not an arm: the cape's edge near the arm in the A-pose would let the arm through it)
   // ── the body's surface (hips, bottom, thighs): a third of its points there, skinned each frame with their normals; a skirt point that comes
   //    closer to the nearest of them than it was standing (at most MB) is pushed back out along that point's normal. The capsules can't follow
   //    the flesh of the hip and the thigh's root, which bulges out when the thigh turns up (it showed through the skirt, most on the girl's body)
@@ -122,7 +124,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
         // a thigh turned up (sitting): the front of the skirt goes over it, not under (pushed the nearest way, the part under the thigh tucked
         // beneath it and the thigh showed through a hole). The back of the skirt stays under (you sit on it)
         const u = U[ci]; if (u && FR[v]) { const s = dx * u[0] + dy * u[1] + dz * u[2]; if (s < 0) { dx -= 2 * s * u[0]; dy -= 2 * s * u[1]; dz -= 2 * s * u[2]; } }
-        if (c[9]) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
+        if (c[9] === 1 || (c[9] === 2 && !FR[v] && pz < -0.02)) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
         const k = r / d; x = px + dx * k; y = py + dy * k; z = pz + dz * k; }
       if (y < 0.003) y = 0.003;   // the floor
       if (seat && z < seat.front && Math.abs(x) < 0.2 && y < seat.y && y > seat.y - 0.06) y = seat.y;   // the chair's seat (the part of it under the bottom)

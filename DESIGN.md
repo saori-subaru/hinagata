@@ -410,6 +410,11 @@ The editor's brush (editor/src/paint.js, the outfit tab's "ペイント"): the l
 
 Not yet: a view paints every surface of the part facing that way at that place (a garment's inside behind its outside gets the same paint; mostly unseen); hair isn't paintable.
 
+### Robe fixes: bell sleeves in a T-pose, a leg kicked back through the hem (2026-10-05, Saori; done)
+
+- Raising the arms, the bell sleeve's lower side stayed at the waist and stretched into a web: those points were nearest the hips, so they followed them. The bell's points now go to the forearm alone (`bellOf`, clothes/index.js: on the bell's surface and nearer it than the shirt without the bell; "off the body" alone missed the part lying against the hips), through the skin weights' `soft` (its bone can now be chosen by the point).
+- Running, the back foot came out through an ankle-length robe. The feet had no collider (now heel to toe, with the shoe and the cloth's own thickness), and a leg kicked back fast went through the cloth in one step, which then was pushed out in front of it. The shins and the feet now keep the back of the skirt on their outside (`outward: "back"`, cloth.js) while they are behind the body. Not in front: sitting, that pushed a skirt down over the shins; there the nearest way stays.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

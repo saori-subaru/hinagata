@@ -15,7 +15,8 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
   switch (name) {
     case "body": return { sdf: bodySdf, lo: [-0.47, -0.02, -0.3], hi: [0.47, 1.43, 0.34], h: H };
     case "shirt": { const SL = OPT.outfit.shirt.sleeve, long = SL === "long" || SL === "bell", w = SL === "bell" ? 0.42 + (OPT.outfit.shirt.bell ?? 0.06) : long ? 0.37 : 0.3;   // long sleeves reach the wrists (and follow the forearms)
-      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), lo: [-w, 0.33, -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
+      const soft = C.bellOf ? { bone: (x) => x > 0 ? "lowerArm.L" : "lowerArm.R", k: (x, y, z) => C.bellOf(x, y, z, B) ? 0 : 1 } : null;   // bell sleeves: all on the forearm
+      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33, -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
       if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04;   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
@@ -65,7 +66,8 @@ export function skinOf(pos, weightsAt, BI, bone1, only, soft = null) {
     if (soft?.front && !bone1) { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], k = soft.k(x, y, z), f = soft.front(z), sL = Math.min(1, Math.max(0, 0.5 + x / 0.16));   // the skirt: the hips, and toward the hem the front on the skirt bones / the rest on the thighs, by side (the middle half and half)
       const W = [[soft.bone, 1 - k], ["skirt.L", k * f * sL], ["skirt.R", k * f * (1 - sL)], ["upperLeg.L", k * (1 - f) * sL], ["upperLeg.R", k * (1 - f) * (1 - sL)]].sort((a, b) => b[1] - a[1]).slice(0, 4), sum = W.reduce((a, w) => a + w[1], 0);
       W.forEach(([b, w], q) => { tmp.idx[q] = BI[b]; tmp.w[q] = w / sum; }); }
-    else if (soft && !bone1) { const k = soft.k(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]), b = BI[soft.bone]; let moved = 0, at = -1;
+    else if (soft && !bone1) { const k = soft.k(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]), b = BI[typeof soft.bone === "function" ? soft.bone(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) : soft.bone]; let moved = 0, at = -1;   // (bone: a name, or by the point)
+      if (k >= 1) { for (let q = 0; q < 4; q++) { si[v * 4 + q] = tmp.idx[q]; sw[v * 4 + q] = tmp.w[q] || 0; } continue; }   // untouched
       for (let q = 0; q < 4; q++) { if (tmp.idx[q] === b) { at = q; continue; } moved += tmp.w[q] * (1 - k); tmp.w[q] *= k; }
       if (at < 0) { at = tmp.w.indexOf(Math.min(...tmp.w)); moved += tmp.w[at]; tmp.w[at] = 0; tmp.idx[at] = b; }   // no room: the weakest bone gives way
       tmp.w[at] += moved; }
