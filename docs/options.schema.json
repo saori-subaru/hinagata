@@ -8077,6 +8077,131 @@
     "en": "Weapons"
    }
   },
+  "outfit.shoes.kind": {
+   "path": "outfit.shoes.kind",
+   "type": "enum",
+   "default": "sneaker",
+   "label": {
+    "ja": "靴の種類",
+    "en": "Kind"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "sneaker",
+     "label": {
+      "ja": "スニーカー",
+      "en": "Sneakers"
+     }
+    },
+    {
+     "value": "laced",
+     "label": {
+      "ja": "紐付きスニーカー",
+      "en": "Laced sneakers"
+     }
+    },
+    {
+     "value": "boots",
+     "label": {
+      "ja": "ブーツ",
+      "en": "Boots"
+     }
+    },
+    {
+     "value": "heels",
+     "label": {
+      "ja": "ハイヒール",
+      "en": "High heels"
+     }
+    }
+   ],
+   "order": 214,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   }
+  },
+  "outfit.shoes.laceColor": {
+   "path": "outfit.shoes.laceColor",
+   "type": "color",
+   "default": "#f4f1ea",
+   "label": {
+    "ja": "靴紐の色",
+    "en": "Lace color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 216,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "when": {
+    "outfit.shoes.kind": "laced"
+   }
+  },
+  "outfit.shoes.bootHeight": {
+   "path": "outfit.shoes.bootHeight",
+   "type": "number",
+   "default": 0.21,
+   "label": {
+    "ja": "ブーツの高さ",
+    "en": "Boot height"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.12,
+   "max": 0.3,
+   "step": 0.005,
+   "order": 217,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "はき口の高さ(m)",
+    "en": "the top's height (m)"
+   },
+   "when": {
+    "outfit.shoes.kind": "boots"
+   }
+  },
+  "outfit.shoes.heelAngle": {
+   "path": "outfit.shoes.heelAngle",
+   "type": "number",
+   "default": 24,
+   "label": {
+    "ja": "ヒールの高さ",
+    "en": "Heel height"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 8,
+   "max": 40,
+   "step": 1,
+   "order": 218,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "つま先立ちの角度(度)。大きいほどヒールが高い",
+    "en": "how far the foot tips forward (degrees): more is a higher heel"
+   },
+   "when": {
+    "outfit.shoes.kind": "heels"
+   }
+  },
   "outfit.shoes.on": {
    "path": "outfit.shoes.on",
    "type": "boolean",
@@ -8107,7 +8232,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 214,
+   "order": 215,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8125,7 +8250,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 215,
+   "order": 219,
    "section": {
     "ja": "靴",
     "en": "Shoes"

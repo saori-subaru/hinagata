@@ -437,6 +437,14 @@ Then (Saori: "足の指丸まってない？"): the toes sat under the foot's ro
 
 Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js; the toddler has no tall one (a contradiction). "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only).
 
+### Shoe kinds (2026-10-05, Saori: "ブーツとかハイヒールとか紐付きスニーカー"; done)
+
+`outfit.shoes.kind`:
+- "sneaker": as before (renders the same).
+- "laced": the same with laces, a part of its own ("laces", `laceColor`), made on its own fine grid (2.4 mm at most: they are 4 mm thick). Four bars across the shoe's front slope, each from an eyelet over the top to the other (three points found on the shoe's surface from inside it), and a small bow at the top row. Further back, toward the opening, the leg comes out of the shoe and hid them.
+- "boots": up the calf (`bootHeight`), made around the foot and the calf's parts (so it follows the calf), a little looser, flared at the top.
+- "heels": low-cut pumps with a heel. A heel needs the foot tipped toes-down, so while they are worn the pose player tilts both feet by `heelAngle` in every pose and raises the body so the ball of the foot stays on the floor (`heelPose`: the tilt about the ankle, the lift, the heel's height). The heel is built slanted forward by the same angle, so tilted it stands straight down to the floor. Barefoot (shoes off) the feet are flat again.
+
 ### Climbing, jumping and falling: IK instead of clips (2026-10-03, Saori; done)
 
 Saori wanted the forest game's character to climb giant trees and fall properly, and asked whether a motion AI (NVIDIA's Kimodo) or Mixamo could supply climbing. Not as drop-ins: both give an adult human's motion, and this body's arms (0.18 of 0.86 m) can't reach where an adult's hands go; the holds also change with every trunk. So climbing is code: a base pose plus IK that puts the hands and feet on the surface. Built in the forest first, then moved here so every game gets it (Saori: "このゲームを作り込むほどアバターエンジンの資産が増えて最高").

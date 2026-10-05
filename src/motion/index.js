@@ -123,7 +123,7 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1 }) {
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised)
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler();
@@ -137,8 +137,9 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
       P0 = { ...P0, b }; }
     if (P0.grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = P0.grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
-    for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0], r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
-    bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd - bone.hips.position.y) * k;
+    const ft = footTilt();
+    for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
+    bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;
     for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
     return P0;
   };

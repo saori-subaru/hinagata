@@ -1,10 +1,19 @@
 // Clothes: shirt, pants, shoes (upper + sole) and socks, as signed distances built around the body.
 // Functions taking B (the body distance) can be given a faster lookup of the same body while meshing.
-import { smin, E, cut, blend, blendFast, sstep } from "../sdf/prim.js";
+import { smin, E, C, cut, blend, blendFast, sstep, dPrim } from "../sdf/prim.js";
 import { skirtOf } from "../options.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
+
+/** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
+ *  ball of the foot stays on the floor; heel: how high the heel's back is then (the heel's length) */
+export function heelPose(OPT, J) {
+  const th = (OPT.outfit.shoes.heelAngle ?? 24) * Math.PI / 180, A = J["foot.L"], c = Math.cos(th), s = Math.sin(th);
+  const ball = A[1] + ((0 - A[1]) * c - (0.06 - A[2]) * s), lift = Math.max(0, -ball);   // the ball (y 0, z 0.06) turned with the foot
+  const heelY = A[1] + ((-0.001 - A[1]) * c - (-0.035 - A[2]) * s) + lift;   // the heel's underside, turned and lifted
+  return { theta: th, lift, heel: Math.max(0.01, heelY) };
+}
 
 /** the cape's shoulder line (rest pose): where the mantle over the shoulders turns into the part that hangs */
 export const capeTop = (J) => J["upperArm.L"][1] + 0.005;
@@ -84,9 +93,26 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
-  const shoeCore = blend(pick("foot", "calf", "toeBox")), soleCore = blend(pick("foot", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
-  const shoeSdf = (x, y, z) => Math.max(shoeCore(x, y, z) - SHOE.off, y - (SHOE.top - SHOE.tilt * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる
+  // shoes.kind (2026-10-05, Saori: boots, high heels, laced sneakers): "sneaker" (as before) / "laced" (the same with laces, a part of its own)
+  // / "boots" (up the calf, following it, the top a little flared) / "heels" (low-cut pumps with a heel: the foot is tilted toes-down in every
+  // pose, heelPose; the heel is built slanted so that tilted it stands straight down to the floor)
+  const KIND = OPT.outfit.shoes.kind ?? "sneaker", BOOTS = KIND === "boots", HEELS = KIND === "heels";
+  const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
+  const shoeCore = blend(pick("foot", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB"] : []))), soleCore = blend(pick("foot", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
+  const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], a = [f.cx, -0.001, f.cz - 0.05], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
+    return C(a, a.map((v, i) => v + d[i] * HP.heel), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
+  const shoeSdf = (x, y, z) => { let d = Math.max(shoeCore(x, y, z) - SHOE.off - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0), y - (TOP - TILT * z), -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (boots: a little looser, flared at the top)
+    for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const soleSdf = (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);
+  // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
+  // surface, a little above it), and a bow at the top row: two loops and two ends
+  const lacesSdf = KIND === "laced" ? (() => { const parts = [], surf = (x, z) => { let lo = 0.025, hi = 0.14; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (shoeSdf(x, m, z) < 0) lo = m; else hi = m; } return lo; };
+    for (const s of ["L", "R"]) { const cx = P[`foot.${s}`].cx, r = 0.0038;
+      [0.046, 0.058, 0.07, 0.082].forEach((z, i) => { const w = 0.018 - 0.0025 * i, pt = (x) => [x, surf(x, z) + 0.0025, z], L = pt(cx - w), M = pt(cx), R = pt(cx + w);   // on the shoe's front slope (further back the leg comes out of the opening and hides them)
+        parts.push(C(L, M, r, r, `foot.${s}`, 0.003), C(M, R, r, r, `foot.${s}`, 0.003));
+        if (i === 0) { const b = [cx, M[1] + 0.003, z];   // the bow
+          for (const sx of [-1, 1]) { parts.push(E([cx + sx * 0.013, b[1] + 0.002, z - 0.002], [0.011, 0.0045, 0.0075], `foot.${s}`, 0.003), C(b, [cx + sx * 0.008, b[1] - 0.006, z + 0.016], 0.003, 0.0026, `foot.${s}`, 0.003)); } } }); }
+    return (x, y, z) => { let d = 1; for (const q of parts) d = Math.min(d, dPrim(q, x, y, z)); return d; }; })() : null;   // (the top found from inside the shoe: lo starts above the sole, where it is inside)
   // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
   const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
@@ -109,5 +135,5 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const S = smin(cone, mantle, k), zf = -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y);   // zf: the front edge (behind the arms below the shoulders)
       return Math.max(S, -(S + CA.thick), y - (CA.collar - 0.12 * z), z - zf, CA.hem - y); };   // the collar is a little higher at the back
   })() : null;
-  return { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, capeSdf, armor, weapons };
+  return { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, armor, weapons };
 }

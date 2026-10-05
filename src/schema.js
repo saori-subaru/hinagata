@@ -256,7 +256,11 @@ const MAIN = [
   ["outfit.socks.color", L("靴下の色", "Socks color"), { section: L("靴下", "Socks"), apply: "setColors" }],
   ["outfit.socks.top", L("靴下の高さ", "Socks height"), { min: 0.06, max: 0.3, step: 0.005, section: L("靴下", "Socks") }],
   ["outfit.shoes.on", L("はく", "Wear"), { section: L("靴", "Shoes"), apply: "setWorn" }],
+  ["outfit.shoes.kind", L("靴の種類", "Kind"), { options: opts({ sneaker: ["スニーカー", "Sneakers"], laced: ["紐付きスニーカー", "Laced sneakers"], boots: ["ブーツ", "Boots"], heels: ["ハイヒール", "High heels"] }), section: L("靴", "Shoes") }],
   ["outfit.shoes.color", L("靴の色", "Shoes color"), { section: L("靴", "Shoes"), apply: "setColors" }],
+  ["outfit.shoes.laceColor", L("靴紐の色", "Lace color"), { when: { "outfit.shoes.kind": "laced" }, section: L("靴", "Shoes"), apply: "setColors" }],
+  ["outfit.shoes.bootHeight", L("ブーツの高さ", "Boot height"), { when: { "outfit.shoes.kind": "boots" }, min: 0.12, max: 0.3, step: 0.005, section: L("靴", "Shoes"), help: L("はき口の高さ(m)", "the top's height (m)") }],
+  ["outfit.shoes.heelAngle", L("ヒールの高さ", "Heel height"), { when: { "outfit.shoes.kind": "heels" }, min: 8, max: 40, step: 1, section: L("靴", "Shoes"), help: L("つま先立ちの角度(度)。大きいほどヒールが高い", "how far the foot tips forward (degrees): more is a higher heel") }],
   ["outfit.shoes.soleColor", L("靴底の色", "Sole color"), { section: L("靴", "Shoes"), apply: "setColors" }],
 ];
 

@@ -7,7 +7,7 @@
 import { skirtOf } from "./options.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
-export const CLOTHES = ["shirt", "pants", "shoes", "soles", "socks", "cape", ...ARMOR, ...WEAPONS];
+export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "cape", ...ARMOR, ...WEAPONS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 
 export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
@@ -27,7 +27,9 @@ export function partSpec(name, { OPT, H, kit, bodyAt = null }) {
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const w = 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: [-w, CA.hem - 0.02, -d], hi: [w, CA.collar + 0.05, CA.wrap + 0.1], h: H * 1.2, only: /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }
-    case "shoes": return { sdf: C.shoeSdf, lo: foot0, hi: [0.22, 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
+    case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
+    case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: /^foot/ }   // thin: their own fine grid
+      : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
     case "soles": return { sdf: C.soleSdf, lo: foot0, hi: [0.22, 0.03, 0.14], h: H * 0.6, only: /^foot/ };
     // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
     case "armorChest": return C.armor.helmSdf ? { sdf: C.armor.chestSdf, lo: [-0.3, 0.38, -0.26], hi: [0.3, 0.82, 0.28], h: H * 0.8, only: /^(hips|spine|chest|upperChest)/ }

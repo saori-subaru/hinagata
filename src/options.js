@@ -545,6 +545,10 @@ export const DEFAULTS = {
       "shieldColor": "#3f63b8"
     },
     "shoes": {
+      "kind": "sneaker",
+      "laceColor": "#f4f1ea",
+      "bootHeight": 0.21,
+      "heelAngle": 24,
       "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
