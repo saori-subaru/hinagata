@@ -124,10 +124,11 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised)
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised)
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
-  const qT = new THREE.Quaternion(), eT = new THREE.Euler();
+  const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
+  const FLARE = Math.atan(skirtFlare);   // the skirt's own slant out from the body at the front (an A-line: flare × 0.8 front to back, clothes): a thigh swinging less than that doesn't reach its front
   const HOLD = { L: left !== "none", R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
   let cur = null, held = 0;   // いまのポーズと、それに切りかえてからの時間
   return function apply(name, t, dt, instant = false, yAdd = 0) {   // yAdd: extra hip height (the seat fit in index.js)
@@ -141,7 +142,11 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
     const ft = footTilt();
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;
-    for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) bone[`skirt.${s}`].quaternion.copy(bone[`upperLeg.${s}`].quaternion);   // the skirt's front bones turn with the thighs (about a point at the front of the waist)
+    // the skirt's front bones turn with the thighs (about a point at the front of the waist), less the skirt's own slant: the front already
+    // stands that far out, and turned the whole way with a thigh raised (sitting) its flare pointed up, the hem lifted over the lap
+    // (2026-10-05, Saori: "座った時前が捲れ上がる")
+    for (const s of ["L", "R"]) if (bone[`skirt.${s}`]) { const q = bone[`upperLeg.${s}`].quaternion, d = vD.set(0, -1, 0).applyQuaternion(q), a = Math.acos(Math.max(-1, Math.min(1, -d.y)));
+      bone[`skirt.${s}`].quaternion.copy(qI).slerp(q, a > FLARE ? 1 - FLARE / a : 0); }
     return P0;
   };
 }

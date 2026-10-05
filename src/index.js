@@ -471,7 +471,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cover");
   // motion
   const HEEL = OPT.outfit.shoes.kind === "heels" ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
+  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal" });
   let poseName = "aPose", time = 0, lastPose = { b: {} };
   // seat fit (poses with seat: h): the bottom rests on the seat. A few hundred vertices of the bottom and the backs of the thighs (body and pants)
   // are skinned each frame; the lowest of the visible ones sets how much the hips go up or down (seatAdj, added to the pose's own hip height)
