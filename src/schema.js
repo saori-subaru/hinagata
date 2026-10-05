@@ -132,6 +132,7 @@ const MAIN = [
   ["hair.gradient.color", L("毛先グラデの色", "Tip gradient color"), { when: { "hair.gradient.on": true }, section: L("グラデーション", "Gradient") }],
   ["hair.gradient.start", L("毛先グラデの始まり", "Tip gradient start"), { when: { "hair.gradient.on": true }, min: 0, max: 1, step: 0.01, section: L("グラデーション", "Gradient"), help: L("0 = 根元・上から / 1 = 毛先・すそだけ", "0 = from the root / top, 1 = only the tips / hem") }],
   ["hair.gradient.bangs", L("前髪にもかける", "On the bangs too"), { when: { "hair.gradient.on": true }, section: L("グラデーション", "Gradient") }],
+  ["hair.gradient.hanging", L("垂れた房にはかける", "On hanging tufts"), { when: { "hair.gradient.on": true, "hair.gradient.bangs": false }, section: L("グラデーション", "Gradient"), help: L("前髪にかけないときも、肩まで垂れた前髪の房にはかける", "with the bangs left out, the bang tufts hanging long still take it") }],
   ["hair.gradient.soft", L("毛先グラデのぼかし", "Tip gradient blend"), { when: { "hair.gradient.on": true }, min: 0, max: 1, step: 0.01, section: L("グラデーション", "Gradient") }],
   ["hair.sculpt.shortLocks.count", L("毛束の数", "Lock count"), { when: { "hair.back": "hang" }, min: 6, max: 30, step: 1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.shortLocks.width", L("毛束の幅", "Lock width"), { when: { "hair.back": "hang" }, min: 0.03, max: 0.16, step: 0.005, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],

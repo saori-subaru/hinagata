@@ -121,7 +121,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N = 8 }) {
         pts.push(toRoot(px, py, pz)); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
-        front: hang > 0.02 ? 0.9 : 0, frontFrom: share });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
+        front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
   return out;
@@ -253,7 +253,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
-  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RING.length) / (ringsPer - 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad)
+  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RING.length) / (ringsPer - 1) * (specs[Math.floor(v / VPL)].grad ?? 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
   const si = new Uint16Array(NV * 4), sw = new Float32Array(NV * 4); for (let v = 0; v < NV; v++) { si[v * 4] = head; sw[v * 4] = 1; }
   g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
   for (const a of ["position", "normal", "shadeN"]) g.attributes[a].setUsage(THREE.DynamicDrawUsage);

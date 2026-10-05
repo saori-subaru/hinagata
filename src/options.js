@@ -591,7 +591,8 @@ export const DEFAULTS = {
       "color": "#7cc47f",
       "start": 0.55,
       "soft": 0.35,
-      "bangs": true
+      "bangs": true,
+      "hanging": true
     },
     "tail": {
       "kind": "none",

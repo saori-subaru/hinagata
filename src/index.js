@@ -266,7 +266,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     for (let i = 0; i < P.length; i += 3) { Q[i] = P[i]; Q[i + 1] = ST.inv(P[i + 1]); Q[i + 2] = P[i + 2]; }
     g.setAttribute("paintP", new THREE.BufferAttribute(Q, 3)); g.setAttribute("paintN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3));
     x.m.material = withPaint(x.m.material, PAINT[k], PAINT[k].glsl); x.paint = k; };
-  GRAD.bangs = { ...GRAD.hair, on: { value: OPT.hair.gradient?.on && OPT.hair.gradient.bangs !== false ? 1 : 0 } };   // the bangs: the hair's, unless gradient.bangs is off
+  const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
+  GRAD.bangs = { ...GRAD.hair, on: { value: bangsGrad(OPT.hair.gradient) } };
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
@@ -368,6 +369,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (bangsOn) {
       const B = OPT.hair.sculpt.nendo;
       const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
       out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 }, GRAD.bangs);
     }
     if (tailsOn) {   // the ties: on the hair at an angle around the head (degrees, 0 = front; twin tails mirrored) and a height (head space)
@@ -579,7 +581,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setGradient(target, values = {}) {
       const G = target === "hair" ? OPT.hair.gradient : OPT.outfit[target]?.gradient, U = GRAD[target]; if (!G || !U) throw new Error(`Unknown gradient "${target}". Available: ${Object.keys(GRAD).join(", ")}`);
       Object.assign(G, values); U.on.value = G.on ? 1 : 0; U.color.value.set(G.color); U.start.value = G.start; U.soft.value = G.soft;
-      if (target === "hair") { GRAD.bangs.on.value = G.on && G.bangs !== false ? 1 : 0; hairGrad(); }
+      if (target === "hair") { GRAD.bangs.on.value = bangsGrad(G); hairGrad();
+        if (("bangs" in values || "hanging" in values) && parts.bangs) { const on = parts.bangs.on, vis = parts.bangs.m.visible; for (const m of [parts.bangs.m, parts.bangs.o]) { root.remove(m); m.geometry.dispose(); } delete parts.bangs;   // which tufts take it: their locks again
+          const x = makeLocks(["bangs"]).bangs; if (x) { parts.bangs = x; x.on = on; x.m.visible = x.o.visible = vis; } } }
     },
     /** A picture on a garment (instant; a new src loads in the background, the returned promise resolves when it shows): target "shirt" | "pants" |
      *  "dress" | "cape", values { src (path or data URL, null = none), mode: "tile" | "wrap" | "front", scale (m), rotate (degrees), x, y (m), opacity, blend: "over" | "multiply" }.
