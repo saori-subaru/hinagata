@@ -32,8 +32,11 @@ the camera, the sounds, the screens around it (title, score, results), touch con
 goes. The character is one asset among the court, the ball and the UI:
 - Start it in a few minutes: colors, a hairstyle, an outfit (`colors`, `hair`, `outfit`; a body type from `BODY_TYPES` if the game
   wants one). Don't keep refining it; the user does the fine-tuning in the editor (below), and you can change the recipe file any time later.
+- Don't let the chibi look set the game. Its rules, depth, pace and presentation come from what the user asked for, as they would with
+  realistic figures: a tennis game has real tennis in it, a full-size court, a scoreboard. Scale the characters to the world, not the
+  world to the characters.
 - Don't shape the game around what the engine shows off. If the game needs a move the engine lacks (a racket swing, a serve, a kick),
-  write it as a pose (see "Moving it in a game") and check it in screenshots like any other animation, until it reads well.
+  pose it on `avatar.joints` (below: a plain joint tree, as your own mannequin would be) and check it in screenshots like any other animation.
 - Test the game as a game: play it (a bot pressing keys, at real speed), not only the character.
 
 ## The character file and the live link
@@ -140,18 +143,41 @@ Only what differs from the defaults, nested as the options are (in a character f
   createAvatar, it plays the pose to measure) → each frame `avatar.update(dt * v / g)`
   while you move the object `v * dt`. The hair, skirts and capes trail behind by themselves when the object moves.
 - Turning: rotate `avatar.object` about y (it faces +z).
-- Your own pose: `POSES.swing = (t) => ({ b: { "upperArm.R": [x, y, z], … }, y: 0 })` — Euler angles (radians, XYZ) per bone (hips, spine,
-  chest, upperChest, neck, head, shoulder.L/R, upperArm.L/R, lowerArm.L/R, hand.L/R, upperLeg.L/R, lowerLeg.L/R, foot.L/R; fingers.L/R…),
-  y: hip lift; bones not listed rest. Each bone turns about its joint in axes that are the world's at rest (the character faces +z, its left
-  is +x): +x tips a bone that points up (spine, neck, head) forward and swings one that points down (thigh, shin) back (a knee bends with
-  +x on the shin; a thigh swings forward with −x); y turns about the vertical; z rolls sideways. The arms rest out to the sides (an A-pose,
-  about 44° down from level), so an arm's swings are easiest found by trying. There's no racket or ball swing built in: make one this way
-  (`throw` and `chop` in https://hinagata.pages.dev/src/motion/survival.js, `run` in src/motion/run.js show how poses are written).
-- Something in a hand (a racket, a sword): add it to the bone, `avatar.bones["hand.R"].add(racket)`, positioned from the wrist joint in
-  those rest axes (the fingers point down-out along the arm); it moves with the hand. (The engine's own weapons: `outfit.weapon`.)
+- Something in a hand (a racket, a sword, a cup): `avatar.hold(racket, "hand.R", { along: "+y", face: "+z" })`. Model it with its origin
+  at the middle of its grip, in the world's units. `along`: its axis that runs through the fist and out past the thumb (forward, with the
+  arm hanging: a racket's handle → head); `face`: its axis that faces the way the palm does (the strings, a blade's flat). The hand closes
+  on it; `avatar.hold(null, "hand.R")` lets go. Works in every pose. (The engine's own weapons: `outfit.weapon`.)
+- Switching to a fast move: `avatar.play(name, { blend: 0 })`. By default a switch eases over about 0.35 s, which softens a swing's start.
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
   `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
+
+## Your own moves: pose the joints
+
+There's no racket swing, serve or kick built in. Write them on `avatar.joints`: one THREE.Group per joint inside `avatar.object` (not
+drawn), set up the way you'd build your own mannequin. The avatar follows them.
+```js
+const j = avatar.joints;                 // hips, spine, chest, upperChest, neck, head, upperArm / lowerArm / hand / upperLeg / lowerLeg / foot .L/.R
+avatar.play("joints", { blend: 0 });     // follow the joints from now on (avatar.play("run") etc. switches back to a built-in move)
+// each frame, from the game's state (here a forehand, u: 0 backswing → 1 follow-through)
+j.spine.rotation.y = -0.7 + 1.3 * u;     // the upper body turns from the right to the left
+j["upperArm.R"].rotation.set(0, -1.0 + 2.4 * u, -1.0);   // the arm out to the side, swung round from behind to across the front
+j["lowerArm.R"].rotation.x = -0.4 - 0.5 * u;             // the elbow bends
+avatar.update(dt, { camera });
+```
+- At rest every rotation is 0 and the axes are the world's: the character faces +z, its left is +x, up is +y. The arms hang at the sides
+  (a little out from the hips), the legs straight down.
+- What the angles do (radians): −x swings an arm or a thigh forward (−π/2: pointing ahead), +x back; an elbow bends with −x on
+  `lowerArm`, a knee with +x on `lowerLeg`; z lifts an arm out to the side (+z the left arm, −z the right; about ±π/2: level); y turns
+  about the vertical (+y toward the character's left). +x bends the spine, chest, neck or head forward. With three.js's rotation order
+  (XYZ) a joint's z is applied first, then y, then x, each about the body's fixed axes: `set(0, y, z)` lifts the arm out, then swings it round.
+- `j.hips.position.y`: lower it to crouch. Move and turn the character with `avatar.object` as usual. The collarbones rise by themselves
+  with a raised arm.
+- Start from a built-in move: `avatar.copyMotion("run", t)` sets every joint to the run at time t (the avatar's clock if left out); then
+  change the joints you need (the arm that swings).
+- Something to swing: `avatar.hold` (above) puts it in the hand, the right way round.
+- Built-in moves are written on the bones themselves (`POSES.name = (t) => ({ b: { "upperArm.R": [x, y, z], … }, y })`, Euler angles per
+  bone). The bones' arms rest in an A-pose (44° down from level), so an arm's angles there are easiest found by trying: use the joints.
 
 ## Already have a rig? Dress it
 

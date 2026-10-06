@@ -22,7 +22,7 @@ const DOWN = new THREE.Vector3(0, -1, 0), I = new THREE.Quaternion();
  *   { height }: that tall in the rig's units (a chibi at the legs of a tall rig was a giant: 2026-10-05); false: as built.
  * Returns the follower: { sync() (copy the joints now; the avatar's update does it), attach(object, bone), scale, stop() }.
  */
-export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, joints, root, fit = true, hide = true, grip = null }) {
+export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, joints, root, fit = true, hide = true, grip = null, place = true }) {   // place: false — the avatar's object isn't moved onto the root (the rig is inside it: avatar.joints)
   root.updateMatrixWorld(true);
   const rootQ = new THREE.Quaternion(), rootP = new THREE.Vector3(), rootS = new THREE.Vector3(), tq = new THREE.Quaternion(), tp = new THREE.Vector3();
   root.matrixWorld.decompose(rootP, rootQ, rootS); const rootQi = rootQ.clone().invert(), rootInv = root.matrixWorld.clone().invert();
@@ -75,7 +75,7 @@ export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, join
         put(`shoulder.${s}`, sh.clone()); put(ua, sh.invert().multiply(Q[ua]));
       }
       pose.y = (posIn(src.hips, tp).y - restP.hips.y) / (scale * legK);   // the hips up and down (the rig's units → the avatar's)
-      avatar.object.position.copy(rootP); avatar.object.quaternion.copy(rootQ); avatar.object.scale.copy(rootS).multiplyScalar(scale);
+      if (place) { avatar.object.position.copy(rootP); avatar.object.quaternion.copy(rootQ); avatar.object.scale.copy(rootS).multiplyScalar(scale); }
     },
     /** move something the rig held (a racket on its hand) onto the avatar's bone, placed on it as it was on the joint */
     attach(object, bone) {
@@ -86,7 +86,10 @@ export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, join
       wrap.add(object); object.traverse((o) => { if (o.isMesh) o.visible = true; });
       avatar.bones[b].add(wrap); return wrap;
     },
+    /** how far each hand closes into a fist (0–1) while the rig is followed */
+    setGrip(g) { pose.grip = g; },
     stop() { delete POSES[name]; },
+    offOf, up,   // (for avatar.joints: a pose's bone turns written back onto the rig, copyMotion)
   };
   follower.sync();
   return follower;
