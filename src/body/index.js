@@ -285,8 +285,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform({ ...OPT.body.head, lift: LIFT }), HEAD_RAW = { ...HEAD };
-  if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT, eyes: { x: OPT.face.layout.eyeX, y: OPT.face.layout.eyeY, size: OPT.face.eyeSize }, mouthY: OPT.face.layout.mouthY }), HEAD_RAW = { ...HEAD };
+  if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max + HT.grow; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
   const KNEE_IN = cut(E([0, OPT.body.sculpt.knee.inner.y, 0], [OPT.body.sculpt.knee.inner.width, OPT.body.sculpt.knee.inner.height, 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
@@ -318,13 +318,37 @@ export function headTransform(h) {
   const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 }, ly = h.lift ?? 0;
   const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
   const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly, k = Math.min(sx, sy, sz) / stretch;
+  // faceWidth / faceLength (2026-10-06, Saori: like a character maker's sliders: narrow the head by bringing the eyes in toward the middle,
+  // not by squashing everything; a face that takes more of the head, toward real proportions, not the whole head stretched). Before the
+  // scale, head space is bent along x and y with the eyes' and the mouth's bands left at their size, so the face picture (its UVs are head
+  // space) keeps their shapes: faceWidth narrows between the eyes and outside them (the eyes come in, the head gets slimmer); faceLength
+  // lengthens between the mouth and the eyes (the nose) and below the mouth (the chin), the chin stays and the eyes and the skull go up.
+  // h.eyes: { x, y, size } (face.layout's eyeX / eyeY, face.eyeSize), h.mouthY: where the picture's parts are
+  const FW = h.faceWidth ?? 1, FLn = h.faceLength ?? 1, EYE = h.eyes ?? { x: 0.096, y: 0.998, size: 1.25 }, ek = (EYE.size ?? 1.25) / 1.25, MY = (h.mouthY ?? 0.896) - 0.015;
+  const XM = FW === 1 ? null : bandMap([[-1, EYE.x - 0.05 * ek], [EYE.x + 0.075 * ek, 0.6]], FW, 0, 0.6, 0);   // |x|: between the eyes, and outside them
+  const ey0 = EYE.y - 0.06 * ek, YM = FLn === 1 ? null : bandMap([[0.78, MY - 0.018], [MY + 0.01, ey0]], FLn, 0.6, 1.5, 0.78);   // under the mouth (the chin, the jaw), and between the mouth and the eyes' bottom
+  const xf = XM ? (x) => Math.sign(x) * XM.fwd(Math.abs(x)) : (x) => x, xi = XM ? (x) => Math.sign(x) * XM.inv(Math.abs(x)) : (x) => x;
+  const yf = YM ? YM.fwd : (y) => y, yi = YM ? YM.inv : (y) => y;
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && !XM && !YM, k = Math.min(sx, sy, sz) * Math.min(1, FW, FLn) / stretch;
+  const grow = YM ? Math.abs(YM.fwd(1.5) - 1.5) * sy : 0;   // how far the top moved (a bound grows by it)
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
-    toHead: (x, y, z) => [x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)],
-    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)) * k,
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * Math.max(1, FW, FLn), grow,
+    toHead: (x, y, z) => [xi(x / sx), yi(py + (y - ly - py) / sy), warp(pz + (z - pz) / sz)],
+    fromHead: (x, y, z) => [xf(x) * sx, py + (yf(y) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(xi(x / sx), yi(py + (y - ly - py) / sy), warp(pz + (z - pz) / sz)) * k,
   };
+}
+
+/** A smooth one-dimensional bend: slope s inside the bands ([a, b] pairs), 1 outside (the edges fade over 8 mm), fixed at anchor; tabulated over
+ *  [lo, hi] and straight beyond. Returns { fwd, inv }. */
+function bandMap(bands, s, lo, hi, anchor, D = 0.0005) {
+  const w = 0.008, slope = (u) => 1 + (s - 1) * bands.reduce((q, [a, b]) => q + sstep(a - w, a + w, u) * (1 - sstep(b - w, b + w, u)), 0);
+  const N = Math.ceil((hi - lo) / D), F = new Float64Array(N + 1); F[0] = lo; for (let i = 1; i <= N; i++) F[i] = F[i - 1] + D * slope(lo + (i - 0.5) * D);
+  const raw = (u) => { const t = (u - lo) / D; if (t <= 0) return F[0] + (u - lo); if (t >= N) return F[N] + (u - lo - N * D); const i = Math.floor(t); return F[i] + (F[i + 1] - F[i]) * (t - i); };
+  const off = anchor - raw(anchor), fwd = (u) => raw(u) + off;
+  const inv = (v) => { const r = v - off; if (r <= F[0]) return lo + (r - F[0]); if (r >= F[N]) return lo + N * D + (r - F[N]);
+    let a = 0, b = N; while (b - a > 1) { const m = (a + b) >> 1; if (F[m] <= r) a = m; else b = m; } return lo + (a + (r - F[a]) / (F[b] - F[a])) * D; };
+  return { fwd, inv };
 }
 
 /** A box with rounded edges (center c, half sizes h, edge radius r), as a head part blended with k. */

@@ -59,6 +59,8 @@ const MAIN = [
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.6, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身で 0.7 前後にすると5頭身ほど(2026-10-05、それまでは 0.8 まで)", "about 0.7 on a tall body: some 5 heads tall (2026-10-05; it stopped at 0.8 before)") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
+  ["body.head.faceWidth", L("顔の幅", "Face width"), { min: 0.7, max: 1.2, step: 0.01, section: L("頭", "Head"), help: L("目の形はそのままで、眉間と目の外側を縮める(のばす)。小さいほど目が中央へ寄って頭が細くなる", "narrows (widens) between the eyes and outside them, the eyes keeping their shape: lower brings the eyes in and slims the head") }],
+  ["body.head.faceLength", L("顔の長さ", "Face length"), { min: 0.8, max: 1.8, step: 0.01, section: L("頭", "Head"), help: L("目・口の形はそのままで、鼻のあたりとあごを縦にのばす。あごはそのまま目から上が上がり、顔が頭に占める割合が増える(大きいほどリアル寄り)", "lengthens the nose and the chin, the eyes and the mouth keeping their shape: the chin stays, the eyes and the skull go up, and the face takes more of the head (higher is more realistic)") }],
   ["body.sculpt.neck.width", L("首の太さ", "Neck width"), { min: 0.6, max: 1.2, step: 0.01, section: L("頭", "Head") }],
   ["body.sculpt.neck.length", L("首の長さ", "Neck length"), { min: -0.02, max: 0.06, step: 0.002, section: L("頭", "Head"), help: L("頭ごと上へ(m)", "lifts the head (m)") }],
   ["body.sculpt.neck.follow", L("首を頭の大きさに合わせる", "Neck follows head size"), { min: 0, max: 1.5, step: 0.05, section: L("頭", "Head"), help: L("頭を小さくすると首も細くなる量。0 = 頭の大きさに関係なく同じ太さ", "how much the neck thins with a smaller head. 0 = the same whatever the head") }],

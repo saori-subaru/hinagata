@@ -40,6 +40,8 @@ export const DEFAULTS = {
       "scale": 0.82,
       "width": 1,
       "depth": 1,
+      "faceWidth": 1,
+      "faceLength": 1,
       "pivotY": 0.845,
       "pivotZ": 0.006,
       "shift": {
