@@ -86,6 +86,7 @@ button { cursor: pointer; }
 .expr-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; } .expr-name { min-width: 4.5em; font-weight: 600; } .expr-btns { display: flex; gap: 6px; margin-left: auto; }
 .chip { padding: 6px 13px; border-radius: var(--pill); border: 1.5px solid var(--line); background: var(--raised); color: var(--ink-2); font-size: 12.5px; }
 .chip:hover { border-color: #d5ccbf; }
+.pchip { display: inline-flex; align-items: center; gap: 6px; } .pthumb { width: 30px; height: 22px; object-fit: contain; border-radius: 4px; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 6px 6px; }
 .chip-pair { display: inline-flex; } .chip-pair .chip:first-child { border-radius: var(--pill) 0 0 var(--pill); } .chip-pair .chip:last-child { border-radius: 0 var(--pill) var(--pill) 0; border-left: 0; padding: 6px 9px; }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 
