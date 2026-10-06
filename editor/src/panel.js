@@ -135,8 +135,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       const write = (p) => { if (n === "normal") { const ch = noNormal(); for (const k of SLOTS) ch[`face.parts.${k}`] = p[k]; set(ch); } else set({ "face.expressions": { ...ES, [n]: { ...p } } }); };
       const reset = () => { const o = { ...ES }; delete o[n]; set({ "face.expressions": o }); };
       ctx.showFace?.(cur); faceShown = true;
-      const pickN = h("select", { class: "sel", style: "width: 100%; max-width: none", "aria-label": t("exEdit"), onchange: (ev) => { editExpr = ev.target.value; render(); } },
-        EXPRESSION_SET.map((k) => h("option", { value: k, selected: k === n }, t(`ex_${k}`))));
+      const pickN = h("div", { class: "seg full", role: "group", "aria-label": t("exprSet") }, EXPRESSION_SET.map((k) =>   // five, fixed: all in view (2026-10-06, Saori: not a drop-down)
+        h("button", { type: "button", "aria-pressed": String(k === n), onclick: () => { editExpr = k; render(); } }, t(`ex_${k}`))));
       const fromK = match(cur)?.key ?? "";
       const pickFrom = h("select", { class: "sel", style: "max-width: 230px", "aria-label": t("exFrom"), onchange: (ev) => { const x = item(ev.target.value); if (x) write({ ...cur, ...x.parts }); } },
         fromK ? null : h("option", { value: "", selected: true }, t("exIndividual")), groups(fromK));
@@ -144,7 +144,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         return h("div", { class: "field" }, h("label", {}, L(e?.label) || k), h("select", { class: "sel", "aria-label": L(e?.label) || k, onchange: (ev) => write({ ...cur, [k]: opts[+ev.target.value].value }) },
           opts.map((o, i) => h("option", { value: i, selected: o.value === cur[k] }, L(o.label))))); };
       const own = n !== "normal" && ES[n];
-      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))), h("div", { class: "help" }, t("exEditHelp")), pickN,
+      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
         h("div", { class: "field" }, h("label", {}, t("exFrom")), pickFrom), SLOTS.map(slotField),
         own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetTo", L(EXPRESSIONS[n])))) : null);
     }
