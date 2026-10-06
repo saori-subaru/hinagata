@@ -757,3 +757,40 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Checked on the new tall (editor, a comparison page): walk (stride 1.35 against the chibi's 0.70), run, sitting on the chair, jump,
   pulling up onto a ledge, climbing a wall, hanging from an edge, gliding under the leaf, crawling, swimming; avatar.joints, copyMotion,
   hold; a skirt with long sleeves, a dress, a cape with a sword and shield, full armor with a spear, long hair running. No console errors.
+
+### Thinning that keeps the shape, and a check for it (2026-10-06, found by the forest; Saori: "おおもとのエンジンが改悪された")
+- What happened: the forest (saori-subaru/genseirin) builds its chibi with `createAvatar(recipe, { simplify: 0.15 })`. Moved from 12483f8 to
+  3269ae5, the body went paper-thin from the side (the grass skirt a cup), on phones too. 0.25 held, but weighed about twice as much; the
+  forest went back to 12483f8.
+- Why: not the error limit. 12483f8 thinned with `target_error` 1 too (the triangle count decides), positions only. b571629 (the lite quality,
+  2026-10-05) kept the face as built (`vertex_lock`, so the outline doesn't draw lines on the cheeks) and counted the normals, but still asked
+  for `simplify` of the *whole* mesh's triangles. The face kept took the share from the rest: a chibi's face is about a fifth of its body
+  (4.3k of 22.4k triangles at 13.6 mm), so at 0.15 the rest of the body had to go to almost nothing: the torso flattened to a third of its
+  depth, triangles spiked from the shoulders to the thighs, the version-less chibi's shins vanished, the tall body lost 30% of its depth.
+  Tried: without the lock everything held (98–102%); without the normals (12483f8's way) too; weaker normals were worse.
+- Now (`simplified` in src/index.js): the share is of what may be thinned, and the face's triangles come on top of it
+  (target = face + share × the rest). And a brake: `THIN_ERROR` 0.01, thinning stops before the shape (with the normals) would change by more
+  than 1% of the part's size, even short of the count. At 0.15 the body changes by 0.3–0.4%, so it doesn't hold today; it is there for the
+  next share that asks too much. The cheeks keep the face as built, as before.
+- The check (`node tools/thin-check.mjs`, tools/thin-check.html; one command, headless Chrome over the DevTools protocol, no dependencies):
+  four bodies (the tall default; the forest's chibi with its grass skirt; a version-less recipe file, read with the old chibi defaults; the
+  slim girlTall with a skirt), each built unthinned ("game" cells, simplify 1: the reference) and at "fine", "lite" and simplify 0.15,
+  cut across at the hips, waist, chest, upper chest, head and shins (the body with its clothes: the body isn't drawn under them). A cut whose
+  depth (front to back, near the middle) or width is under 90% or over 112% of the reference's fails (thin, or spiky); exit code 1. It writes
+  front and side pictures with the numbers (thin-check-out/thin-check.png) and the cuts and per-part triangles (thin-check.json). Run it after
+  changing the engine (CLAUDE.md). `--only case`, `--runs full,s0.15` (an older engine without "fine" / "lite"), `--out dir`.
+- Numbers (triangles of what is drawn, outlines not counted, one character; the browser's renderer.info counts shadows too, about 2x):
+
+  | | 12483f8, 0.15 | 3269ae5, 0.15 (broken) | now, 0.15 | now, lite | unthinned |
+  |---|---|---|---|---|---|
+  | the forest's chibi | 20,255 (10.3k vertices) | 30,487 | 33,207 (16.8k) | 26,067 (13.1k) | 66,513 |
+  | tall default | — (no tall body then) | 20,164 | 22,617 (12.1k) | 16,037 (8.7k) | 56,275 |
+  | version-less chibi | — | 17,516 | 19,616 (10.5k) | 17,096 (9.2k) | 70,373 |
+  | slim (girlTall) | — | 28,244 | 30,752 (16.0k) | 24,172 (12.6k) | 70,653 |
+
+  The forest's chibi at 0.15, by part: body 3,352 → 6,978 (the face kept, 4.3k), grass skirt 1,830 → 9,800, hair and locks the same (15k).
+  The skirt is the weight: since 711507b cloth is meshed finer at the game cells (16.3k triangles unthinned, was 5.7k), and since the lite
+  quality it is thinned less (0.15 × 4 = 60%: from big triangles the inside showed through). Not changed here: thinning cloth harder needs
+  Saori's eye on a moving, seated skirt. "lite" (lighter locks too) is the forest's lighter choice: 26k.
+- "fine" is heavier by the same rule: its face (at 6.8 mm, 15% of the body) now comes on top of the 22%: the default character 59.7k → 65.1k
+  triangles (31.2k → 35.4k vertices; "game" has 56.3k / 32.8k). Its look is unchanged or better; lower FINE's share if the vertices matter.

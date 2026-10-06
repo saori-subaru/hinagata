@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hinagata — thinning check</title>
+<style>body { margin: 0; padding: 12px; background: #f0ece4; font: 13px sans-serif; } pre { white-space: pre-wrap; } img { max-width: 100%; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<p id="state">building…</p>
+<img id="sheet">
+<pre id="out"></pre>
+<script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
+<script type="module">
+// The thinning check (2026-10-06: the forest's chibi went paper-thin from the side at simplify 0.15 after the engine moved on).
+// Each body is built unthinned (the reference: "game", 13.6 mm cells, simplify 1) and thinned ("fine", "lite", simplify 0.15), and cut across at
+// the hips, waist, chest, upper chest, head and shins: the depth (front to back) of each cut, near the middle (|x| < 6 cm). A thinned body whose
+// depth anywhere is under MIN of the reference's fails. The triangles and vertices of everything visible are counted. A sheet of front and
+// side pictures goes with it. Run it with `node tools/thin-check.mjs` (headless Chrome, one command), or open this page (?only=name).
+import * as THREE from "three";
+import { createAvatar, BODY_TYPES } from "../src/index.js";
+
+const MIN = 0.9, MAX = 1.12;   // a thinned cut keeps 90% to 112% of the unthinned one's depth and width (more: spikes thrown out)
+// the forest's character (原生林 src/charmake.js): the chibi standard as a recipe of values, a grass skirt, a crop top without sleeves
+const MINO = { kind: "skirt", top: 0.5, tilt: 0.1, skirt: { hem: 0.33, flare: 0.75, pleats: 44, pleatDepth: 0.022, thick: 0.02 } };
+const forest = (bt) => ({ body: structuredClone(BODY_TYPES[bt]?.body ?? {}), hair: { bangs: "nendo", back: "short", ahoge: true },
+  outfit: { shirt: { on: false }, pants: { on: true, ...MINO, color: "#8a8a44" }, shoes: { on: false }, socks: { on: false } }, outline: { on: false } });
+const CASES = [
+  { name: "tall", label: "高頭身の標準", recipe: {} },
+  { name: "chibi-forest", label: "2頭身(原生林の体)", recipe: forest("standard") },
+  { name: "toddler-file", label: "2頭身(版の無いレシピ)", recipe: { hair: { back: "bob" } }, file: true },   // a file without "hinagata": the old chibi defaults (BODY_TYPES.toddler's values)
+  { name: "slim", label: "細い体型", recipe: { body: structuredClone(BODY_TYPES.girlTall?.body ?? {}), outfit: { pants: { kind: "skirt" } } } },
+];
+const RUNS = [   // [name, settings]; the first is the reference
+  ["full", { quality: "game", simplify: 1 }],
+  ["fine", { quality: "fine" }],
+  ["lite", { quality: "lite" }],
+  ["s0.15", { simplify: 0.15 }],
+];
+const Q = new URLSearchParams(location.search), only = Q.get("only"), runsAsked = Q.get("runs")?.split(",");   // ?only=case, ?runs=full,s0.15 (an older engine without "fine" / "lite")
+
+// the cut of the figure across y = c: the depth (z span) and width (x span) of where the triangles of the given geometries cross the plane,
+// the depth near the middle (|x| < band). The body and what it wears together: the body isn't drawn under the clothes (cull)
+function cut(geos, c, band = 0.06) {
+  let z0 = Infinity, z1 = -Infinity, x0 = Infinity, x1 = -Infinity;
+  for (const geo of geos) { const P = geo.attributes.position.array, I = geo.index.array;
+    const at = (a, b) => { const ya = P[a * 3 + 1] - c, yb = P[b * 3 + 1] - c; if ((ya > 0) === (yb > 0)) return; const t = ya / (ya - yb);
+      const x = P[a * 3] + (P[b * 3] - P[a * 3]) * t, z = P[a * 3 + 2] + (P[b * 3 + 2] - P[a * 3 + 2]) * t;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (Math.abs(x) < band) { if (z < z0) z0 = z; if (z > z1) z1 = z; } };
+    for (let i = 0; i < I.length; i += 3) { at(I[i], I[i + 1]); at(I[i + 1], I[i + 2]); at(I[i + 2], I[i]); } }
+  return { depth: z1 > z0 ? z1 - z0 : 0, width: x1 > x0 ? x1 - x0 : 0 };
+}
+function count(av) {
+  let tris = 0, verts = 0; const parts = {};
+  for (const [k, x] of Object.entries(av.parts)) if (x?.m?.visible && x.m.geometry.index) { const t = x.m.geometry.index.count / 3; tris += t; verts += x.m.geometry.attributes.position.count; parts[k] = t; }
+  if (av.faceLayer?.visible) { tris += av.faceLayer.geometry.index ? av.faceLayer.geometry.index.count / 3 : 0; verts += av.faceLayer.geometry.attributes.position.count; }
+  return { tris, verts, parts };
+}
+// cuts at the joints (hips, waist, chest, upper chest, the head), through the body and the clothes on it (not the hair), and the legs' shins
+function cutsOf(av) {
+  const J = av.internals.J, r = {}, on = (k) => av.parts[k]?.m.visible ? [av.parts[k].m.geometry] : [];
+  const fig = ["body", "shirt", "pants"].flatMap(on);
+  for (const k of ["hips", "spine", "chest", "upperChest"]) r[k] = cut(fig, J[k][1]);
+  r.head = cut(on("body"), J.head[1], 0.04);
+  r.shin = cut(fig, (J["lowerLeg.L"][1] + J["foot.L"][1]) / 2, 0.2);   // both shins (|x| < 20 cm)
+  return r;
+}
+
+// pictures: front and side, orthographic, the same framing for every run of a case
+const S = 220, renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(S, S * 1.5); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+function shots(av, box) {
+  const h = box.max.y - box.min.y, cy = (box.max.y + box.min.y) / 2, half = h * 0.55, cam = new THREE.OrthographicCamera(-half / 1.5, half / 1.5, half, -half, 0.01, 20);
+  scene.add(av.object); const out = [];
+  for (const [x, z] of [[0, 4], [4, 0]]) { cam.position.set(x, cy, z); cam.lookAt(0, cy, 0); renderer.render(scene, cam); const c = document.createElement("canvas"); c.width = S; c.height = S * 1.5; c.getContext("2d").drawImage(renderer.domElement, 0, 0); out.push(c); }
+  scene.remove(av.object); return out;
+}
+
+const results = [], rows = [];
+try {
+for (const C of CASES) {
+  if (only && only !== C.name) continue;
+  let ref = null, box = null; const row = { label: C.label, pics: [] };
+  for (const [run, settings] of RUNS.filter(([k], i) => !i || !runsAsked || runsAsked.includes(k))) {
+    // a file case comes as a fetched file would (a bare recipe from a URL: read with the old chibi defaults, openRecipe in options.js)
+    const t0 = performance.now(), opts = C.file ? "data:application/json," + encodeURIComponent(JSON.stringify(C.recipe)) : structuredClone(C.recipe);
+    const av = await createAvatar(opts, { ...settings, cache: false }).catch((e) => { throw new Error(`${C.name} ${run}: ${e.message}`); });
+    av.update(0, { instant: true });
+    if (!box) box = new THREE.Box3().setFromObject(av.object);
+    const n = count(av), cuts = cutsOf(av), ms = Math.round(performance.now() - t0);
+    const ratios = ref ? Object.keys(cuts).flatMap((k) => ["depth", "width"].map((d) => ref.cuts[k]?.[d] ? cuts[k][d] / ref.cuts[k][d] : 1)) : [1];
+    const worst = Math.min(...ratios), most = Math.max(...ratios), bad = Object.keys(cuts).filter((k) => ref && ["depth", "width"].some((d) => { const q = ref.cuts[k]?.[d] ? cuts[k][d] / ref.cuts[k][d] : 1; return q < MIN || q > MAX; }));
+    const r = { case: C.name, run, ...n, ms, cuts, worst: Math.round(worst * 1000) / 1000, most: Math.round(most * 1000) / 1000, bad, ok: !bad.length };
+    if (!ref) ref = r; results.push(r);
+    row.pics.push([run, ...shots(av, box), r]);
+    av.dispose?.();
+    document.getElementById("state").textContent = `built ${C.name} ${run}`;
+  }
+  rows.push(row);
+}
+} catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; throw e; }
+
+// the sheet: one row per case, front and side per run, the numbers under each
+const W = S * 2 + 8, sheet = document.createElement("canvas"); sheet.width = W * Math.max(...rows.map((r) => r.pics.length)) + 8; sheet.height = rows.length * (S * 1.5 + 64) + 8;
+const g = sheet.getContext("2d"); g.fillStyle = "#f0ece4"; g.fillRect(0, 0, sheet.width, sheet.height); g.font = "15px sans-serif";
+rows.forEach((row, i) => { const y = 8 + i * (S * 1.5 + 64);
+  row.pics.forEach(([run, f, s, r], j) => { const x = 8 + j * W; g.drawImage(f, x, y + 22); g.drawImage(s, x + S, y + 22);
+    g.fillStyle = "#333"; g.fillText(`${row.label} — ${run}`, x, y + 16);
+    g.fillStyle = r.ok ? "#2a6a2a" : "#b02020"; g.fillText(`${r.tris} 三角 / ${r.verts} 頂点  厚み ${Math.round(r.worst * 100)}〜${Math.round(r.most * 100)}%${r.ok ? "" : " ✗ " + r.bad.join(",")}`, x, y + S * 1.5 + 42); }); });
+const png = sheet.toDataURL("image/png"); document.getElementById("sheet").src = png;
+const table = results.map((r) => `${r.case.padEnd(13)} ${r.run.padEnd(6)} ${String(r.tris).padStart(7)} tris ${String(r.verts).padStart(7)} verts  cuts ${(r.worst * 100).toFixed(0).padStart(3)}–${(r.most * 100).toFixed(0).padStart(3)}%  ${r.ok ? "ok" : "FAIL " + r.bad.join(",")}  ${r.ms} ms`).join("\n");
+document.getElementById("out").textContent = table; document.getElementById("state").textContent = results.every((r) => r.ok) ? "all ok" : "FAILED";
+window.RESULT = { ok: results.every((r) => r.ok), min: MIN, max: MAX, results, table, png };
+</script>
+</body>
+</html>

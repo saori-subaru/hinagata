@@ -46,6 +46,12 @@ claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp 
 
 Tools: `editor_link` (the link to give the user), `get_recipe`, `update_recipe` (`{ set: { "dotted.path": value }, reset: [paths] }`, checked as it is written), `check_recipe`, `find_options` (by words, Japanese or English) and `screenshot` (`view`: free / front / side / back / face, `pose`: idle, walk, run, sitChair…; needs the editor open from the link). Run either this or the plain helper for a file, not both (they'd share the port: `--port` another).
 
+**Lighter meshes.** `createAvatar(recipe, { quality: "lite" })` or `{ simplify: 0.15 }` thins the meshes with meshoptimizer. The face is
+kept as built, and thinning stops before the shape would change by more than 1% of a part's size (it may keep more triangles than the share
+asked for; the body doesn't go thin). After changing the engine, run the thinning check: `node tools/thin-check.mjs` (headless Chrome; builds
+a tall, a chibi, a version-less recipe and a slim body at "fine", "lite" and 0.15, measures their depth front to back against the unthinned
+build, writes front and side pictures to `thin-check-out/`, exits 1 when one went thin or spiky).
+
 Design notes, API and decisions: [`DESIGN.md`](DESIGN.md).
 
 Used by: the saon site (`saori-subaru/devlog`, as a git submodule at `site/avatar/`) and the forest game.

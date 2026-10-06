@@ -55,7 +55,9 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
  *              long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
- *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr),
+ *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
+ *                       The face is kept as built on top of the share, cloth is thinned less, and thinning stops before the shape would change by
+ *                       more than 1% of the part's size, so a part may keep more than asked (2026-10-06: a share alone thinned a chibi paper-thin),
  *             spare: false (default) — armor that isn't worn is built only when it is put on (setWorn); true builds it now (an editor),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
@@ -168,6 +170,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // keep `simplify` of the triangles (meshoptimizer), then drop the vertices nothing uses any more (the skin weights, if there are any,
   // follow their vertices: meshoptimizer keeps a subset of the vertices). Cloth (a skirt, a cape) is thinned less: its inner side rides on
   // the outer side's nearest points, and from big triangles the inside showed through in holes (2026-10-05, the lite quality)
+  const THIN_ERROR = 0.01;   // 1% of the mesh's size (meshoptimizer's target_error)
   function simplified(rec, name) {
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
@@ -178,7 +181,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     let lock = null;
     if (name === "body") { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
       for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1; }
-    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, Math.min(idx.length, Math.max(3, Math.floor(idx.length * share / 3) * 3)), 1, []);   // error 1 = let the triangle count decide
+    // the share is of what may be thinned: the face's triangles come on top of it. Counted over the whole mesh (until 2026-10-06), the face
+    // kept as built took the share away from the rest: a chibi's face is a fifth of its body, and at 0.15 the rest went to nearly nothing
+    // (the forest's chibi paper-thin from the side, spikes from the shoulders to the thighs, shins gone; tools/thin-check.mjs).
+    // And a brake: stop where the shape would change by more than THIN_ERROR (of the mesh's size, the normals counted too) even short of
+    // the count. At 0.15 a body's thinning changes it by 0.3-0.4%, so the brake holds only when a share asks for too much.
+    let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
+    const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
+    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
     for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }

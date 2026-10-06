@@ -103,6 +103,10 @@ simulated on the CPU every frame. Budget for both:
 - `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, about half the build
   time: crowds, small characters, phones), "fine" (the look of "high" at the vertices of "game", but about 3x as long to build) or
   "high" (for close-ups and stills; 3–4x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
+  `{ simplify: 0.15 }` thins the "game" mesh to that share of the triangles (meshoptimizer, from your import map's "meshoptimizer", else
+  jsDelivr). The face is kept as built on top of the share, a skirt or cape is thinned less, and thinning stops before the shape would change
+  by more than 1% of a part's size, so you may get more triangles than the share: the body never goes thin or spiky. At 0.15: a tall body in
+  a T-shirt and shorts about 23k triangles, a chibi with a grass skirt about 33k (the skirt is a third of it).
 - Call `measureGait` / `measureStride` once per avatar after it is built, not every frame.
 - Don't update avatars nobody sees for long (or pass the camera: off the screen costs nothing). Headless browsers draw slowly; a real GPU doesn't.
 
