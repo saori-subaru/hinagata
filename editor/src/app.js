@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, RECIPE_VERSION } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -311,7 +311,8 @@ function menu(on) { $("exportMenu").hidden = !on; $("exportBtn").setAttribute("a
 $("exportBtn").addEventListener("click", (e) => { e.stopPropagation(); menu($("exportMenu").hidden); });
 addEventListener("click", (e) => { if (!e.target.closest(".menu-wrap")) menu(false); });
 $("copyCode").addEventListener("click", async () => {
-  const code = `import { createAvatar } from "./src/index.js";\n\nconst avatar = await createAvatar(${JSON.stringify(compact(store.recipe), null, 2)});\nscene.add(avatar.object);\n`;
+  // the first line names the character and the recipe's version, so the code pasted back (コードを貼りつけて開く) comes back as it was made
+  const code = `// Hinagata character ${JSON.stringify(cur.name)} (recipe version ${RECIPE_VERSION})\nimport { createAvatar } from "./src/index.js";\n\nconst avatar = await createAvatar(${JSON.stringify(compact(store.recipe), null, 2)});\nscene.add(avatar.object);\n`;
   try { await navigator.clipboard.writeText(code); toast(t("copied")); } catch { download(`${fileName(cur.name)}.js`, new Blob([code], { type: "text/javascript" })); }
 });
 $("exportMenu").addEventListener("click", (e) => {
@@ -321,6 +322,7 @@ $("exportMenu").addEventListener("click", (e) => {
 async function exportAs(k) {
   if (k === "json") download(`${fileName(cur.name)}.hinagata.json`, new Blob([JSON.stringify(characterFile(compact(store.recipe), cur.name), null, 2)], { type: "application/json" }));   // { hinagata: <version>, name, options }
   if (k === "import") $("fileJson").click();
+  if (k === "paste") { $("pasteText").value = ""; $("pasteModal").hidden = false; $("pasteText").focus(); }
   if (k === "link") {
     const o = compact(store.recipe); let dropped = false;
     for (const im of Object.values(o.face?.images ?? {})) if (im?.src) { delete im.src; dropped = true; }
@@ -341,6 +343,31 @@ $("fileJson").addEventListener("change", (e) => {
     const name = s.name || f.name.replace(/(\.hinagata)?\.json$/i, "");
     store.commit(); persist(); switchTo(addChar(lib, name, s.recipe)); toast(t("imported", name));
   }).catch(() => toast(t("badJson")));
+});
+// paste back what was copied (2026-10-06, Saori: "コピーしとくだけでバックアップできる"): the code (コードをコピー), a link (?o=…) or a recipe's JSON.
+// The code's first line says its version; code without it is today's (bare options in code are, openRecipe); bare JSON is a file's (version 1)
+function readPasted(txt) {
+  txt = txt.trim();
+  const link = txt.match(/[?&]o=([^&#\s]+)/); if (link) return { input: JSON.parse(decodeURIComponent(link[1])), bare: 1 };
+  const at = txt.indexOf("createAvatar(");
+  if (at >= 0) { const s = txt.indexOf("{", at); if (s < 0) throw new Error("no recipe");
+    let depth = 0, str = null, end = -1;   // the object literal, to its closing brace (braces inside strings don't count)
+    for (let i = s; i < txt.length && end < 0; i++) { const c = txt[i];
+      if (str) { if (c === "\\") i++; else if (c === str) str = null; } else if (c === '"' || c === "'" || c === "`") str = c; else if (c === "{") depth++; else if (c === "}" && !--depth) end = i; }
+    if (end < 0) throw new Error("unclosed");
+    const v = txt.match(/recipe version (\d+)/), nm = txt.match(/Hinagata character ("(?:[^"\\]|\\.)*")/), options = JSON.parse(txt.slice(s, end + 1));
+    return { input: { hinagata: v ? +v[1] : RECIPE_VERSION, ...(nm ? { name: JSON.parse(nm[1]) } : {}), options }, bare: RECIPE_VERSION }; }
+  return { input: JSON.parse(txt), bare: 1 };
+}
+const closePaste = () => { $("pasteModal").hidden = true; };
+$("pasteClose").addEventListener("click", closePaste);
+$("pasteModal").addEventListener("click", (e) => { if (e.target === $("pasteModal")) closePaste(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("pasteModal").hidden) closePaste(); });
+$("pasteLoad").addEventListener("click", () => {
+  let got; try { got = readPasted($("pasteText").value); if (!got.input || typeof got.input !== "object" || Array.isArray(got.input)) throw new Error("not an object"); } catch { toast(t("badPaste")); return; }
+  const s = recipeIn(got.input, got.bare), bad = checkOptions(got.input.options ?? got.input); if (bad.length) console.warn("Pasted recipe has problems:", bad);
+  const name = s.name || t("pastedName");
+  closePaste(); store.commit(); persist(); switchTo(addChar(lib, name, s.recipe)); toast(t("imported", name));
 });
 addEventListener("pagehide", () => { store.commit(); persist(); });
 
