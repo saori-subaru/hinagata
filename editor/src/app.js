@@ -143,8 +143,8 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
-  onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
-  onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
+  onReadTemplate: (into = null, put = true) => { tplInto = into === "new" ? NEW : into; drawPut = put; $("fileTpl").click(); },
+  onFacePaint: (into = null, put = true) => { drawPut = put; facePaint.open(into); },   // drawing the face parts in the app (facepaint.js). put: false = only redraw it (描いた絵の「編集」)
   showFace: (p) => { shownFace = p; const av = vp.avatar; if (!av) return; vp.lift(); av.setFace(p ?? faceParts()); vp.apply(); },   // the expression the face tab edits, on the avatar (null: its own face)
   bangs, draw, hairs, myParts, backs, ties, paint, acc,
 });
@@ -166,7 +166,7 @@ if (SYNC) connectSync({ ...SYNC, store,
   } });
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
-let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
+let tplUrl = null, tplInto = null, drawPut = true;   // drawPut: what is read also goes onto the expression being edited (false: a drawing redrawn from its own button)   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
 const NEW = Symbol("new");
 function showTemplate(kind) {
   if (!vp.avatar) return;
@@ -198,6 +198,7 @@ function applyTemplate(im, into0) {
     } else ch = sheetChanges(store.recipe, r);
     const id = into != null ? `image@${into}` : "image", got = { eyes: id, brows: id, mouth: id, ...(into != null ? { cheeks: fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none" } : {}) };
     const ES = ch["face.expressions"] ?? store.get("face.expressions") ?? {};
+    if (!drawPut && !fresh) { store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length)); return into; }   // redrawn in place: the expressions using it change with it
     if (n === "normal") { for (const [k, v] of Object.entries(got)) ch[`face.parts.${k}`] = v; if (ES.normal) { const o = { ...ES }; delete o.normal; ch["face.expressions"] = o; } }   // the character's own face (an old ふつう of its own gives way)
     else ch["face.expressions"] = { ...ES, [n]: { ...(ES[n] ?? EXPRESSIONS[n]?.parts ?? {}), ...got } };
     store.set(ch, { commit: true }); toast(fresh ? t("tplNewExpr", ch["face.drawn"].at(-1).name) : t("tplReadN", r.read.length));

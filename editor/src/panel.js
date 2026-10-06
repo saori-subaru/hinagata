@@ -153,7 +153,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         usedD ? h("button", { class: "chip", type: "button", "aria-pressed": String(usedD.blink !== false), onclick: () => set({ "face.drawn": drawnList().map((q) => q === usedD ? { ...q, blink: q.blink === false } : q) }) }, t("blink")) : null);
       const setSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
         SLOTS.map(slotField), drawRow,
-        own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetTo", L(EXPRESSIONS[n])))) : null);
+        own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetDefault"))) : null);
       // the pictures as small buttons (with the eye's picture): one puts its eyes, brows and mouth on the expression being edited, as my
       // hairstyles put a hair on (Saori: "登録したら消す以外何もできない"); ☆ keeps it in my parts, × removes it
       const thumb = (src) => src ? h("img", { class: "pthumb", src, alt: "" }) : null;
@@ -164,9 +164,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         for (const k of ["eyes", "brows", "mouth"]) if (store.get(`face.parts.${k}`) === id) ch[`face.parts.${k}`] = "image";   // the own face was showing it: back to ふつう's pictures
         const o = { ...ES }; let any = false; for (const [e, p] of Object.entries(o)) if (Object.values(p ?? {}).includes(id)) { delete o[e]; any = true; } if (any) ch["face.expressions"] = o;   // expressions using it: back to stock
         set(ch); };
-      const keep = (x) => ctx.myParts ? h("button", { class: "chip", type: "button", title: t("myPartsSaveTitle"), "aria-label": t("myPartsSave"), onclick: () => ctx.myParts.save(x) }, "☆") : null;
-      const picChips = [...(BASE.eye || BASE.brow || BASE.mouth ? [h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(BASE, "image")) }, thumb(BASE.eye ?? BASE.brow ?? BASE.mouth), t("normalPics")), keep({ ...BASE, normal: true }))] : []),
-        ...drawnList().map((d) => h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(d, `image@${d.id}`)) }, thumb(d.eye ?? d.brow ?? d.mouth), d.name || d.id), keep(d),
+      const keep = (x) => ctx.myParts ? h("button", { class: "chip", type: "button", title: t("myPartsSaveTitle"), onclick: () => ctx.myParts.save(x) }, t("myPartsTo")) : null;   // into my parts (every character)
+      const editBtn = (into) => h("button", { class: "chip", type: "button", title: t("picEditTitle"), onclick: () => ctx.onFacePaint(into, false) }, t("picEdit"));   // redraw the drawing itself (every expression using it changes)
+      const picChips = [...(BASE.eye || BASE.brow || BASE.mouth ? [h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(BASE, "image")) }, thumb(BASE.eye ?? BASE.brow ?? BASE.mouth), t("normalPics")), editBtn(null), keep({ ...BASE, normal: true }))] : []),
+        ...drawnList().map((d) => h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(d, `image@${d.id}`)) }, thumb(d.eye ?? d.brow ?? d.mouth), d.name || d.id), editBtn(d.id), keep(d),
           h("button", { class: "chip", type: "button", title: t("drawDel"), "aria-label": `${t("drawDel")}: ${d.name || d.id}`, onclick: () => removeD(d) }, "×")))];
       const picSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("picsTitle"))),
         h("div", { class: "chips" }, picChips.length ? picChips : h("span", { class: "cost" }, t("myHairNone"))), h("div", { class: "help" }, t("picsHelp", t(`ex_${n}`))));
