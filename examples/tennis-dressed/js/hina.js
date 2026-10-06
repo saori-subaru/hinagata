@@ -1,6 +1,6 @@
 // プリミティブの選手（character.js）に雛形のキャラを着せる（雛形の avatar.follow）。
 // 選手のアニメーションはそのまま character.js が計算し、雛形がその関節の動きと位置を毎フレームなぞる。
-import { createAvatar } from 'hinagata';
+import { createAvatar, openRecipe } from 'hinagata';
 
 export async function dressInHinagata(char, recipe, { camera, racket = true }) {
   const av = await createAvatar(recipe);
@@ -42,10 +42,10 @@ export function recipeFromText(text) {
   text = text.trim();
   if (!text) return null;
   const m = text.match(/[?&]o=([^&#\s]+)/);
-  if (m) return JSON.parse(decodeURIComponent(m[1]));
+  if (m) return openRecipe(JSON.parse(decodeURIComponent(m[1])), { bare: 1 }).options;   // リンク: 版つきのファイル形か、2026-10-06 より前のリンク（ちびの既定）
   const at = text.indexOf('createAvatar(');   // 「コードをコピー」のコード: import { … } の後ろの createAvatar({ … }) の中身
   const a = text.indexOf('{', at < 0 ? 0 : at), b = text.lastIndexOf('}');
   if (a < 0 || b < a) throw new Error('キャラの形式が読めません');
   const o = JSON.parse(text.slice(a, b + 1));
-  return o.hinagata && o.options ? o.options : o;
+  return openRecipe(o, { bare: at < 0 ? 1 : undefined }).options;   // 書き出した JSON は版つき（{ hinagata, name, options }）。「コードをコピー」のコードは今の既定、版のない JSON だけなら 2026-10-06 より前の物（ちびの既定）
 }

@@ -1,5 +1,5 @@
 // The recipe being edited (fully resolved options), its undo history, and the characters saved in this browser.
-import { DEFAULTS, SCHEMA, resolveOptions, diff } from "../../src/index.js";
+import { DEFAULTS, SCHEMA, resolveOptions, diff, openRecipe, RECIPE_VERSION } from "../../src/index.js";
 
 export const PATHS = Object.keys(SCHEMA);
 export const getPath = (o, path) => path.split(".").reduce((x, k) => x?.[k], o);
@@ -11,6 +11,8 @@ export const changedPaths = (a, b) => PATHS.filter((p) => !same(getPath(a, p), g
 export const diffCount = (r, keep = () => true) => PATHS.filter((p) => keep(p) && !same(getPath(r, p), getPath(DEFAULTS, p))).length;
 export const isDefault = (r, p) => same(getPath(r, p), getPath(DEFAULTS, p));
 export const recipeOf = (user) => resolveOptions(user ?? {});
+/** A recipe from outside (a character file, a link, a sync file; bare = the version of one without a version) → { recipe (resolved), name } */
+export const recipeIn = (input, bare = 1) => { const o = openRecipe(input, { bare }); return { recipe: recipeOf(o.options), name: o.name, version: o.version }; };
 export const compact = (r) => diff(DEFAULTS, r);
 
 /**
@@ -50,11 +52,17 @@ export function createStore(recipe) {
 }
 
 // ── characters saved in this browser: { v, current, chars: [{ id, name, updated, recipe (only what differs) }] } ──
+// v: the recipe version the recipes are written in (src/options.js). A library of an older version (v 1: the chibi defaults, before
+// 2026-10-06) is brought up to today's once, on loading: each recipe gets the old defaults it was made against, so every character
+// stays as it was (and is saved that way on the next save).
 const KEY = "hinagata.editor.library";
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 export function loadLibrary() {
-  try { const L = JSON.parse(localStorage.getItem(KEY)); if (L && Array.isArray(L.chars)) return L; } catch {}
-  return { v: 1, current: null, chars: [] };
+  try { const L = JSON.parse(localStorage.getItem(KEY)); if (L && Array.isArray(L.chars)) {
+    const v = Number.isInteger(L.v) ? L.v : 1;
+    if (v < RECIPE_VERSION) { for (const c of L.chars) c.recipe = compact(recipeIn({ hinagata: v, options: c.recipe ?? {} }).recipe); L.v = RECIPE_VERSION; }
+    return L; } } catch {}
+  return { v: RECIPE_VERSION, current: null, chars: [] };
 }
 /** returns false when the browser refused to store it (full or blocked) */
 export function saveLibrary(L) { try { localStorage.setItem(KEY, JSON.stringify(L)); return true; } catch { return false; } }

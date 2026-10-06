@@ -6,14 +6,17 @@
 //   node sync.mjs character.json --mcp [--port 8790]                                  the same, as an agent's MCP server (stdio)
 //   (get it with: curl -O https://hinagata.pages.dev/sync.mjs — or tools/sync.mjs in the repository)
 //
-// The file is the character: the recipe as JSON (only what differs from the defaults, as the editor's "copy code" gives it). Whoever writes
-// it (an agent, you in a text editor, git) is shown in the editor within a moment; what you change in the editor is written back into it
-// (pretty-printed, keys in a steady order), so the agent sees your tweaks as a diff. A file that doesn't exist yet is made ({}).
+// The file is the character: a character file as the editor exports it, { "hinagata": 2, "name": …, "options": { the recipe: only what
+// differs from the defaults } }. Whoever writes it (an agent, you in a text editor, git) is shown in the editor within a moment; what you
+// change in the editor is written back into it (pretty-printed, keys in a steady order), so the agent sees your tweaks as a diff. A file
+// that doesn't exist yet is made ({ "hinagata": 2, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
+// against. Version 1, and a bare recipe file (the options alone, as files were before 2026-10-06), mean the old chibi defaults; version 2
+// the tall standard body. A file keeps its form and version: the editor writes a bare file back bare, relative to the old defaults.
 //
 // It prints a link: the editor opened with ?sync=<port>&key=<key> connects here. The key (random, per run) keeps other web pages from
 // reading or overwriting the file: every request must carry it. Only this one file is ever read or written. No dependencies.
 //
-// HTTP (all with ?key= or the X-Hinagata-Key header):  GET /recipe → { recipe, rev }  ·  PUT /recipe { recipe, from } → { rev }
+// HTTP (all with ?key= or the X-Hinagata-Key header; "recipe" is the file's whole content):  GET /recipe → { recipe, rev }  ·  PUT /recipe { recipe, from } → { rev }
 //   GET /events → Server-Sent Events: "recipe" { recipe, rev, from, file } first, then each time it changes (from: "file" | an editor's id);
 //                 "request" { rid, cmd, args }: something only the editor can do (a picture of the character), answered with
 //   POST /response { rid, result | error }
@@ -33,15 +36,21 @@ const say = (...m) => (MCP ? console.error : console.log)(...m);   // MCP: stdou
 if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 8790] [--editor URL]"); process.exit(1); }
 const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), LINK = `${EDITOR}?sync=${PORT}&key=${KEY}`;
 
-// the recipe: parsed from the file; rev counts changes from either side
-let recipe = {}, rev = 0, written = null;   // written: the text this program last wrote (its own write coming back from the watcher is not a change)
+// RECIPE_VERSION in src/options.js (this file has no dependencies): the version of a file made here
+const VERSION = 2;
+// the file's content (a character file, or a bare recipe), parsed; rev counts changes from either side
+let recipe = {}, rev = 0, written = null;
+const isFile = (d) => !!d && typeof d === "object" && "hinagata" in d && !!d.options && typeof d.options === "object" && !Array.isArray(d.options);
+const optsOf = (d) => isFile(d) ? d.options : d;   // the recipe itself
+const withOpts = (d, o) => isFile(d) ? { ...d, options: o } : o;
+const versionOf = (d) => isFile(d) ? (Number.isInteger(d.hinagata) && d.hinagata >= 1 ? d.hinagata : 1) : 1;   // written: the text this program last wrote (its own write coming back from the watcher is not a change)
 const sorted = (v) => Array.isArray(v) ? v.map(sorted) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v;
 const text = (r) => JSON.stringify(sorted(r), null, 2) + "\n";
 function read() {
-  let t; try { t = fs.readFileSync(file, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; t = "{}\n"; fs.writeFileSync(file, t); written = t; }
+  let t; try { t = fs.readFileSync(file, "utf8"); } catch (e) { if (e.code !== "ENOENT") throw e; const r = { hinagata: VERSION, options: {} }; t = text(r); fs.writeFileSync(file, t); written = t; recipe = r; rev++; return true; }
   if (t === written) return false;
   let r; try { r = JSON.parse(t || "{}"); } catch (e) { say(`  ${path.basename(file)}: not JSON yet (${e.message}); waiting for the next save`); return false; }
-  if (!r || typeof r !== "object" || Array.isArray(r)) { say(`  ${path.basename(file)}: a recipe is an object ({ … })`); return false; }
+  if (!r || typeof r !== "object" || Array.isArray(r) || ("hinagata" in r && !isFile(r))) { say(`  ${path.basename(file)}: a character file is an object ({ "hinagata": ${VERSION}, "options": { … } })`); return false; }
   recipe = r; rev++; written = null; return true;
 }
 function write(r, from) { recipe = r; rev++; written = text(recipe); fs.writeFileSync(file, written); broadcast(from); }
@@ -128,8 +137,8 @@ const L = (x) => typeof x === "string" ? x : x ? [x.ja, x.en].filter(Boolean).jo
 function mcp() {
   const TOOLS = [
     { name: "editor_link", description: "The link that opens the Hinagata editor on this character (give it to the user), and whether an editor is connected now.", inputSchema: { type: "object", properties: {} } },
-    { name: "get_recipe", description: `The character's recipe as it is in ${NAME} now: the options that differ from the defaults (the editor's changes included).`, inputSchema: { type: "object", properties: {} } },
-    { name: "update_recipe", description: "Change the character: set options by their dotted paths (as in find_options), e.g. { \"colors.hair\": \"#f3f1ee\", \"hair.tail.kind\": \"side\" }, and/or put options back to their defaults (reset). Written to the file and shown in the editor at once. Returns the problems the schema finds, if any.",
+    { name: "get_recipe", description: `The character as it is in ${NAME} now: the file ({ hinagata: version, name, options }; options = what differs from the defaults of that version), the editor's changes included.`, inputSchema: { type: "object", properties: {} } },
+    { name: "update_recipe", description: "Change the character: set options by their dotted paths (as in find_options; paths inside the file's options), e.g. { \"colors.hair\": \"#f3f1ee\", \"hair.tail.kind\": \"side\" }, and/or put options back to their defaults (reset; the defaults of the file's version). Written to the file and shown in the editor at once. Returns the problems the schema finds, if any.",
       inputSchema: { type: "object", properties: { set: { type: "object", description: "{ \"dotted.path\": value }" }, reset: { type: "array", items: { type: "string" }, description: "dotted paths to put back to their defaults" } } } },
     { name: "check_recipe", description: "Check the recipe (the file's, or one given) against the options' schema: unknown options, wrong types, values not offered, numbers out of range.", inputSchema: { type: "object", properties: { recipe: { type: "object" } } } },
     { name: "find_options", description: "Find options by words (Japanese or English, in their names, paths or help), e.g. \"ponytail\", \"スカート\", \"hair.tail\". Each: its path, type, range or choices, default and what it does.",
@@ -140,14 +149,14 @@ function mcp() {
   const text = (t) => ({ content: [{ type: "text", text: t }] });
   async function call(name, a = {}) {
     if (name === "editor_link") return text(`${LINK}\n${clients.size ? `${clients.size} editor(s) connected` : "no editor connected yet"}`);
-    if (name === "get_recipe") return text(JSON.stringify(recipe, null, 2));
+    if (name === "get_recipe") return text(JSON.stringify(recipe, null, 2) + (versionOf(recipe) < VERSION ? `\n(version ${versionOf(recipe)}${isFile(recipe) ? "" : ", a bare recipe"}: made against the old defaults, the chibi body (about 3 heads): what isn't set is the chibi's. Today's default is the tall standard body.)` : ""));
     if (name === "update_recipe") {
-      const r = structuredClone(recipe); for (const p of a.reset ?? []) delPath(r, p); for (const [p, v] of Object.entries(a.set ?? {})) setPath(r, p, v);
-      write(r, "agent"); say(`  agent → file (rev ${rev})`);
+      const r = structuredClone(optsOf(recipe)); for (const p of a.reset ?? []) delPath(r, p); for (const [p, v] of Object.entries(a.set ?? {})) setPath(r, p, v);
+      write(withOpts(recipe, r), "agent"); say(`  agent → file (rev ${rev})`);
       let probs = []; try { probs = check(r, await schema()); } catch (e) { probs = [`(not checked: ${e.message})`]; }
       return text(`written (rev ${rev})${probs.length ? `\nproblems:\n- ${probs.join("\n- ")}` : "\nno problems"}`);
     }
-    if (name === "check_recipe") { const probs = check(a.recipe ?? recipe, await schema()); return text(probs.length ? `- ${probs.join("\n- ")}` : "no problems"); }
+    if (name === "check_recipe") { const probs = check(optsOf(a.recipe ?? recipe), await schema()); return text(probs.length ? `- ${probs.join("\n- ")}` : "no problems"); }
     if (name === "find_options") {
       const S = await schema(), q = String(a.query ?? "").toLowerCase().split(/\s+/).filter(Boolean), hits = [];
       for (const e of Object.values(S)) { const hay = `${e.path} ${L(e.label)} ${L(e.help)} ${L(e.section)} ${(e.options ?? []).map((o) => `${o.value} ${L(o.label)}`).join(" ")}`.toLowerCase(); if (q.every((w) => hay.includes(w))) hits.push(e); }
@@ -167,7 +176,7 @@ function mcp() {
     let m; try { m = JSON.parse(line); } catch { return out({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } }); }
     const reply = (result) => m.id !== undefined && out({ jsonrpc: "2.0", id: m.id, result }), fail = (code, message) => m.id !== undefined && out({ jsonrpc: "2.0", id: m.id, error: { code, message } });
     if (m.method === "initialize") return reply({ protocolVersion: m.params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "hinagata", version: "0.1" },
-      instructions: `Hinagata: a chibi 3D character made from a recipe (options as JSON) in ${NAME}. Change it with update_recipe (find_options to learn the options), look at it with screenshot once the user has the editor open (editor_link). The user fine-tunes it in the editor; get_recipe shows their changes.` });
+      instructions: `Hinagata: a 3D character (tall by default, or chibi) made from a recipe (options as JSON) in ${NAME}. Change it with update_recipe (find_options to learn the options), look at it with screenshot once the user has the editor open (editor_link). The user fine-tunes it in the editor; get_recipe shows their changes.` });
     if (m.method === "ping") return reply({});
     if (m.method === "tools/list") return reply({ tools: TOOLS });
     if (m.method === "tools/call") { try { return reply(await call(m.params?.name, m.params?.arguments ?? {})); } catch (e) { return reply({ content: [{ type: "text", text: String(e.message ?? e) }], isError: true }); } }

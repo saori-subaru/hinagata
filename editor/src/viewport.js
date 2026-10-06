@@ -36,11 +36,18 @@ export function createViewport(canvas, stage) {
 
   // camera moves between views smoothly; dragging takes over
   let tween = null;
-  // a taller character (body.proportion): the whole-body views step back with its height, the face view moves up with its head
-  function view(name) {
-    let [p, t] = VIEWS[name]; const ST = avatar?.internals.ST;
+  // a taller character (body.proportion; the default body since 2026-10-06): the views are written for the chibi; the whole-body views step
+  // back with its height, the face view moves up with its head
+  function fitView(name) {
+    let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST;
     if (ST && !ST.identity) { if (name === "face") { p = [p[0], p[1] + ST.lift, p[2]]; t = [t[0], t[1] + ST.lift, t[2]]; }
       else { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); } }
+    return [p, t];
+  }
+  let lastView = "free";   // (to frame it again for a character of another height)
+  const tallness = (av) => av?.internals.ST?.identity === false ? av.internals.ST.fwd(1.27) / 1.27 : 1;
+  function view(name) {
+    lastView = name; const [p, t] = fitView(name);
     tween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...p), t1: new THREE.Vector3(...t), s: performance.now() };
   }
   controls.addEventListener("start", () => { tween = null; });
@@ -66,6 +73,8 @@ export function createViewport(canvas, stage) {
   }
   function setAvatar(next) {
     const old = avatar; avatar = next; scene.add(next.object);
+    if (!old) { const [p, t] = fitView("free"); camera.position.set(...p); controls.target.set(...t); }   // the first character: framed for its height
+    else if (Math.abs(tallness(old) - tallness(next)) > 0.02) view(lastView);   // a chibi after a tall one, or the other way: framed again
     chair.scale.y = next.internals.ST ? next.internals.ST.fwd(0.2) / 0.2 : 1;   // the seat as high as this character's knees (motion seats are moved the same way)
     if (helper) { scene.remove(helper); helper.dispose?.(); }
     helper = new THREE.SkeletonHelper(next.object); helper.material.depthTest = false; helper.renderOrder = 10; scene.add(helper);
@@ -108,8 +117,7 @@ export function createViewport(canvas, stage) {
   /** A square picture from one of the views (for an agent, through the sync helper's MCP tools): base64 PNG on a solid background.
    *  The user's camera and the canvas are put back right after. */
   function capture({ view: name = "free", size: px = 640, bg = "#ebe5dc" } = {}) {
-    let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST;
-    if (ST && !ST.identity) { if (name === "face") { p = [p[0], p[1] + ST.lift, p[2]]; t = [t[0], t[1] + ST.lift, t[2]]; } else { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); } }
+    const [p, t] = fitView(VIEWS[name] ? name : "free");
     const cp = camera.position.clone(), pr = renderer.getPixelRatio(), hv = helper?.visible; if (helper) helper.visible = false;
     px = Math.max(128, Math.min(2048, Math.round(px)));
     camera.position.set(...p); camera.lookAt(...t); camera.aspect = 1; camera.fov = 32; camera.updateProjectionMatrix();

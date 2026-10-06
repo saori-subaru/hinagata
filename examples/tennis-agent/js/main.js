@@ -496,7 +496,7 @@ async function load() {
   P = [new Player(avatars[0], { side: 1, name: recipes[0].name || "ひな", racketColor: "#22b0a0" }),
        new Player(avatars[1], { side: -1, name: recipes[1].name || "レン", racketColor: "#e5484d", speed: DIFF.normal.speed })];
   $("n0").textContent = P[0].name; $("n1").textContent = P[1].name;
-  recipes.forEach((r, i) => { const o = r?.hinagata && r.options ? r.options : r; $(`edit${i}`).href = "https://hinagata.pages.dev/editor/?o=" + encodeURIComponent(JSON.stringify(o)); });
+  recipes.forEach((r, i) => { $(`edit${i}`).href = "https://hinagata.pages.dev/editor/?o=" + encodeURIComponent(JSON.stringify(r)); });   // the file as it is (its version too)
   cpu = makeCPU();
   $("loading").classList.add("hidden");
   toTitle();

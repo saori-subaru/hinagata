@@ -1,4 +1,4 @@
-// Hinagata: code-generated chibi avatars for three.js.
+// Hinagata: code-generated avatars for three.js, tall (the default) or chibi.
 //
 //   const avatar = await createAvatar({ hair: { back: "bob" } });
 //   scene.add(avatar.object);
@@ -13,7 +13,7 @@ import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS 
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
-import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId } from "./options.js";
+import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
@@ -27,6 +27,7 @@ import { accessoryGeometries } from "./accessories.js";
 import { createFollower } from "./follow.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
+export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
@@ -42,8 +43,11 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
 
 /**
  * Build an avatar.
- * options:  see DEFAULTS (src/options.js); anything left out uses the default. Also a URL of a character file ("player.json"), and the
- *           editor's export as it is ({ hinagata: 1, name, options }: 書き出し → JSON).
+ * options:  see DEFAULTS (src/options.js); anything left out uses the default (since 2026-10-06 the tall standard body, BODY_TYPES.standardTall;
+ *           merge a chibi BODY_TYPES entry for a chibi). Also a URL of a character file ("player.json"), and a character file as it is
+ *           ({ hinagata: 2, name, options }: the editor's 書き出し → JSON). Files carry their version: a file of version 1, and a bare recipe
+ *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults
+ *           (openRecipe in options.js). A bare options object passed in code is today's: the current defaults.
  * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
  *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
@@ -70,9 +74,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
-  // a file's URL ("player.json") is fetched, and the editor's export ({ hinagata: 1, name, options }) is opened to its options
-  if (typeof options === "string") { const r = await fetch(options); if (!r.ok) throw new Error(`createAvatar("${options}"): ${r.status}`); options = await r.json(); }
-  if (options?.hinagata && options.options) options = options.options;
+  // a file's URL ("player.json") is fetched, and a character file ({ hinagata, name, options }) is opened to its options, in today's terms
+  // (a file without a version is from before 2026-10-06: its recipe was made against the chibi defaults; a bare object in code is today's)
+  let bare = undefined;
+  if (typeof options === "string") { const r = await fetch(options); if (!r.ok) throw new Error(`createAvatar("${options}"): ${r.status}`); options = await r.json(); bare = 1; }
+  options = openRecipe(options, { bare }).options;
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
   // "fine" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to

@@ -1,5 +1,7 @@
 // Options: every value that defines a character, with defaults (today's character).
 // User options are deep-merged over DEFAULTS. `sculpt` sections are fine-tuning; most users never touch them.
+// The default body is the tall standard (BODY_TYPES.standardTall: about 4.5 heads) since 2026-10-06; it was the chibi (about 3 heads,
+// BODY_TYPES.toddler's values) before. Recipes saved before that are read with the old values: see RECIPE_VERSION and openRecipe below.
 import { partIds } from "./face/names.js";
 
 /** The skirt this outfit has, or null: the pants made a skirt (pants.kind "skirt"), or a dress (outfit.dress.on: the shirt and a skirt as one
@@ -30,11 +32,11 @@ export const DEFAULTS = {
   },
   "body": {
     "proportion": {
-      "legs": 1,
-      "torso": 1
+      "legs": 1.65,
+      "torso": 1.3
     },
     "head": {
-      "scale": 0.9,
+      "scale": 0.82,
       "width": 1,
       "depth": 1,
       "pivotY": 0.845,
@@ -46,20 +48,20 @@ export const DEFAULTS = {
       }
     },
     "torso": {
-      "chest": 1,
-      "belly": 1,
-      "waist": 0,
-      "hips": 1,
+      "chest": 0.95,
+      "belly": 0.62,
+      "waist": 0.028,
+      "hips": 0.85,
       "bust": 0,
       "butt": 1,
       "back": 1
     },
     "thickness": {
-      "upperArm": 1,
-      "forearm": 1,
-      "thigh": 1,
-      "thighTop": 0.9,
-      "calf": 1
+      "upperArm": 0.71,
+      "forearm": 0.71,
+      "thigh": 0.61,
+      "thighTop": 0.61,
+      "calf": 0.6
     },
     "joints": {
       "hipY": 0.44,
@@ -1024,7 +1026,7 @@ export function setPath(obj, path, value) { const ks = path.split("."); let o = 
 // Options from a query string: ?o=<JSON> and/or old short names (?nz=0.27&kx=0.11)
 export function fromQuery(search) {
   const q = new URLSearchParams(search), out = {};
-  if (q.has("o")) Object.assign(out, JSON.parse(q.get("o")));
+  if (q.has("o")) Object.assign(out, openRecipe(JSON.parse(q.get("o")), { bare: 1 }).options);   // a link's recipe without a version: made before 2026-10-06
   for (const [k, path] of Object.entries(SHORT)) if (q.has(k)) setPath(out, path, +q.get(k));
   return out;
 }
@@ -1045,3 +1047,41 @@ export function diff(base, opt) {
   }
   return out;
 }
+
+// ── Recipe versions (2026-10-06, Saori: the tall body became the default; "the world's scale comes from what the game is, not from the
+// default character"). A recipe is only what differs from the defaults, so changing a default would silently change every character
+// saved before. So recipes have a version, and what each change of the defaults replaced is kept here: a recipe of an older version is
+// read with the defaults it was made against filled in under it, and comes out as the same character.
+//   - A character file says its version: { "hinagata": 2, "name": "…", "options": { … } } (the editor's export).
+//   - Recipes stored without a version are version 1 (the chibi defaults): bare recipe files (character.json as the sync helper and
+//     agents wrote them before), { "hinagata": 1, … } files, the editor's characters saved in a browser before, ?o= links made before.
+//   - A bare options object in code (createAvatar({ … })) is today's: the current defaults.
+export const RECIPE_VERSION = 2;
+/** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body). */
+export const OLD_DEFAULTS = {
+  2: { body: {   // the chibi (about 3 heads; the values BODY_TYPES.toddler has): the default body until 2026-10-06
+    proportion: { legs: 1, torso: 1 }, head: { scale: 0.9 },
+    torso: { chest: 1, belly: 1, waist: 0, hips: 1, bust: 0, butt: 1, back: 1 },
+    thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 } } },
+};
+const oldValues = (version) => { let o = {}; for (let v = RECIPE_VERSION; v > version; v--) o = merge(o, OLD_DEFAULTS[v] ?? {}); return o; };   // (the oldest wins)
+/** The defaults as they were at a recipe version. */
+export const defaultsAt = (version) => merge(DEFAULTS, oldValues(version));
+/** Is this a character file ({ hinagata: <version>, name, options })? */
+export const isCharacterFile = (x) => isObj(x) && "hinagata" in x && isObj(x.options);
+/**
+ * A recipe as it comes in (a character file, or bare options) → { options, name, version, file }: `options` in today's terms (merged over
+ * today's DEFAULTS it gives the character it was made as), `version` the one it was made at, `file` whether it came as a character file.
+ * bare: the version of bare options. RECIPE_VERSION (default) for options written in code now; 1 for recipes stored without a version
+ * (bare files, old links, old browser storage). Every place a recipe comes in goes through here.
+ */
+export function openRecipe(input, { bare = RECIPE_VERSION } = {}) {
+  const file = isCharacterFile(input), raw = file ? input.options : isObj(input) ? input : {};
+  let version = file ? (Number.isInteger(input.hinagata) && input.hinagata >= 1 ? input.hinagata : 1) : bare;
+  if (version > RECIPE_VERSION) { console.warn(`Hinagata: a recipe of version ${version}, made by a newer Hinagata (this one reads up to ${RECIPE_VERSION}); read as ${RECIPE_VERSION}`); version = RECIPE_VERSION; }
+  return { options: version < RECIPE_VERSION ? merge(oldValues(version), raw) : raw, name: file && typeof input.name === "string" ? input.name : null, version, file };
+}
+/** Options in today's terms → the recipe a file of an older version holds (only what differs from that version's defaults). */
+export const recipeAt = (version, options) => version >= RECIPE_VERSION ? diff(DEFAULTS, options) : diff(defaultsAt(version), merge(DEFAULTS, options));
+/** A character file of today's version, as the editor exports it. */
+export const characterFile = (options, name) => ({ hinagata: RECIPE_VERSION, ...(name ? { name } : {}), options });

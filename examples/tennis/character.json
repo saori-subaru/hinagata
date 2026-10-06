@@ -1,11 +1,14 @@
 {
-  "colors": { "hair": "#e8a33c", "eyes": "#3d8a5c" },
-  "hair": { "bangs": "side", "back": "short", "tail": { "kind": "pony", "tie": { "color": "#2f6fd0" } } },
-  "face": { "blush": { "cheeks": { "on": true } } },
-  "outfit": {
-    "shirt": { "color": "#ffffff", "sleeve": "none" },
-    "pants": { "kind": "skirt", "color": "#2f6fd0" },
-    "socks": { "color": "#ffffff", "top": 0.1 },
-    "shoes": { "color": "#ffffff", "soleColor": "#2f6fd0" }
+  "hinagata": 1,
+  "options": {
+    "colors": { "hair": "#e8a33c", "eyes": "#3d8a5c" },
+    "hair": { "bangs": "side", "back": "short", "tail": { "kind": "pony", "tie": { "color": "#2f6fd0" } } },
+    "face": { "blush": { "cheeks": { "on": true } } },
+    "outfit": {
+      "shirt": { "color": "#ffffff", "sleeve": "none" },
+      "pants": { "kind": "skirt", "color": "#2f6fd0" },
+      "socks": { "color": "#ffffff", "top": 0.1 },
+      "shoes": { "color": "#ffffff", "soleColor": "#2f6fd0" }
+    }
   }
 }

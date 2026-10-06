@@ -4,6 +4,9 @@
 // (bust: a girl's chest, separate from chest = the chest board; butt: how far the bottom sticks out; back: back thickness), body.thickness
 // (thighTop: the thigh at the hip joint), body.proportion and body.head.scale; no joint moves. Fine-tune from there; write your own the same way.
 // ("kid" is gone: it looked like the toddler.)
+// The default body (DEFAULTS) is standardTall's since 2026-10-06 (before, it was the chibi with the toddler's values). Every fragment sets all
+// of torso, thickness, proportion and head.scale, so merging one gives the same body whatever the defaults are: BODY_TYPES.standard is the
+// chibi standard on the tall default too. Keep it so when adding a type or a value.
 const CHIBI = { torso: {}, thickness: {}, proportion: { legs: 1, torso: 1 }, head: { scale: 0.9 } };
 const base = {
   standard: { torso: { chest: 0.95, belly: 0.75, waist: 0.022, hips: 0.85, bust: 0, butt: 1, back: 1 }, thickness: { upperArm: 0.85, forearm: 0.85, thigh: 0.73, thighTop: 0.73, calf: 0.72 } },   // slim, a little waist: a general-purpose body

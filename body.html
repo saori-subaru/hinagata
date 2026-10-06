@@ -62,7 +62,7 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; t
 <canvas id="gl"></canvas>
 <img id="ref" src="img/sotai-ref.jpg" alt="" hidden>
 <div class="top">
-  <div><h1>素体(試作)</h1><small>約2.4頭身 / 骨28本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
+  <div><h1>素体(試作)</h1><small>標準は高頭身(約4.5頭身、ちびは体型スライダーで) / 骨28本 / ぜんぶコードで生成</small><a href="../lab/town.html">← ホーム</a></div>
   <div class="side">
     <button class="btn" id="tLay" type="button" aria-pressed="false">顔の位置スライダー</button>
     <button class="btn" id="tChg" type="button" aria-pressed="false">変更を選ぶ</button>
@@ -200,6 +200,7 @@ async function makeAvatar(opts, quiet = false) {   // 作る(作り直すとき�
   const t0 = performance.now();
   avatar = await createAvatar(opts, { quality: low ? "low" : "high", workers: !Q.has("noworkers"), debug: { slow: Q.has("slow"), oldSock: Q.has("oldsock"), faceWrap: Q.has("wrap") ? WRAP : null } });
   scene.add(avatar.object); keepStyle(avatar);
+  chair.scale.y = avatar.internals.ST ? avatar.internals.ST.fwd(0.2) / 0.2 : 1;   // the seat as high as this body's knees (as the motions' seats)
   ({ parts, internals: I } = avatar); face = I.face;
   globalThis.sotai = { avatar, bodySdf: I.bodySdf, bodySdfSlow: I.bodySdfSlow, P: I.P, CUT: I.CUT, PROF: avatar.PROF, OPT: avatar.options };   // 確認用
   const nv = Object.values(parts).reduce((s, x) => s + x.m.geometry.attributes.position.count, 0);
@@ -211,6 +212,12 @@ async function makeAvatar(opts, quiet = false) {   // 作る(作り直すとき�
   onAvatar?.();
 }
 await makeAvatar(fromQuery(location.search));
+// The views on this page are written for the chibi (about 1.3 m, the head at about 1 m; the default body until 2026-10-06). On a taller body
+// (body.proportion: the default now) fy puts a chibi height at the same place on this body (its own stretch: above the neck everything
+// moves up as one, so the face views still look at the face), and fd steps the whole-body views back by its height.
+const fy = (y) => avatar.internals.ST?.fwd(y) ?? y, fd = () => fy(1.27) / 1.27;
+const homeCam = () => { camera.position.set(0.9 * fd(), fy(0.95), 3.0 * fd()); controls.target.set(0, fy(0.62), 0); };
+homeCam();
 globalThis.sotaiChecksum = () => avatar.checksum();
 globalThis.sotaiSetCam = (v) => { camera.position.set(v[0], v[1], v[2]); if (v.length > 3) controls.target.set(v[3], v[4], v[5]); };   // 確認用: カメラを置く
 
@@ -486,8 +493,8 @@ $("headPick").addEventListener("change", async (e) => {
 });
 // 案を横に並べる: 左がいまの(または「頭」で選んだ案)、右が「右」で選んだ案
 toggle("tPair", async (on) => {
-  if (on) { await makeTwin(); avatar.object.position.x = -0.48; camera.position.set(0, 0.95, 4.2); controls.target.set(0, 0.62, 0); }
-  else { twin?.dispose(); twin = null; avatar.object.position.x = 0; camera.position.set(0.9, 0.95, 3.0); controls.target.set(0, 0.62, 0); }
+  if (on) { await makeTwin(); avatar.object.position.x = -0.48; camera.position.set(0, fy(0.95), 4.2 * fd()); controls.target.set(0, fy(0.62), 0); }
+  else { twin?.dispose(); twin = null; avatar.object.position.x = 0; homeCam(); }
   headLabel(); refreshLook();
 });
 // 顔の絵の位置スライダー(作り直さずに、その場で描き直す)
@@ -510,14 +517,17 @@ let layCam = null;
 const LIMB_SLIDERS = [["torso", "chest", "胸板", 0.8, 1.4, 0.01], ["torso", "bust", "胸(ふくらみ)", 0, 1, 0.01], ["torso", "belly", "おなか", 0.6, 1.15, 0.01], ["torso", "waist", "くびれ", 0, 0.04, 0.001], ["torso", "hips", "腰の幅", 0.75, 1.2, 0.01], ["torso", "butt", "おしり", 0.4, 1.2, 0.01], ["torso", "back", "背中の厚み", 0.3, 1.2, 0.01],
   ["thickness", "upperArm", "二の腕", 0.6, 1.15, 0.01], ["thickness", "forearm", "前腕", 0.6, 1.15, 0.01], ["thickness", "thigh", "太もも", 0.6, 1.15, 0.01], ["thickness", "thighTop", "太ももの付け根", 0.5, 1.15, 0.01], ["thickness", "calf", "ふくらはぎ", 0.6, 1.15, 0.01]];
 const SHAPE = { torso: { ...avatar.options.body.torso }, thickness: { ...avatar.options.body.thickness } }; SHAPE.thickness.thighTop ??= SHAPE.thickness.thigh; const SHAPE0 = structuredClone(SHAPE);   // thighTop: null = same as the thigh
-function curOpts() { const o = merge(merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: structuredClone(SHAPE) }), OUTFIT), PARTS_OPT), SOCKET_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
-const TYPE_LABEL = { standard: "標準", toddler: "幼児", girl: "女の子", sturdy: "がっしり" };
+let FRAME = null;   // a body type's proportions and head size, once one is picked ({ proportion, head: { scale } }; null = as the page opened)
+function curOpts() { const o = merge(merge(merge(merge(merge(merge(fromQuery(location.search), HEAD_VARIANTS[headI][1] ?? {}), chgOff()), { body: { ...structuredClone(SHAPE), ...structuredClone(FRAME ?? {}) } }), OUTFIT), PARTS_OPT), SOCKET_OPT); return BANG.tips ? merge(o, { hair: { sculpt: { nendo: { tips: structuredClone(BANG.tips), thick: BANG.thick } } } }) : o; }
+const TYPE_LABEL = { standard: "標準", toddler: "幼児", girl: "女の子", sturdy: "がっしり" }, typeLabel = (t) => t.endsWith("Tall") ? `${TYPE_LABEL[t.slice(0, -4)] ?? t}(高)` : `${TYPE_LABEL[t] ?? t}(ちび)`;
+const frameOf = (b) => ({ proportion: { ...b.proportion }, head: { scale: b.head.scale } }), curFrame = () => FRAME ?? frameOf(avatar.options.body);
 function limbSync() { const d = {};
   for (const [g, k] of LIMB_SLIDERS) { const v = SHAPE[g][k]; $("tv-" + k).textContent = v.toFixed(k === "waist" ? 3 : 2); $("ts-" + k).value = v; if (v !== SHAPE0[g][k]) (d[g] ??= {})[k] = v; }
-  for (const b of $("bodyTypes").children) b.setAttribute("aria-pressed", String(LIMB_SLIDERS.every(([g, k]) => BODY_TYPES[b.dataset.t].body[g][k] === SHAPE[g][k])));
+  for (const b of $("bodyTypes").children) { const T = BODY_TYPES[b.dataset.t].body, F = curFrame(); b.setAttribute("aria-pressed", String(LIMB_SLIDERS.every(([g, k]) => T[g][k] === SHAPE[g][k]) && JSON.stringify(frameOf(T)) === JSON.stringify(F))); }
   $("limbOut").value = Object.keys(d).length ? JSON.stringify({ body: d }) : "(はじめのまま)"; }
-for (const [t, o] of Object.entries(BODY_TYPES).filter(([t]) => !t.endsWith("Tall"))) { const b = document.createElement("button");   // (the chibi ones: this page sets the torso and the limbs only) b.className = "btn"; b.type = "button"; b.dataset.t = t; b.textContent = TYPE_LABEL[t] ?? t;
-  b.addEventListener("click", () => { Object.assign(SHAPE.torso, o.body.torso); Object.assign(SHAPE.thickness, o.body.thickness); limbSync(); rebuildBody(); }); $("bodyTypes").append(b); }
+for (const [t, o] of Object.entries(BODY_TYPES)) { const b = document.createElement("button");   // every type, chibi and tall (2026-10-06: the default is the tall standard): torso, limbs, proportions, head size
+  b.className = "btn"; b.type = "button"; b.dataset.t = t; b.textContent = typeLabel(t);
+  b.addEventListener("click", () => { Object.assign(SHAPE.torso, o.body.torso); Object.assign(SHAPE.thickness, o.body.thickness); FRAME = frameOf(o.body); limbSync(); rebuildBody(); }); $("bodyTypes").append(b); }
 let building = false, again = false;
 async function rebuildBody() {
   if (building) { again = true; return; } building = true;
@@ -539,7 +549,7 @@ for (const [g, k, label, min, max, step] of LIMB_SLIDERS) {
   $("ts-" + k).addEventListener("input", (e) => { SHAPE[g][k] = +e.target.value; limbSync(); });
   $("ts-" + k).addEventListener("change", rebuildBody);
 }
-$("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); limbSync(); rebuildBody(); });
+$("limbReset").addEventListener("click", () => { Object.assign(SHAPE.torso, SHAPE0.torso); Object.assign(SHAPE.thickness, SHAPE0.thickness); FRAME = null; limbSync(); rebuildBody(); });
 // 服の形: 袖・シャツの丈・ズボンの丈(形が変わるので作り直す。顔・髪・表示の状態は引き継ぐ)
 const OUTFIT = { outfit: { shirt: {}, pants: {}, weapon: {} } };
 const OUTFIT_KINDS = [["tSleeve", "shirt", "sleeve", "袖", { short: "半袖", none: "そでなし", long: "長袖" }], ["tShirtLen", "shirt", "length", "シャツの丈", { tuck: "入れる", out: "出す", crop: "短い" }], ["tPantsLen", "pants", "length", "ズボンの丈", { shorts: "短パン", knee: "ひざ下", long: "長ズボン" }], ["tPantsKind", "pants", "kind", "下", { pants: "ズボン", skirt: "スカート" }],
@@ -583,12 +593,12 @@ toggle("tChg", async (on) => {
   $("chgPanel").hidden = !on; document.body.classList.toggle("chgOpen", on); chgSync();
   if (on && !twin) { pairI = HEAD_VARIANTS.findIndex(([n]) => n === "4つを標準にする前"); $("tPair").click(); }
   if (on) { while (!twin) await new Promise((r) => setTimeout(r, 200));   // 並べ終わってから、2人の顔に寄る(狭い画面では下のパネルに隠れないよう上に)
-    const narrow = innerWidth <= 720; camera.position.set(0, narrow ? 0.75 : 1.0, narrow ? 3.6 : 2.7); controls.target.set(0, narrow ? 0.62 : 0.92, 0); }
+    const narrow = innerWidth <= 720; camera.position.set(0, fy(narrow ? 0.75 : 1.0), narrow ? 3.6 : 2.7); controls.target.set(0, fy(narrow ? 0.62 : 0.92), 0); }
 });
 toggle("tLimb", (on) => {
   for (const id of ["tLay", "tChg", "tBang"]) if (on && $(id).getAttribute("aria-pressed") === "true") $(id).click();
   $("limbPanel").hidden = !on; $("poses").hidden = on || compare; limbSync();
-  if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.55, twin ? 6.2 : 5.2); controls.target.set(x, 0.0, 0); }
+  if (on && innerWidth <= 720) { limbCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x; camera.position.set(x, 0.55, (twin ? 6.2 : 5.2) * fd()); controls.target.set(x, 0.0, 0); }
   else if (!on && limbCam) { camera.position.copy(limbCam[0]); controls.target.copy(limbCam[1]); limbCam = null; }
 });
 toggle("tLay", (on) => {
@@ -597,7 +607,7 @@ toggle("tLay", (on) => {
   if (on && $("tBang").getAttribute("aria-pressed") === "true") $("tBang").click();
   $("layPanel").hidden = !on; $("poses").hidden = on || compare; laySync();
   if (on) { layCam = [camera.position.clone(), controls.target.clone()]; const x = twin ? 0 : avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
-    camera.position.set(x, 0.98 - low, (twin ? 2.4 : 1.75) * (low ? 1.25 : 1)); controls.target.set(x, 0.95 - low, 0); }
+    camera.position.set(x, fy(0.98 - low), (twin ? 2.4 : 1.75) * (low ? 1.25 : 1)); controls.target.set(x, fy(0.95 - low), 0); }
   else if (layCam) { camera.position.copy(layCam[0]); controls.target.copy(layCam[1]); layCam = null; }
 });
 // ── 前髪のふさ: 毛先ごとに玉を出し、引っぱって位置(頭のまわりの角度)と毛先の高さを変える ──
@@ -683,7 +693,7 @@ toggle("tBang", (on) => {
   $("bangPanel").hidden = !on; $("poses").hidden = on || compare; bangGrp.visible = on;
   if (on) { bangHome ??= bangSnap(); if (curPose !== "aPose") [...$("poses").children].find((x) => x.textContent === "Aポーズ")?.click();   // 玉は立ち姿の位置に置くのでAポーズで
     bangBuild(); bangCam = [camera.position.clone(), controls.target.clone()]; const x = avatar.object.position.x, low = innerWidth <= 720 ? 0.16 : 0;
-    camera.position.set(x, 1.02 - low, 1.6 * (low ? 1.3 : 1)); controls.target.set(x, 0.98 - low, 0); }
+    camera.position.set(x, fy(1.02 - low), 1.6 * (low ? 1.3 : 1)); controls.target.set(x, fy(0.98 - low), 0); }
   else { bangSel = -1; if (bangCam) { camera.position.copy(bangCam[0]); controls.target.copy(bangCam[1]); bangCam = null; } }
 });
 
@@ -694,7 +704,8 @@ if (/[?&]cmp/.test(location.search)) $("tCmp").click();
 const HT = [0.35, 0.5, 0.01];
 const VIEW = { front: [0, 0.95, 3.0], q: [1.3, 0.9, 2.6], side: [3.0, 0.9, 0.02], back: [-1.3, 1.0, -2.6], face: [0.45, 1.05, 1.35, 0, 1.0, 0], face2: [0.6, 1.12, 1.25, 0, 0.97, 0], above: [0.05, 2.1, 0.75, 0, 0.95, 0.05], side34: [0.9, 1.05, 0.75, 0, 0.95, 0.05], earR: [0.3, 1.0, 0.75, 0.27, 0.99, 0], arm: [0.25, 0.62, 0.9, 0.23, 0.6, 0], armd: [0.3, 0.4, 0.75, 0.25, 0.56, 0], sideR: [-2.3, 0.55, 0.02, 0, 0.42, 0], top: [0, 2.0, 0.5, 0, 1.0, 0.05], noseside2: [0.6, 0.9, 0.24, 0, 0.9, 0.24], noseside: [0.7, 0.93, 0.24, 0, 0.93, 0.24], ear: [0.75, 1.05, -0.35, 0.2, 1.0, -0.03], earf: [0.55, 1.02, 0.6, 0.2, 1.0, -0.03],
   nose: [0.32, 1.0, 0.75, 0, 0.96, 0.15], hf: [0, 1.05, 1.3, 0, 1.05, 0], h34: [-1.05, 1.08, 0.75, 0, 1.0, 0.03], np: [0.5, 0.94, 0.17, 0, 0.94, 0.17], ef: [0.17, 0.95, 0.55, 0.17, 0.95, 0], es: [0.75, 0.96, -0.01, 0.15, 0.96, -0.01], h34b: [-0.75, 1.0, 1.05, 0, 0.98, 0.05], hbt: [-0.5, 1.75, -0.9, 0, 1.1, 0], hft: [0.5, 1.75, 0.9, 0, 1.1, 0], hs: [1.3, 1.05, 0.02, 0, 1.05, 0], hb: [-0.75, 1.15, -1.1, 0, 1.05, 0], ha: [0, 2.0, 0.3, 0, 1.05, 0], tf: [0, 0.7, 1.25, 0, 0.66, 0], ts: [1.0, 0.7, 0.75, 0, 0.64, 0.03], tsh: [0.55, 0.85, 0.75, 0.15, 0.72, 0], tq: [0.7, 0.8, 1.1, 0.05, 0.62, 0], nkb: [-0.15, 0.85, -0.6, 0, 0.75, 0], kn: [0.6, 0.3, 0.6, 0.12, 0.27, 0], kz: [0.42, 0.25, -0.02, 0.2, 0.24, -0.02], fa: [0, 1.45, 0.75, 0, 1.0, 0.1], cs: [-0.7, 1.12, 0.3, 0, 0.97, 0.06], jd: [-0.12, 0.92, 0.42, -0.19, 0.9, 0.02], fa2: [0.35, 1.35, 0.8, 0, 1.0, 0.1], tqb: [0.7, 0.85, -1.1, 0.05, 0.62, 0], shz: [0.13, 0.76, 0.55, 0.13, 0.74, 0], shb: [0.2, 0.8, -0.55, 0.13, 0.74, 0], hip: [0, 0.55, 1.05, 0, 0.53, 0], hip34: [0.75, 0.58, 0.75, 0, 0.53, 0], bf: [0, 0.6, 2.0, 0, 0.55, 0], bs: [2.0, 0.6, 0.02, 0, 0.55, 0], bb: [0, 0.6, -2.0, 0, 0.55, 0], hand: [0.62, 0.66, 0.42, ...HT], handf: [0.36, 0.5, 0.55, ...HT], hands: [0.75, 0.45, 0.02, ...HT] }[Q.get("view")] ?? (Q.get("cam") ? Q.get("cam").split(",").map(Number) : undefined);   // ?cam=px,py,pz,tx,ty,tz で好きな所から
-if (VIEW) { camera.position.set(...VIEW.slice(0, 3)); if (VIEW.length > 3) controls.target.set(...VIEW.slice(3)); }
+if (VIEW) { const [px, py, pz, tx, ty, tz] = VIEW, k = VIEW.length > 3 ? 1 : fd();   // (heights put on this body: fy; a view without a target is a whole-body one)
+  camera.position.set(px * k, fy(py), pz * k); if (VIEW.length > 3) controls.target.set(tx, fy(ty), tz); }
 const qp = [...$("poses").children].find((x) => x.textContent === Q.get("pose")); if (qp) qp.click();
 
 // ── 毎フレーム ──

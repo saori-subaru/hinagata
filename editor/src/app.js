@@ -1,8 +1,8 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges } from "../../src/index.js";
-import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, compact } from "./store.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile } from "../../src/index.js";
+import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
 import { createBangTool } from "./bangs.js";
@@ -35,7 +35,8 @@ const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pr
 // ── characters ──
 const lib = loadLibrary();
 const shared = new URLSearchParams(location.search).get("o"), SYNC = (({ sync, key }) => sync && key ? { port: +sync, key } : null)(Object.fromEntries(new URLSearchParams(location.search)));   // SYNC: live sync with a recipe file (sync.js)
-if (shared) { try { addChar(lib, t("shared"), recipeOf(JSON.parse(shared))); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
+// ?o=: a character file ({ hinagata: 2, name, options }: the links made since 2026-10-06), or a bare recipe (links made before: the chibi defaults)
+if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
 if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
 let cur = lib.chars.find((c) => c.id === lib.current) ?? lib.chars[0]; lib.current = cur.id;
 const store = createStore(recipeOf(cur.recipe));
@@ -137,8 +138,8 @@ let syncShown = null;   // the sync's state on screen (redrawn in another langua
 // live sync with a recipe file (tools/sync.mjs, sync.js): the file is a character of its own in the library (named after it), switched to
 // when the editor connects; its changes come in as undo steps, the ones made here go back into it
 if (SYNC) connectSync({ ...SYNC, store,
-  onStart: (recipe, file) => { let c = lib.chars.find((x) => x.sync === file); if (!c) { c = addChar(lib, file, recipeOf(recipe)); c.sync = file; }
-    c.recipe = compact(recipeOf(recipe)); if (c.id === cur.id) { store.replace(recipeOf(recipe)); syncUndo(); renderLibrary(); } else switchTo(c); },
+  onStart: (recipe, file) => { let c = lib.chars.find((x) => x.sync === file); if (!c) { c = addChar(lib, file, recipe); c.sync = file; }   // (recipe: resolved, in today's terms: sync.js)
+    c.recipe = compact(recipe); if (c.id === cur.id) { store.replace(recipe); syncUndo(); renderLibrary(); } else switchTo(c); },
   onStatus: (state, file) => { syncShown = { state, file }; showSync(); },
   onRequest: async (cmd, a) => {   // the helper's MCP tools (tools/sync.mjs): a picture of the character, in a pose if asked (then back to the one playing)
     if (cmd !== "screenshot") throw new Error(`unknown request ${cmd}`);
@@ -318,13 +319,13 @@ $("exportMenu").addEventListener("click", (e) => {
   exportAs(k).catch((err) => { console.error(err); toast(String(err?.message ?? err)); });
 });
 async function exportAs(k) {
-  if (k === "json") download(`${fileName(cur.name)}.hinagata.json`, new Blob([JSON.stringify({ hinagata: 1, name: cur.name, options: compact(store.recipe) }, null, 2)], { type: "application/json" }));
+  if (k === "json") download(`${fileName(cur.name)}.hinagata.json`, new Blob([JSON.stringify(characterFile(compact(store.recipe), cur.name), null, 2)], { type: "application/json" }));   // { hinagata: <version>, name, options }
   if (k === "import") $("fileJson").click();
   if (k === "link") {
     const o = compact(store.recipe); let dropped = false;
     for (const im of Object.values(o.face?.images ?? {})) if (im?.src) { delete im.src; dropped = true; }
     for (const d of o.face?.drawn ?? []) for (const k of ["eye", "brow", "mouth"]) if (d?.[k]) { d[k] = null; dropped = true; }   // pictures don't fit in a link
-    const url = `${location.origin}${location.pathname}?o=${encodeURIComponent(JSON.stringify(o))}`;
+    const url = `${location.origin}${location.pathname}?o=${encodeURIComponent(JSON.stringify(characterFile(o, cur.name)))}`;   // with its version (a bare recipe in a link is read as one made before 2026-10-06)
     try { await navigator.clipboard.writeText(url); toast(dropped ? t("linkNoImages") : t("linkCopied")); } catch { prompt(t("exLink"), url); }
   }
   if (k === "png") download(`${fileName(cur.name)}.png`, await vp.snapshot());
@@ -333,11 +334,12 @@ async function exportAs(k) {
 $("fileJson").addEventListener("change", (e) => {
   const f = e.target.files[0]; e.target.value = ""; if (!f) return;
   f.text().then((txt) => {
-    const j = JSON.parse(txt), o = j && typeof j === "object" ? (j.options ?? j) : null;
-    if (!o || typeof o !== "object" || Array.isArray(o)) throw new Error("not an object");
-    const bad = checkOptions(o); if (bad.length) console.warn("Imported recipe has problems:", bad);
-    const name = (typeof j.name === "string" && j.name) || f.name.replace(/(\.hinagata)?\.json$/i, "");
-    store.commit(); persist(); switchTo(addChar(lib, name, recipeOf(o))); toast(t("imported", name));
+    const j = JSON.parse(txt);
+    if (!j || typeof j !== "object" || Array.isArray(j)) throw new Error("not an object");
+    const s = recipeIn(j);   // a character file has its version; a bare recipe file is from before 2026-10-06 (the chibi defaults)
+    const bad = checkOptions(j.options ?? j); if (bad.length) console.warn("Imported recipe has problems:", bad);
+    const name = s.name || f.name.replace(/(\.hinagata)?\.json$/i, "");
+    store.commit(); persist(); switchTo(addChar(lib, name, s.recipe)); toast(t("imported", name));
   }).catch(() => toast(t("badJson")));
 });
 addEventListener("pagehide", () => { store.commit(); persist(); });

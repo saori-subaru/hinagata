@@ -1,8 +1,7 @@
 // The body: joints (bones) and the signed-distance parts that make the naked body, head and face sculpt.
 import { handFrame } from "../clothes/weapons.js";
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
-import { DEFAULTS } from "../options.js";
-const HEAD_SCALE0 = DEFAULTS.body.head.scale;   // the head size the neck width is set for (neck.follow)
+const HEAD_SCALE0 = 0.9;   // the head size the neck width is set for (neck.follow): the chibi's, the default until 2026-10-06 (not DEFAULTS' now: every neck would change)
 
 /**
  * Build the body from options.
