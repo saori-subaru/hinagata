@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET, PART_LABELS } from "../../src/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 
@@ -126,19 +126,22 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         ...drawnList().map((d) => { const id = `image@${d.id}`; return { key: `d:${d.id}`, label: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" }, own: true }; })];
       const groups = (sel) => [[t("exStock"), ITEMS.filter((x) => !x.own)], [t("exDrawnGroup"), ITEMS.filter((x) => x.own)]].filter(([, l]) => l.length)
         .map(([g, l]) => h("optgroup", { label: g }, l.map((x) => h("option", { value: x.key, selected: x.key === sel }, x.label))));
+      // a face built from the parts, named by what it is (2026-10-06, Saori: "下のパーツで組んだ顔ってどういう意味？"): 組んだ顔：まる目・ふつう・ω
+      const partName = (slot, id) => { if (id?.startsWith?.("image@")) { const d = drawnList().find((q) => `image@${q.id}` === id); return d ? drawnName(d) : t("pic"); } return PART_LABELS[slot]?.[id] ? L(PART_LABELS[slot][id]) : id ?? "–"; };
+      const built = (p) => `${t("exBuilt")}${["eyes", "brows", "mouth"].map((k) => partName(k, p[k])).join("・")}${p.cheeks === "flush" ? `・${L(PART_LABELS.cheeks.flush)}` : ""}`;
       const item = (k) => ITEMS.find((x) => x.key === k), match = (parts) => ITEMS.find((x) => Object.entries(x.parts).every(([k, v]) => parts[k] === v)) ?? null;
       // try on: the face now is the first that matches, else a mix of parts
       const curK = match(r.face.parts)?.key ?? "";
       const tryOn = h("select", { class: "sel", style: "width: 100%; max-width: none", "aria-label": t("expression"), onchange: (ev) => { const x = item(ev.target.value); if (x) wear(x.parts); } },
-        curK ? null : h("option", { value: "", selected: true }, t("exMix")), groups(curK));
-      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Each row picks its face: the stock one
-      // (no entry), the face now (made above from parts), or any of the list
+        curK ? null : h("option", { value: "", selected: true }, built(r.face.parts)), groups(curK));
+      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Each row picks its face from the list, or
+      // the face built from the parts below (2026-10-06, Saori: "今の顔のまま / 今の顔を登録 / 共通のまま" were three names for little: one name now).
+      // A row with no entry shows what it gives: the stock face of its name (喜び → にこっ), and ふつう the parts' face; picking that removes the entry
       const ES = r.face.expressions ?? {}, now = () => ({ eyes: r.face.parts.eyes, brows: r.face.parts.brows, mouth: r.face.parts.mouth, cheeks: r.face.parts.cheeks });
       const put = (n, v) => { const o = { ...ES }; if (v) o[n] = v; else delete o[n]; set({ "face.expressions": o }); };
-      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts), ownK = own ? match(own)?.key ?? "own" : "stock";
-        const pick = h("select", { class: "sel", "aria-label": t(`ex_${n}`), onchange: (ev) => { const v = ev.target.value; if (v === "stock") put(n, null); else if (v === "now") put(n, now()); else if (item(v)) put(n, { ...item(v).parts }); } },
-          h("option", { value: "stock", selected: ownK === "stock" }, t(n === "normal" ? "exKeepNormal" : "exKeepStock")), h("option", { value: "now" }, t("exUseNow")),
-          ownK === "own" ? h("option", { value: "own", selected: true }, t("exOwnFace")) : null, groups(ownK));
+      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts), base = n === "normal" ? "parts" : `s:${n}`, ownK = own ? match(own)?.key ?? "parts" : base;
+        const pick = h("select", { class: "sel", style: "max-width: 230px", "aria-label": t(`ex_${n}`), onchange: (ev) => { const v = ev.target.value; if (v === base) put(n, null); else if (v === "parts") put(n, now()); else if (item(v)) put(n, { ...item(v).parts }); } },
+          h("option", { value: "parts", selected: ownK === "parts" }, built(ownK === "parts" && own ? own : r.face.parts)), groups(ownK));
         return h("div", { class: "expr-row" }, h("span", { class: "expr-name" }, t(`ex_${n}`)), h("span", { class: "expr-btns" }, pick,
           shown ? h("button", { class: "chip", type: "button", "aria-pressed": String(on({ parts: shown })), onclick: () => wear(shown) }, t("exShow")) : null)); };
       const both = document.createDocumentFragment(); both.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))), tryOn),
