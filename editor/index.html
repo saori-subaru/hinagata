@@ -211,6 +211,8 @@ button { cursor: pointer; }
 .lib { flex: 1 1 auto; overflow-y: auto; padding: 10px; display: grid; gap: 6px; align-content: start; }
 .lib-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid transparent; background: transparent; text-align: left; width: 100%; }
 .lib-item:hover { background: var(--surface-2); }
+.lib-presets { padding: 8px 10px; border-top: 1px solid var(--line, #0001); flex-wrap: wrap; }
+.lib-presets-h { width: 100%; font-size: 12px; opacity: 0.7; margin-bottom: 4px; }
 .lib-item[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
 .lib-item .meta { flex: 1 1 auto; min-width: 0; display: grid; }
 .lib-item .meta b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -289,6 +291,7 @@ button { cursor: pointer; }
 <aside class="drawer" id="drawer" hidden aria-labelledby="libTitle">
   <header><h2 id="libTitle" data-i18n="library"></h2><button class="icon-btn" id="libClose" type="button" data-i18n-label="close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></header>
   <div class="lib" id="lib"></div>
+  <div class="lib-presets chips" id="libPresets"></div>
   <footer><button class="btn primary small" id="libNew" type="button" data-i18n="new"></button><button class="btn small" id="libDup" type="button" data-i18n="duplicate"></button><button class="btn small ghost" id="libDel" type="button" data-i18n="delete"></button></footer>
 </aside>
 <input type="file" id="fileJson" accept="application/json,.json" hidden>

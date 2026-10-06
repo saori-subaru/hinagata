@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -291,6 +291,10 @@ const ago = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m 
 function renderLibrary() {
   $("lib").replaceChildren(...lib.chars.map((c) => h("button", { class: "lib-item", type: "button", "aria-current": String(c.id === cur.id), onclick: () => { if (c.id !== cur.id) switchTo(c); } },
     h("span", { class: "meta" }, h("b", {}, c.name), h("small", {}, t("edited", ago(c.updated)))))));
+  // プリセット（src/presets.js）：押すと、そのキャラの写しが一覧に増える
+  const L = (x) => x[getLang()] ?? x.ja;
+  $("libPresets").replaceChildren(h("div", { class: "lib-presets-h" }, t("fromPreset")), ...Object.values(CHARACTERS).map((p) => h("button", { class: "chip", type: "button", title: L(p.about),
+    onclick: () => { store.commit(); persist(); const s = recipeIn(p.file); switchTo(addChar(lib, L(p.name), s.recipe)); } }, `${L(p.name)}（${L(p.about)}）`)));
 }
 const drawer = (on) => { $("drawer").hidden = $("scrim").hidden = !on; if (on) { renderLibrary(); $("libClose").focus(); } else $("libBtn").focus(); };
 $("libBtn").addEventListener("click", () => drawer(true));
