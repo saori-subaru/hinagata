@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS, RECIPE_VERSION, EXPRESSIONS } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -48,6 +48,8 @@ function persist() {
 // ── 3D view and building ──
 const vp = createViewport($("gl"), $("stage"));
 let building = false, again = false;
+let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
+const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
 async function rebuild() {
   if (building) { again = true; return; }
   building = true; if (vp.avatar) $("busy").hidden = false;
@@ -55,7 +57,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality, spare: true });
-      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -113,6 +115,17 @@ const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
 const ties = createTieTool({ vp, store, onChange: () => panel.render() });
 const paint = createPaintTool({ vp, store, onChange: () => panel.render() });
 const acc = createAccessoryTool({ vp, store, onChange: () => panel.render() });   // putting accessories on the character (accessories.js)   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
+// my parts (2026-10-06, Saori: "画風統一するならみんな同じの使いそう"): drawn eyes, brows and mouths saved in this browser, to use on any
+// character (the expression set's eyes / brows / mouth list them; picked, the drawing is copied into that character: panel.js)
+const PARTS_KEY = "hinagata.editor.parts";
+const myParts = {
+  list() { try { const L = JSON.parse(localStorage.getItem(PARTS_KEY)); return Array.isArray(L) ? L : []; } catch { return []; } },
+  write(L) { try { localStorage.setItem(PARTS_KEY, JSON.stringify(L)); return true; } catch { toast(t("notSaved")); return false; } },
+  save(d) { const L = myParts.list(), name = d.normal ? t("myPartsNormal", cur.name) : d.name || t("myPartsN", L.length + 1);
+    L.push({ id: Date.now().toString(36), name, eye: d.eye ?? null, brow: d.brow ?? null, mouth: d.mouth ?? null, cheeks: d.cheeks ?? "none", blink: d.blink !== false });
+    if (myParts.write(L)) toast(t("myPartsSaved", name)); panel.render(); },
+  remove(id) { const x = myParts.list().find((q) => q.id === id); if (!x || !confirm(t("myPartsDel", x.name))) return; myParts.write(myParts.list().filter((q) => q.id !== id)); panel.render(); },
+};
 // my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
 const HAIRS_KEY = "hinagata.editor.hairs";
 const hairs = {
@@ -130,9 +143,10 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
-  onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
-  onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
-  bangs, draw, hairs, backs, ties, paint, acc,
+  onReadTemplate: (into = null, put = true) => { tplInto = into === "new" ? NEW : into; drawPut = put; $("fileTpl").click(); },
+  onFacePaint: (into = null, put = true) => { drawPut = put; facePaint.open(into); },   // drawing the face parts in the app (facepaint.js). put: false = only redraw it (描いた絵の「編集」)
+  showFace: (p) => { shownFace = p; const av = vp.avatar; if (!av) return; vp.lift(); av.setFace(p ?? faceParts()); vp.apply(); },   // the expression the face tab edits, on the avatar (null: its own face)
+  bangs, draw, hairs, myParts, backs, ties, paint, acc,
 });
 let syncShown = null;   // the sync's state on screen (redrawn in another language)
 // live sync with a recipe file (tools/sync.mjs, sync.js): the file is a character of its own in the library (named after it), switched to
@@ -152,7 +166,7 @@ if (SYNC) connectSync({ ...SYNC, store,
   } });
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
-let tplUrl = null, tplInto = null;   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
+let tplUrl = null, tplInto = null, drawPut = true;   // drawPut: what is read also goes onto the expression being edited (false: a drawing redrawn from its own button)   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
 const NEW = Symbol("new");
 function showTemplate(kind) {
   if (!vp.avatar) return;
@@ -177,13 +191,16 @@ function applyTemplate(im, into0) {
     let r; try { r = readFaceSheet(vp.avatar, im, { into }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; }
     if (!r.read.length) { toast(t("tplRead0")); return; }
     let ch;
-    if (fresh) {   // named "新しい表情" (2, 3 … if taken); renamed in its row
-      const names = new Set(list.map((d) => d.name)); let name = t("newExprName"), k = 2; while (names.has(name)) name = `${t("newExprName")}${k++}`;
+    const n = panel.editExpr ?? "normal";   // the expression the set is editing: what was read goes into it (2026-10-06, Saori: drawing a sad face changed the character's own face)
+    if (fresh) {   // named after that expression ("悲しみ"; "新しい表情" for ふつう; 2, 3 … if taken); renamed in its row
+      const base = n === "normal" ? t("newExprName") : t(`ex_${n}`), names = new Set(list.map((d) => d.name)); let name = base, k = 2; while (names.has(name)) name = `${base}${k++}`;
       ch = { "face.drawn": [...list, { id: into, name, eye: null, brow: null, mouth: null, ...r.drawn[into], cheeks: "none", blink: true }] };
     } else ch = sheetChanges(store.recipe, r);
-    const id = into != null ? `image@${into}` : "image";   // show what was just read
-    Object.assign(ch, { "face.parts.eyes": id, "face.parts.brows": id, "face.parts.mouth": id });
-    if (into != null) ch["face.parts.cheeks"] = fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none";
+    const id = into != null ? `image@${into}` : "image", got = { eyes: id, brows: id, mouth: id, ...(into != null ? { cheeks: fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none" } : {}) };
+    const ES = ch["face.expressions"] ?? store.get("face.expressions") ?? {};
+    if (!drawPut && !fresh) { store.set(ch, { commit: true }); toast(t("tplReadN", r.read.length)); return into; }   // redrawn in place: the expressions using it change with it
+    if (n === "normal") { for (const [k, v] of Object.entries(got)) ch[`face.parts.${k}`] = v; if (ES.normal) { const o = { ...ES }; delete o.normal; ch["face.expressions"] = o; } }   // the character's own face (an old ふつう of its own gives way)
+    else ch["face.expressions"] = { ...ES, [n]: { ...(ES[n] ?? EXPRESSIONS[n]?.parts ?? {}), ...got } };
     store.set(ch, { commit: true }); toast(fresh ? t("tplNewExpr", ch["face.drawn"].at(-1).name) : t("tplReadN", r.read.length));
     return into;
 }
@@ -315,7 +332,8 @@ function menu(on) { $("exportMenu").hidden = !on; $("exportBtn").setAttribute("a
 $("exportBtn").addEventListener("click", (e) => { e.stopPropagation(); menu($("exportMenu").hidden); });
 addEventListener("click", (e) => { if (!e.target.closest(".menu-wrap")) menu(false); });
 $("copyCode").addEventListener("click", async () => {
-  const code = `import { createAvatar } from "./src/index.js";\n\nconst avatar = await createAvatar(${JSON.stringify(compact(store.recipe), null, 2)});\nscene.add(avatar.object);\n`;
+  // the first line names the character and the recipe's version, so the code pasted back (コードを貼りつけて開く) comes back as it was made
+  const code = `// Hinagata character ${JSON.stringify(cur.name)} (recipe version ${RECIPE_VERSION})\nimport { createAvatar } from "./src/index.js";\n\nconst avatar = await createAvatar(${JSON.stringify(compact(store.recipe), null, 2)});\nscene.add(avatar.object);\n`;
   try { await navigator.clipboard.writeText(code); toast(t("copied")); } catch { download(`${fileName(cur.name)}.js`, new Blob([code], { type: "text/javascript" })); }
 });
 $("exportMenu").addEventListener("click", (e) => {
@@ -325,6 +343,7 @@ $("exportMenu").addEventListener("click", (e) => {
 async function exportAs(k) {
   if (k === "json") download(`${fileName(cur.name)}.hinagata.json`, new Blob([JSON.stringify(characterFile(compact(store.recipe), cur.name), null, 2)], { type: "application/json" }));   // { hinagata: <version>, name, options }
   if (k === "import") $("fileJson").click();
+  if (k === "paste") { $("pasteText").value = ""; $("pasteModal").hidden = false; $("pasteText").focus(); }
   if (k === "link") {
     const o = compact(store.recipe); let dropped = false;
     for (const im of Object.values(o.face?.images ?? {})) if (im?.src) { delete im.src; dropped = true; }
@@ -345,6 +364,31 @@ $("fileJson").addEventListener("change", (e) => {
     const name = s.name || f.name.replace(/(\.hinagata)?\.json$/i, "");
     store.commit(); persist(); switchTo(addChar(lib, name, s.recipe)); toast(t("imported", name));
   }).catch(() => toast(t("badJson")));
+});
+// paste back what was copied (2026-10-06, Saori: "コピーしとくだけでバックアップできる"): the code (コードをコピー), a link (?o=…) or a recipe's JSON.
+// The code's first line says its version; code without it is today's (bare options in code are, openRecipe); bare JSON is a file's (version 1)
+function readPasted(txt) {
+  txt = txt.trim();
+  const link = txt.match(/[?&]o=([^&#\s]+)/); if (link) return { input: JSON.parse(decodeURIComponent(link[1])), bare: 1 };
+  const at = txt.indexOf("createAvatar(");
+  if (at >= 0) { const s = txt.indexOf("{", at); if (s < 0) throw new Error("no recipe");
+    let depth = 0, str = null, end = -1;   // the object literal, to its closing brace (braces inside strings don't count)
+    for (let i = s; i < txt.length && end < 0; i++) { const c = txt[i];
+      if (str) { if (c === "\\") i++; else if (c === str) str = null; } else if (c === '"' || c === "'" || c === "`") str = c; else if (c === "{") depth++; else if (c === "}" && !--depth) end = i; }
+    if (end < 0) throw new Error("unclosed");
+    const v = txt.match(/recipe version (\d+)/), nm = txt.match(/Hinagata character ("(?:[^"\\]|\\.)*")/), options = JSON.parse(txt.slice(s, end + 1));
+    return { input: { hinagata: v ? +v[1] : RECIPE_VERSION, ...(nm ? { name: JSON.parse(nm[1]) } : {}), options }, bare: RECIPE_VERSION }; }
+  return { input: JSON.parse(txt), bare: 1 };
+}
+const closePaste = () => { $("pasteModal").hidden = true; };
+$("pasteClose").addEventListener("click", closePaste);
+$("pasteModal").addEventListener("click", (e) => { if (e.target === $("pasteModal")) closePaste(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("pasteModal").hidden) closePaste(); });
+$("pasteLoad").addEventListener("click", () => {
+  let got; try { got = readPasted($("pasteText").value); if (!got.input || typeof got.input !== "object" || Array.isArray(got.input)) throw new Error("not an object"); } catch { toast(t("badPaste")); return; }
+  const s = recipeIn(got.input, got.bare), bad = checkOptions(got.input.options ?? got.input); if (bad.length) console.warn("Pasted recipe has problems:", bad);
+  const name = s.name || t("pastedName");
+  closePaste(); store.commit(); persist(); switchTo(addChar(lib, name, s.recipe)); toast(t("imported", name));
 });
 addEventListener("pagehide", () => { store.commit(); persist(); });
 

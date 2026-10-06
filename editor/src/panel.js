@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET, PART_LABELS } from "../../src/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 
@@ -31,7 +31,8 @@ let uid = 0;
  */
 export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const { store } = ctx;
-  let tab = "body", filter = "";
+  let tab = "body", filter = "", editExpr = "normal", faceShown = false;   // editExpr: the expression the face tab edits (shown on the avatar while there)
+  const SLOTS = ["eyes", "brows", "mouth", "cheeks"], EXPR_PARTS = new Set([...SLOTS.map((k) => `face.parts.${k}`), "face.expressions"]);   // they are edited with the expression (its block), not in Parts / as JSON
   const open = new Set();   // tabs whose Advanced part is open
   const set = (changes, commit = true) => store.set(changes, { commit });
 
@@ -118,19 +119,65 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row(false), row(true));
     }
     if (tab === "face") {
-      const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
-      const drawnX = drawnList().map((d) => { const id = `image@${d.id}`; return { ja: drawnName(d), en: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" } }; });   // the character's drawn expressions
-      const wear = (parts) => { const ch = {}; for (const [kk, v] of Object.entries(parts)) ch[`face.parts.${kk}`] = v; set(ch); };
-      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Make the face above, then "use this face"
-      const ES = r.face.expressions ?? {}, now = () => ({ eyes: r.face.parts.eyes, brows: r.face.parts.brows, mouth: r.face.parts.mouth, cheeks: r.face.parts.cheeks });
-      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts);
-        return h("div", { class: "expr-row" }, h("span", { class: "expr-name" }, t(`ex_${n}`)), h("span", { class: "cost" }, t(own ? "exOwn" : "exStock")),
-          h("span", { class: "expr-btns" }, h("button", { class: "chip", type: "button", onclick: () => set({ "face.expressions": { ...ES, [n]: now() } }) }, t("exUse")),
-            shown ? h("button", { class: "chip", type: "button", "aria-pressed": String(on({ parts: shown })), onclick: () => wear(shown) }, t("exShow")) : null,
-            own ? h("button", { class: "chip", type: "button", onclick: () => { const o = { ...ES }; delete o[n]; set({ "face.expressions": o }); } }, t("exReset")) : null)); };
-      const both = document.createDocumentFragment(); both.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))),
-        h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => wear(x.parts) }, L(x))))),
-        h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), h("div", { class: "help" }, t("exprSetHelp")), EXPRESSION_SET.map(row))); return both;
+      // the expressions, edited one at a time (2026-10-06, Saori: picking a face, then registering it on a row, then building the next one was
+      // too roundabout): pick the expression (ふつう 喜び 悲しみ 怒り 驚き), it shows on the character, and its eyes, brows, mouth and cheeks are
+      // edited right here. ふつう is the character's own face (face.parts); the others are this character's versions (face.expressions), the
+      // stock face of their name until one is changed. A drawn template goes into the one picked (app.js applyTemplate); a drawn face is used
+      // elsewhere by picking its eyes, brows and mouth ("絵: …" in each)
+      if (!EXPRESSION_SET.includes(editExpr)) editExpr = "normal";
+      const n = editExpr, ES = r.face.expressions ?? {}, P0 = r.face.parts, base = { eyes: P0.eyes, brows: P0.brows, mouth: P0.mouth, cheeks: P0.cheeks };
+      const cur = n === "normal" ? { ...base, ...(ES.normal ?? {}) } : { ...base, ...(ES[n] ?? EXPRESSIONS[n]?.parts ?? {}) };
+      const noNormal = () => { if (!ES.normal) return {}; const o = { ...ES }; delete o.normal; return { "face.expressions": o }; };   // an old ふつう of its own gives way to the parts
+      const write = (p, extra = {}) => { if (n === "normal") { const ch = { ...noNormal(), ...extra }; for (const k of SLOTS) ch[`face.parts.${k}`] = p[k]; set(ch); } else set({ ...extra, "face.expressions": { ...ES, [n]: { ...p } } }); };
+      // my parts (ctx.myParts: drawn eyes, brows and mouths kept in this browser, for every character): picked here, the drawing is copied into
+      // this character's drawn faces (face.drawn, lib: where it came from) and used; one already copied shows as its own "絵: …"
+      const MY = ctx.myParts?.list() ?? [], PIC = { eyes: "eye", brows: "brow", mouth: "mouth" }, here = new Set(drawnList().map((d) => d.lib).filter(Boolean));
+      const adopt = (x) => { const list = drawnList(), ids = new Set(list.map((d) => String(d.id))); let i = 1, id; do id = `m${i++}`; while (ids.has(id));
+        return { id, ch: { "face.drawn": [...list, { id, name: x.name, eye: x.eye ?? null, brow: x.brow ?? null, mouth: x.mouth ?? null, cheeks: x.cheeks ?? "none", blink: x.blink !== false, lib: x.id }] } }; };
+      const reset = () => { const o = { ...ES }; delete o[n]; set({ "face.expressions": o }); };
+      ctx.showFace?.(cur); faceShown = true;
+      const pickN = h("div", { class: "seg full", role: "group", "aria-label": t("exprSet") }, EXPRESSION_SET.map((k) =>   // five, fixed: all in view (2026-10-06, Saori: not a drop-down)
+        h("button", { type: "button", "aria-pressed": String(k === n), onclick: () => { editExpr = k; render(); } }, t(`ex_${k}`))));
+      const slotField = (k) => { const e = ALL.find((q) => q.path === `face.parts.${k}`), drawn = k === "cheeks" ? [] : drawnList().map((d) => ({ value: `image@${d.id}`, label: { ja: drawnName(d), en: drawnName(d) } })), my = PIC[k] ? MY.filter((x) => x[PIC[k]] && !here.has(x.id)).map((x) => ({ value: null, my: x, label: { ja: `${t("myPartsTag")}${x.name}`, en: `${t("myPartsTag")}${x.name}` } })) : [], opts = [...(e?.options ?? []), ...drawn, ...my];
+        const pickSlot = (o) => { if (!o.my) return write({ ...cur, [k]: o.value }); const a = adopt(o.my); write({ ...cur, [k]: `image@${a.id}` }, a.ch); };
+        return h("div", { class: "field" }, h("label", {}, L(e?.label) || k), h("select", { class: "sel", "aria-label": L(e?.label) || k, onchange: (ev) => pickSlot(opts[+ev.target.value]) },
+          opts.map((o, i) => h("option", { value: i, selected: o.value === cur[k] }, L(o.label))))); };
+      const own = n !== "normal" && ES[n];
+      // drawing (2026-10-06, Saori: the drawn faces were a list of cards growing down the panel, apart from the expression they were for): the
+      // buttons draw this expression: ふつう its own pictures, another the drawn face it uses (redrawn), or a new one named after it
+      const usedId = (p) => { for (const k of ["eyes", "brows", "mouth"]) { const v = p[k]; if (typeof v === "string" && v.startsWith("image@")) return v.slice(6); } return null; };
+      const into = n === "normal" ? null : usedId(cur) ?? "new", usedD = drawnList().find((d) => String(d.id) === String(usedId(cur)));
+      const drawRow = h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", title: t("fpOpenTitle"), onclick: () => ctx.onFacePaint(into) }, t(into === "new" ? "exDrawNew" : "exDraw")),
+        h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("exReadTpl")),
+        h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
+        usedD ? h("button", { class: "chip", type: "button", "aria-pressed": String(usedD.blink !== false), onclick: () => set({ "face.drawn": drawnList().map((q) => q === usedD ? { ...q, blink: q.blink === false } : q) }) }, t("blink")) : null);
+      const setSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
+        SLOTS.map(slotField), drawRow,
+        own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetDefault"))) : null);
+      // the pictures as small buttons (with the eye's picture): one puts its eyes, brows and mouth on the expression being edited, as my
+      // hairstyles put a hair on (Saori: "登録したら消す以外何もできない"); ☆ keeps it in my parts, × removes it
+      const thumb = (src) => src ? h("img", { class: "pthumb", src, alt: "" }) : null;
+      const useIds = (ids) => write({ ...cur, ...ids });
+      const pickOf = (x, id) => Object.fromEntries([["eyes", "eye"], ["brows", "brow"], ["mouth", "mouth"]].filter(([, k]) => x[k]).map(([q]) => [q, id]));
+      const baseSrc = (k) => store.get(`face.images.${k}.src`), BASE = { eye: baseSrc("eye"), brow: baseSrc("brow"), mouth: baseSrc("mouth") };
+      const removeD = (d) => { if (!confirm(t("confirmDelExpr", d.name || d.id))) return; const id = `image@${d.id}`, ch = { "face.drawn": drawnList().filter((q) => q !== d) };
+        for (const k of ["eyes", "brows", "mouth"]) if (store.get(`face.parts.${k}`) === id) ch[`face.parts.${k}`] = "image";   // the own face was showing it: back to ふつう's pictures
+        const o = { ...ES }; let any = false; for (const [e, p] of Object.entries(o)) if (Object.values(p ?? {}).includes(id)) { delete o[e]; any = true; } if (any) ch["face.expressions"] = o;   // expressions using it: back to stock
+        set(ch); };
+      const keep = (x) => ctx.myParts ? h("button", { class: "chip", type: "button", title: t("myPartsSaveTitle"), onclick: () => ctx.myParts.save(x) }, t("myPartsTo")) : null;   // into my parts (every character)
+      const editBtn = (into) => h("button", { class: "chip", type: "button", title: t("picEditTitle"), onclick: () => ctx.onFacePaint(into, false) }, t("picEdit"));   // redraw the drawing itself (every expression using it changes)
+      const picChips = [...(BASE.eye || BASE.brow || BASE.mouth ? [h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(BASE, "image")) }, thumb(BASE.eye ?? BASE.brow ?? BASE.mouth), t("normalPics")), editBtn(null), keep({ ...BASE, normal: true }))] : []),
+        ...drawnList().map((d) => h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => useIds(pickOf(d, `image@${d.id}`)) }, thumb(d.eye ?? d.brow ?? d.mouth), d.name || d.id), editBtn(d.id), keep(d),
+          h("button", { class: "chip", type: "button", title: t("drawDel"), "aria-label": `${t("drawDel")}: ${d.name || d.id}`, onclick: () => removeD(d) }, "×")))];
+      const picSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("picsTitle"))),
+        h("div", { class: "chips" }, picChips.length ? picChips : h("span", { class: "cost" }, t("myHairNone"))), h("div", { class: "help" }, t("picsHelp", t(`ex_${n}`))));
+      const M = ctx.myParts, ML = M?.list() ?? [];
+      const mySec = M ? h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("myParts"))),
+        h("div", { class: "chips" }, ML.length ? ML.map((x) => h("span", { class: "chip-pair" }, h("button", { class: "chip pchip", type: "button", title: t("picUse"), onclick: () => {
+            const had = drawnList().find((d) => d.lib === x.id); if (had) return useIds(pickOf(x, `image@${had.id}`)); const a = adopt(x); write({ ...cur, ...pickOf(x, `image@${a.id}`) }, a.ch); } }, thumb(x.eye ?? x.brow ?? x.mouth), x.name),
+          h("button", { class: "chip", type: "button", title: t("drawDel"), "aria-label": `${t("drawDel")}: ${x.name}`, onclick: () => M.remove(x.id) }, "×"))) : h("span", { class: "cost" }, t("myHairNone"))),
+        h("div", { class: "help" }, t("myPartsHelp", t(`ex_${n}`)))) : null;
+      const all = document.createDocumentFragment(); all.append(setSec, picSec); if (mySec) all.append(mySec); return all;
     }
     if (tab === "outfit") {   // the whole garment at once: a robe is a dress down to the ankles with bell sleeves
       const G = { plain: { "outfit.dress.on": false, "outfit.shirt.sleeve": "short" }, dress: { "outfit.dress.on": true, "outfit.dress.hem": 0.28, "outfit.dress.flare": 0.45, "outfit.shirt.sleeve": "short" },
@@ -150,34 +197,6 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const drawnList = () => (store.get("face.drawn") ?? []).filter((d) => d && d.id != null);
   const drawnName = (d) => `${t("pic")}: ${d.name || d.id}`;
   const setDrawn = (list, extra = {}) => set({ "face.drawn": list, ...extra });
-  function drawnBlock() {
-    const list = drawnList(), base = (k) => store.get(`face.images.${k}.src`);
-    const pic = (k, v) => h("div", { class: "pic" }, v ? h("img", { class: "thumb", src: v, alt: "" }) : h("span", { class: "thumb empty" }, "–"), h("span", {}, t(`f_${k}`)));
-    const anyPic = ["eye", "eyeClosed", "brow", "mouth", "nose"].some(base) || list.some((d) => d.eye || d.brow || d.mouth);
-    const edit = (d, ch) => setDrawn(list.map((q) => q === d ? { ...q, ...ch } : q));
-    const remove = (d) => { if (!confirm(t("confirmDelExpr", d.name || d.id))) return; const id = `image@${d.id}`, extra = {};
-      for (const k of ["eyes", "brows", "mouth"]) if (store.get(`face.parts.${k}`) === id) extra[`face.parts.${k}`] = "image";   // the face was showing it: back to the drawn ふつう
-      setDrawn(list.filter((q) => q !== d), extra); };
-    const readBtn = (into) => [h("button", { class: "chip read", type: "button", title: t("fpOpenTitle"), onclick: () => ctx.onFacePaint(into) }, t("fpOpenShort")),   // draw it in the app (facepaint.js)
-      h("button", { class: "chip read", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("tplReadShort"))];   // the template drawn for this expression
-    const cards = [h("div", { class: "drow" }, h("div", { class: "head" }, h("b", {}, t("normalPic")), readBtn(null)), h("div", { class: "pics" }, ["eye", "eyeClosed", "brow", "mouth", "nose"].map((k) => pic(k, base(k)))))];
-    for (const d of list) {
-      const nm = h("input", { class: "num name", value: d.name ?? "", "aria-label": t("exprName") }); nm.addEventListener("change", () => edit(d, { name: nm.value.trim() || d.id }));
-      cards.push(h("div", { class: "drow" }, h("div", { class: "head" }, nm, readBtn(d.id),
-          h("button", { class: "chip", type: "button", "aria-pressed": String((d.cheeks ?? "none") === "flush"), onclick: () => edit(d, { cheeks: (d.cheeks ?? "none") === "flush" ? "none" : "flush" }) }, t("flush")),
-          h("button", { class: "chip", type: "button", "aria-pressed": String(d.blink !== false), onclick: () => edit(d, { blink: d.blink === false }) }, t("blink")),
-          h("button", { class: "chip", type: "button", onclick: () => remove(d) }, t("delExpr"))),
-        h("div", { class: "pics" }, ["eye", "brow", "mouth"].map((k) => pic(k, d[k])))));
-    }
-    return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("drawn"))),
-      h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint(null) }, t("fpOpen")),
-        h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint("new") }, t("fpNew")),
-        h("button", { class: "btn small", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
-        h("button", { class: "btn small", type: "button", title: t("tplNewTitle"), onclick: () => ctx.onReadTemplate("new") }, t("tplNew")),
-        anyPic ? h("button", { class: "btn small ghost", type: "button", onclick: () => { if (!confirm(t("confirmClearDrawn"))) return; const ch = {}; for (const k of ["eye", "eyeClosed", "brow", "mouth", "nose"]) ch[`face.images.${k}.src`] = null; ch["face.drawn"] = list.map((d) => ({ ...d, eye: null, brow: null, mouth: null })); set(ch); } }, t("tplClear")) : null),
-      h("div", { class: "drawn" }, cards),
-      h("div", { class: "help" }, t("tplHelp")));
-  }
   // moving the nendo bangs' tufts on the face (editor/src/bangs.js): the switch, adding / removing, and the picked tuft's own values
   function bangsBlock() {
     const B = ctx.bangs; if (!B) return null;
@@ -321,8 +340,9 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const mine = ALL.filter((e) => tabOf(e) === tab), main = mine.filter((e) => e.tier === "main").sort((a, b) => a.order - b.order);
     panelEl.replaceChildren();
     const pre = presetBlock(); if (pre) panelEl.append(pre);
-    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories"))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
-    if (tab === "face") { panelEl.append(drawnBlock()); panelEl.append(h("div", { class: "note" }, t("imageNote"))); }
+    if (tab !== "face" && faceShown) { ctx.showFace?.(null); faceShown = false; }   // left the face tab: the character's own face again
+    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories" && !EXPR_PARTS.has(e.path)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
+    if (tab === "face") panelEl.append(h("div", { class: "note" }, t("imageNote")));
     if (tab === "outfit") { for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
     if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), tiesBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
     const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]); if (adv) panelEl.append(adv);   // one picture at a time: in Advanced; drawn locks and the back locks' edits: their own blocks
@@ -338,5 +358,5 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
   resetEl.addEventListener("click", () => { const ch = {}; for (const p of tabPaths(tab)) if (!isDefault(store.recipe, p)) ch[p] = structuredClone(getPath(DEFAULTS, p)); set(ch); });
 
-  return { render, renderFoot, get tab() { return tab; } };
+  return { render, renderFoot, get tab() { return tab; }, get editExpr() { return editExpr; } };   // editExpr: where a drawn template goes (app.js applyTemplate)
 }

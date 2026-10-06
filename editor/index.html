@@ -86,6 +86,7 @@ button { cursor: pointer; }
 .expr-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; } .expr-name { min-width: 4.5em; font-weight: 600; } .expr-btns { display: flex; gap: 6px; margin-left: auto; }
 .chip { padding: 6px 13px; border-radius: var(--pill); border: 1.5px solid var(--line); background: var(--raised); color: var(--ink-2); font-size: 12.5px; }
 .chip:hover { border-color: #d5ccbf; }
+.pchip { display: inline-flex; align-items: center; gap: 6px; } .pthumb { width: 30px; height: 22px; object-fit: contain; border-radius: 4px; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 6px 6px; }
 .chip-pair { display: inline-flex; } .chip-pair .chip:first-child { border-radius: var(--pill) 0 0 var(--pill); } .chip-pair .chip:last-child { border-radius: 0 var(--pill) var(--pill) 0; border-left: 0; padding: 6px 9px; }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 
@@ -199,6 +200,7 @@ button { cursor: pointer; }
 .tpl-in p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
 .tpl-in img { width: 100%; height: auto; max-height: 62vh; object-fit: contain; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
 .tpl-in a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+.paste-in { width: min(640px, 100%); } .paste-in textarea { width: 100%; font: 500 11px var(--mono, monospace); resize: vertical; border-radius: 10px; border: 1px solid var(--line); padding: 8px; box-sizing: border-box; }
 .fp-stage { position: relative; width: min(100%, calc(62vh * 4 / 3)); aspect-ratio: 4 / 3; margin: 0 auto; overflow: hidden; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
 .fp-inner { position: absolute; inset: 0; transition: transform .2s ease; }
 .fp-inner canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -246,6 +248,7 @@ button { cursor: pointer; }
       <div class="menu" id="exportMenu" role="menu" hidden>
         <button type="button" role="menuitem" data-ex="json"><span data-i18n="exJson"></span><small data-i18n="exJsonSub"></small></button>
         <button type="button" role="menuitem" data-ex="import"><span data-i18n="exImport"></span><small data-i18n="exImportSub"></small></button>
+        <button type="button" role="menuitem" data-ex="paste"><span data-i18n="exPaste"></span><small data-i18n="exPasteSub"></small></button>
         <button type="button" role="menuitem" data-ex="link"><span data-i18n="exLink"></span><small data-i18n="exLinkSub"></small></button>
         <button type="button" role="menuitem" data-ex="png"><span data-i18n="exPng"></span><small data-i18n="exPngSub"></small></button>
         <button type="button" role="menuitem" data-ex="glb"><span data-i18n="exGlb"></span><small data-i18n="exGlbSub"></small></button>
@@ -285,6 +288,14 @@ button { cursor: pointer; }
     <img id="tplImg" alt="">
     <div class="chips"><a class="btn small" id="tplSave" download="hinagata-face-template.png" data-i18n="tplSave"></a></div>
     <small class="cost" data-i18n="tplLongPress"></small>
+  </div>
+</div>
+<div class="tpl" id="pasteModal" hidden role="dialog" aria-modal="true" aria-labelledby="pasteTitle">
+  <div class="tpl-in paste-in">
+    <div class="tpl-h"><b id="pasteTitle" data-i18n="pasteTitle"></b><button class="btn small ghost" id="pasteClose" type="button" data-i18n="close"></button></div>
+    <p data-i18n="pasteHelp"></p>
+    <textarea id="pasteText" class="json" rows="12" spellcheck="false"></textarea>
+    <div class="chips"><button class="btn small primary" id="pasteLoad" type="button" data-i18n="pasteLoad"></button></div>
   </div>
 </div>
 <div class="scrim" id="scrim" hidden></div>
