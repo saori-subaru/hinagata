@@ -440,7 +440,7 @@ Then (Saori: "足の指丸まってない？"): the toes sat under the foot's ro
 
 ### Body types: chibi and tall (2026-10-05, Saori; done)
 
-Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js; the toddler has no tall one (a contradiction). "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only). (2026-10-06: the tall standard became the default body, and body.html offers every type with its proportions: see "The tall body is the default".)
+Each body type (standard, toddler, girl, sturdy) comes as a chibi (as before, plus the base proportions and head 0.9, so choosing it undoes a tall one) and a tall one (`<type>Tall`: legs 1.65, torso 1.3, head 0.82, limbs 0.84×, belly 0.82× but not under 0.6, a little more waist), made from the chibi in src/body/types.js; the toddler has no tall one (a contradiction). "kid" is gone (it looked like the toddler). The editor shows them in two rows (ちび / 高頭身) and sets every value a type has (torso, limbs, proportions, head size); the test page (body.html) keeps the chibi ones (it sets the torso and limbs only). (2026-10-06: the tall standard became the default body, and body.html offers every type with its proportions: see "The tall body is the default". Later that day the tall ones became about 5 heads: legs 2, head 0.7, arms of their own: see "The tall body at about 5 heads".)
 
 ### Shoe kinds (2026-10-05, Saori: "ブーツとかハイヒールとか紐付きスニーカー"; done)
 
@@ -522,7 +522,7 @@ With the standard humanoid names (see "Motions written for any humanoid skeleton
 
 ## Scope: chibi only, but wide within it
 
-(Superseded 2026-10-06: the default body is the tall standard, about 4.5 heads, and the chibi types stay. See "The tall body is the default" at the end. What follows is the first plan, kept as it was.)
+(Superseded 2026-10-06: the default body is the tall standard, about 5 heads, and the chibi types stay. See "The tall body is the default" at the end. What follows is the first plan, kept as it was.)
 
 Low head-to-body ratio only (about 2 to 3 heads). Tall anime characters are well served by VRoid and game engines, and are heavy for browser games built with three.js — the target users here. Within chibi proportions, the goal is range: with effort the same system can make a cute anime girl or a knight in fantasy armor. What that takes:
 
@@ -704,7 +704,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### The tall body is the default; recipes have a version (2026-10-06, Saori)
 - Why (Saori): the default character was a chibi (about 3 heads) only because the chibi was the easier one to build first. When people ask an agent to make a game with Hinagata, the agent takes the chibi default, shrinks the game's world to its 1.35 m and the game comes out childish (the tennis retest: the court shrunk to the chibi). The tall body should be the default, and the chibi stays fully available. Her rule: the world's scale comes from what the game is, not from the default character; a chibi game may scale its world to its chibis.
-- The default body is `BODY_TYPES.standardTall` (legs 1.65, torso 1.3, head 0.82, the standard's torso with slimmer limbs and belly): `createAvatar()` without body options gives it, about 1.62 units tall (the chibi types 1.36). Nothing else in DEFAULTS changed. The neck's width still follows the head relative to 0.9 (`HEAD_SCALE0`, now a constant; read from DEFAULTS it would have thinned every neck). Every BODY_TYPES fragment sets all of torso, thickness, proportion and head.scale, so `BODY_TYPES.standard` (and girl, sturdy, toddler) gives the same chibi as before on the new default; checked for every type against the old engine.
+- The default body is `BODY_TYPES.standardTall` (legs 1.65, torso 1.3, head 0.82, the standard's torso with slimmer limbs and belly; the same evening: legs 2, head 0.7, see the next section): `createAvatar()` without body options gives it, about 1.62 units tall (the chibi types 1.36). Nothing else in DEFAULTS changed. The neck's width still follows the head relative to 0.9 (`HEAD_SCALE0`, now a constant; read from DEFAULTS it would have thinned every neck). Every BODY_TYPES fragment sets all of torso, thickness, proportion and head.scale, so `BODY_TYPES.standard` (and girl, sturdy, toddler) gives the same chibi as before on the new default; checked for every type against the old engine.
 - The old default body was not `BODY_TYPES.standard`: it had the toddler's torso and limbs (all 1, thighTop 0.9). That is what old recipes are read with.
 - Recipes are "only what differs from the defaults", so a new default would have turned every saved chibi tall. So recipes have a version (`RECIPE_VERSION` 2, options.js) and what each change of the defaults replaced is kept (`OLD_DEFAULTS[2]`: the chibi body). `openRecipe(input, { bare })` is the one door for every recipe coming in: a character file `{ "hinagata": n, "name", "options" }` says its version; bare options are `bare` (today's by default). A recipe of an older version gets the old values filled in under it, so it comes out in today's terms as the same character. `recipeAt(version, options)` writes one back at an older version; `characterFile(options, name)` makes today's file.
 - Which is which: version 1 = stored without a version, made against the chibi defaults: bare recipe files (the sync helper's character.json, agents' files written before), `{ "hinagata": 1 }` files (the editor's export until now), the editor's characters saved in a browser (the library's `v` was 1; on loading it is brought to 2 once, each recipe with the old body written in), `?o=` links made before (the editor and body.html). A bare options object passed in code is today's: code is written against the docs of its day, while files and links were saved under the old defaults. `createAvatar(url)` fetches a file, so a bare file there is version 1, the same file the sync helper and the editor read that way.
@@ -714,3 +714,36 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Examples: tennis/ and tennis-agent/ files are marked version 1 (they stay chibi games); tennis-dressed reads pasted links and files through openRecipe; minimal.html sizes its character to 1.7 m in a world in metres.
 - llms.txt starts with "scale and body": build the world in metres, size the character to it, the default (tall) unless the user asks for chibi / cute / kids, nothing childish unless asked; the character file with its version; the first code example picks the body and sizes it.
 - Games that pin Hinagata as a submodule are not affected until they update. The forest (genseirin) builds its recipe from `BODY_TYPES` (its own recipeOf: always a whole body type, then scaled to 0.86 m by its measured height), so it gets the same chibi; "kid", which its picker still offers, was already gone and falls back to standard. The saon site (devlog) no longer has the submodule: `/avatar/` passes through to hinagata.pages.dev, so it follows main (the editor's saved characters on that origin are brought to version 2 on the first visit).
+
+### The tall body at about 5 heads; recipe version 3 (2026-10-06, Saori)
+- Why (Saori, an animator, looking at the tall default): "普通に頭でかすぎてバランス悪い" — the head too big, the balance off. Then, on the
+  first tries: "今の高等身で頭の大きさだけ0.7くらいにしたらいいんじゃない？ あと足が短過ぎる気がする" — keep the tall body, the head about 0.7,
+  longer legs. The default stays tall; the chibi types stay as they were.
+- Measured (chin to crown without hair, against the height without hair, from the built head's distance function): chibi 2.97 heads (head
+  0.43 of 1.27), the first tall default 3.92 (0.39 of 1.53; it was called "about 4.5"), the new tall 4.77 (0.33 of 1.58; with the hair on
+  top, 1.68 high). The hip joint at 0.48 of the height (was 0.42).
+- The tall types (src/body/types.js `tall`): legs 1.65 → 2, head 0.82 → 0.7, torso 1.3 as it was, the same thickness. Tried legs 1.8 / 1.9 /
+  2.0 at head 0.7 side by side (4.58 / 4.67 / 4.77 heads); 2.0 looked balanced. The face, the hair and the drawn parts scale with the head as
+  one, so they keep their look (no oversized eyes, no helmet hair: the same face, smaller); expressions checked.
+- The arms: stretched with the torso (as the chibi's are), the hands of the longer body only reached the crotch, the hand stretched upright
+  by the torso. Lengthening the arms in the stretch's terms either put the hands below the hip joint, where the legs' stretch (×2) would pull
+  them long, or laid the rest arm flatter, and every pose (written on the A-pose) then held the arms out from the body. So arms can have a
+  length of their own: `body.proportion.arms` (×, null = stretched with the torso, as before and for the chibi): the arm is laid out at the
+  stretched arm's angle, that many times the base arm's length, and isn't stretched at all; it rides up with the shoulder (makeStretch's
+  rigid arms: a vertex moves by its skin weight on the arm bones, fwd for the rest; the bones by `ST.bone`; the paint, the culling under the
+  clothes and the jaw shade read the points where they were made, `basePos`; the body read in place for colliders looks for the arm where it
+  went). Tall: 1.45, the fingertips on the upper thigh in the idle pose. `body.proportion.hands` (×, around the wrist; tall 1.1: unstretched,
+  the chibi's hands looked small), `body.proportion.shoulders` (×: the shoulder joint out, the shoulder's flesh, the slope from the neck,
+  the chest and the armpit's cut with it; sturdyTall 1.1, the others 1). The hand keeps its angle to a steeper forearm (handFrame), held
+  things and weapons follow it; the meshing boxes around the arms grow by `armReach`. Ported from the stopped 7-head attempt (hinagata-wt-real),
+  without its grown-up face changes (a chibi face at 7 heads looked like a monster; at 5 heads the face needs nothing).
+- Ranges: legs up to 2.4 (was 2), torso up to 1.7 (was 1.6); arms 0.8–2, hands 0.7–1.5, shoulders 0.85–1.5.
+- Versions: recipes are only what differs from the defaults, so the version went up to 3 (`RECIPE_VERSION`), and `OLD_DEFAULTS[3]` keeps
+  what changed (legs 1.65, head 0.82, arms null, hands 1, shoulders 1). A version 2 file, link or the editor's library (`v: 2`) is read with
+  the first tall body, exactly (checked: the same 3.92 heads); version 1 and bare files with the chibi (2.97, arms null). The editor's export,
+  its links and new sync files write version 3; the sync keeps a file's own version and `get_recipe` says which body an older one means.
+  Bare options in code are today's (the 5-head body).
+- The editor's face view looks at the face wherever the head is and comes nearer as the head is smaller (it framed the chibi's head).
+- Checked on the new tall (editor, a comparison page): walk (stride 1.35 against the chibi's 0.70), run, sitting on the chair, jump,
+  pulling up onto a ledge, climbing a wall, hanging from an edge, gliding under the leaf, crawling, swimming; avatar.joints, copyMotion,
+  hold; a skirt with long sleeves, a dress, a cape with a sword and shield, full armor with a spear, long hair running. No console errors.
