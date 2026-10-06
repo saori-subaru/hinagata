@@ -119,17 +119,29 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     if (tab === "face") {
       const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
-      const drawnX = drawnList().map((d) => { const id = `image@${d.id}`; return { ja: drawnName(d), en: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" } }; });   // the character's drawn expressions
       const wear = (parts) => { const ch = {}; for (const [kk, v] of Object.entries(parts)) ch[`face.parts.${kk}`] = v; set(ch); };
-      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Make the face above, then "use this face"
+      // the faces to pick from, in two groups: the stock ones (every character) and this character's drawn ones (face.drawn). Both pickers are
+      // drop-downs (2026-10-06, Saori: a row of buttons grows down the panel as drawn expressions are added)
+      const ITEMS = [...Object.entries(EXPRESSIONS).map(([id, x]) => ({ key: `s:${id}`, label: L(x), parts: x.parts, own: false })),
+        ...drawnList().map((d) => { const id = `image@${d.id}`; return { key: `d:${d.id}`, label: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" }, own: true }; })];
+      const groups = (sel) => [[t("exStock"), ITEMS.filter((x) => !x.own)], [t("exDrawnGroup"), ITEMS.filter((x) => x.own)]].filter(([, l]) => l.length)
+        .map(([g, l]) => h("optgroup", { label: g }, l.map((x) => h("option", { value: x.key, selected: x.key === sel }, x.label))));
+      const item = (k) => ITEMS.find((x) => x.key === k), match = (parts) => ITEMS.find((x) => Object.entries(x.parts).every(([k, v]) => parts[k] === v)) ?? null;
+      // try on: the face now is the first that matches, else a mix of parts
+      const curK = match(r.face.parts)?.key ?? "";
+      const tryOn = h("select", { class: "sel", style: "width: 100%; max-width: none", "aria-label": t("expression"), onchange: (ev) => { const x = item(ev.target.value); if (x) wear(x.parts); } },
+        curK ? null : h("option", { value: "", selected: true }, t("exMix")), groups(curK));
+      // this character's own expression set (face.expressions): what a game's setFace("happy") shows. Each row picks its face: the stock one
+      // (no entry), the face now (made above from parts), or any of the list
       const ES = r.face.expressions ?? {}, now = () => ({ eyes: r.face.parts.eyes, brows: r.face.parts.brows, mouth: r.face.parts.mouth, cheeks: r.face.parts.cheeks });
-      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts);
-        return h("div", { class: "expr-row" }, h("span", { class: "expr-name" }, t(`ex_${n}`)), h("span", { class: "cost" }, t(own ? "exOwn" : "exStock")),
-          h("span", { class: "expr-btns" }, h("button", { class: "chip", type: "button", onclick: () => set({ "face.expressions": { ...ES, [n]: now() } }) }, t("exUse")),
-            shown ? h("button", { class: "chip", type: "button", "aria-pressed": String(on({ parts: shown })), onclick: () => wear(shown) }, t("exShow")) : null,
-            own ? h("button", { class: "chip", type: "button", onclick: () => { const o = { ...ES }; delete o[n]; set({ "face.expressions": o }); } }, t("exReset")) : null)); };
-      const both = document.createDocumentFragment(); both.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))),
-        h("div", { class: "chips" }, [...Object.values(EXPRESSIONS), ...drawnX].map((x) => h("button", { class: "chip", type: "button", "aria-pressed": String(on(x)), onclick: () => wear(x.parts) }, L(x))))),
+      const put = (n, v) => { const o = { ...ES }; if (v) o[n] = v; else delete o[n]; set({ "face.expressions": o }); };
+      const row = (n) => { const own = ES[n], shown = own ?? (n === "normal" ? null : EXPRESSIONS[n]?.parts), ownK = own ? match(own)?.key ?? "own" : "stock";
+        const pick = h("select", { class: "sel", "aria-label": t(`ex_${n}`), onchange: (ev) => { const v = ev.target.value; if (v === "stock") put(n, null); else if (v === "now") put(n, now()); else if (item(v)) put(n, { ...item(v).parts }); } },
+          h("option", { value: "stock", selected: ownK === "stock" }, t(n === "normal" ? "exKeepNormal" : "exKeepStock")), h("option", { value: "now" }, t("exUseNow")),
+          ownK === "own" ? h("option", { value: "own", selected: true }, t("exOwnFace")) : null, groups(ownK));
+        return h("div", { class: "expr-row" }, h("span", { class: "expr-name" }, t(`ex_${n}`)), h("span", { class: "expr-btns" }, pick,
+          shown ? h("button", { class: "chip", type: "button", "aria-pressed": String(on({ parts: shown })), onclick: () => wear(shown) }, t("exShow")) : null)); };
+      const both = document.createDocumentFragment(); both.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("expression"))), tryOn),
         h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), h("div", { class: "help" }, t("exprSetHelp")), EXPRESSION_SET.map(row))); return both;
     }
     if (tab === "outfit") {   // the whole garment at once: a robe is a dress down to the ankles with bell sleeves

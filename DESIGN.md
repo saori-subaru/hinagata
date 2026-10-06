@@ -722,3 +722,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### Paste code to open (2026-10-06, Saori: "コードを読み込める機能も欲しい。そしたらコピーしとくだけでバックアップできる")
 - The export menu's コードを貼りつけて開く: a box to paste what コードをコピー copied, a share link (?o=…) or a recipe's JSON; it is added to the characters (the open one stays). The copied code's first line now says the character's name and the recipe's version (`// Hinagata character "…" (recipe version 2)`), so pasted back it comes back as it was made even after the defaults change again. Code without that line is read as today's (bare options in code are, openRecipe); a link and bare JSON as files are (a bare one is version 1). The recipe is the object literal after `createAvatar(`, to its closing brace.
+
+### The expressions as drop-downs (2026-10-06, Saori: "表情が横並びだけどどんどん増えたら選びづらい"; "試着もプルダウンにしないと")
+- Face tab: 表情 (try a face on) was a row of buttons, the stock ones then the character's drawn ones, growing down the panel with each drawing. Now one drop-down, grouped 共通 / このキャラの絵; it shows the face now, or "いまの顔(パーツの組み合わせ)" when the parts match none.
+- 表情セット: each row (ふつう 喜び 悲しみ 怒り 驚き) picks its face in a drop-down: 共通のまま (no entry), いまの顔を登録 (the parts set below), or any stock or drawn face; a face of its own that matches none shows as このキャラ用の顔. 見る puts it on. (Before: make the face above, then "今の顔を登録" on the row.)
