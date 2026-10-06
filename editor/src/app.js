@@ -48,6 +48,8 @@ function persist() {
 // ── 3D view and building ──
 const vp = createViewport($("gl"), $("stage"));
 let building = false, again = false;
+let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
+const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
 async function rebuild() {
   if (building) { again = true; return; }
   building = true; if (vp.avatar) $("busy").hidden = false;
@@ -55,7 +57,7 @@ async function rebuild() {
     do {
       again = false;
       const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality, spare: true });
-      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
+      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
@@ -132,6 +134,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
   onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
+  showFace: (p) => { shownFace = p; const av = vp.avatar; if (!av) return; vp.lift(); av.setFace(p ?? faceParts()); vp.apply(); },   // the expression the face tab edits, on the avatar (null: its own face)
   bangs, draw, hairs, backs, ties, paint, acc,
 });
 let syncShown = null;   // the sync's state on screen (redrawn in another language)
