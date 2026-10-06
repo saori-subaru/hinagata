@@ -380,8 +380,11 @@ export function makeStretch(OPT, J) {
   const PR = OPT.body.proportion ?? {}, sL = PR.legs ?? 1, sT = PR.torso ?? 1;
   if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1, rigid: false, armDy: 0, up: id, upSlope: () => 1, down: id, bone: (b, y) => y }; }
   const ya = 0.12, yh = J["upperLeg.L"][1], yn = J.neck[1], w = 0.03, Y0 = -0.2, D = 0.0005, N = Math.ceil((2.6 - Y0) / D);
+  // 脚が伸びるのは股（骨盤の底）から下だけ。股関節までを伸ばしていたので、骨盤の底も一緒に伸びて股が垂れ、股上が長く見えた
+  // （2026-10-06 サオリ「足の長さ伸ばすと股上ものびる」）。骨盤の底 = pelvis の楕円の下端 ≈ 股関節の 0.08 下
+  const yc = yh - 0.08;
   const box = (y, a, b) => sstep(a - w, a + w, y) * (1 - sstep(b - w, b + w, y));
-  const slope = (y) => 1 + (sL - 1) * box(y, ya, yh) + (sT - 1) * box(y, yh, yn);
+  const slope = (y) => 1 + (sL - 1) * box(y, ya, yc) + (sT - 1) * box(y, yh, yn);
   const F = new Float64Array(N + 1); for (let i = 1; i <= N; i++) F[i] = F[i - 1] + D * slope(Y0 + (i - 0.5) * D);   // fwd(Y0 + i D) - Y0
   const fwd = (y) => { const t = (y - Y0) / D; if (t <= 0) return y; if (t >= N) return Y0 + F[N] + (y - Y0 - N * D); const i = Math.floor(t); return Y0 + F[i] + (F[i + 1] - F[i]) * (t - i); };
   const inv = (y) => { const v = y - Y0; if (v <= 0) return y; if (v >= F[N]) return Y0 + N * D + (v - F[N]);
