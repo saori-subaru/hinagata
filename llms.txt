@@ -124,7 +124,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 - Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; chibi `standard`, `girl`, `sturdy`,
   `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, shoulders.
 - Ready-made characters: `import { CHARACTERS }` → `createAvatar(CHARACTERS.sylvie.file)` (シルヴィ, an elf girl) or `CHARACTERS.astel.file`
-  (アステル, a hero girl with sword, shield and cape). Each is a character file (version 3); copy its `options` into your own file to start from it.
+  (アステル, a hero boy with sword, shield and cape). Each is a character file (version 3); copy its `options` into your own file to start from it.
   In the editor: the character list → 「プリセットから作る」.
 - Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
   by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,

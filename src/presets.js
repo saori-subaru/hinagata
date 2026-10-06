@@ -73,21 +73,19 @@ export const CHARACTERS = {
   },
   astel: {
     name: { ja: "アステル", en: "Astel" },
-    about: { ja: "勇者っぽい女の子", en: "A hero girl" },
+    about: { ja: "勇者っぽい男の子", en: "A hero boy" },
+    // 2026-10-06 Saori remade him as a boy (both presets were girls): the tall default body (legs 1.76, torso 1.13, arms 1.17)
     file: { hinagata: 3, name: "アステル", options: {
-      colors: { skin: "#fee5d2", hair: "#9e7a57" },
+      colors: { skin: "#fee5d2", hair: "#906b47" },
       body: {
-        proportion: { legs: 2, torso: 1.3, arms: 1.45 },   // made when the tall default was legs 2, torso 1.3, arms 1.45
-        head: { scale: 0.7, width: 0.94 },
-        torso: { chest: 0.92, belly: 0.6, waist: 0.04, hips: 0.75, bust: 0.77, butt: 0.96, back: 0.56 },
-        thickness: { upperArm: 0.6, forearm: 0.6, thigh: 0.6, thighTop: 0.5 },
+        head: { width: 0.94 },
         sculpt: { neck: { width: 0.8 } },
       },
       outfit: {
-        shirt: { color: "#f0f8ff", gradient: { color: "#febebe" } },
+        shirt: { color: "#83a8d8", gradient: { color: "#febebe" }, sleeve: "long" },
         cape: { on: true },
-        dress: { gradient: { on: true, color: "#c8f9f8", start: 0.66, soft: 0.35 }, on: true },
-        pants: { on: false },
+        dress: { gradient: { on: true, color: "#c8f9f8", start: 0.66, soft: 0.35 } },
+        pants: { length: "knee" },
         armor: { on: true },
         weapon: { right: "sword", left: "shield" },
         shoes: { kind: "boots", bootHeight: 0.135 },
@@ -95,9 +93,13 @@ export const CHARACTERS = {
       },
       hair: {
         gradient: { on: true, color: "#eec9a0" },
-        tail: { kind: "side", y: 1.22, lift: 0.08, size: 0.5, tie: { on: false } },
-        back: "long",
-        sculpt: { long: { count: 16, bottom: 0.725 } },
+        tail: { kind: "pony", y: 0.95, length: 0.62, lift: 0.1, size: 0.5, wave: 0.016, tie: { on: false } },
+        ahoge: false,
+        sculpt: {
+          nendo: { puff: 0.011 },
+          shortLocks: { below: 0.12, flick: -0.026 },
+          long: { count: 16, bottom: 0.725 },
+        },
       },
       face: { parts: { eyes: "image", brows: "image", mouth: "image" } },
     } },
