@@ -384,7 +384,11 @@ export function makeStretch(OPT, J) {
   // （2026-10-06 サオリ「足の長さ伸ばすと股上ものびる」）。骨盤の底 = pelvis の楕円の下端 ≈ 股関節の 0.08 下
   const yc = yh - 0.08;
   const box = (y, a, b) => sstep(a - w, a + w, y) * (1 - sstep(b - w, b + w, y));
-  const slope = (y) => 1 + (sL - 1) * box(y, ya, yc) + (sT - 1) * box(y, yh, yn);
+  // 胴の伸びは おなか・腰が受け持ち、胸はあまり伸ばさない(2026-10-06 サオリ「高等身にしたとき胸が引き延ばされてたてにのびる」。body-fixes 3a352c6 から):
+  // 首と股関節の高さは前と同じ。胸(胸の関節の 4 cm 下から首まで)は胴の伸びの CHEST 割(body.proportion.chest、既定 0.3)、残りを おなか・腰が
+  const yw = Math.min(yn - 0.06, J.chest[1] - 0.04), CHEST = PR.chest ?? 0.3;
+  const sc = 1 + (sT - 1) * CHEST, sw = 1 + ((sT - 1) * (yn - yh) - (sc - 1) * (yn - yw)) / (yw - yh);
+  const slope = (y) => 1 + (sL - 1) * box(y, ya, yc) + (sw - 1) * box(y, yh, yw) + (sc - 1) * box(y, yw, yn);
   const F = new Float64Array(N + 1); for (let i = 1; i <= N; i++) F[i] = F[i - 1] + D * slope(Y0 + (i - 0.5) * D);   // fwd(Y0 + i D) - Y0
   const fwd = (y) => { const t = (y - Y0) / D; if (t <= 0) return y; if (t >= N) return Y0 + F[N] + (y - Y0 - N * D); const i = Math.floor(t); return Y0 + F[i] + (F[i + 1] - F[i]) * (t - i); };
   const inv = (y) => { const v = y - Y0; if (v <= 0) return y; if (v >= F[N]) return Y0 + N * D + (v - F[N]);
@@ -393,6 +397,6 @@ export function makeStretch(OPT, J) {
   const up = (y, a) => !rigid || !a ? fwd(y) : (1 - a) * fwd(y) + a * (y + armDy), upSlope = (y, a) => !rigid || !a ? slope(y) : (1 - a) * slope(y) + a;
   const down = (Y, a) => { if (!rigid || !a) return inv(Y); if (a >= 1) return Y - armDy;
     let lo = Math.min(inv(Y), Y - armDy), hi = Math.max(inv(Y), Y - armDy); for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (up(m, a) < Y) lo = m; else hi = m; } return (lo + hi) / 2; };
-  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sT), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya),
+  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sc, sw), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya),
     rigid, armDy, up, upSlope, down, bone: (b, y) => rigid && isArmBone(b) ? y + armDy : fwd(y) };   // bone: where a joint at base height y goes
 }

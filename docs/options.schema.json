@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 228,
+   "order": 229,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -322,6 +322,31 @@
     "en": "lengthens the torso, keeping its width (×). Unless the arm length is set, the arms get a little longer too"
    }
   },
+  "body.proportion.chest": {
+   "path": "body.proportion.chest",
+   "type": "number",
+   "default": 0.3,
+   "label": {
+    "ja": "胸の伸び",
+    "en": "Chest stretch"
+   },
+   "group": "body",
+   "tier": "main",
+   "cost": "body",
+   "apply": null,
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "order": 18,
+   "section": {
+    "ja": "頭身",
+    "en": "Proportions"
+   },
+   "help": {
+    "ja": "胴を伸ばすとき胸が受け持つ割合。0 = 胸はそのまま(おなか・腰が伸びる)、1 = 胴の中で同じだけ伸びる(胸が縦長になる)",
+    "en": "the chest's share when the torso lengthens. 0 = the chest keeps its shape (the waist and belly lengthen), 1 = the whole torso evenly (the chest goes long)"
+   }
+  },
   "body.proportion.arms": {
    "path": "body.proportion.arms",
    "type": "number",
@@ -337,7 +362,7 @@
    "min": 0.8,
    "max": 2,
    "step": 0.01,
-   "order": 18,
+   "order": 19,
    "nullable": true,
    "section": {
     "ja": "頭身",
@@ -363,7 +388,7 @@
    "min": 0.7,
    "max": 1.5,
    "step": 0.01,
-   "order": 19,
+   "order": 20,
    "section": {
     "ja": "頭身",
     "en": "Proportions"
@@ -388,7 +413,7 @@
    "min": 0.85,
    "max": 1.5,
    "step": 0.01,
-   "order": 20,
+   "order": 21,
    "section": {
     "ja": "頭身",
     "en": "Proportions"
@@ -413,7 +438,7 @@
    "min": 0.6,
    "max": 1.05,
    "step": 0.01,
-   "order": 21,
+   "order": 22,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -438,7 +463,7 @@
    "min": 0.85,
    "max": 1.15,
    "step": 0.01,
-   "order": 22,
+   "order": 23,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -459,7 +484,7 @@
    "min": 0.85,
    "max": 1.15,
    "step": 0.01,
-   "order": 23,
+   "order": 24,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -575,7 +600,7 @@
    "min": 0.8,
    "max": 1.4,
    "step": 0.01,
-   "order": 35,
+   "order": 36,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -596,7 +621,7 @@
    "min": 0.6,
    "max": 1.15,
    "step": 0.01,
-   "order": 37,
+   "order": 38,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -617,7 +642,7 @@
    "min": 0,
    "max": 0.04,
    "step": 0.001,
-   "order": 38,
+   "order": 39,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -638,7 +663,7 @@
    "min": 0.75,
    "max": 1.2,
    "step": 0.01,
-   "order": 39,
+   "order": 40,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -659,7 +684,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 36,
+   "order": 37,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -680,7 +705,7 @@
    "min": 0.4,
    "max": 1.2,
    "step": 0.01,
-   "order": 40,
+   "order": 41,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -701,7 +726,7 @@
    "min": 0.3,
    "max": 1.2,
    "step": 0.01,
-   "order": 41,
+   "order": 42,
    "section": {
     "ja": "胴",
     "en": "Torso"
@@ -722,7 +747,7 @@
    "min": 0.6,
    "max": 1.15,
    "step": 0.01,
-   "order": 42,
+   "order": 43,
    "section": {
     "ja": "手足の太さ",
     "en": "Limbs"
@@ -743,7 +768,7 @@
    "min": 0.6,
    "max": 1.15,
    "step": 0.01,
-   "order": 43,
+   "order": 44,
    "section": {
     "ja": "手足の太さ",
     "en": "Limbs"
@@ -764,7 +789,7 @@
    "min": 0.6,
    "max": 1.15,
    "step": 0.01,
-   "order": 44,
+   "order": 45,
    "section": {
     "ja": "手足の太さ",
     "en": "Limbs"
@@ -785,7 +810,7 @@
    "min": 0.5,
    "max": 1.15,
    "step": 0.01,
-   "order": 45,
+   "order": 46,
    "nullable": true,
    "section": {
     "ja": "手足の太さ",
@@ -811,7 +836,7 @@
    "min": 0.6,
    "max": 1.15,
    "step": 0.01,
-   "order": 46,
+   "order": 47,
    "section": {
     "ja": "手足の太さ",
     "en": "Limbs"
@@ -965,7 +990,7 @@
    "min": 0.6,
    "max": 1.2,
    "step": 0.01,
-   "order": 24,
+   "order": 25,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -986,7 +1011,7 @@
    "min": -0.02,
    "max": 0.06,
    "step": 0.002,
-   "order": 25,
+   "order": 26,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -1011,7 +1036,7 @@
    "min": 0,
    "max": 1.5,
    "step": 0.05,
-   "order": 26,
+   "order": 27,
    "section": {
     "ja": "頭",
     "en": "Head"
@@ -1355,7 +1380,7 @@
    "min": 0.9,
    "max": 0.99,
    "step": 0.002,
-   "order": 30,
+   "order": 31,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -1380,7 +1405,7 @@
    "min": 0.07,
    "max": 0.14,
    "step": 0.002,
-   "order": 31,
+   "order": 32,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -1443,7 +1468,7 @@
    "min": 0.005,
    "max": 0.04,
    "step": 0.001,
-   "order": 32,
+   "order": 33,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -1468,7 +1493,7 @@
    "min": 0,
    "max": 0.5,
    "step": 0.01,
-   "order": 33,
+   "order": 34,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -2074,7 +2099,7 @@
    "tier": "main",
    "cost": "body",
    "apply": null,
-   "order": 34,
+   "order": 35,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -2855,7 +2880,7 @@
    "min": 0,
    "max": 0.015,
    "step": 0.001,
-   "order": 27,
+   "order": 28,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -2937,7 +2962,7 @@
    "min": 0,
    "max": 0.02,
    "step": 0.001,
-   "order": 29,
+   "order": 30,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -3038,7 +3063,7 @@
    "min": 0,
    "max": 0.02,
    "step": 0.001,
-   "order": 28,
+   "order": 29,
    "section": {
     "ja": "輪郭",
     "en": "Face shape"
@@ -5316,7 +5341,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 127,
+   "order": 128,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5334,7 +5359,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 128,
+   "order": 129,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5352,7 +5377,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setTexture",
-   "order": 137,
+   "order": 138,
    "nullable": true,
    "section": {
     "ja": "シャツ",
@@ -5398,7 +5423,7 @@
      }
     }
    ],
-   "order": 138,
+   "order": 139,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5422,7 +5447,7 @@
    "min": 0.01,
    "max": 0.6,
    "step": 0.005,
-   "order": 139,
+   "order": 140,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5450,7 +5475,7 @@
    "min": -180,
    "max": 180,
    "step": 1,
-   "order": 140,
+   "order": 141,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5474,7 +5499,7 @@
    "min": -0.3,
    "max": 0.3,
    "step": 0.002,
-   "order": 141,
+   "order": 142,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5498,7 +5523,7 @@
    "min": 0,
    "max": 1.6,
    "step": 0.002,
-   "order": 142,
+   "order": 143,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5522,7 +5547,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 143,
+   "order": 144,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5559,7 +5584,7 @@
      }
     }
    ],
-   "order": 144,
+   "order": 145,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5580,7 +5605,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 133,
+   "order": 134,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5598,7 +5623,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 134,
+   "order": 135,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5622,7 +5647,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 135,
+   "order": 136,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5650,7 +5675,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 136,
+   "order": 137,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5701,7 +5726,7 @@
      }
     }
    ],
-   "order": 129,
+   "order": 130,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5722,7 +5747,7 @@
    "min": 0.02,
    "max": 0.12,
    "step": 0.005,
-   "order": 130,
+   "order": 131,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5770,7 +5795,7 @@
      }
     }
    ],
-   "order": 131,
+   "order": 132,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -5804,7 +5829,7 @@
      }
     }
    ],
-   "order": 132,
+   "order": 133,
    "section": {
     "ja": "シャツ",
     "en": "Shirt"
@@ -6012,7 +6037,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setTexture",
-   "order": 156,
+   "order": 157,
    "nullable": true,
    "section": {
     "ja": "マント",
@@ -6061,7 +6086,7 @@
      }
     }
    ],
-   "order": 157,
+   "order": 158,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6085,7 +6110,7 @@
    "min": 0.01,
    "max": 0.6,
    "step": 0.005,
-   "order": 158,
+   "order": 159,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6113,7 +6138,7 @@
    "min": -180,
    "max": 180,
    "step": 1,
-   "order": 159,
+   "order": 160,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6137,7 +6162,7 @@
    "min": -0.3,
    "max": 0.3,
    "step": 0.002,
-   "order": 160,
+   "order": 161,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6161,7 +6186,7 @@
    "min": 0,
    "max": 1.6,
    "step": 0.002,
-   "order": 161,
+   "order": 162,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6185,7 +6210,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 162,
+   "order": 163,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6222,7 +6247,7 @@
      }
     }
    ],
-   "order": 163,
+   "order": 164,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6243,7 +6268,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 152,
+   "order": 153,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6264,7 +6289,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 153,
+   "order": 154,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6288,7 +6313,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 154,
+   "order": 155,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6316,7 +6341,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 155,
+   "order": 156,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6337,7 +6362,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 145,
+   "order": 146,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6359,7 +6384,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 146,
+   "order": 147,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6383,7 +6408,7 @@
    "min": 0.02,
    "max": 0.5,
    "step": 0.005,
-   "order": 147,
+   "order": 148,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6407,7 +6432,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 148,
+   "order": 149,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6431,7 +6456,7 @@
    "min": -0.04,
    "max": 0.1,
    "step": 0.005,
-   "order": 149,
+   "order": 150,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6497,7 +6522,7 @@
    "min": 0,
    "max": 1,
    "step": 0.05,
-   "order": 151,
+   "order": 152,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6525,7 +6550,7 @@
    "min": 0,
    "max": 1.5,
    "step": 0.05,
-   "order": 150,
+   "order": 151,
    "section": {
     "ja": "マント",
     "en": "Cape"
@@ -6550,7 +6575,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setTexture",
-   "order": 173,
+   "order": 174,
    "nullable": true,
    "section": {
     "ja": "ワンピース",
@@ -6599,7 +6624,7 @@
      }
     }
    ],
-   "order": 174,
+   "order": 175,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6623,7 +6648,7 @@
    "min": 0.01,
    "max": 0.6,
    "step": 0.005,
-   "order": 175,
+   "order": 176,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6651,7 +6676,7 @@
    "min": -180,
    "max": 180,
    "step": 1,
-   "order": 176,
+   "order": 177,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6675,7 +6700,7 @@
    "min": -0.3,
    "max": 0.3,
    "step": 0.002,
-   "order": 177,
+   "order": 178,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6699,7 +6724,7 @@
    "min": 0,
    "max": 1.6,
    "step": 0.002,
-   "order": 178,
+   "order": 179,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6723,7 +6748,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 179,
+   "order": 180,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6760,7 +6785,7 @@
      }
     }
    ],
-   "order": 180,
+   "order": 181,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6781,7 +6806,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 169,
+   "order": 170,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6802,7 +6827,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 170,
+   "order": 171,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6826,7 +6851,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 171,
+   "order": 172,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6854,7 +6879,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 172,
+   "order": 173,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6875,7 +6900,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 164,
+   "order": 165,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6897,7 +6922,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 165,
+   "order": 166,
    "nullable": true,
    "section": {
     "ja": "ワンピース",
@@ -6964,7 +6989,7 @@
    "min": 0.03,
    "max": 0.4,
    "step": 0.005,
-   "order": 166,
+   "order": 167,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -6988,7 +7013,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 167,
+   "order": 168,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -7012,7 +7037,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 168,
+   "order": 169,
    "section": {
     "ja": "ワンピース",
     "en": "Dress"
@@ -7071,7 +7096,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setTexture",
-   "order": 194,
+   "order": 195,
    "nullable": true,
    "section": {
     "ja": "ズボン",
@@ -7117,7 +7142,7 @@
      }
     }
    ],
-   "order": 195,
+   "order": 196,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7141,7 +7166,7 @@
    "min": 0.01,
    "max": 0.6,
    "step": 0.005,
-   "order": 196,
+   "order": 197,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7169,7 +7194,7 @@
    "min": -180,
    "max": 180,
    "step": 1,
-   "order": 197,
+   "order": 198,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7193,7 +7218,7 @@
    "min": -0.3,
    "max": 0.3,
    "step": 0.002,
-   "order": 198,
+   "order": 199,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7217,7 +7242,7 @@
    "min": 0,
    "max": 1.6,
    "step": 0.002,
-   "order": 199,
+   "order": 200,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7241,7 +7266,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 200,
+   "order": 201,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7278,7 +7303,7 @@
      }
     }
    ],
-   "order": 201,
+   "order": 202,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7299,7 +7324,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 190,
+   "order": 191,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7317,7 +7342,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 191,
+   "order": 192,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7341,7 +7366,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 192,
+   "order": 193,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7369,7 +7394,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 193,
+   "order": 194,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7390,7 +7415,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 181,
+   "order": 182,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7408,7 +7433,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 182,
+   "order": 183,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7442,7 +7467,7 @@
      }
     }
    ],
-   "order": 183,
+   "order": 184,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7483,7 +7508,7 @@
      }
     }
    ],
-   "order": 184,
+   "order": 185,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7507,7 +7532,7 @@
    "min": 0.2,
    "max": 0.4,
    "step": 0.005,
-   "order": 187,
+   "order": 188,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7535,7 +7560,7 @@
    "min": 0,
    "max": 0.8,
    "step": 0.01,
-   "order": 188,
+   "order": 189,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7563,7 +7588,7 @@
    "min": 0,
    "max": 32,
    "step": 1,
-   "order": 189,
+   "order": 190,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7648,7 +7673,7 @@
    "min": 0.22,
    "max": 0.4,
    "step": 0.005,
-   "order": 185,
+   "order": 186,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7715,7 +7740,7 @@
    "min": 0,
    "max": 0.4,
    "step": 0.01,
-   "order": 186,
+   "order": 187,
    "section": {
     "ja": "ズボン",
     "en": "Pants"
@@ -7737,7 +7762,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 202,
+   "order": 203,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7771,7 +7796,7 @@
      }
     }
    ],
-   "order": 203,
+   "order": 204,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7789,7 +7814,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 204,
+   "order": 205,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7807,7 +7832,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 208,
+   "order": 209,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7829,7 +7854,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 209,
+   "order": 210,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7891,7 +7916,7 @@
      }
     }
    ],
-   "order": 205,
+   "order": 206,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7943,7 +7968,7 @@
      }
     }
    ],
-   "order": 206,
+   "order": 207,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -7965,7 +7990,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 207,
+   "order": 208,
    "nullable": true,
    "section": {
     "ja": "鎧",
@@ -7991,7 +8016,7 @@
    "min": 0.01,
    "max": 0.05,
    "step": 0.001,
-   "order": 210,
+   "order": 211,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -8012,7 +8037,7 @@
    "min": 0.004,
    "max": 0.02,
    "step": 0.001,
-   "order": 211,
+   "order": 212,
    "section": {
     "ja": "鎧",
     "en": "Armor"
@@ -8074,7 +8099,7 @@
      }
     }
    ],
-   "order": 212,
+   "order": 213,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8126,7 +8151,7 @@
      }
     }
    ],
-   "order": 213,
+   "order": 214,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8160,7 +8185,7 @@
      }
     }
    ],
-   "order": 214,
+   "order": 215,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8182,7 +8207,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 215,
+   "order": 216,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8200,7 +8225,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 216,
+   "order": 217,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8218,7 +8243,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 217,
+   "order": 218,
    "section": {
     "ja": "武器",
     "en": "Weapons"
@@ -8266,7 +8291,7 @@
      }
     }
    ],
-   "order": 222,
+   "order": 223,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8284,7 +8309,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 224,
+   "order": 225,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8308,7 +8333,7 @@
    "min": 0.12,
    "max": 0.3,
    "step": 0.005,
-   "order": 225,
+   "order": 226,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8336,7 +8361,7 @@
    "min": 8,
    "max": 40,
    "step": 1,
-   "order": 226,
+   "order": 227,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8361,7 +8386,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 221,
+   "order": 222,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8379,7 +8404,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 223,
+   "order": 224,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8397,7 +8422,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 227,
+   "order": 228,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -8510,7 +8535,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 218,
+   "order": 219,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -8528,7 +8553,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 219,
+   "order": 220,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -8549,7 +8574,7 @@
    "min": 0.06,
    "max": 0.3,
    "step": 0.005,
-   "order": 220,
+   "order": 221,
    "section": {
     "ja": "靴下",
     "en": "Socks"
@@ -8567,7 +8592,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 121,
+   "order": 122,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -8588,7 +8613,7 @@
    "min": 10,
    "max": 60,
    "step": 1,
-   "order": 122,
+   "order": 123,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -8631,7 +8656,7 @@
    "min": 0,
    "max": 0.6,
    "step": 0.01,
-   "order": 123,
+   "order": 124,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -8690,7 +8715,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 124,
+   "order": 125,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -8708,7 +8733,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 125,
+   "order": 126,
    "nullable": true,
    "section": {
     "ja": "塗り",
@@ -8737,7 +8762,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 126,
+   "order": 127,
    "section": {
     "ja": "塗り",
     "en": "Paint"
@@ -8871,7 +8896,7 @@
      }
     }
    ],
-   "order": 79,
+   "order": 80,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -8904,7 +8929,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 93,
+   "order": 94,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -8922,7 +8947,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 94,
+   "order": 95,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -8946,7 +8971,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 95,
+   "order": 96,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -8974,7 +8999,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 98,
+   "order": 99,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -8995,7 +9020,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 96,
+   "order": 97,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -9016,7 +9041,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setGradient",
-   "order": 97,
+   "order": 98,
    "section": {
     "ja": "グラデーション",
     "en": "Gradient"
@@ -9072,7 +9097,7 @@
      }
     }
    ],
-   "order": 82,
+   "order": 83,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9106,7 +9131,7 @@
      }
     }
    ],
-   "order": 83,
+   "order": 84,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9130,7 +9155,7 @@
    "min": 60,
    "max": 180,
    "step": 1,
-   "order": 90,
+   "order": 91,
    "nullable": true,
    "section": {
     "ja": "結び髪",
@@ -9156,7 +9181,7 @@
    "min": 0.95,
    "max": 1.22,
    "step": 0.005,
-   "order": 89,
+   "order": 90,
    "nullable": true,
    "section": {
     "ja": "結び髪",
@@ -9182,7 +9207,7 @@
    "min": 0.1,
    "max": 0.9,
    "step": 0.01,
-   "order": 84,
+   "order": 85,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9279,7 +9304,7 @@
    "min": 0,
    "max": 0.12,
    "step": 0.005,
-   "order": 86,
+   "order": 87,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9342,7 +9367,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 85,
+   "order": 86,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9367,7 +9392,7 @@
    "min": 0,
    "max": 0.06,
    "step": 0.002,
-   "order": 87,
+   "order": 88,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9392,7 +9417,7 @@
    "min": 0.5,
    "max": 4,
    "step": 0.1,
-   "order": 88,
+   "order": 89,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9414,7 +9439,7 @@
    "tier": "main",
    "cost": "hair",
    "apply": "setTails",
-   "order": 91,
+   "order": 92,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9432,7 +9457,7 @@
    "tier": "main",
    "cost": "hair",
    "apply": "setTails",
-   "order": 92,
+   "order": 93,
    "section": {
     "ja": "結び髪",
     "en": "Tails"
@@ -9509,7 +9534,7 @@
      }
     }
    ],
-   "order": 80,
+   "order": 81,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -9527,7 +9552,7 @@
    "tier": "main",
    "cost": "hair",
    "apply": "setHair",
-   "order": 81,
+   "order": 82,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -10296,7 +10321,7 @@
    "min": 0.08,
    "max": 0.6,
    "step": 0.01,
-   "order": 117,
+   "order": 118,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -10325,7 +10350,7 @@
    "min": 0.8,
    "max": 2,
    "step": 0.01,
-   "order": 115,
+   "order": 116,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -10354,7 +10379,7 @@
    "min": 0,
    "max": 0.04,
    "step": 0.001,
-   "order": 118,
+   "order": 119,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -10402,7 +10427,7 @@
    "min": 6,
    "max": 40,
    "step": 0.5,
-   "order": 116,
+   "order": 117,
    "section": {
     "ja": "前髪のふさ",
     "en": "Bang tufts"
@@ -10696,7 +10721,7 @@
    "min": 6,
    "max": 30,
    "step": 1,
-   "order": 99,
+   "order": 100,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10739,7 +10764,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 100,
+   "order": 101,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10763,7 +10788,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 101,
+   "order": 102,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10809,7 +10834,7 @@
    "min": -0.04,
    "max": 0.12,
    "step": 0.005,
-   "order": 102,
+   "order": 103,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10837,7 +10862,7 @@
    "min": -0.04,
    "max": 0.06,
    "step": 0.002,
-   "order": 103,
+   "order": 104,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10876,7 +10901,7 @@
    "min": 6,
    "max": 30,
    "step": 1,
-   "order": 105,
+   "order": 106,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10919,7 +10944,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 106,
+   "order": 107,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10943,7 +10968,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 107,
+   "order": 108,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -10990,7 +11015,7 @@
    "min": -0.02,
    "max": 0.06,
    "step": 0.002,
-   "order": 108,
+   "order": 109,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11066,7 +11091,7 @@
    "min": 0.3,
    "max": 6,
    "step": 0.1,
-   "order": 104,
+   "order": 105,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11242,7 +11267,7 @@
    "min": 0.6,
    "max": 1.6,
    "step": 0.01,
-   "order": 119,
+   "order": 120,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -11266,7 +11291,7 @@
    "min": -180,
    "max": 180,
    "step": 5,
-   "order": 120,
+   "order": 121,
    "section": {
     "ja": "髪型",
     "en": "Style"
@@ -11324,7 +11349,7 @@
    "min": 6,
    "max": 24,
    "step": 1,
-   "order": 109,
+   "order": 110,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11367,7 +11392,7 @@
    "min": 0.03,
    "max": 0.16,
    "step": 0.005,
-   "order": 110,
+   "order": 111,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11391,7 +11416,7 @@
    "min": 0.1,
    "max": 0.6,
    "step": 0.01,
-   "order": 111,
+   "order": 112,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11419,7 +11444,7 @@
    "min": -0.06,
    "max": 0.08,
    "step": 0.002,
-   "order": 113,
+   "order": 114,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11458,7 +11483,7 @@
    "min": 0.3,
    "max": 4,
    "step": 0.1,
-   "order": 114,
+   "order": 115,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11543,7 +11568,7 @@
    "min": 0.3,
    "max": 0.85,
    "step": 0.005,
-   "order": 112,
+   "order": 113,
    "section": {
     "ja": "後ろ髪の毛束",
     "en": "Back locks"
@@ -11978,7 +12003,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 71,
+   "order": 72,
    "section": {
     "ja": "影と線",
     "en": "Shadows and lines"
@@ -12144,7 +12169,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 70,
+   "order": 71,
    "section": {
     "ja": "影と線",
     "en": "Shadows and lines"
@@ -12329,7 +12354,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 69,
+   "order": 70,
    "section": {
     "ja": "影と線",
     "en": "Shadows and lines"
@@ -12457,7 +12482,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBlush",
-   "order": 58,
+   "order": 59,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12475,7 +12500,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBlush",
-   "order": 59,
+   "order": 60,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12499,7 +12524,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 60,
+   "order": 61,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12523,7 +12548,7 @@
    "min": 0.02,
    "max": 0.07,
    "step": 0.001,
-   "order": 61,
+   "order": 62,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12547,7 +12572,7 @@
    "min": 0.1,
    "max": 0.19,
    "step": 0.001,
-   "order": 62,
+   "order": 63,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12571,7 +12596,7 @@
    "min": 0.9,
    "max": 1,
    "step": 0.001,
-   "order": 63,
+   "order": 64,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12592,7 +12617,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBlush",
-   "order": 64,
+   "order": 65,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12610,7 +12635,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBlush",
-   "order": 65,
+   "order": 66,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12634,7 +12659,7 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
-   "order": 66,
+   "order": 67,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12658,7 +12683,7 @@
    "min": 0.008,
    "max": 0.03,
    "step": 0.001,
-   "order": 67,
+   "order": 68,
    "section": {
     "ja": "赤み",
     "en": "Blush"
@@ -12679,7 +12704,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 68,
+   "order": 69,
    "section": {
     "ja": "影と線",
     "en": "Shadows and lines"
@@ -12827,7 +12852,7 @@
      }
     }
    ],
-   "order": 47,
+   "order": 48,
    "section": {
     "ja": "パーツ",
     "en": "Parts"
@@ -12889,7 +12914,7 @@
      }
     }
    ],
-   "order": 48,
+   "order": 49,
    "section": {
     "ja": "パーツ",
     "en": "Parts"
@@ -12951,7 +12976,7 @@
      }
     }
    ],
-   "order": 49,
+   "order": 50,
    "section": {
     "ja": "パーツ",
     "en": "Parts"
@@ -12985,7 +13010,7 @@
      }
     }
    ],
-   "order": 50,
+   "order": 51,
    "section": {
     "ja": "パーツ",
     "en": "Parts"
@@ -13026,7 +13051,7 @@
      }
     }
    ],
-   "order": 51,
+   "order": 52,
    "nullable": true,
    "section": {
     "ja": "パーツ",
@@ -13049,7 +13074,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setExpressions",
-   "order": 77,
+   "order": 78,
    "section": {
     "ja": "表情セット",
     "en": "Expression set"
@@ -13074,7 +13099,7 @@
    "min": 0.8,
    "max": 1.8,
    "step": 0.01,
-   "order": 52,
+   "order": 53,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13095,7 +13120,7 @@
    "min": 0.07,
    "max": 0.16,
    "step": 0.001,
-   "order": 53,
+   "order": 54,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13117,7 +13142,7 @@
    "min": 0.94,
    "max": 1.06,
    "step": 0.001,
-   "order": 54,
+   "order": 55,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13139,7 +13164,7 @@
    "min": 0.07,
    "max": 0.16,
    "step": 0.001,
-   "order": 55,
+   "order": 56,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13160,7 +13185,7 @@
    "min": 1.02,
    "max": 1.14,
    "step": 0.001,
-   "order": 56,
+   "order": 57,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13181,7 +13206,7 @@
    "min": 0.86,
    "max": 0.95,
    "step": 0.001,
-   "order": 57,
+   "order": 58,
    "section": {
     "ja": "位置",
     "en": "Layout"
@@ -13199,7 +13224,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 72,
+   "order": 73,
    "nullable": true,
    "section": {
     "ja": "描いたパーツ",
@@ -13279,7 +13304,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 73,
+   "order": 74,
    "nullable": true,
    "section": {
     "ja": "描いたパーツ",
@@ -13359,7 +13384,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 74,
+   "order": 75,
    "nullable": true,
    "section": {
     "ja": "描いたパーツ",
@@ -13439,7 +13464,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 75,
+   "order": 76,
    "nullable": true,
    "section": {
     "ja": "描いたパーツ",
@@ -13500,7 +13525,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": null,
-   "order": 76,
+   "order": 77,
    "nullable": true,
    "section": {
     "ja": "描いたパーツ",
@@ -13561,7 +13586,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 78,
+   "order": 79,
    "section": {
     "ja": "描いた表情",
     "en": "Drawn expressions"
