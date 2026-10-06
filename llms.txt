@@ -1,27 +1,49 @@
 # Hinagata
 
-> A chibi 3D character engine for the browser (three.js). A character is a recipe: a small JSON object of options, built into a skinned,
-> animated avatar at runtime. Made for vibe coding: you (the agent) make the game and give it characters; the user fine-tunes them in
-> the editor at https://hinagata.pages.dev, live, while you keep working.
+> A 3D character engine for the browser (three.js) that makes anime-style characters, tall (the default, about 4.5 heads) or chibi.
+> A character is a recipe: a small JSON object of options, built into a skinned, animated avatar at runtime. Made for vibe coding: you
+> (the agent) make the game and give it characters; the user fine-tunes them in the editor at https://hinagata.pages.dev, live, while you
+> keep working.
 
 Source: https://github.com/saori-subaru/hinagata (public). Everything below is served from https://hinagata.pages.dev with CORS open.
 
-## First: the game is the job
+## First: scale and body
+
+The world's scale comes from what the game is, not from the default character.
+- Build the game world at real scale, in metres (a tennis court is 23.77 m long, a door 2 m high, a car 4.5 m). Size the character to the
+  game: scale `avatar.object` (an adult about 1.7 m, a child about 1.2 m). Don't shrink the court, the rooms or the camera to the character.
+- Use the default body (tall, about 4.5 heads) unless the user asks for chibi, cute or kids. Then merge a chibi body type (`BODY_TYPES.standard`,
+  `.girl`, `.sturdy`, `.toddler`) into the recipe, and then it is fine to scale the world to them (a chibi game).
+- Don't make the game look childish unless the user asked for it: the UI, colors, camera and sounds follow what the game is.
+
+```js
+import { createAvatar, BODY_TYPES } from "https://hinagata.pages.dev/src/index.js";
+const hero = await createAvatar("character.json");                                   // the default body: tall
+// const kid = await createAvatar({ ...BODY_TYPES.standard, hair: { back: "bob" } });   // chibi, only when asked for
+hero.update(0, { instant: true });                                                    // (posed, so it can be measured)
+hero.object.scale.setScalar(1.7 / new THREE.Box3().setFromObject(hero.object).getSize(new THREE.Vector3()).y);   // 1.7 m in a world in metres
+```
+Measures (`measureGait`, `measureStride`, `measureBody`) are in the avatar's own units: multiply them by `avatar.object.scale.x`.
+
+## The game is the job
 
 The user asked for a game. Make it as good a game as you would with any other 3D characters: the rules, the controls and how they feel,
 the camera, the sounds, the screens around it (title, score, results), touch controls if it may run on a phone. That is where your time
 goes. The character is one asset among the court, the ball and the UI:
-- Start it in a few minutes: a body type and colors (`BODY_TYPES`, `colors`, a hairstyle, an outfit). Don't keep refining it; the user
-  does the fine-tuning in the editor (below), and you can change the recipe file any time later.
+- Start it in a few minutes: colors, a hairstyle, an outfit (`colors`, `hair`, `outfit`; a body type from `BODY_TYPES` if the game
+  wants one). Don't keep refining it; the user does the fine-tuning in the editor (below), and you can change the recipe file any time later.
 - Don't shape the game around what the engine shows off. If the game needs a move the engine lacks (a racket swing, a serve, a kick),
   write it as a pose (see "Moving it in a game") and check it in screenshots like any other animation, until it reads well.
 - Test the game as a game: play it (a bot pressing keys, at real speed), not only the character.
 
 ## The character file and the live link
 
-1. Keep the character in its own file, `character.json` (the recipe), and have the game load it (`createAvatar("character.json")`). Don't
-   bury it in code. One file per character. A file the user saved from the editor (書き出し → JSON / Export → JSON:
-   `{ "hinagata": 1, "name", "options" }`) works as it is: to put their character in the game, they drop it in place of the file.
+1. Keep the character in its own file, `character.json`, and have the game load it (`createAvatar("character.json")`). Don't bury it in
+   code. One file per character. Write it as the editor exports it: `{ "hinagata": 2, "name": "…", "options": { the recipe } }`.
+   `"hinagata"` is the recipe version (the defaults the recipe is written against): 2 = today's (the tall body). Version 1, and a file that
+   is only a recipe (no `"hinagata"`), were made against the old chibi defaults and are read that way, so old characters stay as they were.
+   A file the user saved from the editor (書き出し → JSON / Export → JSON) works as it is: to put their character in the game, they drop it
+   in place of the file.
 2. Start the live sync so the user can fine-tune it in the editor while you work on the game (they don't need to ask for it):
    ```sh
    curl -O https://hinagata.pages.dev/sync.mjs        # Node 18+, no dependencies
@@ -37,7 +59,8 @@ goes. The character is one asset among the court, the ball and the UI:
    `screenshot` (view: free | front | side | back | face; pose: idle, walk, run, …; needs the editor open from the link).
 
 The sync works when you run on the user's own machine (the editor in their browser reaches 127.0.0.1). A cloud agent can't reach it:
-then hand the user an editor link with the recipe in it instead: `https://hinagata.pages.dev/editor/?o=` + encodeURIComponent(JSON).
+then hand the user an editor link with the character in it instead: `https://hinagata.pages.dev/editor/?o=` + encodeURIComponent(JSON of
+the character file, `{ "hinagata": 2, "options": … }`; a bare recipe in a link is read as an old one, with the chibi defaults).
 
 ## Use it in a page
 
@@ -48,9 +71,11 @@ then hand the user an editor link with the recipe in it instead: `https://hinaga
 <script type="module">
 import * as THREE from "three";
 import { createAvatar } from "https://hinagata.pages.dev/src/index.js";
-const avatar = await createAvatar("character.json"); // a file's URL or the recipe object. async: builds the meshes (in workers; cached
-                                                    // in the browser), 1–2 s each the first time
-scene.add(avatar.object);                           // a THREE.Group: feet at y = 0, facing +z, about 1.3–1.4 units tall
+const avatar = await createAvatar("character.json"); // a file's URL, a character file object or bare options (a bare object in code is
+                                                    // today's: the tall default). async: builds the meshes (in workers; cached in
+                                                    // the browser), 1–2 s each the first time
+scene.add(avatar.object);                           // a THREE.Group: feet at y = 0, facing +z, about 1.6 units tall (the chibi types
+                                                    // about 1.35): scale it to your world in metres (above)
 avatar.play("walk");
 renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
 </script>
@@ -60,7 +85,7 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); r
   "front", default; "all" / "none"). That uses the stencil buffer, so keep the renderer's (`new THREE.WebGLRenderer({ stencil: true })`: the default in 0.160, not after 0.163). Without
   one the lines inside the hair simply show.
 - Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
-- `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world as you like.
+- `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world (an adult about 1.7 m).
 - A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).
 
 ## Keep it fast
@@ -79,19 +104,21 @@ simulated on the CPU every frame. Budget for both:
 
 ## The recipe
 
-Only what differs from the defaults, nested as the options are. Example:
+Only what differs from the defaults, nested as the options are (in a character file it is the `"options"`). Example:
 ```json
-{ "colors": { "hair": "#f3f1ee", "eyes": "#4fb36a" },
-  "body": { "proportion": { "legs": 1.65, "torso": 1.3 }, "head": { "scale": 0.82 } },
+{ "hinagata": 2, "name": "Lena", "options": {
+  "colors": { "hair": "#f3f1ee", "eyes": "#4fb36a" },
+  "body": { "head": { "scale": 0.74 } },
   "hair": { "bangs": "nendo", "back": "long", "tail": { "kind": "side", "side": "L" }, "gradient": { "on": true, "color": "#5fae6a" } },
-  "outfit": { "dress": { "on": true, "color": "#f8f6f0" }, "shoes": { "kind": "boots" } } }
+  "outfit": { "dress": { "on": true, "color": "#f8f6f0" }, "shoes": { "kind": "boots" } } } }
 ```
 - Every option, its type, range or choices, default and what it does (Japanese and English): https://hinagata.pages.dev/options.schema.json
   (`options` by dotted path; `tier: "main"` are the ones the editor shows first). Prefer main options; the rest is fine-tuning.
 - Check a recipe: `checkOptions(recipe)` → [{ path, problem }] (empty = fine). In a page it comes from `src/index.js`; in Node (no three.js)
   import it from `https://hinagata.pages.dev/src/schema.js` (or the repository's `src/schema.js`). Unknown keys are ignored by the engine, so
   check: a typo silently does nothing.
-- Body types: `import { BODY_TYPES }` (standard, toddler, girl, sturdy, and …Tall versions): merge `BODY_TYPES.girlTall` into the recipe.
+- Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; chibi `standard`, `girl`, `sturdy`,
+  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size).
 - Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
   by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
   armor, weapon), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
@@ -146,4 +173,5 @@ A figure with one spine joint has its turn shared over the avatar's spine, chest
 
 https://hinagata.pages.dev (the editor) — the user's tool: sliders for every main option, dragging hair tufts and tails on the head,
 drawing locks of hair and face parts, painting on the clothes, accessories by clicking, poses to preview, export to code or GLB.
-`?o=<recipe JSON>` opens a recipe as a new character; `?sync=<port>&key=<key>` (the sync helper's link) follows a file.
+`?o=<character file JSON>` opens a character as a new one; `?sync=<port>&key=<key>` (the sync helper's link) follows a file. New
+characters there start tall; the body type row offers the chibi ones.

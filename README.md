@@ -1,6 +1,6 @@
 # Hinagata
 
-A chibi avatar engine for the browser, built on three.js.
+A 3D character engine for the browser, built on three.js: anime-style characters, tall (the default, about 4.5 heads) or chibi.
 
 - A character is a **recipe**: a small options object (JSON), not a mesh file. The body, clothes, hair and face are built from code at runtime.
 - **Motions are code and fit the body**: walk (with the stride measured from the legs), jump, fall, climb with IK onto any surface the game describes.
@@ -9,16 +9,24 @@ A chibi avatar engine for the browser, built on three.js.
 
 ```js
 import { createAvatar } from "./src/index.js";   // needs an import map for "three"
-const avatar = await createAvatar(recipe);
-scene.add(avatar.object);
+const avatar = await createAvatar(recipe);   // the default body is tall; a chibi: { ...BODY_TYPES.standard, … }
+scene.add(avatar.object);                    // about 1.6 units tall: scale it to your world (in metres: an adult about 1.7 m)
 avatar.play("walk");
 // every frame
 avatar.update(dt);
 ```
 
+Build the game's world at real scale and size the characters to it; the world's scale comes from what the game is, not from the default
+character (a chibi game may scale its world to its chibis).
+
+**Character files and versions.** The editor exports `{ "hinagata": 2, "name": …, "options": { the recipe } }`. `"hinagata"` is the recipe
+version: the defaults the recipe is written against. Until 2026-10-06 the default body was the chibi; recipes stored without a version
+(bare recipe files, the editor's saved characters, `?o=` links) and version 1 files are read with those old defaults, so they don't change.
+A bare options object passed in code uses today's defaults (the tall body). One function reads them all: `openRecipe` (src/options.js).
+
 ## Live sync with an agent
 
-Have the agent keep the character in a file (`character.json`: the recipe, only what differs from the defaults) and fine-tune it in the editor while both see each other's changes:
+Have the agent keep the character in a file (`character.json`: a character file as above, its options only what differs from the defaults) and fine-tune it in the editor while both see each other's changes:
 
 ```sh
 curl -O https://hinagata.pages.dev/sync.mjs     # once (or tools/sync.mjs here); Node 18+, no dependencies
