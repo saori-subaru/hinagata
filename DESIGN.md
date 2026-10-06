@@ -732,3 +732,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### My parts (2026-10-06, Saori: "キャラAにパーツを追加してもキャラBでは選べない？"; "画風統一するならみんな同じの使いそう")
 - Drawn parts belong to their character (face.drawn). マイパーツ, like マイ髪型: a drawn face's eye, brow and mouth pictures saved in this browser (localStorage `hinagata.editor.parts`; マイパーツに保存 on each card of 描いたパーツ, ふつう's too, named "<character>のふつう"). In any character the expression set's eyes / brows / mouth list them as "マイ: 名前"; picked, the drawing is copied into that character's face.drawn (`lib`: the my-parts id it came from, so it is copied once and then shows as its own "絵: 名前") and used. A recipe keeps its copy: a game or another browser needs nothing from the library. Removing one from my parts leaves the characters' copies.
+
+### The template's eye frames (2026-10-06, Saori: "目ととじ目も並んでるしもうわけわからん。テンプレの目が枠からはみ出てる")
+- The guide eye is drawn at face.eyeSize (1.25 by default) and its frames were sized for 1: it ran out of them. The eye frames now grow with the eye size: taller (not up into the brow's frame), wider up to 370 px (not into the nose's). Their middles stay, so templates made before read the same; a drawn picture is placed at its own pixels as before.
+- The closed eye's frame sits on the other eye; an open guide eye under both looked like two eyes to draw. The guide under the closed eye's frame is now the closed eye (tileGuide: the drawn one, or the code's), in the downloaded template and in the in-app drawing.

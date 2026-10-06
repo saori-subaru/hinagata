@@ -25,9 +25,16 @@ export function sheetTiles(avatar) {
 const COLS = 3, HEAD = 120;   // a sheet: 3 tiles across, under a header strip
 const rowsFor = (n) => Math.ceil((n + 1) / COLS);   // n tiles and the how-to tile
 
+// the eye frames grow with face.eyeSize (2026-10-06, Saori: "テンプレの目が枠からはみ出てる": the guide eye is drawn at the eye size, 1.25 by
+// default, the frames were made for 1): taller by it, wider up to 370 px (wider, they would reach the nose's frame). Their middles stay, so
+// a template made with the smaller frames reads the same
+const EYE_W_MAX = 370;
 function frameRect(face, k) {   // [x, y, w, h] on the face picture
-  const F = FRAMES[k], P = face.PART_IMG[k], A = F.at(face), [w, h] = F.size, x = Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2);
-  return [F.other ? face.faceCanvas.width - x - w : x, Math.round(face.py(A.y + (P.dy ?? 0)) - h / 2), w, h];
+  const F = FRAMES[k], P = face.PART_IMG[k], A = F.at(face), es = k.startsWith("eye") ? Math.max(1, face.getLayout?.().eyeSize ?? 1) : 1;
+  const w = k.startsWith("eye") ? Math.min(EYE_W_MAX, Math.round(F.size[0] * es)) : F.size[0], x = Math.round(face.px(A.x + (P.dx ?? 0)) - w / 2), cy = face.py(A.y + (P.dy ?? 0));
+  let h = Math.round(F.size[1] * es);
+  if (es > 1) { const [, by, , bh] = frameRect(face, "brow"); h = Math.min(h, Math.max(F.size[1], Math.floor(2 * (cy - (by + bh) - 4)))); }   // not up into the brow's frame
+  return [F.other ? face.faceCanvas.width - x - w : x, Math.round(cy - h / 2), w, h];
 }
 
 /** The head (skin only) from straight in front, over exactly the face picture's area, in the bind pose. Returns a canvas. */
@@ -73,8 +80,15 @@ function guideFace(avatar, parts) {
 }
 
 /** One tile: the head, the guide face (faint), the frames (red; a dashed grey one where the other side is drawn for you), a title. */
+/** The tile's guide face, with the closed eye under the closed eye's frame (Saori: an open eye under both frames looked like two eyes to draw). */
+function tileGuide(avatar, tile) {
+  const c = guideFace(avatar, tile.guide); if (!tile.frames.includes("eyeClosed")) return c;
+  const { face } = avatar.internals, closed = tile.guide.eyes === "image" && face.PART_IMG.eyeClosed?.src ? "imageClosed" : "closed", [x, y, w, h] = frameRect(face, "eyeClosed");
+  const g = c.getContext("2d"); g.clearRect(x, y, w, h); g.drawImage(guideFace(avatar, { ...tile.guide, eyes: closed }), x, y, w, h, x, y, w, h);
+  return c;
+}
 function drawTile(g, avatar, head, tile, lang, title) {
-  g.drawImage(head, 0, 0); g.globalAlpha = 0.35; g.drawImage(guideFace(avatar, tile.guide), 0, 0); g.globalAlpha = 1;
+  g.drawImage(head, 0, 0); g.globalAlpha = 0.35; g.drawImage(tileGuide(avatar, tile), 0, 0); g.globalAlpha = 1;
   drawFrames(g, avatar, tile, lang, title);
 }
 function drawFrames(g, avatar, tile, lang, title) {   // the frames, their labels, the face's middle line (and a title)
@@ -94,7 +108,7 @@ function drawFrames(g, avatar, tile, lang, title) {   // the frames, their label
 export function faceSheetLayers(avatar, { lang = "ja" } = {}) {
   const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height, tile = sheetTiles(avatar)[0];
   const fr = document.createElement("canvas"); fr.width = W; fr.height = H; drawFrames(fr.getContext("2d"), avatar, tile, lang, null);
-  return { face: headShot(avatar), parts: guideFace(avatar, tile.guide), frames: fr };
+  return { face: headShot(avatar), parts: tileGuide(avatar, tile), frames: fr };
 }
 
 /** Make a template. kind "parts" = the ふつう face alone (1024×768) / "sheet" = ふつう and every drawn expression. Returns a canvas. */
