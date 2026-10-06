@@ -115,6 +115,17 @@ const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
 const ties = createTieTool({ vp, store, onChange: () => panel.render() });
 const paint = createPaintTool({ vp, store, onChange: () => panel.render() });
 const acc = createAccessoryTool({ vp, store, onChange: () => panel.render() });   // putting accessories on the character (accessories.js)   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
+// my parts (2026-10-06, Saori: "画風統一するならみんな同じの使いそう"): drawn eyes, brows and mouths saved in this browser, to use on any
+// character (the expression set's eyes / brows / mouth list them; picked, the drawing is copied into that character: panel.js)
+const PARTS_KEY = "hinagata.editor.parts";
+const myParts = {
+  list() { try { const L = JSON.parse(localStorage.getItem(PARTS_KEY)); return Array.isArray(L) ? L : []; } catch { return []; } },
+  write(L) { try { localStorage.setItem(PARTS_KEY, JSON.stringify(L)); return true; } catch { toast(t("notSaved")); return false; } },
+  save(d) { const L = myParts.list(), name = d.normal ? t("myPartsNormal", cur.name) : d.name || t("myPartsN", L.length + 1);
+    L.push({ id: Date.now().toString(36), name, eye: d.eye ?? null, brow: d.brow ?? null, mouth: d.mouth ?? null, cheeks: d.cheeks ?? "none", blink: d.blink !== false });
+    if (myParts.write(L)) toast(t("myPartsSaved", name)); panel.render(); },
+  remove(id) { const x = myParts.list().find((q) => q.id === id); if (!x || !confirm(t("myPartsDel", x.name))) return; myParts.write(myParts.list().filter((q) => q.id !== id)); panel.render(); },
+};
 // my hairstyles: the whole hair (style, shapes, tufts, drawn locks; not its color) saved by name in this browser, to put on any character
 const HAIRS_KEY = "hinagata.editor.hairs";
 const hairs = {
@@ -135,7 +146,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onReadTemplate: (into = null) => { tplInto = into === "new" ? NEW : into; $("fileTpl").click(); },
   onFacePaint: (into = null) => facePaint.open(into),   // drawing the face parts in the app (facepaint.js)
   showFace: (p) => { shownFace = p; const av = vp.avatar; if (!av) return; vp.lift(); av.setFace(p ?? faceParts()); vp.apply(); },   // the expression the face tab edits, on the avatar (null: its own face)
-  bangs, draw, hairs, backs, ties, paint, acc,
+  bangs, draw, hairs, myParts, backs, ties, paint, acc,
 });
 let syncShown = null;   // the sync's state on screen (redrawn in another language)
 // live sync with a recipe file (tools/sync.mjs, sync.js): the file is a character of its own in the library (named after it), switched to
