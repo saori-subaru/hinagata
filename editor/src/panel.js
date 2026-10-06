@@ -115,7 +115,18 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       const on = (b) => Object.entries(leaves(b.body, "body")).every(([p, v]) => store.get(p) === v);
       const row = (tall) => h("div", { class: "chips" }, h("span", { class: "cost" }, t(tall ? "bodyTall" : "bodyChibi")), Object.entries(BODY_TYPES).filter(([k]) => k.endsWith("Tall") === tall).map(([k, b]) =>
         h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => set(leaves(b.body, "body")) }, bodyTypeName(k.replace(/Tall$/, "")))));
-      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row(false), row(true));
+      // anime ↔ real (2026-10-06, Saori): one slider over three values: body.head.faceLength (the face takes more of the head), body.head.faceWidth
+      // (the eyes in, the head slimmer) and face.eyeSize (smaller eyes; relative to the character's own, so a size picked at the anime end
+      // stays). Where it is now is read back from faceLength; the three sliders below move with it
+      const REAL = { len: 0.8, wid: -0.18, eye: -0.24 }, rOf = () => Math.min(1, Math.max(0, ((store.get("body.head.faceLength") ?? 1) - 1) / REAL.len));
+      const realSet = (r, commit) => { const r0 = rOf(), eye = (store.get("face.eyeSize") ?? 1.25) * (1 + REAL.eye * r) / (1 + REAL.eye * r0), q = (x) => +x.toFixed(3);
+        set({ "body.head.faceLength": q(1 + REAL.len * r), "body.head.faceWidth": q(1 + REAL.wid * r), "face.eyeSize": q(eye) }, commit); };
+      const r0 = rOf(), rng = h("input", { class: "rng full", type: "range", min: 0, max: 1, step: 0.01, value: r0, "aria-label": t("realism") }), pct = (x) => `${x * 100}%`;
+      rng.style.setProperty("--p", pct(r0));
+      rng.addEventListener("input", () => { rng.style.setProperty("--p", pct(+rng.value)); realSet(+rng.value, false); });
+      rng.addEventListener("change", () => store.commit());
+      const real = h("div", { class: "field" }, h("label", {}, t("realism")), rng, h("div", { class: "row full", style: "justify-content: space-between" }, h("span", { class: "cost" }, t("realAnime")), h("span", { class: "cost" }, t("realReal"))), h("div", { class: "help" }, t("realismHelp")));
+      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row(false), row(true), real);
     }
     if (tab === "face") {
       const on = (x) => Object.entries(x.parts).every(([k, v]) => r.face.parts[k] === v);
