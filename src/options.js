@@ -33,9 +33,9 @@ export const DEFAULTS = {
   },
   "body": {
     "proportion": {
-      "legs": 2,
-      "torso": 1.3,
-      "arms": 1.45,
+      "legs": 1.76,
+      "torso": 1.13,
+      "arms": 1.17,
       "hands": 1.1,
       "shoulders": 1
     },

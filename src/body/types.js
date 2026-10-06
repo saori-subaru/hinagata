@@ -21,7 +21,8 @@ const r2 = (x) => Math.round(x * 100) / 100, r3 = (x) => Math.round(x * 1000) / 
 // Arms of their own length (proportion.arms 1.45: rigid, riding on the shoulder, so the fingertips reach the upper thigh; stretched with the
 // torso they ended at the crotch) and hands a little bigger (1.1: unstretched, the chibi's hands looked small at 5 heads). The sturdy one has
 // broader shoulders (1.1).
+// 2026-10-06 later: legs 1.76, torso 1.13, arms 1.17 — the values Saori settled on in the editor (from legs 2, torso 1.3, arms 1.45).
 const tall = (b, k) => ({ torso: { ...b.torso, belly: r2(Math.max(0.6, b.torso.belly * 0.82)), waist: r3(b.torso.waist + 0.006) }, thickness: Object.fromEntries(Object.entries(b.thickness).map(([k, v]) => [k, r2(v * 0.84)])),
-  proportion: { legs: 2, torso: 1.3, arms: 1.45, hands: 1.1, shoulders: k === "sturdy" ? 1.1 : 1 }, head: { scale: 0.7 } });
+  proportion: { legs: 1.76, torso: 1.13, arms: 1.17, hands: 1.1, shoulders: k === "sturdy" ? 1.1 : 1 }, head: { scale: 0.7 } });
 const NO_TALL = new Set(["toddler"]);   // a tall toddler is a contradiction (2026-10-05, Saori)
 export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: { ...CHIBI, ...b } }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: tall(b, k) }]])]));

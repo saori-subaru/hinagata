@@ -725,6 +725,16 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - The tall types (src/body/types.js `tall`): legs 1.65 → 2, head 0.82 → 0.7, torso 1.3 as it was, the same thickness. Tried legs 1.8 / 1.9 /
   2.0 at head 0.7 side by side (4.58 / 4.67 / 4.77 heads); 2.0 looked balanced. The face, the hair and the drawn parts scale with the head as
   one, so they keep their look (no oversized eyes, no helmet hair: the same face, smaller); expressions checked.
+- Later the same evening, two changes from Saori looking at it in the editor:
+  - "足の長さ伸ばすと股上ものびる": the legs' stretch ran from the ankle up to the hip joint, but the pelvis reaches about 0.08 below the hip
+    joint, so the bottom of the pelvis was stretched with the legs: the crotch hung low and the rise looked long. The legs now stretch from
+    the crotch (hip joint − 0.08) down (src/body/index.js makeStretch). This shortens every tall body by that band × (legs − 1); the legs
+    below the crotch are as long as before.
+  - She set legs 1.76, torso 1.13, arms 1.17 by hand and asked for them as the default ("その値を既定にしておいて"): the tall types and DEFAULTS
+    now use them (were legs 2, torso 1.3, arms 1.45). Version 3 was not published before this, so it is not a new version; the two
+    presets (src/presets.js) pin the values they were made with.
+  - She also said the body lines (the hip-to-thigh line, the flesh between the legs) are not finished for the tall body: the shapes were
+    tuned on the chibi and are only stretched. To do: re-sculpt them for the tall body, part by part, from her notes.
 - The arms: stretched with the torso (as the chibi's are), the hands of the longer body only reached the crotch, the hand stretched upright
   by the torso. Lengthening the arms in the stretch's terms either put the hands below the hip joint, where the legs' stretch (×2) would pull
   them long, or laid the rest arm flatter, and every pose (written on the A-pose) then held the arms out from the body. So arms can have a

@@ -8,7 +8,7 @@ export const CHARACTERS = {
     file: { hinagata: 3, name: "シルヴィ", options: {
       colors: { skin: "#fee9d7", hair: "#fff7f0", eyes: "#41714d" },
       body: {
-        proportion: { legs: 1.65, torso: 1.3 },
+        proportion: { legs: 1.65, torso: 1.3, arms: 1.45 },   // arms: made when the tall default was 1.45
         head: { scale: 0.69, depth: 0.92 },
         torso: { chest: 0.92, belly: 0.6, waist: 0.026, hips: 0.92, bust: 0.77, butt: 0.96, back: 0.56 },
         thickness: { upperArm: 0.77, forearm: 0.74, thigh: 0.6, thighTop: 0.61, calf: 0.6 },
@@ -77,6 +77,7 @@ export const CHARACTERS = {
     file: { hinagata: 3, name: "アステル", options: {
       colors: { skin: "#fee5d2", hair: "#9e7a57" },
       body: {
+        proportion: { legs: 2, torso: 1.3, arms: 1.45 },   // made when the tall default was legs 2, torso 1.3, arms 1.45
         head: { scale: 0.7, width: 0.94 },
         torso: { chest: 0.92, belly: 0.6, waist: 0.04, hips: 0.75, bust: 0.77, butt: 0.96, back: 0.56 },
         thickness: { upperArm: 0.6, forearm: 0.6, thigh: 0.6, thighTop: 0.5 },
