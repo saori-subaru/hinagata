@@ -53,7 +53,7 @@ export function createStore(recipe) {
 
 // ── characters saved in this browser: { v, current, chars: [{ id, name, updated, recipe (only what differs) }] } ──
 // v: the recipe version the recipes are written in (src/options.js). A library of an older version (v 1: the chibi defaults, before
-// 2026-10-06) is brought up to today's once, on loading: each recipe gets the old defaults it was made against, so every character
+// 2026-10-06; v 2: the first tall body, about 4 heads) is brought up to today's once, on loading: each recipe gets the old defaults it was made against, so every character
 // stays as it was (and is saved that way on the next save).
 const KEY = "hinagata.editor.library";
 const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);

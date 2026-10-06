@@ -37,11 +37,13 @@ export function createViewport(canvas, stage) {
   // camera moves between views smoothly; dragging takes over
   let tween = null;
   // a taller character (body.proportion; the default body since 2026-10-06): the views are written for the chibi; the whole-body views step
-  // back with its height, the face view moves up with its head
+  // back with its height; the face view looks at the face wherever the head is and comes as much nearer as the head is smaller (it is
+  // written for the chibi's head, scale 0.9; the 5-head tall one's is 0.7)
   function fitView(name) {
-    let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST;
-    if (ST && !ST.identity) { if (name === "face") { p = [p[0], p[1] + ST.lift, p[2]]; t = [t[0], t[1] + ST.lift, t[2]]; }
-      else { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); } }
+    let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST, H = avatar?.internals.HT;
+    if (name === "face" && H) { const py = avatar.options.body.head.pivotY ?? 0.845, k = H.sy / 0.9, ty = H.fromHead(0, py + (t[1] - py) / 0.9, 0)[1];
+      p = [p[0], ty + (p[1] - t[1]) * k, t[2] + (p[2] - t[2]) * k]; t = [t[0], ty, t[2]]; }
+    else if (ST && !ST.identity) { const f = ST.fwd(1.27) / 1.27; p = p.map((v) => v * f); t = t.map((v) => v * f); }
     return [p, t];
   }
   let lastView = "free";   // (to frame it again for a character of another height)

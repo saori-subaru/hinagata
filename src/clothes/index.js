@@ -5,6 +5,7 @@ import { skirtOf } from "../options.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
+import { armReach } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
  *  ball of the foot stays on the floor; heel: how high the heel's back is then (the heel's length) */
@@ -28,8 +29,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   //   sheet; raising the arms (T-pose) stretched it into a web (2026-10-02 Saori: 「袖下の付け根の位置が下すぎて水かきみたい」)
   const PIT = (SH.underarm ?? "fit") === "loose" || !SLEEVE || SLEEVE === "none" ? [] : ARMPIT;
   const LONG = SLEEVE === "long" || SLEEVE === "bell", BELL = SLEEVE === "bell" ? (SH.bell ?? 0.06) : 0;   // bell: a long sleeve that widens into an open bell past the wrist (a robe's)
+  const AR = armReach(OPT);
+  // long arms (body.proportion.arms) reach below the shirt's hem in the base body: the hem cuts only the torso, not a long sleeve beside it
+  const HEM_X = OPT.body.proportion?.arms != null ? (LEN === "crop" ? 0.19 : 0.24) + 0.115 * ((OPT.body.proportion.shoulders ?? 1) - 1) : Infinity;
   const armParts = LONG ? ["sleeve", "upperArm", "foreArm"] : SLEEVE === "short" ? ["sleeve"] : [];
-  const shirtCore = blendFast(pick("chest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", ...armParts, ...(LEN === "out" ? ["butt"] : [])), [-0.4, 0.4, -0.25], [0.4, 0.95, 0.27]);   // out: over the bottom too (else the pants show through at the back)
+  const shirtCore = blendFast(pick("chest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", ...armParts, ...(LEN === "out" ? ["butt"] : [])), [-0.4 - AR.x, 0.4 - AR.y, -0.25], [0.4 + AR.x, 0.95, 0.27]);   // (AR: longer arms reach further)   // out: over the bottom too (else the pants show through at the back)
   const arm = (s) => { const a = P[`upperArm.${s}`], f = P[`foreArm.${s}`], L = Math.hypot(a.bx, a.by), Lf = Math.hypot(f.bx, f.by, f.bz);   // armhole and cuff: planes across the arm
     const gx = f.bx / Lf, gy = f.by / Lf, gz = f.bz / Lf, dx = gx * gy, dy = gy * gy - 1, dz = gz * gy, dl = Math.hypot(dx, dy, dz) || 1;   // d: straight down, across the forearm
     return { ax: a.ax, ay: a.ay, az: a.az, ux: a.bx / L, uy: a.by / L, fx: f.ax, fy: f.ay, fz: f.az, gx, gy, gz, dx: dx / dl, dy: dy / dl, dz: dz / dl, Lf, side: Math.sign(a.ax) }; };
@@ -63,7 +67,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         d = sm(d, -Math.max(t + 0.012, Math.hypot(px, py, z - A.az) - 0.063)); }   // 0.063: around the sleeve only, not the back or chest beside it   // (only around the arm: a plane alone would cut through the body too)
       if (LONG) d = sm(d, (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz - (A.Lf - 0.012));   // long: the cuff just before the wrist
       if (BELL && !noBell) d = smin(d, bellShell(x, y, z, A), 0.008); }
-    return Math.max(sm(sm(d, neck), fit), HEM - y); };   // tuck: すそはズボンの中に入れる
+    return Math.max(sm(sm(d, neck), fit), HEM - y - (HEM_X < Infinity ? 1.5 * Math.max(0, Math.abs(x) - HEM_X) : 0)); };   // tuck: すそはズボンの中に入れる
   // pants.length: "shorts" (hem = pants.hem) | "knee" (just below the knee) | "long" (to the ankle)
   const PL = OPT.outfit.pants.length ?? "shorts", PANTS_HEM = { knee: 0.2, long: 0.1 }[PL] ?? OPT.outfit.pants.hem;   // ズボンのすその高さ
   const pantsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn", ...(PL === "shorts" ? [] : ["thigh", "calf", "calfO", "calfB"])), CROTCH]);   // ズボンを着せる範囲

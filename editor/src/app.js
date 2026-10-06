@@ -35,7 +35,7 @@ const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pr
 // ── characters ──
 const lib = loadLibrary();
 const shared = new URLSearchParams(location.search).get("o"), SYNC = (({ sync, key }) => sync && key ? { port: +sync, key } : null)(Object.fromEntries(new URLSearchParams(location.search)));   // SYNC: live sync with a recipe file (sync.js)
-// ?o=: a character file ({ hinagata: 2, name, options }: the links made since 2026-10-06), or a bare recipe (links made before: the chibi defaults)
+// ?o=: a character file ({ hinagata: 3, name, options }: the links made since 2026-10-06, of their version), or a bare recipe (links made before: the chibi defaults)
 if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
 if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
 let cur = lib.chars.find((c) => c.id === lib.current) ?? lib.chars[0]; lib.current = cur.id;

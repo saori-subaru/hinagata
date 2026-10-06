@@ -5,23 +5,28 @@
 import { smin } from "../sdf/prim.js";
 import { sub, dot, norm, cross, slice, sell } from "./armor.js";
 
+const FORE0 = Math.atan2(0.612 - 0.52, 0.322 - 0.232);   // the base forearm's angle below level (body/index.js J)
 const add = (a, ...t) => a.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
 const capsule = (p, a, b, r) => { const ab = sub(b, a), ap = sub(p, a), h = Math.max(0, Math.min(1, dot(ap, ab) / dot(ab, ab))); return Math.hypot(ap[0] - ab[0] * h, ap[1] - ab[1] * h, ap[2] - ab[2] * h) - r; };
 
 /** The hand's frame (A-pose): D = toward the fingers, N = the palm's side, S = the thumb's side (forward); G = where a fist holds a grip.
  *  A fist holds a grip along S: across the hand, square to the forearm (the wrist stays straight). To stand a spear or staff up,
- *  the arm bends instead (motion/index.js: ARMED). */
-export function handFrame(J, s) {
-  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`], D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0], S = [0, 0, 1];
-  const palm = add(w, [D, 0.03], [N, 0.002]);
-  return { m, w, D, N, S, palm, G: add(palm, [N, 0.03], [D, 0.004]) };
+ *  the arm bends instead (motion/index.js: ARMED). k: the hand's size (body.proportion.hands). */
+export function handFrame(J, s, k = 1) {
+  const m = s === "L" ? 1 : -1, w = J[`hand.${s}`], S = [0, 0, 1];
+  let D = [m * 0.876, -0.483, 0], N = [-0.483 * m, -0.876, 0];
+  // the hand keeps its angle to the forearm: a forearm laid steeper than the base one (rigid arms, body.proportion.arms) turns it as much
+  { const e = J[`lowerArm.${s}`], d = Math.atan2(e[1] - w[1], Math.abs(w[0] - e[0])) - FORE0;
+    if (Math.abs(d) > 1e-9) { const a = Math.atan2(0.483, 0.876) + d; D = [m * Math.cos(a), -Math.sin(a), 0]; N = [-m * Math.sin(a), -Math.cos(a), 0]; } }
+  const palm = add(w, [D, 0.03 * k], [N, 0.002 * k]);
+  return { m, w, D, N, S, palm, G: add(palm, [N, 0.03 * k], [D, 0.004 * k]) };
 }
 
 export function buildWeapons(OPT, { J, bodySdf }) {
   const WO = OPT.outfit.weapon ?? {}, R = WO.right ?? "none", L = WO.left ?? "none";
   const none = null;
   // ── right hand: the item's axis A runs straight through the fist (S); W across it (its blade's width, toward the knuckles), T its thickness ──
-  const H = handFrame(J, "R");
+  const HK = OPT.body.proportion?.hands ?? 1, H = handFrame(J, "R", HK);
   const A = H.S, W = norm(add(H.D, [A, -dot(H.D, A)])), T = cross(A, W);
   const loc = (x, y, z) => { const q = [x - H.G[0], y - H.G[1], z - H.G[2]]; return [dot(q, A), dot(q, W), dot(q, T)]; };   // (along, across, thickness)
   const at = (a, w = 0) => add(H.G, [A, a], [W, w]);
@@ -59,7 +64,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   }
 
   // ── left hand: a shield strapped to the outside of the forearm (bound to the forearm) by two leather bands ──
-  const HL = handFrame(J, "L"), e = J["lowerArm.L"], h = J["hand.L"], Vf = norm(sub(h, e)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [Vf, -dot(O0, Vf)])), Hf = cross(Vf, O).map((v) => -v);   // Vf toward the hand = the shield's top (guarding: elbow down, forearm up, the shield upright), O its face: out of the back of the forearm (a little forward)
+  const HL = handFrame(J, "L", HK), e = J["lowerArm.L"], h = J["hand.L"], Vf = norm(sub(h, e)), O0 = norm(add([0, 0, 0], [HL.N, -0.95], [HL.S, 0.3])), O = norm(add(O0, [Vf, -dot(O0, Vf)])), Hf = cross(Vf, O).map((v) => -v);   // Vf toward the hand = the shield's top (guarding: elbow down, forearm up, the shield upright), O its face: out of the back of the forearm (a little forward)
   // shieldMount "diagonal": the shield turned 45° on the arm (about its face), its top toward the elbow's outer side — the guard then raises the forearm slantwise (hand in, elbow out) and the shield stands upright
   const tilt = WO.shieldMount === "diagonal" ? -Math.PI / 4 : 0, V = norm(add([0, 0, 0], [Vf, Math.cos(tilt)], [Hf, Math.sin(tilt)])), Hz = cross(V, O).map((v) => -v);
   const SC = add(e.map((v, i) => (v + h[i]) / 2), [O, 0.085]);   // on the outside of the forearm, standing off it a little (guarding, it then comes out in front of a big helm)

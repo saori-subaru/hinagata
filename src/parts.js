@@ -5,6 +5,7 @@
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
 import { skirtOf } from "./options.js";
+import { armReach } from "./body/index.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "cape", ...ARMOR, ...WEAPONS];
@@ -16,11 +17,12 @@ export const partClothCell = (H) => Math.min(H * 1.2, THIN);   // a skirt's or a
 
 export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   // clothH: the skirt's and the cape's cell, if set (the game quality: see index.js)
   const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, foot0 = [-0.22, -0.01, -0.12];
+  const { x: ax, y: ay } = armReach(OPT);   // longer arms, wider shoulders, bigger hands (body.proportion) reach further: the boxes around the arms grow by it
   switch (name) {
-    case "body": return { sdf: bodySdf, lo: [-0.47, -0.02, -0.3], hi: [0.47, 1.43, 0.34], h: H };
-    case "shirt": { const SL = OPT.outfit.shirt.sleeve, long = SL === "long" || SL === "bell", w = SL === "bell" ? 0.42 + (OPT.outfit.shirt.bell ?? 0.06) : long ? 0.37 : 0.3;   // long sleeves reach the wrists (and follow the forearms)
+    case "body": return { sdf: bodySdf, lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 1.43, 0.34], h: H };
+    case "shirt": { const SL = OPT.outfit.shirt.sleeve, long = SL === "long" || SL === "bell", w = (SL === "bell" ? 0.42 + (OPT.outfit.shirt.bell ?? 0.06) : long ? 0.37 : 0.3) + ax;   // long sleeves reach the wrists (and follow the forearms)
       const soft = C.bellOf ? { bone: (x) => x > 0 ? "lowerArm.L" : "lowerArm.R", k: (x, y, z) => C.bellOf(x, y, z, B) ? 0 : 1 } : null;   // bell sleeves: all on the forearm
-      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33, -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
+      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
       if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04;
@@ -42,9 +44,9 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
     case "armorChest": return C.armor.helmSdf ? { sdf: C.armor.chestSdf, lo: [-0.3, 0.38, -0.26], hi: [0.3, 0.82, 0.28], h: H * 0.8, only: /^(hips|spine|chest|upperChest)/ }
       : { sdf: C.armor.chestSdf, lo: [-0.26, 0.47, -0.22], hi: [0.26, 0.76, 0.26], h: H * 0.8, only: /^(spine|chest|upperChest)/ };
-    case "armorShoulders": return { sdf: C.armor.shoulderSdf, lo: [-0.3, 0.6, -0.16], hi: [0.3, 0.88, 0.16], h: H * 0.8, only: /^(shoulder|upperArm)/ };
-    case "armorArms": return C.armor.helmSdf ? { sdf: C.armor.armSdf, lo: [-0.4, 0.42, -0.12], hi: [0.4, 0.74, 0.14], h: H * 0.8, only: /^(upperArm|lowerArm)/ }
-      : { sdf: C.armor.armSdf, lo: [-0.38, 0.42, -0.11], hi: [0.38, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
+    case "armorShoulders": return { sdf: C.armor.shoulderSdf, lo: [-0.3 - ax, 0.6, -0.16], hi: [0.3 + ax, 0.88, 0.16], h: H * 0.8, only: /^(shoulder|upperArm)/ };
+    case "armorArms": return C.armor.helmSdf ? { sdf: C.armor.armSdf, lo: [-0.4 - ax, 0.42 - ay, -0.12], hi: [0.4 + ax, 0.74, 0.14], h: H * 0.8, only: /^(upperArm|lowerArm)/ }
+      : { sdf: C.armor.armSdf, lo: [-0.38 - ax, 0.42 - ay, -0.11], hi: [0.38 + ax, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
     case "armorLegs": return C.armor.helmSdf ? { sdf: C.armor.legSdf, lo: [-0.26, 0.08, -0.15], hi: [0.26, 0.44, 0.17], h: H * 0.8, only: /^(upperLeg|lowerLeg)/ }
       : { sdf: C.armor.legSdf, lo: [-0.24, 0.08, -0.13], hi: [0.24, 0.34, 0.15], h: H * 0.8, only: /^lowerLeg/ };
     case "armorHelm": case "armorVisor": case "armorDeco": case "armorHands": case "armorFeet": case "armorMail": { const A = C.armor, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor: nothing
@@ -52,9 +54,9 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       if (name === "armorHelm") return { sdf: A.helmSdf, lo: [-0.4, 0.7, -0.4], hi: [0.4, 1.52, 0.42], h: H * 0.85, bone1: "head" };
       if (name === "armorVisor") return !A.visorSdf ? none : { sdf: A.visorSdf, lo: [-0.3, 0.85, -0.1], hi: [0.3, 1.2, 0.42], h: H * 0.6, bone1: "head" };
       if (name === "armorDeco") return !A.decoSdf ? none : { sdf: A.decoSdf, lo: [-0.6, 0.9, -0.5], hi: [0.6, 1.85, 0.45], h: H * 0.8, bone1: "head" };
-      if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42, 0.36, -0.1], hi: [0.42, 0.6, 0.12], h: H * 0.7, only: /^(hand|fingers|fingerTips|thumb|lowerArm)/ };
+      if (name === "armorHands") return { sdf: A.handSdf, lo: [-0.42 - ax, 0.36 - ay, -0.1], hi: [0.42 + ax, 0.6, 0.12], h: H * 0.7, only: /^(hand|fingers|fingerTips|thumb|lowerArm)/ };
       if (name === "armorFeet") return { sdf: A.footSdf, lo: [-0.24, -0.01, -0.14], hi: [0.24, 0.14, 0.16], h: H * 0.8, only: /^(foot|lowerLeg)/ };
-      return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47, -0.02, -0.3], hi: [0.47, 0.82, 0.34], h: H * 1.2 }; }
+      return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.82, 0.34], h: H * 1.2 }; }
     // weapons (clothes/weapons.js): each bound to one bone (the right hand; the shield to the left forearm)
     case "weaponR": case "weaponRGrip": case "weaponL": case "weaponLFace": case "weaponLGrip": { const Wp = C.weapons, r = name.startsWith("weaponR"), f = { weaponR: Wp.rMetal, weaponRGrip: Wp.rOther, weaponL: Wp.lMetal, weaponLFace: Wp.lFace, weaponLGrip: Wp.lOther }[name], b = r ? Wp.boxR : Wp.boxL;
       if (!f || !b) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };

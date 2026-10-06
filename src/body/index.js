@@ -2,6 +2,32 @@
 import { handFrame } from "../clothes/weapons.js";
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
 const HEAD_SCALE0 = 0.9;   // the head size the neck width is set for (neck.follow): the chibi's, the default until 2026-10-06 (not DEFAULTS' now: every neck would change)
+const ARM0 = { "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01] };   // the base arm (left), as built at the base proportions
+
+/**
+ * The left arm's joints (base proportions) for body.proportion.shoulders and .arms (2026-10-06, the 5-head tall body; Saori: "頭でかすぎて
+ * バランス悪い", the arms to reach the thighs):
+ * shoulders (×): the shoulder joint further out (the arm with it); the shoulder's flesh, the slope from the neck and the chest widen with it.
+ * arms (×, null = none): arms of their own length (× the base arm's), which the torso's stretch then leaves as they are: they ride on the
+ * shoulder (makeStretch's rigid arms) instead of being stretched upright with the torso, so the hands keep their shape and can reach below
+ * the hip joint (there the legs' stretch would pull a hand long). Laid out the way the stretch would have turned them (steeper by the torso's
+ * factor), so a pose turns them where it turns a stretched arm. null (the chibi types) = the arms stretch with the torso, as before.
+ */
+export function armJoints(OPT) {
+  const PR = OPT.body.proportion ?? {}, A = PR.arms ?? null, SHW = 0.115 * ((PR.shoulders ?? 1) - 1), out = {};
+  for (const [k, v] of Object.entries(ARM0)) out[k] = [v[0] + SHW, v[1], v[2]];
+  if (A != null) { const sT = PR.torso ?? 1, ua = out["upperArm.L"];
+    const seg = (a, b) => { const d = [b[0] - a[0], (b[1] - a[1]) * sT, b[2] - a[2]], k = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) * A / Math.hypot(...d); return d.map((v) => v * k); };
+    const d1 = seg(ARM0["upperArm.L"], ARM0["lowerArm.L"]), d2 = seg(ARM0["lowerArm.L"], ARM0["hand.L"]);
+    out["lowerArm.L"] = ua.map((v, i) => v + d1[i]); out["hand.L"] = out["lowerArm.L"].map((v, i) => v + d2[i]); }
+  return out;
+}
+/** How much further the hands reach than the base arm's (body.proportion: shoulders, arms, hands), in base space: { x: out to the side,
+ *  y: down }. The boxes the body and the clothes around the arms are meshed in (parts.js, clothes) grow by it. */
+export function armReach(OPT) {
+  const PR = OPT.body.proportion ?? {}, h = armJoints(OPT)["hand.L"], K = PR.hands ?? 1, tip = 0.115 * K;   // the fingertips: about 11.5 cm from the wrist along the hand
+  return { x: Math.max(0, h[0] - ARM0["hand.L"][0] + 0.876 * (tip - 0.115)), y: Math.max(0, ARM0["hand.L"][1] - h[1] + 0.483 * (tip - 0.115) + (PR.arms != null ? 0.06 : 0)) };   // (a rigid hand turns down with its steeper forearm: a margin)
+}
 
 /**
  * Build the body from options.
@@ -20,6 +46,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
     "upperLeg.L": [0.11, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
   };
+  // body.proportion: the shoulders and arms (armJoints above; SHW: how much further out the shoulder joint is), hands: their size (× around the wrist)
+  const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
+  Object.assign(J, armJoints(OPT));
   // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
   const NK = OPT.body.sculpt.neck, LIFT = NK.length ?? 0; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
@@ -32,8 +61,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 指の骨(左右に3本): 4本の指の付け根(fingers)・指の中ほど(fingerTips)・親指の付け根(thumb)。ポーズで指を曲げてグーにする(motion の grip)
   //   指4本は1本の骨でまとめて曲げる(1本ずつは動かさない)。手の向き(D=指の向き N=手のひら S=親指の側)は weapons.js の handFrame と同じ
   const HANDS = {};
-  for (const s of ["L", "R"]) { const H = handFrame(J, s), at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0)); HANDS[s] = { D: H.D, N: H.N, S: H.S, G: H.G };   // G: the middle of the fist (where a held thing's grip goes: avatar.hold)
-    J[`fingers.${s}`] = at(H.palm, [H.D, 0.022]); J[`fingerTips.${s}`] = at(H.palm, [H.D, 0.042], [H.N, 0.003]); J[`thumb.${s}`] = at(H.palm, [H.S, 0.04], [H.D, -0.008], [H.N, 0.006]);
+  for (const s of ["L", "R"]) { const H = handFrame(J, s, HK), at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0)); HANDS[s] = { D: H.D, N: H.N, S: H.S, G: H.G };   // G: the middle of the fist (where a held thing's grip goes: avatar.hold)
+    J[`fingers.${s}`] = at(H.palm, [H.D, 0.022 * HK]); J[`fingerTips.${s}`] = at(H.palm, [H.D, 0.042 * HK], [H.N, 0.003 * HK]); J[`thumb.${s}`] = at(H.palm, [H.S, 0.04 * HK], [H.D, -0.008 * HK], [H.N, 0.006 * HK]);
     Object.assign(PARENT, { [`fingers.${s}`]: `hand.${s}`, [`fingerTips.${s}`]: `fingers.${s}`, [`thumb.${s}`]: `hand.${s}` }); }
   const BONES = Object.keys(PARENT);
   const BI = Object.fromEntries(BONES.map((b, i) => [b, i]));
@@ -62,11 +91,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
   { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }
-  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
-  P.chest = E([0, 0.68, 0.015 + BD / 2], [0.13 * TO.chest, 0.1, 0.1 * TO.chest - BD / 2], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+  P.chest = E([0, 0.68, 0.015 + BD / 2], [0.13 * TO.chest + 0.6 * SHW, 0.1, 0.1 * TO.chest - BD / 2], "chest", 0.05);       // 胸は細め(脇の下を高くする)
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
@@ -183,31 +212,31 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     { const B = TO.butt ?? 1; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B)], [0.08, 0.066, 0.075 * B], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet)
-    { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * 0.116, 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
+    { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * (0.116 + SHW), 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
     P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
     { const a = j("lowerArm"), b = j("hand"), t = OPT.body.sculpt.forearm.bulge.start, L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L;   // ひじの下の前腕のふくらみ: 下寄りにふくらませ(上側は控えめ)、手首へ細くなりながらなめらかにつなぐ
       const nd = [m * uy, -m * ux], od = OPT.body.sculpt.forearm.bulge.offset, c = [a[0] + (b[0] - a[0]) * t + nd[0] * od, a[1] + (b[1] - a[1]) * t + nd[1] * od, a[2] + (b[2] - a[2]) * t];
       P[`foreBulge.${s}`] = C(c, [b[0] + nd[0] * od * 0.3, b[1] + nd[1] * od * 0.3, b[2]], OPT.body.sculpt.forearm.bulge.radius, OPT.body.sculpt.forearm.bulge.radiusEnd, `lowerArm.${s}`, OPT.body.sculpt.forearm.bulge.blend);
-      Object.assign(P[`foreBulge.${s}`], { t: 4, n: [-0.483 * m, -0.876, 0], flat: OPT.body.sculpt.forearm.bulge.flat }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
+      Object.assign(P[`foreBulge.${s}`], { t: 4, n: handFrame(J, s, HK).N, flat: OPT.body.sculpt.forearm.bulge.flat }); }   // 手のひらの向きに平たい(手首に向かって平たくしぼる。丸太にならないように)
     // 手: Aポーズで手のひらが下を向く。指4本(少し開く)+親指
     // 何か持つ手(outfit.weapon)は握りこぶし(手首はまっすぐのまま。柄は親指の側へ抜ける)
     const fist = ((OPT.outfit?.weapon ?? {})[s === "L" ? "left" : "right"] ?? "none") !== "none";
-    const { w, D, N, S } = handFrame(J, s);   // D=指の向き N=手のひらの向き S=親指の側
-    const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k, 0));
+    const { w, D, N, S } = handFrame(J, s, HK);   // D=指の向き N=手のひらの向き S=親指の側
+    const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k * HK, 0));   // (offsets in the hand's size)
     const palm = at(w, [D, 0.03], [N, 0.002]);
-    P[`palm.${s}`] = E(palm, [0.034, 0.05, 0.019], `hand.${s}`, 0.02, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
+    P[`palm.${s}`] = E(palm, [0.034 * HK, 0.05 * HK, 0.019 * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
       const fd = D.map((v, k) => v * Math.cos(sp) + S[k] * Math.sin(sp)), b0 = at(palm, [D, 0.022], [S, o * (fist ? 0.85 : 1)]);
-      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125, 0.012, `fingers.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012, 0.011, `fingerTips.${s}`, 0.006); return; }
+      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125 * HK, 0.012 * HK, `fingers.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012 * HK, 0.011 * HK, `fingerTips.${s}`, 0.006); return; }
       // 開いた指: 付け根側(fingers の骨)と先側(fingerTips の骨)の2本に分ける = 中ほどで曲がる。つなぎ目は溶かす幅を小さく(同じ太さの継ぎ目がふくらまないように)
       const mid = at(b0, [fd, len * 0.48], [N, 0.003]);
-      P[`finger${i}.${s}`] = C(b0, mid, 0.0125, 0.012, `fingers.${s}`, 0.008);   // 指の股はくっきり
-      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len], [N, 0.006]), 0.012, 0.0115, `fingerTips.${s}`, 0.002);
+      P[`finger${i}.${s}`] = C(b0, mid, 0.0125 * HK, 0.012 * HK, `fingers.${s}`, 0.008);   // 指の股はくっきり
+      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len], [N, 0.006]), 0.012 * HK, 0.0115 * HK, `fingerTips.${s}`, 0.002);
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
-    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013, 0.011, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013, 0.011, `thumb.${s}`, 0.012);
+    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012);
     { const a = j("upperLeg"), b = j("lowerLeg"), d = OPT.body.sculpt.thigh.topDrop ?? 0, L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);   // topDrop: 太ももの肉の上端だけを脚の向きに下げる(股関節=骨の回る点は動かさない)。外側の付け根の張り出しが下がり、くびれから腰へのカーブがゆるくなる
       P[`thigh.${s}`] = C(a.map((v, i) => v + (b[i] - v) * d / L), b, 0.08, 0.066, `upperLeg.${s}`, 0.05); }
     P[`thighB.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
@@ -296,14 +325,15 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const AP = OPT.body.sculpt.armpit ?? {};
   const ARMPIT = AP.on === false ? [] : [1, -1].map((m) => { const s = m > 0 ? "L" : "R", ja = J[`upperArm.${s}`], jb = J[`lowerArm.${s}`], a = [Math.abs(ja[0]), ja[1]], b = [Math.abs(jb[0]), jb[1]], L = Math.hypot(b[0] - a[0], b[1] - a[1]);   // 右側も左と同じ向きの座標で(X = |x| で計算するので、関節も |x| にそろえる)
     const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux, r = P[`upperArm.${s}`].ra + (AP.margin ?? 0.004);   // n: 腕の下側(下・内向き)
-    const A0 = [AP.x ?? 0.105, AP.y ?? 0.67], B0 = [(AP.x ?? 0.105) + 0.05, (AP.y ?? 0.67) - 0.1], dl = Math.hypot(B0[0] - A0[0], B0[1] - A0[1]), qx = -(B0[1] - A0[1]) / dl, qy = (B0[0] - A0[0]) / dl;   // 胴の側面の線(外向きの法線 q)
+    const A0 = [(AP.x ?? 0.105) + 0.6 * SHW, AP.y ?? 0.67], B0 = [(AP.x ?? 0.105) + 0.05 + 0.3 * SHW, (AP.y ?? 0.67) - 0.1], dl = Math.hypot(B0[0] - A0[0], B0[1] - A0[1]), qx = -(B0[1] - A0[1]) / dl, qy = (B0[0] - A0[0]) / dl;   // 胴の側面の線(外向きの法線 q)
     const ZW = AP.depth ?? 0.07, RND = AP.round ?? 0.02;
     return { t: 3, sub: true, k: AP.blend ?? 0.015, bone: "chest", bx0: m * 0.15, by0: 0.64, bz0: 0, br: 0.14,
       f: (x, y, z) => { const X = x * m; if (X <= 0) return 1; const c1 = r - ((X - a[0]) * nx + (y - a[1]) * ny), c2 = -((X - A0[0]) * qx + (y - A0[1]) * qy), c4 = Math.abs(z) - ZW;
         return -smin(-(-smin(-c1, -c2, RND)), -c4, RND); } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, ...FOOT_CUT, HEAD];
-  const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
-  const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-0.5, -0.04, -0.34], [0.5, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
+  const BX = 0.5 + armReach(OPT).x;   // (longer arms and wider shoulders reach further out)
+  const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
+  const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
   return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
@@ -341,10 +371,14 @@ function roundBox(c, h, r, k) {
  * Every mesh is made at the base proportions and its points are moved by fwd (normals by the slope); bones likewise. The changes between the
  * parts fade over a few cm (no kink in the shading).
  * Returns { identity, fwd(y), inv(y), slope(y), k (the least a distance shrinks: for distances read through inv), lift (how far the head moved), legK }.
+ * Rigid arms (body.proportion.arms set, 2026-10-06): the arms are not stretched; they move up with the shoulder as one piece (armDy). A point's
+ * share on the arm bones (a: its skin weights there, 0..1) says how much: up(y, a) / upSlope(y, a) / down(Y, a) are fwd / slope / inv for it.
+ * bone(name, y): where a joint goes. Without rigid arms they are fwd / slope / inv whatever a.
  */
+export const isArmBone = (b) => /^(upperArm|lowerArm|hand|fingers|fingerTips|thumb)\./.test(b);
 export function makeStretch(OPT, J) {
   const PR = OPT.body.proportion ?? {}, sL = PR.legs ?? 1, sT = PR.torso ?? 1;
-  if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1 }; }
+  if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1, rigid: false, armDy: 0, up: id, upSlope: () => 1, down: id, bone: (b, y) => y }; }
   const ya = 0.12, yh = J["upperLeg.L"][1], yn = J.neck[1], w = 0.03, Y0 = -0.2, D = 0.0005, N = Math.ceil((2.6 - Y0) / D);
   const box = (y, a, b) => sstep(a - w, a + w, y) * (1 - sstep(b - w, b + w, y));
   const slope = (y) => 1 + (sL - 1) * box(y, ya, yh) + (sT - 1) * box(y, yh, yn);
@@ -352,5 +386,10 @@ export function makeStretch(OPT, J) {
   const fwd = (y) => { const t = (y - Y0) / D; if (t <= 0) return y; if (t >= N) return Y0 + F[N] + (y - Y0 - N * D); const i = Math.floor(t); return Y0 + F[i] + (F[i + 1] - F[i]) * (t - i); };
   const inv = (y) => { const v = y - Y0; if (v <= 0) return y; if (v >= F[N]) return Y0 + N * D + (v - F[N]);
     let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (F[m] <= v) lo = m; else hi = m; } return Y0 + (lo + (v - F[lo]) / (F[hi] - F[lo])) * D; };
-  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sT), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya) };
+  const rigid = PR.arms != null, ys = J["upperArm.L"][1], armDy = rigid ? fwd(ys) - ys : 0;
+  const up = (y, a) => !rigid || !a ? fwd(y) : (1 - a) * fwd(y) + a * (y + armDy), upSlope = (y, a) => !rigid || !a ? slope(y) : (1 - a) * slope(y) + a;
+  const down = (Y, a) => { if (!rigid || !a) return inv(Y); if (a >= 1) return Y - armDy;
+    let lo = Math.min(inv(Y), Y - armDy), hi = Math.max(inv(Y), Y - armDy); for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (up(m, a) < Y) lo = m; else hi = m; } return (lo + hi) / 2; };
+  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sT), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya),
+    rigid, armDy, up, upSlope, down, bone: (b, y) => rigid && isArmBone(b) ? y + armDy : fwd(y) };   // bone: where a joint at base height y goes
 }

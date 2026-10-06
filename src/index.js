@@ -15,7 +15,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
@@ -45,7 +45,7 @@ export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the 
  * Build an avatar.
  * options:  see DEFAULTS (src/options.js); anything left out uses the default (since 2026-10-06 the tall standard body, BODY_TYPES.standardTall;
  *           merge a chibi BODY_TYPES entry for a chibi). Also a URL of a character file ("player.json"), and a character file as it is
- *           ({ hinagata: 2, name, options }: the editor's 書き出し → JSON). Files carry their version: a file of version 1, and a bare recipe
+ *           ({ hinagata: 3, name, options }: the editor's 書き出し → JSON). Files carry their version (2: the first tall body): a file of version 1, and a bare recipe
  *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults
  *           (openRecipe in options.js). A bare options object passed in code is today's: the current defaults.
  * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
@@ -123,10 +123,18 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // stretched upward as they are made (mesh), and what moves the character uses the stretched ones: the bones (Jr), the head's transform
   // for things placed in head space (HTr: the hair's locks, the face picture, the ear line) and the body read in place (bodySdfR, for colliders)
   const ST = makeStretch(OPT, J);
-  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.fwd(v[1]), v[2]]]));
+  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.bone(k, v[1]), v[2]]]));   // (rigid arms: the arm's joints ride on the shoulder)
   const HTr = ST.identity ? HT : { ...HT, identity: false, toHead: (x, y, z) => HT.toHead(x, ST.inv(y), z), fromHead: (x, y, z) => { const p = HT.fromHead(x, y, z); p[1] = ST.fwd(p[1]); return p; },
     wrap: (f) => { const g = HT.wrap(f); return (x, y, z) => g(x, ST.inv(y), z); } };
-  const bodySdfR = ST.identity ? bodySdf : (x, y, z) => bodySdf(x, ST.inv(y), z) * ST.k;
+  // (rigid arms, body.proportion.arms: a point that lands on an arm where the arm moved to is read there)
+  const armAt = (x, y, z) => { const t = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] }; weightsAt(x, y, z, t); let a = 0; for (let q = 0; q < 4; q++) if (t.w[q] && isArmBone(BONES[t.idx[q]])) a += t.w[q]; return a; };
+  const bodySdfR = ST.identity ? bodySdf : !ST.rigid ? (x, y, z) => bodySdf(x, ST.inv(y), z) * ST.k
+    : (x, y, z) => { const ya = y - ST.armDy; return armAt(x, ya, z) > 0.5 ? bodySdf(x, ya, z) : bodySdf(x, ST.inv(y), z) * ST.k; };
+  const ARM_BI = new Set(BONES.filter(isArmBone).map((b) => BI[b]));
+  /** a vertex's share on the arm bones (rigid arms ride on the shoulder: makeStretch) */
+  const armShare = (si, sw, v) => { if (!ST.rigid || !si) return 0; let a = 0; for (let q = 0; q < 4; q++) if (ARM_BI.has(si[v * 4 + q])) a += sw[v * 4 + q]; return a; };
+  /** a mesh's points where they were made, at the base proportions (the paint, the culling under the clothes and the jaw shadow read them) */
+  const basePos = (g) => g.userData.basePos ?? g.attributes.position.array;
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J: Jr, PARENT, BONES });
 
   lap("shapes");
@@ -149,9 +157,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const g = new THREE.BufferGeometry();
     let gp = rec.pos, gn = rec.nor;
     if (!ST.identity) { gp = Float32Array.from(gp); gn = Float32Array.from(gn);   // the proportions: points up by fwd, normals by the slope there (the record stays at the base, for the cache)
-      for (let i = 0; i < gp.length; i += 3) { const s = ST.slope(gp[i + 1]); gp[i + 1] = ST.fwd(gp[i + 1]); const ny = gn[i + 1] / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
+      for (let i = 0, v = 0; i < gp.length; i += 3, v++) { const a = armShare(rec.si, rec.sw, v), s = ST.upSlope(gp[i + 1], a); gp[i + 1] = ST.up(gp[i + 1], a); const ny = gn[i + 1] / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
     g.setAttribute("position", new THREE.BufferAttribute(gp, 3)); g.setAttribute("normal", new THREE.BufferAttribute(gn, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(rec.si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(rec.sw, 4));
+    if (!ST.identity) g.userData.basePos = rec.pos;
     PROF.push({ part: name, verts: rec.pos.length / 3, ms: w ? w.ms : Math.round(performance.now() - T0), cached: !time, worker: !!w, sample: time ? Math.round(time.sample) : 0, project: time ? Math.round(time.project) : 0 });
     return g;
   }
@@ -221,9 +230,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // painted color per vertex (multiplied into the skin): the jaw shadow, and a soft crescent of shade inside each ear (reads as the ear's hollow)
   const ES_ = OPT.face.earShade;
   function addPaint(geo) {
-    const Pa = geo.attributes.position.array, N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), jc = new THREE.Color(JS.color), ec = new THREE.Color(ES_.color);
+    const Pa = basePos(geo), N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), jc = new THREE.Color(JS.color), ec = new THREE.Color(ES_.color);
     const put = (v, c, k) => { if (k <= 0) return; for (const [o, ch] of [[0, "r"], [1, "g"], [2, "b"]]) A[v * 3 + o] *= 1 + (c[ch] - 1) * Math.min(1, k); };
-    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = ST.inv(Pa[i + 1]), z = Pa[i + 2], ny = N[i + 1];   // (at the base proportions: the shadow's heights are)
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];   // (at the base proportions: the shadow's heights are)
       if (JS.on) { const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);
         const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(-0.06, 0.0, z);
         put(v, jc, Math.max(jaw, neck)); }
@@ -312,8 +321,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       im.src = src; }));
   }
   // a part's points for the paint: where each was when made, at the base proportions, and its normal
-  const paintable = (x, k) => { const g = x.m.geometry, P = g.attributes.position.array, Q = new Float32Array(P.length);
-    for (let i = 0; i < P.length; i += 3) { Q[i] = P[i]; Q[i + 1] = ST.inv(P[i + 1]); Q[i + 2] = P[i + 2]; }
+  const paintable = (x, k) => { const g = x.m.geometry, Q = Float32Array.from(basePos(g));
     g.setAttribute("paintP", new THREE.BufferAttribute(Q, 3)); g.setAttribute("paintN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3));
     x.m.material = withPaint(x.m.material, PAINT[k], PAINT[k].glsl); x.paint = k; };
   const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
@@ -530,10 +538,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeSdf]], COVER_DEPTH = 0.006;   // m inside the garment
   const bodyGeo = parts.body.m.geometry, fullIdx = bodyGeo.index, coverIdx = new Map();
   let coverBits = null, coverSig = -1;
-  if (cull) { const Pa = bodyGeo.attributes.position.array, kept = building && hit?.cover;   // remembered with the meshes (same shape, same answer; recomputing reads the whole body ~0.25 s)
+  if (cull) { const Pa = basePos(bodyGeo), kept = building && hit?.cover;   // remembered with the meshes (same shape, same answer; recomputing reads the whole body ~0.25 s)
     if (kept && kept.length === Pa.length / 3) coverBits = kept;
     else { coverBits = new Uint8Array(Pa.length / 3);
-      COVER.forEach(([, f], b) => { for (let v = 0; v < coverBits.length; v++) if (f(Pa[v * 3], ST.inv(Pa[v * 3 + 1]), Pa[v * 3 + 2]) < -COVER_DEPTH) coverBits[v] |= 1 << b; });   // (the garments' shapes are at the base proportions)
+      COVER.forEach(([, f], b) => { for (let v = 0; v < coverBits.length; v++) if (f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -COVER_DEPTH) coverBits[v] |= 1 << b; });   // (the garments' shapes are at the base proportions)
       fresh.cover = coverBits; } }
   function syncCover() {
     if (!coverBits) return;
@@ -664,7 +672,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const H = HANDS[s], A = new THREE.Vector3(...H.S).normalize(), N = new THREE.Vector3(...H.N), F = N.addScaledVector(A, -N.dot(A)).normalize();
         const a = ax(along), f = ax(face); if (Math.abs(a.dot(f)) > 1e-6) throw new Error("hold: along and face must be different axes");
         const mo = new THREE.Matrix4().makeBasis(a, f, a.clone().cross(f)), mt = new THREE.Matrix4().makeBasis(A, F, A.clone().cross(F));
-        const G = [H.G[0], ST.fwd(H.G[1]), H.G[2]], wrap = new THREE.Group(); wrap.name = `held:${object.name || "item"}`;
+        const G = [H.G[0], ST.bone(`hand.${s}`, H.G[1]), H.G[2]], wrap = new THREE.Group(); wrap.name = `held:${object.name || "item"}`;
         wrap.position.set(G[0] - Jr[`hand.${s}`][0], G[1] - Jr[`hand.${s}`][1], G[2] - Jr[`hand.${s}`][2]);
         wrap.quaternion.setFromRotationMatrix(mt.multiply(mo.transpose())); wrap.add(object); bone[`hand.${s}`].add(wrap);
         held[s] = { wrap, object, scale: 1 };

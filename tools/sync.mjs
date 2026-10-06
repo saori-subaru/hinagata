@@ -6,12 +6,13 @@
 //   node sync.mjs character.json --mcp [--port 8790]                                  the same, as an agent's MCP server (stdio)
 //   (get it with: curl -O https://hinagata.pages.dev/sync.mjs — or tools/sync.mjs in the repository)
 //
-// The file is the character: a character file as the editor exports it, { "hinagata": 2, "name": …, "options": { the recipe: only what
+// The file is the character: a character file as the editor exports it, { "hinagata": 3, "name": …, "options": { the recipe: only what
 // differs from the defaults } }. Whoever writes it (an agent, you in a text editor, git) is shown in the editor within a moment; what you
 // change in the editor is written back into it (pretty-printed, keys in a steady order), so the agent sees your tweaks as a diff. A file
-// that doesn't exist yet is made ({ "hinagata": 2, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
+// that doesn't exist yet is made ({ "hinagata": 3, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
 // against. Version 1, and a bare recipe file (the options alone, as files were before 2026-10-06), mean the old chibi defaults; version 2
-// the tall standard body. A file keeps its form and version: the editor writes a bare file back bare, relative to the old defaults.
+// the first tall body (about 4 heads, a bigger head); version 3 today's tall body (about 5 heads). A file keeps its form and version: the
+// editor writes a bare file back bare, relative to the old defaults, and a version 2 file back as version 2.
 //
 // It prints a link: the editor opened with ?sync=<port>&key=<key> connects here. The key (random, per run) keeps other web pages from
 // reading or overwriting the file: every request must carry it. Only this one file is ever read or written. No dependencies.
@@ -37,7 +38,7 @@ if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 
 const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), LINK = `${EDITOR}?sync=${PORT}&key=${KEY}`;
 
 // RECIPE_VERSION in src/options.js (this file has no dependencies): the version of a file made here
-const VERSION = 2;
+const VERSION = 3;
 // the file's content (a character file, or a bare recipe), parsed; rev counts changes from either side
 let recipe = {}, rev = 0, written = null;
 const isFile = (d) => !!d && typeof d === "object" && "hinagata" in d && !!d.options && typeof d.options === "object" && !Array.isArray(d.options);
@@ -149,7 +150,7 @@ function mcp() {
   const text = (t) => ({ content: [{ type: "text", text: t }] });
   async function call(name, a = {}) {
     if (name === "editor_link") return text(`${LINK}\n${clients.size ? `${clients.size} editor(s) connected` : "no editor connected yet"}`);
-    if (name === "get_recipe") return text(JSON.stringify(recipe, null, 2) + (versionOf(recipe) < VERSION ? `\n(version ${versionOf(recipe)}${isFile(recipe) ? "" : ", a bare recipe"}: made against the old defaults, the chibi body (about 3 heads): what isn't set is the chibi's. Today's default is the tall standard body.)` : ""));
+    if (name === "get_recipe") return text(JSON.stringify(recipe, null, 2) + (versionOf(recipe) < VERSION ? `\n(version ${versionOf(recipe)}${isFile(recipe) ? "" : ", a bare recipe"}: made against older defaults, ${versionOf(recipe) === 1 ? "the chibi body (about 3 heads): what isn't set is the chibi's" : "the first tall body (about 4 heads, a bigger head and shorter legs): what isn't set is that body's"}. Today's default is the tall standard body, about 5 heads.)` : ""));
     if (name === "update_recipe") {
       const r = structuredClone(optsOf(recipe)); for (const p of a.reset ?? []) delPath(r, p); for (const [p, v] of Object.entries(a.set ?? {})) setPath(r, p, v);
       write(withOpts(recipe, r), "agent"); say(`  agent → file (rev ${rev})`);

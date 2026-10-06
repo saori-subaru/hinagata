@@ -22,7 +22,7 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 
 const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
 addEventListener("resize", resize); resize();
 
-// one avatar: bob hair, green shirt, walking. The body: the default is the tall standard (about 4.5 heads);
+// one avatar: bob hair, green shirt, walking. The body: the default is the tall standard (about 5 heads);
 // for a chibi game merge a chibi type: createAvatar({ ...BODY_TYPES.standard, hair: … })
 const avatar = await createAvatar({ hair: { back: "bob", bangs: "block" }, outfit: { shirt: { color: "#8cc084" } } });
 // the world is built in metres: size the character to it (an adult about 1.7 m), not the world to the character
