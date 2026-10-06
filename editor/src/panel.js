@@ -122,12 +122,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       // the expressions, edited one at a time (2026-10-06, Saori: picking a face, then registering it on a row, then building the next one was
       // too roundabout): pick the expression (ふつう 喜び 悲しみ 怒り 驚き), it shows on the character, and its eyes, brows, mouth and cheeks are
       // edited right here. ふつう is the character's own face (face.parts); the others are this character's versions (face.expressions), the
-      // stock face of their name until one is changed. "Start from" puts a stock or drawn face in to begin with
-      const ITEMS = [...Object.entries(EXPRESSIONS).map(([id, x]) => ({ key: `s:${id}`, label: L(x), parts: x.parts, own: false })),
-        ...drawnList().map((d) => { const id = `image@${d.id}`; return { key: `d:${d.id}`, label: drawnName(d), parts: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" }, own: true }; })];
-      const groups = (sel) => [[t("exStock"), ITEMS.filter((x) => !x.own)], [t("exDrawnGroup"), ITEMS.filter((x) => x.own)]].filter(([, l]) => l.length)
-        .map(([g, l]) => h("optgroup", { label: g }, l.map((x) => h("option", { value: x.key, selected: x.key === sel }, x.label))));
-      const item = (k) => ITEMS.find((x) => x.key === k), match = (p) => ITEMS.find((x) => Object.entries(x.parts).every(([k, v]) => p[k] === v)) ?? null;
+      // stock face of their name until one is changed. A drawn template goes into the one picked (app.js applyTemplate); a drawn face is used
+      // elsewhere by picking its eyes, brows and mouth ("絵: …" in each)
       if (!EXPRESSION_SET.includes(editExpr)) editExpr = "normal";
       const n = editExpr, ES = r.face.expressions ?? {}, P0 = r.face.parts, base = { eyes: P0.eyes, brows: P0.brows, mouth: P0.mouth, cheeks: P0.cheeks };
       const cur = n === "normal" ? { ...base, ...(ES.normal ?? {}) } : { ...base, ...(ES[n] ?? EXPRESSIONS[n]?.parts ?? {}) };
@@ -137,15 +133,12 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       ctx.showFace?.(cur); faceShown = true;
       const pickN = h("div", { class: "seg full", role: "group", "aria-label": t("exprSet") }, EXPRESSION_SET.map((k) =>   // five, fixed: all in view (2026-10-06, Saori: not a drop-down)
         h("button", { type: "button", "aria-pressed": String(k === n), onclick: () => { editExpr = k; render(); } }, t(`ex_${k}`))));
-      const fromK = match(cur)?.key ?? "";
-      const pickFrom = h("select", { class: "sel", style: "max-width: 230px", "aria-label": t("exFrom"), onchange: (ev) => { const x = item(ev.target.value); if (x) write({ ...cur, ...x.parts }); } },
-        fromK ? null : h("option", { value: "", selected: true }, t("exIndividual")), groups(fromK));
       const slotField = (k) => { const e = ALL.find((q) => q.path === `face.parts.${k}`), drawn = k === "cheeks" ? [] : drawnList().map((d) => ({ value: `image@${d.id}`, label: { ja: drawnName(d), en: drawnName(d) } })), opts = [...(e?.options ?? []), ...drawn];
         return h("div", { class: "field" }, h("label", {}, L(e?.label) || k), h("select", { class: "sel", "aria-label": L(e?.label) || k, onchange: (ev) => write({ ...cur, [k]: opts[+ev.target.value].value }) },
           opts.map((o, i) => h("option", { value: i, selected: o.value === cur[k] }, L(o.label))))); };
       const own = n !== "normal" && ES[n];
       return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
-        h("div", { class: "field" }, h("label", {}, t("exFrom")), pickFrom), SLOTS.map(slotField),
+        SLOTS.map(slotField),
         own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetTo", L(EXPRESSIONS[n])))) : null);
     }
     if (tab === "outfit") {   // the whole garment at once: a robe is a dress down to the ankles with bell sleeves
@@ -355,5 +348,5 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
   resetEl.addEventListener("click", () => { const ch = {}; for (const p of tabPaths(tab)) if (!isDefault(store.recipe, p)) ch[p] = structuredClone(getPath(DEFAULTS, p)); set(ch); });
 
-  return { render, renderFoot, get tab() { return tab; } };
+  return { render, renderFoot, get tab() { return tab; }, get editExpr() { return editExpr; } };   // editExpr: where a drawn template goes (app.js applyTemplate)
 }

@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, RECIPE_VERSION } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, RECIPE_VERSION, EXPRESSIONS } from "../../src/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -180,13 +180,15 @@ function applyTemplate(im, into0) {
     let r; try { r = readFaceSheet(vp.avatar, im, { into }); } catch (err) { toast(t(err.code === "count" ? "tplCount" : "tplBad")); return; }
     if (!r.read.length) { toast(t("tplRead0")); return; }
     let ch;
-    if (fresh) {   // named "新しい表情" (2, 3 … if taken); renamed in its row
-      const names = new Set(list.map((d) => d.name)); let name = t("newExprName"), k = 2; while (names.has(name)) name = `${t("newExprName")}${k++}`;
+    const n = panel.editExpr ?? "normal";   // the expression the set is editing: what was read goes into it (2026-10-06, Saori: drawing a sad face changed the character's own face)
+    if (fresh) {   // named after that expression ("悲しみ"; "新しい表情" for ふつう; 2, 3 … if taken); renamed in its row
+      const base = n === "normal" ? t("newExprName") : t(`ex_${n}`), names = new Set(list.map((d) => d.name)); let name = base, k = 2; while (names.has(name)) name = `${base}${k++}`;
       ch = { "face.drawn": [...list, { id: into, name, eye: null, brow: null, mouth: null, ...r.drawn[into], cheeks: "none", blink: true }] };
     } else ch = sheetChanges(store.recipe, r);
-    const id = into != null ? `image@${into}` : "image";   // show what was just read
-    Object.assign(ch, { "face.parts.eyes": id, "face.parts.brows": id, "face.parts.mouth": id });
-    if (into != null) ch["face.parts.cheeks"] = fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none";
+    const id = into != null ? `image@${into}` : "image", got = { eyes: id, brows: id, mouth: id, ...(into != null ? { cheeks: fresh ? "none" : list.find((d) => String(d.id) === String(into))?.cheeks ?? "none" } : {}) };
+    const ES = ch["face.expressions"] ?? store.get("face.expressions") ?? {};
+    if (n === "normal") { for (const [k, v] of Object.entries(got)) ch[`face.parts.${k}`] = v; if (ES.normal) { const o = { ...ES }; delete o.normal; ch["face.expressions"] = o; } }   // the character's own face (an old ふつう of its own gives way)
+    else ch["face.expressions"] = { ...ES, [n]: { ...(ES[n] ?? EXPRESSIONS[n]?.parts ?? {}), ...got } };
     store.set(ch, { commit: true }); toast(fresh ? t("tplNewExpr", ch["face.drawn"].at(-1).name) : t("tplReadN", r.read.length));
     return into;
 }
