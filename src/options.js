@@ -33,7 +33,8 @@ export const DEFAULTS = {
   "body": {
     "proportion": {
       "legs": 1.65,
-      "torso": 1.3
+      "torso": 1.3,
+      "chest": 0.3
     },
     "head": {
       "scale": 0.82,

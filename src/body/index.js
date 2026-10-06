@@ -347,10 +347,16 @@ export function makeStretch(OPT, J) {
   if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1 }; }
   const ya = 0.12, yh = J["upperLeg.L"][1], yn = J.neck[1], w = 0.03, Y0 = -0.2, D = 0.0005, N = Math.ceil((2.6 - Y0) / D);
   const box = (y, a, b) => sstep(a - w, a + w, y) * (1 - sstep(b - w, b + w, y));
-  const slope = (y) => 1 + (sL - 1) * box(y, ya, yh) + (sT - 1) * box(y, yh, yn);
+  // where the length goes (2026-10-06, Saori: "高等身にしたとき胸が引き延ばされてたてにのびる", "股の間の謎のたるんだ肉"): the joints end where they
+  // did (the same height at the hips and the neck), but the legs stretch only below the crotch (yc: stretched up to the hip joint, the
+  // crotch's underside hung down between the thighs) and the chest only a little (from yw up: its round front went long); the waist and
+  // the belly take the rest of the torso's length, as a tall body's longer middle
+  const yc = Math.min(yh, (OPT.body.sculpt.crotch?.y ?? 0.29) + (yh - 0.4) + 0.02), yw = Math.min(yn - 0.06, J.chest[1] - 0.04), CHEST = PR.chest ?? 0.3;   // proportion.chest: the share of the stretch the chest takes (1 = as much as the waist, as before)
+  const sl = 1 + (sL - 1) * (yh - ya) / (yc - ya), sc = 1 + (sT - 1) * CHEST, sw = 1 + ((sT - 1) * (yn - yh) - (sc - 1) * (yn - yw)) / (yw - yh);
+  const slope = (y) => 1 + (sl - 1) * box(y, ya, yc) + (sw - 1) * box(y, yh, yw) + (sc - 1) * box(y, yw, yn);
   const F = new Float64Array(N + 1); for (let i = 1; i <= N; i++) F[i] = F[i - 1] + D * slope(Y0 + (i - 0.5) * D);   // fwd(Y0 + i D) - Y0
   const fwd = (y) => { const t = (y - Y0) / D; if (t <= 0) return y; if (t >= N) return Y0 + F[N] + (y - Y0 - N * D); const i = Math.floor(t); return Y0 + F[i] + (F[i + 1] - F[i]) * (t - i); };
   const inv = (y) => { const v = y - Y0; if (v <= 0) return y; if (v >= F[N]) return Y0 + N * D + (v - F[N]);
     let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (F[m] <= v) lo = m; else hi = m; } return Y0 + (lo + (v - F[lo]) / (F[hi] - F[lo])) * D; };
-  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sT), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya) };
+  return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sl, sc, sw), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya) };
 }

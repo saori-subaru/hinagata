@@ -265,15 +265,22 @@ export function colliders(J, BI, sdf) {
 /**
  * The moving locks. specs: from longLocks or bangLocks (all with the same number of points) / head: the head bone's index / coll: colliders() / ell: { c, r } the head (root space, rest) /
  * outward(p): the direction the hair faces at p (for the cross-section's "out" and the shading normals) / opts: { stiff, damping }
+ * floor: each point stays out of the head's side of a plane through where it rests, facing out (outward there): the bangs lie close over the
+ *   forehead with nothing else to keep them off it (2026-10-06, Saori: "走った時に前髪がおでこにめり込む": the head ran ahead and the locks
+ *   trailing behind went into it). slack: how far in past the rest it may go (m)
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false }) {
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001 }) {
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
   specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * width(t) + 0.003;
     if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
   X.set(R); P.set(R);
+  let FN = null, FD = null;   // floor: per point, the plane's normal (rest space) and its offset
+  if (floor) { FN = new Float32Array(NP * 3); FD = new Float32Array(NP); const I = new THREE.Matrix4();
+    for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2], o = outward(x, y, z, I), l = Math.hypot(...o) || 1;
+      FN[i * 3] = o[0] / l; FN[i * 3 + 1] = o[1] / l; FN[i * 3 + 2] = o[2] / l; FD[i] = (o[0] * x + o[1] * y + o[2] * z) / l - slack; } }
   // the mesh
   const pos = new Float32Array(NV * 3), nor = new Float32Array(NV * 3), shn = new Float32Array(NV * 3), idx = [];
   for (let l = 0; l < NL; l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RG.length; k++) {
@@ -303,6 +310,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
     pp[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; pp[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; pp[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
     const q0 = pp[0], q1 = pp[1], q2 = pp[2]; if (ell) pushOutEllipsoid(pp, ell.c, ell.r, r);
+    if (FN) { const k = FN[j] * pp[0] + FN[j + 1] * pp[1] + FN[j + 2] * pp[2] - FD[i]; if (k < 0) { pp[0] -= FN[j] * k; pp[1] -= FN[j + 1] * k; pp[2] -= FN[j + 2] * k; } }
     if (pp[0] !== q0 || pp[1] !== q1 || pp[2] !== q2) { const f = M.elements; X[j] = f[0] * pp[0] + f[4] * pp[1] + f[8] * pp[2] + f[12]; X[j + 1] = f[1] * pp[0] + f[5] * pp[1] + f[9] * pp[2] + f[13]; X[j + 2] = f[2] * pp[0] + f[6] * pp[1] + f[10] * pp[2] + f[14]; }
     for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, c.r + r); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
     if (X[j + 1] < floorY + r) X[j + 1] = floorY + r;   // the floor (the avatar's feet)

@@ -55,6 +55,7 @@ const MAIN = [
   ["body.sculpt.ears.elf.curve", L("先の反り", "Tip curl"), { when: { "body.sculpt.ears.elf.on": true }, min: -0.3, max: 0.8, step: 0.01, section: L("耳", "Ears") }],
   ["body.proportion.legs", L("脚の長さ", "Leg length"), { min: 0.8, max: 2, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで脚を伸ばす(倍)。頭を小さくするのと合わせると頭身が上がる", "lengthens the legs, keeping their width (×). With a smaller head, the figure gets more heads tall") }],
   ["body.proportion.torso", L("胴の長さ", "Torso length"), { min: 0.8, max: 1.6, step: 0.01, section: L("頭身", "Proportions"), help: L("太さはそのままで胴を伸ばす(倍)。腕も少し長くなる", "lengthens the torso, keeping its width (×). The arms get a little longer too") }],
+  ["body.proportion.chest", L("胸の伸び", "Chest stretch"), { min: 0, max: 1, step: 0.05, section: L("頭身", "Proportions"), help: L("胴を伸ばすとき胸が受け持つ割合。0 = 胸はそのまま(おなか・腰が伸びる)、1 = 胴の中で同じだけ伸びる(胸が縦長になる)", "the chest's share when the torso lengthens. 0 = the chest keeps its shape (the waist and belly lengthen), 1 = the whole torso evenly (the chest goes long)") }],
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.6, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身で 0.7 前後にすると5頭身ほど(2026-10-05、それまでは 0.8 まで)", "about 0.7 on a tall body: some 5 heads tall (2026-10-05; it stopped at 0.8 before)") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
