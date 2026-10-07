@@ -115,7 +115,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const r = (at(a0, j0) * (1 - ta) + at(a1, j0) * ta) * (1 - tj) + (at(a0, j0 + 1) * (1 - ta) + at(a1, j0 + 1) * ta) * tj;
       return (Math.hypot(x, dz) - r) * 0.9; }; })() : null;
   // over a shirt whose hem is inside the skirt: its top goes over the shirt itself (7 mm out), as the pants' waistband does (a dress stood 2 cm
-  // out from the body there, the shirt 1.4 cm: a step under the chest)
+  // out from the body there, the shirt 1.4 cm: a step under the chest). A dress's 3 mm, and over the last 2 cm it sinks under its own top, so
+  // the skirt comes out from under it (its rim over the top caught the light as a line all round, 2026-10-07)
   const SK_BAND = HEM < SK_Y0 - 0.03 ? 0.06 : 0;
   // the hem's shape (skirtOf: hemShape, hemCount, hemDepth, curl; 2026-10-07, Saori): zigzag / scallop cut the hem's edge up between points
   // or round lobes around it; tiers stack the skirt in steps, each tier flaring out over the top of the next; curl flares the last part out
@@ -129,7 +130,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
-    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - (SK.dress ? 0.003 : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
+    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
