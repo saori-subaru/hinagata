@@ -40,6 +40,12 @@ export function buildWeapons(OPT, { J, bodySdf }) {
       const guard = capsule([x, y, z], at(0.058, -0.078), at(0.058, 0.078), 0.014), pommel = Math.hypot(a + 0.068, w, t) - 0.023;
       return Math.min(blade + fuller, guard, pommel); };
   }
+  if (R === "dagger") {   // a short blade (2026-10-07, Saori: "短剣を足すのもいいかも"): a short grip, a small guard, a leaf of a blade
+    rOther = (x, y, z) => capsule([x, y, z], at(-0.045), at(0.045), 0.012);
+    rMetal = (x, y, z) => { const [a, w, t] = loc(x, y, z), u = Math.min(1, Math.max(0, (a - 0.055) / 0.17)), hw = 0.022 * Math.sin(Math.PI * Math.min(1, 0.35 + u * 0.75)) ** 0.7 + 0.001;
+      const blade = Math.max(Math.abs(w) - hw, Math.abs(t) - 0.006 * (1 - 0.4 * Math.min(1, Math.abs(w) / hw)), 0.05 - a, a - 0.225);
+      return Math.min(blade, capsule([x, y, z], at(0.05, -0.04), at(0.05, 0.04), 0.009), Math.hypot(a + 0.058, w, t) - 0.015); };   // the guard, the pommel
+  }
   if (R === "greatsword") {   // two-handed (2026-10-07, Saori: "両手剣"): a grip long enough for both hands (the left below the right), a wide guard, a long broad blade
     rOther = (x, y, z) => capsule([x, y, z], at(-0.17), at(0.06), 0.016);
     rMetal = (x, y, z) => { const [a, w, t] = loc(x, y, z), hw = 0.046 * Math.min(1, Math.max(0, (0.92 - a) / 0.14)) + 0.001;
@@ -101,11 +107,11 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   //   the left hip slanting back and down; greatsword: the scabbard across the back (behind the right shoulder down to the left hip) on a
   //   strap across the chest. The belt and the strap lie on the body 2.2 cm out (over the clothes) ──
   let sheath = none, belt = none, boxSheath = null, boxBelt = null, sheathBone = null;
-  if (R === "sword" || R === "greatsword") {   // (built either way: weapon.sheath shows or hides them at once, avatar.setSheath)
-    const great = R === "greatsword", ON = 0.022;
-    const T0 = great ? [-0.2, 0.92, -0.165] : [0.185, 0.475, 0.03], T1 = great ? [0.2, 0.33, -0.15] : add(T0, [norm([0.12, -0.8, -0.55]), 0.5]);
+  if (R === "sword" || R === "greatsword" || R === "dagger") {   // (built either way: weapon.sheath shows or hides them at once, avatar.setSheath)
+    const great = R === "greatsword", dag = R === "dagger", ON = 0.022;
+    const T0 = great ? [-0.2, 0.92, -0.165] : [0.185, 0.475, 0.03], T1 = great ? [0.2, 0.33, -0.15] : add(T0, [norm([0.12, -0.8, -0.55]), dag ? 0.24 : 0.5]);   // (a dagger's: short, at the same hip)
     const d = norm(sub(T1, T0)), L = Math.hypot(...sub(T1, T0)), n0 = great ? [0, 0, -1] : [1, 0, 0], nA = norm(add(n0, [d, -dot(n0, d)])), wA = cross(d, nA);   // nA: the flat side's normal (out of the body), wA: across it
-    const HW = great ? 0.052 : 0.03, HT = great ? 0.013 : 0.011;
+    const HW = great ? 0.052 : dag ? 0.024 : 0.03, HT = great ? 0.013 : dag ? 0.01 : 0.011;
     sheath = (x, y, z) => { const q = sub([x, y, z], T0), a = dot(q, d), w = dot(q, wA), t = dot(q, nA), u = Math.min(1, Math.max(0, a / L));
       const hw = HW * (1 - 0.35 * u) + (a < 0.035 ? 0.006 : 0) + (a > L - 0.04 ? 0.004 : 0), ht = HT + (a < 0.035 ? 0.004 : 0);   // a throat at the top, a chape at the tip
       return Math.max((Math.hypot(w / hw, t / ht) - 1) * Math.min(hw, ht), -a, a - L - Math.min(hw, ht) * Math.max(0, 1 - Math.abs(w) / hw)); };   // the tip rounded off
@@ -120,7 +126,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   const box = (c, axes) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];   // axes: [vector, from, to] ×3
     for (const s0 of [1, 2]) for (const s1 of [1, 2]) for (const s2 of [1, 2]) { const p = add(c, [axes[0][0], axes[0][s0]], [axes[1][0], axes[1][s1]], [axes[2][0], axes[2][s2]]); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } }
     return { lo: lo.map((v) => v - 0.02), hi: hi.map((v) => v + 0.02) }; };
-  const reach = { sword: [-0.1, 0.53], greatsword: [-0.23, 0.94], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
+  const reach = { sword: [-0.1, 0.53], dagger: [-0.08, 0.24], greatsword: [-0.23, 0.94], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
   const boxR = R === "none" || R === "fist" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" || L === "fist" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
   return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL, sheath, belt, boxSheath, boxBelt, sheathBone };
 }
