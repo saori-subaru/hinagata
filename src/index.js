@@ -489,6 +489,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   }
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
+  const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
@@ -519,8 +520,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (bangsOn) {
       // the hime cut in locks (2026-10-07, Saori: "姫カットの毛束タイプ"): the same locks from its own tips (a straight fringe, side locks to the
       // cheeks), each ending square instead of in a point (HIME_END)
-      const HIME = hairPick.bangs === "hime", B = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: 0.97, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
-      const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE, bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      const HIME = hairPick.bangs === "hime", B = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
+      const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE(), bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
       if (HIME) for (const sp of specs) { sp.prof = HIME_END; sp.blunt = 0.06; }
       const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
       out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, floor: true, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 }, GRAD.bangs);   // floor: not into the forehead (createLocks)
@@ -939,9 +940,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (parts.drawn) { for (const m of [parts.drawn.m, parts.drawn.o]) { root.remove(m); m.geometry.dispose(); } delete parts.drawn; }
       const x = makeLocks(["drawn"]).drawn; if (x) { parts.drawn = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
-    setBangs(values) {
-      const N = OPT.hair.sculpt.nendo, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
-      if ("locks" in values) OPT.hair.bangsForm = values.locks ? "locks" : "block";   // (the form decides it now: options.js hairForms)
+    // group: whose values — "nendo" (also under the hime cut's), "hime" or "side" (its strands): the bangs in locks rebuild only themselves
+    setBangs(values, group = "nendo") {
+      const N = OPT.hair.sculpt[group] ??= {}, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
+      if (group === "nendo" && "locks" in values) OPT.hair.bangsForm = values.locks ? "locks" : "block";   // (the form decides it now: options.js hairForms)
       if (!was || !hairKit.bangsAsLocks(hairPick) || ["locks", "lockTaper"].some((k) => k in values)) { avatar.setHair({}); return; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.bangs) { for (const m of [parts.bangs.m, parts.bangs.o]) { root.remove(m); m.geometry.dispose(); } delete parts.bangs; }
@@ -953,7 +955,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     backLocks() { const sim = parts.locks?.sim; if (!sim) return { group: null, locks: [] };
       const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : hairPick.back === "bob" || hairPick.back === "flip" ? hairPick.back + "Locks" : "shortLocks";
       return { group, locks: sim.specs.map((s, i) => ({ i, tip: s.pts.at(-1), root: s.pts[0] })) }; },
-    bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },
+    bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: hairPick.bangs === "hime" ? HIME_HANG : OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },   // (the hime cut's side locks hang from higher up)
+    /** Where a side-swept strand ends (avatar space, rest pose; on the hair): its tip's angle around the head and up from the head's middle (degrees). */
+    sideTipAt(th, ph) { const K = bangKit(), D = Math.PI / 180, d = [Math.sin(th * D) * Math.cos(ph * D), Math.sin(ph * D), Math.cos(th * D) * Math.cos(ph * D)], t = surfaceAlong(K.surf, K.center, d) + 0.004;
+      return K.toRoot(...K.center.map((v, i) => v + d[i] * t)); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
     async exportGLB() {

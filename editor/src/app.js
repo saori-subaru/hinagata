@@ -84,7 +84,7 @@ function applyInstant(av, p, v) {
     case "setFaceLayout": av.setFaceLayout({ [last]: v }); return true;
     case "setBlush": av.setBlush({ [k[2]]: { [last]: v } }); return true;
     case "setHair": av.setHair({ [last]: v }); return true;
-    case "setBangs": av.setBangs({ [last]: structuredClone(v) }); return true;
+    case "setBangs": av.setBangs({ [last]: structuredClone(v) }, k[2]); return true;   // hair.sculpt.<nendo | hime | side>.<key>
     case "setPaint": av.setPaint(k[1], v); return true;
     case "setTexture": av.setTexture(k[1], { [last]: v }); return true;
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;

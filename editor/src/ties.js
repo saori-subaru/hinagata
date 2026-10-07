@@ -9,7 +9,7 @@ const D2R = Math.PI / 180;
 /** vp: the viewport / store: the recipe / onChange(): the tool's state changed (the panel redraws) */
 export function createTieTool({ vp, store, onChange = () => {} }) {
   const group = new THREE.Group(); group.visible = false;
-  const mat = new THREE.MeshBasicMaterial({ color: 0xe0a020, depthTest: false, transparent: true, opacity: 0.9 }), selMat = new THREE.MeshBasicMaterial({ color: 0x4b4acf, depthTest: false });
+  const mat = new THREE.MeshBasicMaterial({ color: 0xe0a020, depthTest: false, transparent: true, opacity: 0.9 }), selMat = new THREE.MeshBasicMaterial({ color: 0x4b4acf, depthTest: false, transparent: true });
   const geo = new THREE.SphereGeometry(0.0105, 16, 12);
   let on = false, drag = null, av = null;
   const usable = () => (store.get("hair.tail.kind") ?? "none") !== "none";

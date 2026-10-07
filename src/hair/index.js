@@ -39,10 +39,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
-  // side-swept: four big strands from the crown (58° up) sweeping across the forehead: [from angle, to angle, to height angle, radius, bend] (degrees)
-  const SIDE = [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]];
+  // side-swept: big strands from the crown (58° up) sweeping across the forehead: [from angle, to angle, to height angle, radius, bend] (degrees;
+  // hair.sculpt.side.strands, the editor's bangs tool moves their tips: read each time, so a change needs no new kit)
+  const SIDE = () => OPT.hair.sculpt.side?.strands ?? [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]];
   const BANGS = {
-    "side": () => SIDE.map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
+    "side": () => SIDE().map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
     // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
     // tips: [angle, height, slope?, skew?, group?]. skew: the left/right edges get different slopes (the clump sweeps sideways);
