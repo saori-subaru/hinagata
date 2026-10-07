@@ -80,17 +80,19 @@ export function withPaint(m, U, glsl) {
     Object.assign(sh.uniforms, { pOn: U.on, pMap: U.map });
     sh.vertexShader = "attribute vec3 paintP;\nattribute vec3 paintN;\nvarying vec3 vPaintP;\nvarying vec3 vPaintN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaintP = paintP; vPaintN = paintN;");
     sh.fragmentShader = "uniform float pOn;\nuniform sampler2D pMap;\nvarying vec3 vPaintP;\nvarying vec3 vPaintN;\n" + glsl + "\n" + sh.fragmentShader.replace("#include <alphamap_fragment>",
-      "if (pOn > 0.5) { vec4 pc = texture2D(pMap, paintUV(vPaintP, vPaintN)); diffuseColor.rgb = mix(diffuseColor.rgb, pow(pc.rgb, vec3(2.2)), pc.a); }\n#include <alphamap_fragment>"); };
+      "if (pOn > 0.5) { vec4 pc = paintSample(pMap, vPaintP, normalize(vPaintN)); diffuseColor.rgb = mix(diffuseColor.rgb, pow(pc.rgb, vec3(2.2)), pc.a); }\n#include <alphamap_fragment>"); };
   m.customProgramCacheKey = () => "paint|" + glsl + "|" + key;   // (the layout differs between the body and the garments)
   return m;
 }
-// metal (the armor): toon bands with more contrast, a darker rim where the surface turns away, and a hard white glint (anime-style shine)
-const metalRamp = (() => { const d = new Uint8Array([120, 120, 120, 255, 205, 205, 205, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+// metal (the armor): toon bands with more contrast, a darker rim where the surface turns away, the lower side darker (it mirrors the
+// ground), and a hard white glint (anime-style shine). Darker than at first (2026-10-07, Saori: "鎧の質感を暗い部分入れてもっと出したい")
+const metalRamp = (() => { const d = new Uint8Array([78, 78, 86, 255, 180, 180, 186, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
   const m = style === "smooth" ? new THREE.MeshPhongMaterial({ color: c, shininess: 60, specular: 0x666666 }) : new THREE.MeshToonMaterial({ color: c, gradientMap: metalRamp });
   if (style !== "smooth") m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <opaque_fragment>", `{ vec3 n = normalize(normal); float f = n.z, g = dot(n, normalize(vec3(-0.35, 0.55, 0.76)));
-      outgoingLight *= mix(0.72, 1.0, smoothstep(0.18, 0.32, f));   // darker rim where the plate turns away
+      outgoingLight *= mix(0.5, 1.0, smoothstep(0.18, 0.32, f));   // darker rim where the plate turns away
+      outgoingLight *= mix(0.62, 1.0, smoothstep(-0.32, -0.18, n.y));   // facing down: the dark ground in it (a crisp band, as drawn metal has)
       outgoingLight = mix(outgoingLight, vec3(1.0), 0.85 * smoothstep(0.955, 0.965, g)); }   // the glint
     #include <opaque_fragment>`); };
   return m;

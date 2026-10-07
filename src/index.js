@@ -290,10 +290,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     if (!ud.headY) { ud.headY = new Float32Array(n); for (let v = 0; v < n; v++) ud.headY[v] = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2])[1]; }
     const Y = ud.headY; let lo = Infinity, hi = -Infinity; for (let v = 0; v < n; v++) { lo = Math.min(lo, Y[v]); hi = Math.max(hi, Y[v]); }
     for (const s of parts.locks?.sim?.specs ?? []) { const t = s.pts.at(-1); lo = Math.min(lo, HTr.toHead(t[0], t[1], t[2])[1]); }
-    const GO = OPT.hair.gradient, off = GO?.on && GO.bangs === false && hairPick.bangs !== "none" && !hairKit.bangsAsLocks(hairPick);
-    if (off && ud.bangsOf !== hairPick.bangs) { const f = blend(hairKit.BANGS[hairPick.bangs](hairPick)); ud.bangW = new Float32Array(n); ud.bangsOf = hairPick.bangs;
+    const GO = OPT.hair.gradient, inBlock = hairPick.bangs !== "none" && !hairKit.bangsAsLocks(hairPick), off = GO?.on && GO.bangs === false && inBlock;
+    if (GO?.on && inBlock && ud.bangsOf !== hairPick.bangs) { const f = blend(hairKit.BANGS[hairPick.bangs](hairPick)); ud.bangW = new Float32Array(n); ud.bangsOf = hairPick.bangs;
       for (let v = 0; v < n; v++) { const h = HTr.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); ud.bangW[v] = 1 - sstep(0.01, 0.045, f(h[0], h[1], h[2])); } }   // 1 on the bangs, fading over a few cm into the rest (hime locks over a bob: the bob's lumps poking through them stayed green streaks)
-    for (let v = 0; v < n; v++) G[v] = (hi - Y[v]) / ((hi - lo) || 1) * (off ? 1 - ud.bangW[v] : 1);
+    // bangs in the block, with the gradient on them: measured over the bangs alone, top 0 to their tips 1, as bangs made of locks are (by the
+    // head's height their tips were about halfway: the gradient, starting further down, never reached them. 2026-10-07, Saori: only the back hair took it)
+    let bl = Infinity, bh = -Infinity; if (GO?.on && inBlock && !off) for (let v = 0; v < n; v++) if (ud.bangW[v] > 0.5) { bl = Math.min(bl, Y[v]); bh = Math.max(bh, Y[v]); }
+    const own = bh > bl;
+    for (let v = 0; v < n; v++) { const g = (hi - Y[v]) / ((hi - lo) || 1);
+      G[v] = off ? g * (1 - ud.bangW[v]) : own ? g + (Math.min(1, Math.max(0, (bh - Y[v]) / (bh - bl))) - g) * ud.bangW[v] : g; }
     geo.attributes.gradT.needsUpdate = true;
   }
   const glf = (v) => (+v).toFixed(4);
@@ -334,7 +339,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // a part's points for the paint: where each was when made, at the base proportions, and its normal
   const paintable = (x, k) => { const g = x.m.geometry, Q = Float32Array.from(basePos(g));
     g.setAttribute("paintP", new THREE.BufferAttribute(Q, 3)); g.setAttribute("paintN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3));
-    x.m.material = withPaint(x.m.material, PAINT[k], PAINT[k].glsl); x.paint = k; };
+    const w = x.wrap; x.wrap = (m) => withPaint(w ? w(m) : m, PAINT[k], PAINT[k].glsl); x.m.material = withPaint(x.m.material, PAINT[k], PAINT[k].glsl); x.paint = k; };
+  // x.wrap(m): what a part's material is dressed in on top of its shading (its gradient, picture, paint), so setShading puts them back on the
+  // new material (2026-10-07, Saori: the bangs lost their gradient. Switching the shading left only the hair's block with it)
   const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
   GRAD.bangs = { ...GRAD.hair, on: { value: bangsGrad(OPT.hair.gradient) } };
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c);
@@ -400,7 +407,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       for (const x of list) { const P = x.m.geometry.attributes.position.array, G = new Float32Array(P.length / 3); for (let v = 0; v < G.length; v++) G[v] = (hi - P[v * 3 + 1]) / ((hi - lo) || 1);
         x.m.geometry.setAttribute("gradT", new THREE.BufferAttribute(G, 1));
         x.m.geometry.setAttribute("texP", new THREE.BufferAttribute(Float32Array.from(P), 3)); x.m.geometry.setAttribute("texN", new THREE.BufferAttribute(Float32Array.from(x.m.geometry.attributes.normal.array), 3));   // where each point was when made (the picture stays on the cloth when it moves)
-        x.m.material = withTex(withGrad(x.m.material, U), TEX[key]); paintable(x, key); } };
+        x.wrap = (m) => withTex(withGrad(m, U), TEX[key]); x.m.material = x.wrap(x.m.material); paintable(x, key); } };
     if (SKO?.dress) gradT([parts.shirt, parts.pants], "dress"); else { gradT([parts.shirt], "shirt"); gradT([parts.pants], "pants"); }
     if (CA.on) gradT([parts.cape], "cape"); }
   await Promise.all([...Object.keys(TEX).map(loadTex), ...PAINT_TARGETS.map(loadPaint)]);   // the pictures given in the options show from the first frame
@@ -451,7 +458,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
-    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.m.material = withGrad(x.m.material, U); x.sim = sim; return x; };
+    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(m, U); x.m.material = x.wrap(x.m.material); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
@@ -752,8 +759,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const resoften = soften !== OPT.shading.soften; Object.assign(OPT.shading, { style, bands, soften });
       if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN && !x.sim) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
-        if (k === "body") { const old = x.toonMat, nm = shadeToon(old.color.getHex()); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style); x.m.material.wireframe = old.wireframe; old.dispose();
+        if (k === "body") { const old = x.toonMat, nm = x.wrap(shadeToon(old.color.getHex())); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
+        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
     },
