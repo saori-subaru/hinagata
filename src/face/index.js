@@ -7,7 +7,7 @@ import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS0 = ["round", "classic", "surprised", "glare", "image"];
+const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "image"];
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -87,6 +87,52 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         ell(cx - 0.012, cy + 0.014, 0.0085, 0.0085, "#ffffff"); ell(cx + 0.012, cy - 0.018, 0.0035, 0.0035, "#ffffffe0"); ell(cx - 0.004, cy + 0.002, 0.0022, 0.0022, "#ffffffd0");
         fctx.restore();
       },
+      // キラキラ目 (2026-10-07, for a 超絶美少女): the round eye's build, dressed up — an almond eye lifted at the outer corner, a bigger iris
+      // with fibers, a dark band under the lid and a glowing crescent at the bottom, a pupil with its own ring, highlights (a big one, a star
+      // glint, small dots), a winged upper lash with spikes, lower lashes, a soft eyeshadow at the outer corner
+      sparkle: () => {
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+        const dot = (x, y, rx, ry, fill, rot = 0) => { fctx.beginPath(); fctx.ellipse(...P(x, y), pu(rx), pu(ry), rot, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
+        const glow = (x, y, rx, ry, col, a) => { const g = fctx.createRadialGradient(...P(x, y), 0, ...P(x, y), pu(rx)); g.addColorStop(0, col + a); g.addColorStop(1, col + "00");
+          fctx.save(); fctx.translate(...P(x, y)); fctx.scale(1, ry / rx); fctx.translate(-px(cx + x), -py(cy + y)); fctx.fillStyle = g; fctx.fillRect(px(cx + x - rx), py(cy + y + rx), pu(rx * 2), pu(rx * 2)); fctx.restore(); };
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        glow(0.026, 0.03, 0.036, 0.02, "#f59ab0", "55");                                                   // eyeshadow over the outer corner
+        const open = () => { fctx.beginPath(); mv(-0.034, -0.002); bz(-0.03, 0.032, 0.014, 0.046, 0.047, 0.02); bz(0.046, -0.014, 0.024, -0.041, -0.002, -0.041); bz(-0.022, -0.041, -0.036, -0.022, -0.034, -0.002); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.042), ...P(0, -0.04)); g.addColorStop(0, "#c4bdd2"); g.addColorStop(0.32, "#f1eff4"); g.addColorStop(1, "#fdfcfd"); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); open(); fctx.clip();
+        const ir = () => { fctx.beginPath(); fctx.ellipse(...P(0.002, -0.003), pu(0.0295), pu(0.04), 0, 0, Math.PI * 2); };
+        ir(); { const g = fctx.createLinearGradient(...P(0, 0.037), ...P(0, -0.043)); g.addColorStop(0, IR[0]); g.addColorStop(0.4, IR[1]); g.addColorStop(0.75, IR[2]); g.addColorStop(1, IR[3]); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); ir(); fctx.clip();
+        fctx.lineCap = "round"; fctx.lineWidth = pu(0.0011); fctx.strokeStyle = IR[3] + "48";                // fibers, out from the pupil
+        for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2 + 0.1, r0 = 0.011 + (i % 3) * 0.002, r1 = 0.026 - (i % 2) * 0.004; fctx.beginPath(); mv(0.002 + Math.cos(a) * r0, -0.003 + Math.sin(a) * r0 * 1.35); ln(0.002 + Math.cos(a) * r1, -0.003 + Math.sin(a) * r1 * 1.35); fctx.stroke(); }
+        glow(0.002, -0.029, 0.026, 0.016, IR[3].slice(0, 7), "e0");                                         // the glowing crescent at the bottom
+        line(0.0016, IR[2] + "70"); fctx.beginPath(); fctx.ellipse(...P(0.002, -0.004), pu(0.019), pu(0.027), 0, 0, Math.PI * 2); fctx.stroke();   // an inner ring
+        dot(0.002, 0.03, 0.036, 0.026, IR[0] + "c8");                                                      // the lid's shadow over the top
+        dot(0.002, 0.04, 0.04, 0.016, "#1a1028a0");
+        fctx.restore();
+        { const g = fctx.createRadialGradient(...P(0.002, -0.001), 0, ...P(0.002, -0.001), pu(0.014)); g.addColorStop(0, "#120a1a"); g.addColorStop(0.75, "#22142e"); g.addColorStop(1, "#22142e00");   // the pupil
+          fctx.save(); fctx.translate(...P(0.002, -0.001)); fctx.scale(0.66, 1); fctx.translate(-px(cx + 0.002), -py(cy - 0.001)); fctx.fillStyle = g; fctx.fillRect(px(cx - 0.012), py(cy + 0.013), pu(0.028), pu(0.028)); fctx.restore(); }
+        line(0.0022, "#2a1c36"); ir(); fctx.stroke();                                                      // the iris's rim
+        { const g = fctx.createLinearGradient(...P(0, 0.046), ...P(0, 0.018)); g.addColorStop(0, "#5a4a6a90"); g.addColorStop(1, "#5a4a6a00"); open(); fctx.fillStyle = g; fctx.fill(); }   // the lid's shadow on the white
+        fctx.restore();
+        // lower lashes: a thin line toward the outer corner, two short ticks on it (longer ones, off the line, read as whiskers: Saori's
+        // picture with smaller eyes)
+        line(0.002, "#6e4c62"); fctx.beginPath(); mv(0.002, -0.0425); qc(0.032, -0.04, 0.046, -0.012); fctx.stroke();
+        line(0.0015, "#6e4c62"); fctx.beginPath(); mv(0.035, -0.0315); ln(0.0375, -0.035); mv(0.0415, -0.0225); ln(0.0447, -0.0252); fctx.stroke();
+        // upper lash: thin at the inner corner, thick toward the outer, a wing and spikes
+        fctx.beginPath(); mv(-0.037, -0.004); bz(-0.033, 0.035, 0.014, 0.051, 0.048, 0.023);
+        qc(0.054, 0.03, 0.06, 0.033); qc(0.054, 0.024, 0.053, 0.019);                                      // a spike up
+        qc(0.059, 0.014, 0.066, 0.005); qc(0.056, 0.008, 0.046, 0.011);                                    // the wing
+        bz(0.014, 0.037, -0.026, 0.027, -0.035, 0.0); fctx.closePath(); fctx.fillStyle = "#2a1a2c"; fctx.fill();
+        fctx.beginPath(); mv(0.022, 0.041); qc(0.032, 0.05, 0.041, 0.053); qc(0.034, 0.045, 0.031, 0.04); fctx.closePath(); fctx.fill();   // two lashes standing up
+        fctx.beginPath(); mv(0.035, 0.036); qc(0.045, 0.043, 0.054, 0.044); qc(0.046, 0.037, 0.043, 0.032); fctx.closePath(); fctx.fill();
+        line(0.0026, "#c98a8e"); fctx.beginPath(); mv(-0.014, 0.053); qc(0.014, 0.063, 0.042, 0.046); fctx.stroke();   // the double lid
+        // highlights: a big one, a four-pointed glint, small dots
+        dot(-0.01, 0.014, 0.0088, 0.0112, "#ffffff", -0.35);
+        { const sx = 0.013, sy = 0.012, r = 0.0075, w = 0.0016; fctx.beginPath(); mv(sx, sy + r); qc(sx + w, sy + w, sx + r, sy); qc(sx + w, sy - w, sx, sy - r); qc(sx - w, sy - w, sx - r, sy); qc(sx - w, sy + w, sx, sy + r); fctx.closePath(); fctx.fillStyle = "#fffffff0"; fctx.fill(); }
+        dot(0.012, -0.02, 0.0042, 0.0042, "#ffffffe0"); dot(-0.007, -0.013, 0.0018, 0.0018, "#ffffffc0"); dot(0.018, -0.006, 0.0013, 0.0013, "#ffffffb0");
+        fctx.restore();
+      },
       classic: (m) => { const { x, y } = EYE, rx = 0.035, ry = 0.047;   // ひとつ前の、塗りつぶしの丸い目
         const g = fctx.createLinearGradient(0, py(y + ry), 0, py(y - ry)); g.addColorStop(0, "#2a1b26"); g.addColorStop(0.55, "#4a3042"); g.addColorStop(1, "#8a5a72");
         ell(x, y, rx, ry, g); ell(x, y - 0.004, rx * 0.5, ry * 0.55, "#21141d");
@@ -124,6 +170,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         g.addColorStop(0, N.color); g.addColorStop(1, N.color.slice(0, 7) + "00");
         fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(1, N.height / N.width); fctx.translate(-px(x), -py(y)); fctx.fillStyle = g; fctx.fillRect(px(x - N.width), py(y + N.width), pu(N.width * 2), pu(N.width * 2)); fctx.restore(); },
       image: () => imgPart("nose", NOSEP.x, NOSEP.y),
+      // code-drawn noses (2026-10-07, Saori: "鼻を書いてみてもらえますか"), just under the nose's tip: a small dot, or a short stroke down
+      // the shadow side with a soft shadow beside it
+      dot: () => ell(NOSEP.x, NOSEP.y - 0.003, 0.0026, 0.0021, "#5e3a46e0"),
+      line: () => { const { x, y } = NOSEP, g = fctx.createRadialGradient(px(x + 0.004), py(y - 0.002), 0, px(x + 0.004), py(y - 0.002), pu(0.008)); g.addColorStop(0, "#d9897a50"); g.addColorStop(1, "#d9897a00");
+        fctx.fillStyle = g; fctx.fillRect(px(x - 0.006), py(y + 0.008), pu(0.02), pu(0.02));
+        line(0.0026, "#7a4a52"); fctx.beginPath(); fctx.moveTo(px(x + 0.002), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.0035), py(y - 0.001), px(x - 0.001), py(y - 0.004)); fctx.stroke(); },
       none: () => {},
     },
     cheeks: {

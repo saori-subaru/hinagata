@@ -56,6 +56,7 @@ export const DEFAULTS = {
       "depth": 1,
       "pivotY": 0.845,
       "pivotZ": 0.006,
+      "jawLength": 1,
       "shift": {
         "z": 0.03,
         "z0": -0.08,
@@ -112,6 +113,7 @@ export const DEFAULTS = {
         }
       },
       "socketScale": 1,
+      "socketSize": 1,
       "faceNarrow": {
         "k": 1,
         "y0": 1.02,

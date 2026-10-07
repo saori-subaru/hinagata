@@ -4,11 +4,11 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, band (a ring around the limb at that
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "band"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -35,7 +35,29 @@ const SHAPES = {
   star: () => { const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, r = i % 2 ? 0.21 : 0.5; s[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); }
     const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
   ball: () => { const g = new THREE.SphereGeometry(0.5, 16, 12); g.translate(0, 0, 0.42); return g; },
+  // a bow (2026-10-07, for a 超絶美少女's hair): two loops puffed out and swept back a little, a knot, two tails with V-cut ends.
+  // Cloth, so its normals are smoothed (the leaf's facets would show on its soft curves)
+  ribbon: () => { const parts = [];
+    for (const m of [1, -1]) {
+      const s = new THREE.Shape(); s.moveTo(0.05 * m, 0.07); s.bezierCurveTo(0.2 * m, 0.36, 0.52 * m, 0.38, 0.5 * m, 0.06); s.bezierCurveTo(0.49 * m, -0.24, 0.2 * m, -0.22, 0.05 * m, -0.07); s.lineTo(0.05 * m, 0.07);
+      const g = flat(s, 0.06), P = g.attributes.position;
+      for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), d = ((x - 0.3 * m) / 0.26) ** 2 + ((y - 0.06) / 0.22) ** 2; P.setZ(i, P.getZ(i) + 0.13 * Math.max(0, 1 - d) - 0.16 * Math.max(0, Math.abs(x) - 0.08)); }   // puffed, the ends swept back
+      parts.push(smooth(g));
+      const t = new THREE.Shape(); t.moveTo(0.03 * m, -0.04); t.lineTo(0.12 * m, -0.07); t.lineTo(0.32 * m, -0.62); t.lineTo(0.24 * m, -0.56); t.lineTo(0.17 * m, -0.66); t.lineTo(0.03 * m, -0.04);
+      const tg = flat(t, 0.04), TP = tg.attributes.position;
+      for (let i = 0; i < TP.count; i++) { const y = TP.getY(i), x = TP.getX(i); TP.setZ(i, TP.getZ(i) - 0.06 + 0.05 * Math.sin(-y * 5) * Math.sign(x) * m); }   // behind the loops, a little wave
+      parts.push(smooth(tg)); }
+    const k = new THREE.SphereGeometry(0.13, 14, 10); k.scale(0.85, 1, 0.75); k.translate(0, 0, 0.1); parts.push(k);
+    return merge(parts); },
 };
+function smooth(g) {   // vertex normals averaged over the triangles that share a point (a non-indexed geometry, as ExtrudeGeometry makes)
+  const P = g.attributes.position, N = new Float32Array(P.count * 3), acc = new Map(), key = (i) => `${P.getX(i).toFixed(4)},${P.getY(i).toFixed(4)},${P.getZ(i).toFixed(4)}`;
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  for (let i = 0; i < P.count; i += 3) { a.fromBufferAttribute(P, i); b.fromBufferAttribute(P, i + 1); c.fromBufferAttribute(P, i + 2); const n = c.sub(b).cross(a.sub(b));   // (area-weighted)
+    for (let j = 0; j < 3; j++) { const k = key(i + j), v = acc.get(k) ?? [0, 0, 0]; v[0] += n.x; v[1] += n.y; v[2] += n.z; acc.set(k, v); } }
+  for (let i = 0; i < P.count; i++) { const v = acc.get(key(i)), l = Math.hypot(...v) || 1; N[i * 3] = v[0] / l; N[i * 3 + 1] = v[1] / l; N[i * 3 + 2] = v[2] / l; }
+  g.setAttribute("normal", new THREE.BufferAttribute(N, 3)); return g;
+}
 
 /**
  * One item → its geometries (rest pose, avatar space), each { geo, bone }. ctx: { J (joints, rest), PARENT, fromHead (head → avatar space) }.

@@ -60,7 +60,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
   Object.assign(J, armJoints(OPT));
   // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
-  const NK = OPT.body.sculpt.neck, LIFT = NK.length ?? 0; J.head[1] += LIFT;
+  // jawLength (> 1): the face under the mouth comes down (headTransform); the head goes up by as much as the chin does, so the neck stays as long
+  const JL = OPT.body.head.jawLength ?? 1, JAW_Y = (OPT.face?.layout?.mouthY ?? 0.896) - 0.016, JAW_LIFT = JL > 1 ? (JAW_Y - OPT.body.sculpt.chin.y) * (JL - 1) * OPT.body.head.scale : 0;
+  const NK = OPT.body.sculpt.neck, LIFT = (NK.length ?? 0) + JAW_LIFT; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
   // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
@@ -340,14 +342,18 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const SOCK_K = OPT.body.sculpt.socketScale ?? 1;   // 0 = no eye sockets (a flat face under the eyes: drawn eyes stay straight from any angle)
-  const socket = (x, y, z) => { if (!SOCK_K) return 0; let d = 0; const zf = sstep(0.03, 0.11, z);   // zf: the wide dip under the eyes stays on the front of the face (wide, it reached the ears and made them jagged)
-    for (const m of [1, -1]) { const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
+  // socketSize: the whole socket (its dips and the band toward the temple) scaled around the eye's middle, its depth with it (2026-10-07, Saori:
+  // "眼窩が輪郭に影響しないよう、目を眼窩ごとすこし小さく"): smaller eyes with their sockets, so the band no longer reaches the face's outline
+  const SS = OPT.body.sculpt.socketSize ?? 1;
+  const socket = (X0, Y0, z) => { if (!SOCK_K) return 0; let d = 0; const zf = sstep(0.03, 0.11, z);   // zf: the wide dip under the eyes stays on the front of the face (wide, it reached the ears and made them jagged)
+    for (const m of [1, -1]) { const ecx = m * (0.112 + EX), ecy = 0.998 + FACE_DY + EY, x = SS === 1 ? X0 : ecx + (X0 - ecx) / SS, y = SS === 1 ? Y0 : ecy + (Y0 - ecy) / SS;
+      const dx = x - m * (0.128 + EX), dy = y - 0.995 - FACE_DY - EY, ry = dy > 0 ? 0.088 : 0.105;
       if (dx * m <= 0 || !SOCK_BAND.on) { const r = Math.hypot(dx / (dx * m > 0 ? SOCKET_OUT : 0.09), dy / ry); if (r < 1) d += 0.014 * (1 - r * r) ** 2; }
       else { const v = Math.abs(dy) / ry, t = dx * m / SOCK_BAND.len;   // 目じり側: 上下のふちは平行のまま、頭の横へ向かってなだらかに浅くなる(1点にすぼまらない)
         if (v < 1 && t < 1) d += 0.014 * (1 - v * v) ** 2 * (1 - t * t) ** 2 * (1 - SOCK_BAND.lift * Math.min(1, t * 2)); }
     { const ix = (x - m * SOCK_IN.x) / SOCK_IN.w, iy = dy / SOCK_IN.h, ir = ix * ix + iy * iy; if (ir < 1) d += SOCK_IN.d * (1 - ir) ** 2; }   // 目頭側(鼻すじのとなり)を少し引っこめて、目の乗る面を平らに
     { const ex = x - m * EYE_UNDER.x, ux = ex / (ex * m > 0 ? EYE_UNDER.wo : EYE_UNDER.wi), uy = (dy - EYE_UNDER.y) / EYE_UNDER.h, ur = ux * ux + uy * uy; if (ur < 1) d += EYE_UNDER.d * (1 - ur) ** 2; }   // 目の下だけ: 目じり側は早めに消す
-    const ly = dy + SOCKET_LOW.y, lr = Math.hypot(dx / SOCKET_LOW.w, ly / (ly > 0 ? SOCKET_LOW.hu : SOCKET_LOW.h)); if (lr < 1) d += SOCKET_LOW.d * (1 - lr * lr) ** 2 * zf; } return d * SOCK_K; };   // 目の下半分のうしろ: 前に出ないよう、広くなだらかに沈める(横に広いので、描いた目の横線は上から見ても曲がりにくい。狭いと穴に見えた)
+    const ly = dy + SOCKET_LOW.y, lr = Math.hypot(dx / SOCKET_LOW.w, ly / (ly > 0 ? SOCKET_LOW.hu : SOCKET_LOW.h)); if (lr < 1) d += SOCKET_LOW.d * (1 - lr * lr) ** 2 * zf; } return d * SOCK_K * SS; };   // 目の下半分のうしろ: 前に出ないよう、広くなだらかに沈める(横に広いので、描いた目の横線は上から見ても曲がりにくい。狭いと穴に見えた)
   // 顔の側面の目じりのあたりを少し前(外)へ出す。眼窩の帯の外の端あたりを中心に、上下は帯と同じ幅で、なだらかに
   const temple = (x, y, z) => { if (z < -0.02) return 0; let d = 0, trim = 0; for (const m of [1, -1]) { const dx = (x - m * TEMPLE.x) / TEMPLE.w, dy = (y - TEMPLE.y) / TEMPLE.h, r = dx * dx + dy * dy; if (r < 1) d += TEMPLE.d * (1 - r) ** 2; } for (const m of [1, -1]) { const dx = (x - m * CHEEK_FILL.x) / CHEEK_FILL.w, dy = (y - CHEEK_FILL.y) / CHEEK_FILL.h, r = dx * dx + dy * dy; if (r < 1) d += CHEEK_FILL.d * (1 - r) ** 2; }   // 目の下〜鼻の横のほお(上から見てこけないように)
     for (const m of [1, -1]) { const dx = (x - m * SIDE_TRIM.x) / SIDE_TRIM.w, dy = (y - SIDE_TRIM.y) / SIDE_TRIM.h, r = dx * dx + dy * dy; if (r < 1) trim += SIDE_TRIM.d * (1 - r) ** 2; }   // ほおの横のでっぱりを少し抑える(上・斜めから見て角ばらないように)
@@ -362,7 +368,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform({ ...OPT.body.head, lift: LIFT }), HEAD_RAW = { ...HEAD };
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y }), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
@@ -391,18 +397,26 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
  * lift: then move it up (a longer neck).
  * shift: everything in front of z1 (head space) moves back by z, fading in between z0 and z1, so the head gets shorter front to back
  * while the side silhouette keeps its shape (skin, hair and face picture move together).
+ * jawLength (> 1, with jawY: just under the mouth): below jawY the face is that much longer, at the front only (fading out behind the
+ * cheeks, so the nape and the ears stay), with a soft bend (about 1 cm). The nose and mouth above it stay where they are: the jaw gets longer,
+ * so a pointed chin has room below the cheeks (2026-10-07, Saori: "顎をとがらせれば美少女っぽくなりますが、そうするには今のモデルは頬から下が
+ * 短すぎてこけてしまってた"; faceLength, taken out, stretched from under the eyes and brought the nose and mouth down too).
  * toHead: world point → head-space point. fromHead: the reverse. wrap(sdf): a head-space distance function seen in world space.
  */
 export function headTransform(h) {
   const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 }, ly = h.lift ?? 0;
   const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
   const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly, k = Math.min(sx, sy, sz) / stretch;
+  // the jaw: JS(y, z) a stretched height → the head's own, JU back (a few steps; its slope stays under 1)
+  const JL = h.jawLength ?? 1, JY = h.jawY ?? 0.88, JK = 1 - 1 / JL, fr = (d) => 0.5 * (d + Math.sqrt(d * d + 0.0001)), fa = (z) => sstep(-0.06, 0.08, z);
+  const JS = JL === 1 ? (y) => y : (y, z) => y + JK * fa(z) * fr(JY - y), JU = JL === 1 ? (y) => y : (y, z) => { let v = y; for (let i = 0; i < 8; i++) v = y - JK * fa(z) * fr(JY - v); return v; };
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && JL === 1, k = Math.min(sx, sy, sz) / stretch * (JL === 1 ? 1 : 0.9);
+  const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, JS(py + (y - ly - py) / sy, Z), Z]; };
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
-    toHead: (x, y, z) => [x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)],
-    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)) * k,
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * JL,
+    toHead,
+    fromHead: (x, y, z) => [x * sx, py + (JU(y, z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(...toHead(x, y, z)) * k,
   };
 }
 
