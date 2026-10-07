@@ -186,6 +186,10 @@ addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("tplModal").hi
 // a drawn template (an image, or the in-app drawing's canvas) into ふつう (into null), a drawn expression (its id) or a new one (NEW).
 // Returns the expression id it went into (null = ふつう), or undefined when nothing was read
 function applyTemplate(im, into0) {
+    if (into0 === "closed") {   // the closed eye, its own entry (drawn in the eye's frame: 2026-10-07, Saori)
+      let r; try { r = readFaceSheet(vp.avatar, im, { into: "closed" }); } catch (err) { toast(t("tplBad")); return; }
+      if (!r.base.eyeClosed) { toast(t("tplRead0")); return; }
+      store.set({ "face.images.eyeClosed.src": r.base.eyeClosed }, { commit: true }); toast(t("closedSet")); return "closed"; }
     const list = (store.get("face.drawn") ?? []).filter((d) => d && d.id != null), fresh = into0 === NEW;   // NEW: the drawing becomes a new expression
     let into = into0;
     if (fresh) { const ids = new Set(list.map((d) => String(d.id))); let n = list.length + 1; do into = `e${n++}`; while (ids.has(into)); }

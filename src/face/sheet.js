@@ -1,6 +1,7 @@
 // Face templates: a picture to draw face parts on, and reading the drawn parts back from it.
 //   "parts" (1024×768, the face picture's own size): the head from the front, a guide face faintly, and a frame for each part
-//     at its place on the face — eye, closed eye (on the other eye), brow, mouth, nose. Read back into face.images.*.
+//     at its place on the face — eye, the other eye (only if drawn), brow, mouth, nose. Read back into face.images.*. The closed eye is
+//     drawn in the eye's frame of its own template (into "closed").
 //   "sheet" (3 tiles across, a header strip on top): the same for ふつう (all five frames), then one tile for each of the
 //     character's drawn expressions (options.face.drawn, in order; eye, brow, mouth), and a how-to tile. Read back by position,
 //     so a sheet belongs to the list of expressions it was made from (the header says how many).
@@ -9,9 +10,14 @@
 import * as THREE from "three";
 import { EXPRESSIONS, DRAWN_PREFIX } from "./names.js";
 
-const FRAMES = {   // the frame's size (px on the face picture); at: the part's point; other: drawn on the other eye (read back mirrored); mirror: the other side is drawn for you
+// the frame's size (px on the face picture); at: the part's point; other: on the other eye; mirror: the other side is drawn for you; note: what
+// the frame's label says instead of "draw it here"
+// eyeL (2026-10-07, Saori): the frame on the other eye is the other eye (read as drawn, not flipped), only when something is drawn there: odd
+// eyes, a highlight on one side. Empty, the eye is mirrored as before. It was the closed eye's frame; the closed eye is drawn in the eye's own
+// frame now, as its own entry (readFaceSheet into "closed"), so it faces the same way as the open eye. The template's frames didn't move
+const FRAMES = {
   eye: { size: [340, 290], at: (f) => f.EYE, label: ["目", "Eye"] },
-  eyeClosed: { size: [340, 290], at: (f) => f.EYE, other: true, label: ["とじ目", "Closed eye"] },
+  eyeL: { size: [340, 290], at: (f) => f.EYE, other: true, label: ["左目", "Other eye"], note: ["描かなければ自動で左右反転", "leave empty: mirrored for you"] },
   brow: { size: [330, 110], at: (f) => f.BROW, mirror: true, label: ["眉", "Brow"] },
   mouth: { size: [260, 90], at: (f) => f.MOUTHP, label: ["口", "Mouth"] },
   nose: { size: [120, 100], at: (f) => f.NOSEP, label: ["鼻", "Nose"] },
@@ -19,8 +25,8 @@ const FRAMES = {   // the frame's size (px on the face picture); at: the part's 
 /** The tiles of a sheet for this avatar, in order: { id, name: { ja, en }, guide (parts drawn faintly), frames, drawn (its face.drawn entry, or null for ふつう) }. */
 export function sheetTiles(avatar) {
   const O = avatar.options.face, own = !!(O.images.eye.src || O.images.brow.src || O.images.mouth.src);   // the ふつう guide: the character's own drawing if it has one, else the code face
-  return [{ id: "normal", name: { ja: "ふつう", en: "Normal" }, guide: own ? { eyes: "image", brows: "image", mouth: "image" } : EXPRESSIONS.normal.parts, frames: ["eye", "eyeClosed", "brow", "mouth", "nose"], drawn: null },
-    ...(O.drawn ?? []).filter((d) => d && d.id != null).map((d) => { const id = DRAWN_PREFIX + d.id; return { id: String(d.id), name: { ja: d.name ?? String(d.id), en: d.name ?? String(d.id) }, guide: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" }, frames: ["eye", "brow", "mouth"], drawn: d }; })];
+  return [{ id: "normal", name: { ja: "ふつう", en: "Normal" }, guide: own ? { eyes: "image", brows: "image", mouth: "image" } : EXPRESSIONS.normal.parts, frames: ["eye", "eyeL", "brow", "mouth", "nose"], drawn: null },
+    ...(O.drawn ?? []).filter((d) => d && d.id != null).map((d) => { const id = DRAWN_PREFIX + d.id; return { id: String(d.id), name: { ja: d.name ?? String(d.id), en: d.name ?? String(d.id) }, guide: { eyes: id, brows: id, mouth: id, cheeks: d.cheeks ?? "none" }, frames: ["eye", "eyeL", "brow", "mouth"], drawn: d }; })];
 }
 const COLS = 3, HEAD = 120;   // a sheet: 3 tiles across, under a header strip
 const rowsFor = (n) => Math.ceil((n + 1) / COLS);   // n tiles and the how-to tile
@@ -79,14 +85,13 @@ function guideFace(avatar, parts) {
   return c;
 }
 
-/** One tile: the head, the guide face (faint), the frames (red; a dashed grey one where the other side is drawn for you), a title. */
-/** The tile's guide face, with the closed eye under the closed eye's frame (Saori: an open eye under both frames looked like two eyes to draw). */
+/** The tile's guide face (the closed-eye tile: the closed eye, the drawn one if there is one). */
 function tileGuide(avatar, tile) {
-  const c = guideFace(avatar, tile.guide); if (!tile.frames.includes("eyeClosed")) return c;
-  const { face } = avatar.internals, closed = tile.guide.eyes === "image" && face.PART_IMG.eyeClosed?.src ? "imageClosed" : "closed", [x, y, w, h] = frameRect(face, "eyeClosed");
-  const g = c.getContext("2d"); g.clearRect(x, y, w, h); g.drawImage(guideFace(avatar, { ...tile.guide, eyes: closed }), x, y, w, h, x, y, w, h);
-  return c;
+  if (tile.id !== "closed") return guideFace(avatar, tile.guide);
+  return guideFace(avatar, { ...tile.guide, eyes: avatar.internals.face.PART_IMG.eyeClosed?.src ? "imageClosed" : "closed" });
 }
+/** The closed eye's own tile (in-app drawing and the "parts" template read into "closed"): the eye's frame alone. */
+const CLOSED_TILE = { id: "closed", name: { ja: "とじ目", en: "Closed eye" }, guide: { eyes: "closed", brows: "none", mouth: "smile" }, frames: ["eye"], drawn: null };
 function drawTile(g, avatar, head, tile, lang, title) {
   g.drawImage(head, 0, 0); g.globalAlpha = 0.35; g.drawImage(tileGuide(avatar, tile), 0, 0); g.globalAlpha = 1;
   drawFrames(g, avatar, tile, lang, title);
@@ -95,7 +100,8 @@ function drawFrames(g, avatar, tile, lang, title) {   // the frames, their label
   const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height;
   g.font = "bold 18px sans-serif"; g.textBaseline = "bottom";
   for (const k of tile.frames) { const [x, y, w, h] = frameRect(face, k), F = FRAMES[k], name = F.label[lang === "ja" ? 0 : 1];
-    g.setLineDash([]); g.lineWidth = 3; g.strokeStyle = "#ff3b6b"; g.strokeRect(x, y, w, h); g.fillStyle = "#ff3b6b"; g.fillText(lang === "ja" ? `${name}をここに描く` : `Draw the ${name.toLowerCase()} here`, x + 4, y - 3);
+    g.setLineDash([]); g.lineWidth = 3; g.strokeStyle = "#ff3b6b"; g.strokeRect(x, y, w, h); g.fillStyle = "#ff3b6b";
+    g.fillText(F.note ? `${name}: ${F.note[lang === "ja" ? 0 : 1]}` : lang === "ja" ? `${tile.id === "closed" ? "とじ目" : name}をここに描く` : `Draw the ${(tile.id === "closed" ? "closed eye" : name).toLowerCase()} here`, x + 4, y - 3);
     if (F.mirror) { const mx = W - x - w; g.setLineDash([8, 8]); g.lineWidth = 2; g.strokeStyle = "#0006"; g.strokeRect(mx, y, w, h); g.fillStyle = "#0008"; g.fillText(lang === "ja" ? "(描かない: 自動で左右反転)" : "(leave empty: mirrored for you)", mx + 4, y - 3); } }
   g.setLineDash([6, 6]); g.strokeStyle = "#0003"; g.lineWidth = 1; g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, H); g.stroke(); g.setLineDash([]);   // the face's middle
   if (title) { g.font = "bold 40px sans-serif"; g.textBaseline = "bottom"; const tw = g.measureText(title).width; g.fillStyle = "#ffffffd0"; g.fillRect(16, H - 74, tw + 28, 58); g.fillStyle = "#2b2230"; g.fillText(title, 30, H - 24); }   // bottom left (clear of the frames)
@@ -105,8 +111,8 @@ function drawFrames(g, avatar, tile, lang, title) {   // the frames, their label
 /** The "parts" template as separate layers, for an editor that draws over it (2026-10-05, Saori: the face and its parts each shown or hidden,
  *  each with its own opacity): { face (the head from the front, skin only), parts (the guide face's parts at full strength, the rest clear),
  *  frames (the frames, their labels and the middle line, the rest clear) }, each a canvas the face picture's size. */
-export function faceSheetLayers(avatar, { lang = "ja" } = {}) {
-  const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height, tile = sheetTiles(avatar)[0];
+export function faceSheetLayers(avatar, { lang = "ja", closed = false } = {}) {   // closed: the closed eye's (the eye's frame alone, a closed guide eye)
+  const { face } = avatar.internals, W = face.faceCanvas.width, H = face.faceCanvas.height, tile = closed ? CLOSED_TILE : sheetTiles(avatar)[0];
   const fr = document.createElement("canvas"); fr.width = W; fr.height = H; drawFrames(fr.getContext("2d"), avatar, tile, lang, null);
   return { face: headShot(avatar), parts: tileGuide(avatar, tile), frames: fr };
 }
@@ -138,7 +144,7 @@ function cutBackground(c, tol = 48) {   // clear the color that runs in from the
 
 /** Read a drawn template (an Image or canvas): a "parts" one (4:3) or a sheet made for this avatar's expressions.
  *  A one-face template can go into a drawn expression instead ({ into: id }): every expression uses the same frames.
- *  Returns { base: { eye, eyeClosed, brow, mouth, nose }, drawn: { <id>: { eye, brow, mouth } }, read: [[tileId, frame], …], kind }
+ *  Returns { base: { eye, eyeL, brow, mouth, nose } (into "closed": { eyeClosed }), drawn: { <id>: { eye, eyeL, brow, mouth } }, read: [[tileId, frame], …], kind }
  *  — only the frames with something drawn in them (data URLs). sheetChanges() turns it into option changes.
  *  Throws if the picture is neither, or is a sheet for a different number of expressions (err.code "count"). */
 export function readFaceSheet(avatar, im, { into = null } = {}) {   // into: a drawn expression's id — a one-face ("parts") template goes into it (its eye / brow / mouth) instead of ふつう
@@ -153,11 +159,11 @@ export function readFaceSheet(avatar, im, { into = null } = {}) {   // into: a d
   const out = { base: {}, drawn: {}, read: [], kind: sheet ? "sheet" : "parts" };
   for (const { tile, frame: k, x, y, w, h } of sheetLayout(avatar, { kind: out.kind })) {
     const c = document.createElement("canvas"); c.width = w; c.height = h; const cg = c.getContext("2d");
-    if (FRAMES[k].other) { cg.translate(w, 0); cg.scale(-1, 1); }   // drawn on the other eye: flip it to the side the face draws
-    cg.drawImage(full, x, y, w, h, 0, 0, w, h);
+    cg.drawImage(full, x, y, w, h, 0, 0, w, h);   // (the other eye's frame: as drawn, not flipped)
     const part = alpha ? c : cutBackground(c), D = part.getContext("2d").getImageData(0, 0, w, h).data;
     let ink = 0; for (let j = 3; j < D.length; j += 4) if (D[j] > 24) ink++; if (ink < 20) continue;   // nothing drawn here
-    if (into != null && !sheet && !["eye", "brow", "mouth"].includes(k)) continue;   // into an expression: its own parts only (the closed eye and the nose are shared)
+    if (into === "closed") { if (!sheet && k === "eye") { out.base.eyeClosed = part.toDataURL("image/png"); out.read.push(["closed", "eyeClosed"]); } continue; }   // the closed eye: drawn in the eye's frame
+    if (into != null && !sheet && !["eye", "eyeL", "brow", "mouth"].includes(k)) continue;   // into an expression: its own parts only (the nose is shared)
     const url = part.toDataURL("image/png"), to = into != null && !sheet ? String(into) : tile;
     if (to === "normal") out.base[k] = url; else (out.drawn[to] ??= {})[k] = url; out.read.push([to, k]); }
   return out;

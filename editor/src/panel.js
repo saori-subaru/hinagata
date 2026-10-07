@@ -159,8 +159,17 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("exReadTpl")),
         h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
         usedD ? h("button", { class: "chip", type: "button", "aria-pressed": String(usedD.blink !== false), onclick: () => set({ "face.drawn": drawnList().map((q) => q === usedD ? { ...q, blink: q.blink === false } : q) }) }, t("blink")) : null);
+      // ふつう: the closed eye under its eyes, as an entry of its own (2026-10-07, Saori: "表情普通の下に閉じめを作って、とじめはとじめで設定する"): drawn
+      // in the eye's frame (same way round as the open eye), used for blinking and as 絵のとじ目
+      const closedSrc = store.get("face.images.eyeClosed.src");
+      const closedRow = n !== "normal" ? null : h("div", { class: "field" }, h("label", {}, t("f_eyeClosed")),
+        h("div", { class: "chips" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
+          h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint("closed") }, t(closedSrc ? "closedRedraw" : "closedDraw")),
+          h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate("closed") }, t("exReadTpl")),
+          closedSrc ? h("button", { class: "btn small ghost", type: "button", onclick: () => set({ "face.images.eyeClosed.src": null }) }, t("closedClear")) : null),
+        h("div", { class: "help" }, t("closedHelp")));
       const setSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
-        SLOTS.map(slotField), drawRow,
+        slotField("eyes"), closedRow, SLOTS.slice(1).map(slotField), drawRow,
         own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetDefault"))) : null);
       // the pictures as small buttons (with the eye's picture): one puts its eyes, brows and mouth on the expression being edited, as my
       // hairstyles put a hair on (Saori: "登録したら消す以外何もできない"); ☆ keeps it in my parts, × removes it

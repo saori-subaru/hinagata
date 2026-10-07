@@ -11,12 +11,12 @@
 // (the head, skin only) and its parts (the guide face), each shown or hidden and with its own opacity; the frames always on top of them.
 import { faceSheetLayers, sheetLayout } from "../../src/index.js";
 
-const PARTS = ["eye", "eyeClosed", "brow", "mouth", "nose"];
+const PARTS = ["eye", "eyeL", "brow", "mouth", "nose"];
 const TOOLS = ["pen", "eraser", "fill", "path", "pick"];
 
 /** getAvatar(): the shown avatar / store: the recipe / apply(canvas, into) → the expression id it went into / t: the strings / h: the DOM helper */
 export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => "ja" }) {
-  let into = null, W = 1024, H = 768, zoom = null, undo = [], drawing = null, path = null, frames = [];
+  let into = null, W = 1024, H = 768, zoom = null, undo = [], drawing = null, path = null, frames = [], closed = false;   // closed: drawing the closed eye (its own entry, in the eye's frame)
   const S = { color: "#2b2230", size: 6, tool: "pen", pathFill: false, layers: { face: { on: true, a: 1 }, parts: { on: true, a: 0.35 } } };
   try { const saved = JSON.parse(localStorage.getItem("hinagata.editor.facepaint")) ?? {}; if (saved.erase) saved.tool = "eraser"; delete saved.erase; delete saved.guide;
     Object.assign(S, saved, { layers: { face: { ...S.layers.face, ...saved.layers?.face }, parts: { ...S.layers.parts, ...saved.layers?.parts } } }); } catch {}
@@ -41,7 +41,7 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
   }
   const chip = (label, on, onclick, title) => h("button", { class: "chip", type: "button", "aria-pressed": String(!!on), title, onclick }, label);
   function renderBars() {
-    zooms.replaceChildren(...[null, ...PARTS].map((k) => chip(k ? t(`f_${k}`) : t("fpAll"), zoom === k, () => setZoom(k))));
+    zooms.replaceChildren(...[null, ...(closed ? [] : PARTS)].map((k) => chip(k ? t(`f_${k}`) : t("fpAll"), zoom === k, () => setZoom(k))));
     tools.replaceChildren(...[...TOOLS.map((k) => chip(t(`fpTool_${k}`), S.tool === k, () => { endPath(false); S.tool = k; save(); renderBars(); drawUI(); })),
       S.tool === "path" ? chip(t("fpPathFill"), S.pathFill, () => { S.pathFill = !S.pathFill; save(); renderBars(); drawUI(); }) : null,
       S.tool === "path" && path?.pts.length ? h("button", { class: "btn small", type: "button", onclick: () => endPath(true) }, t("fpPathDone")) : null,
@@ -60,12 +60,12 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
   }
   const push = () => { undo.push(g.getImageData(0, 0, W, H)); if (undo.length > 30) undo.shift(); };
 
-  // the parts as they are now, each in its frame (the closed eye is drawn on the other eye: mirrored back)
+  // the parts as they are now, each in its frame (the closed eye: in the eye's frame)
   function prefill(av) {
-    const O = av.options.face, d = into != null ? (O.drawn ?? []).find((q) => String(q?.id) === String(into)) : null;
-    const src = (k) => d ? (["eye", "brow", "mouth"].includes(k) ? d[k] : null) : O.images[k]?.src;
+    const O = av.options.face, d = into != null && !closed ? (O.drawn ?? []).find((q) => String(q?.id) === String(into)) : null;
+    const src = (k) => closed ? O.images.eyeClosed?.src : d ? (["eye", "eyeL", "brow", "mouth"].includes(k) ? d[k] : null) : O.images[k]?.src;
     return Promise.all(frames.map((f) => new Promise((ok) => { const s = src(f.frame); if (!s) return ok(); const im = new Image();
-      im.onload = () => { g.save(); if (f.frame === "eyeClosed") { g.translate(f.x + f.w, f.y); g.scale(-1, 1); g.drawImage(im, 0, 0, f.w, f.h); } else g.drawImage(im, f.x, f.y, f.w, f.h); g.restore(); ok(); };
+      im.onload = () => { g.drawImage(im, f.x, f.y, f.w, f.h); ok(); };
       im.onerror = () => ok(); im.src = s; })));
   }
 
@@ -149,16 +149,16 @@ export function createFacePainter({ getAvatar, store, apply, t, h, lang = () => 
   });
 
   return {
-    /** open on ふつう (null), a drawn expression (its id) or a new expression ("new") */
+    /** open on ふつう (null), a drawn expression (its id), a new expression ("new") or the closed eye ("closed") */
     async open(target = null) {
       const av = getAvatar(); if (!av) return;
-      into = target === "new" ? apply.NEW : target; undo = []; zoom = null; path = null; inner.style.transform = "";
-      const T = faceSheetLayers(av, { lang: lang() }); W = T.face.width; H = T.face.height; frames = layout();
+      into = target === "new" ? apply.NEW : target; closed = target === "closed"; undo = []; zoom = null; path = null; inner.style.transform = "";
+      const T = faceSheetLayers(av, { lang: lang(), closed }); W = T.face.width; H = T.face.height; frames = layout().filter((f) => !closed || f.frame === "eye");
       for (const c of [L.face, L.parts, frameC, ink, ui]) { c.width = W; c.height = H; }
       for (const k of ["face", "parts"]) { const c = L[k].getContext("2d"); if (k === "face") { c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); } c.drawImage(T[k], 0, 0); }
       frameC.getContext("2d").drawImage(T.frames, 0, 0); g.clearRect(0, 0, W, H); showLayers();
-      const d = into != null && into !== apply.NEW ? (av.options.face.drawn ?? []).find((q) => String(q?.id) === String(into)) : null;
-      title.textContent = target === "new" ? t("fpTitleNew") : into == null ? t("fpTitle", t("normalPic")) : t("fpTitle", d?.name ?? String(into));
+      const d = into != null && into !== apply.NEW && !closed ? (av.options.face.drawn ?? []).find((q) => String(q?.id) === String(into)) : null;
+      title.textContent = target === "new" ? t("fpTitleNew") : closed ? t("fpTitle", t("f_eyeClosed")) : into == null ? t("fpTitle", t("normalPic")) : t("fpTitle", d?.name ?? String(into));
       if (target !== "new") await prefill(av);
       shut.textContent = t("close");   // (in the language chosen now)
       renderBars(); drawUI(); modal.hidden = false;
