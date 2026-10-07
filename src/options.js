@@ -330,6 +330,7 @@ export const DEFAULTS = {
       "mouth": {
         "curve": 45,
         "profile": 0,
+        "chinOut": 0,
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,
