@@ -351,6 +351,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         else { X[a] += dx * f * 0.5; X[a + 1] += dy * f * 0.5; X[a + 2] += dz * f * 0.5; X[b] -= dx * f * 0.5; X[b + 1] -= dy * f * 0.5; X[b + 2] -= dz * f * 0.5; } }
       for (let i = 2; i < N; i++) collide(l * N + i);
     }
+    // then each link exactly its length, from the root out (follow the leader): four rounds left a long chain a few % longer when the head
+    // went up or down fast, and the hair stretched and sprang back on a jump (2026-10-07, Saori: "ジャンプなどで上下に動いた時の髪がバネのように
+    // 伸び縮みする"). The move goes into the point's last position too, so it adds no speed of its own (no jitter, no extra swing)
+    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] / d;
+      const cx = -dx * f, cy = -dy * f, cz = -dz * f; X[b] += cx; X[b + 1] += cy; X[b + 2] += cz; P[b] += cx; P[b + 1] += cy; P[b + 2] += cz; }
   }
   // the mesh from the chain: rings along a Catmull-Rom curve through the points, each a flat lens across the lock, facing out
   const C = new Float32Array(ringsPer * 3), Dd = new Float32Array(ringsPer * 3);
