@@ -13,12 +13,12 @@ import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS 
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
-import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe } from "./options.js";
+import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
+import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -265,7 +265,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("setup");
   // build in workers: the body and the hair at once, then the clothes (they read the body's grid, so the result is the same as here).
   // Whatever a worker can't do (no workers, an error) is simply built here below.
-  const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
+  const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
   const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras } };
   if (workers) {
@@ -487,6 +487,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (o.userData.hairStencil !== test) { Object.assign(o, { stencilWrite: test, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = test; }
       x.o.renderOrder = test ? 1 : 0; }
   }
+  // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
+  const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
+  const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
@@ -494,7 +497,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
-    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && (hairPick.back === "short" || hairPick.back === "hang") && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
+    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
@@ -507,13 +510,19 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
       if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      else if (hairPick.back === "bob" || hairPick.back === "flip") {   // a bob or a flip in locks: hanging from the back of the head as the short hair's do, further round to the front, down to that style's hem; the bob's tips curl in a little, the flip's out and up
+        const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
+        out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10 }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }
       else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
         out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {
-      const B = OPT.hair.sculpt.nendo;
-      const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      // the hime cut in locks (2026-10-07, Saori: "姫カットの毛束タイプ"): the same locks from its own tips (a straight fringe, side locks to the
+      // cheeks), each ending square instead of in a point (HIME_END)
+      const HIME = hairPick.bangs === "hime", B = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
+      const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE(), bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      if (HIME) for (const sp of specs) { sp.prof = HIME_END; sp.blunt = 0.06; }
       const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
       out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, floor: true, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 }, GRAD.bangs);   // floor: not into the forehead (createLocks)
     }
@@ -851,9 +860,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
-    /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). Kept in options.hair. */
+    /** Rebuild the hair: pick = { bangs, back, ahoge, bangsForm, backForm, nape } (as options.hair; any of them). Kept in options.hair. */
     setHair(pick) {
-      Object.assign(hairPick, pick, pick.bangs ? { bangs: bangsId(pick.bangs) } : {}); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k]; bangKitMemo = null;
+      const HR = OPT.hair; for (const k of ["bangs", "back", "ahoge", "bangsForm", "backForm", "nape"]) if (k in pick) HR[k] = k === "bangs" ? bangsId(pick[k]) : pick[k];
+      if (HR.bangs === "block") { HR.bangs = "nendo"; HR.bangsForm = "block"; } if (HR.back === "hang") { HR.back = "short"; HR.nape = "hang"; HR.backForm = "locks"; }   // the old names (options.js readHair)
+      Object.assign(hairPick, hairForms(HR)); bangKitMemo = null;
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
@@ -867,6 +878,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
      *  (count, width, thick, flick, stiff, below / bottom …; for shortLocks.lie, pass { lie: { … } }). */
     setLocks(group, values) {
       if (group === "shortLocks.lie") { group = "shortLocks"; values = { lie: values }; }
+      if ((group === "shortLocks" && "on" in values) || (group === "long" && "locks" in values)) { OPT.hair.sculpt[group][group === "long" ? "locks" : "on"] = !!(values.on ?? values.locks); avatar.setHair({ backForm: (values.on ?? values.locks) ? "locks" : "block" }); return; }   // locks or a block: the form now (options.js hairForms)
       const G = OPT.hair.sculpt[group]; for (const [k, v] of Object.entries(structuredClone(values))) { if (v && typeof v === "object" && !Array.isArray(v) && G[k] && typeof G[k] === "object") Object.assign(G[k], v); else G[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
@@ -928,8 +940,10 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (parts.drawn) { for (const m of [parts.drawn.m, parts.drawn.o]) { root.remove(m); m.geometry.dispose(); } delete parts.drawn; }
       const x = makeLocks(["drawn"]).drawn; if (x) { parts.drawn = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
-    setBangs(values) {
-      const N = OPT.hair.sculpt.nendo, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
+    // group: whose values — "nendo" (also under the hime cut's), "hime" or "side" (its strands): the bangs in locks rebuild only themselves
+    setBangs(values, group = "nendo") {
+      const N = OPT.hair.sculpt[group] ??= {}, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
+      if (group === "nendo" && "locks" in values) OPT.hair.bangsForm = values.locks ? "locks" : "block";   // (the form decides it now: options.js hairForms)
       if (!was || !hairKit.bangsAsLocks(hairPick) || ["locks", "lockTaper"].some((k) => k in values)) { avatar.setHair({}); return; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.bangs) { for (const m of [parts.bangs.m, parts.bangs.o]) { root.remove(m); m.geometry.dispose(); } delete parts.bangs; }
@@ -939,9 +953,12 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** The back hair's locks as built (avatar space, rest pose): [{ i, tip: [x, y, z], root }] in the order of their edits (hair.sculpt.*.edits),
      *  and which group they belong to: "shortLocks" (hanging), "shortLocks.lie" (lying) or "long". Empty without back locks. */
     backLocks() { const sim = parts.locks?.sim; if (!sim) return { group: null, locks: [] };
-      const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : "shortLocks";
+      const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : hairPick.back === "bob" || hairPick.back === "flip" ? hairPick.back + "Locks" : "shortLocks";
       return { group, locks: sim.specs.map((s, i) => ({ i, tip: s.pts.at(-1), root: s.pts[0] })) }; },
-    bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },
+    bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: hairPick.bangs === "hime" ? HIME_HANG : OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },   // (the hime cut's side locks hang from higher up)
+    /** Where a side-swept strand ends (avatar space, rest pose; on the hair): its tip's angle around the head and up from the head's middle (degrees). */
+    sideTipAt(th, ph) { const K = bangKit(), D = Math.PI / 180, d = [Math.sin(th * D) * Math.cos(ph * D), Math.sin(ph * D), Math.cos(th * D) * Math.cos(ph * D)], t = surfaceAlong(K.surf, K.center, d) + 0.004;
+      return K.toRoot(...K.center.map((v, i) => v + d[i] * t)); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
     async exportGLB() {

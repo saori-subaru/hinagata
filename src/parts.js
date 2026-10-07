@@ -75,7 +75,9 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     case "extraWings": { const f = C.extras.wingSdf; if (!f) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const S = OPT.outfit.extras?.wingSize ?? 1; return { sdf: f, lo: [-0.15 - 0.6 * S, 0.3, -0.15 - 0.55 * S], hi: [0.15 + 0.6 * S, 0.75 + 0.45 * S, 0.05], h: Math.min(H * 0.5, 0.006), bone1: "upperChest" }; }
     case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
-    case "socks": return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, 0.17, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
+    // the box reaches the socks' top (2026-10-07: it stopped at 0.17, so socks over 0.17 were cut there, though the slider went to 0.3; the
+    // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
+    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/ }; }
   }
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));

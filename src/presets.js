@@ -104,4 +104,60 @@ export const CHARACTERS = {
       face: { parts: { eyes: "image", brows: "image", mouth: "image" } },
     } },
   },
+  lumina: {
+    name: { ja: "ルミナ", en: "Lumina" },
+    about: { ja: "ツインテールの美少女", en: "A pretty girl with twin tails" },
+    // 2026-10-07, Claude (Saori: "超絶美少女を作ってください"): lavender twin tails with bows, the sparkly eyes, a white dress fading to
+    // lavender, over-the-knee socks. Made with the parts added for her: eyes "sparkle", the "ribbon" accessory, socks above the knee
+    file: { hinagata: 3, name: "ルミナ", options: {
+      colors: { skin: "#fff1e8", hair: "#efe4f7", eyes: "#6d4fd0" },
+      body: {
+        proportion: { legs: 1.82, torso: 1.13, arms: 1.17, hands: 1.05, shoulders: 0.94 },
+        head: { scale: 0.68, jawLength: 1.4 },   // a longer jaw under the mouth, so the chin can come to a point (Saori)
+        torso: { chest: 0.9, belly: 0.6, waist: 0.03, hips: 0.92, bust: 0.8, butt: 0.96, back: 0.56 },
+        thickness: { upperArm: 0.72, forearm: 0.68, thigh: 0.66, thighTop: 0.62, calf: 0.6 },
+        // full cheeks (Saori: "ほおがこけて、りんかくが角ばって"): not trimmed at the side, filled out and longer; a pointed chin (sharpness, not
+        // the V chin: that left a corner under the ear). The later tries (a wider face, smaller eyes and sockets) kept the chin round, so she is
+        // this face, the one Saori picked ("いったんこの時のルミナを")
+        sculpt: { neck: { width: 0.72 }, cheeks: { y: 0.94, height: 0.14 }, cheekTrim: { depth: 0 }, cheekFill: { depth: 0.007 }, chin: { k: 0.024, sharp: 0.3 } },
+      },
+      hair: {
+        back: "long",
+        gradient: { on: true, color: "#b48ae8", start: 0.45, soft: 0.55 },
+        tail: { kind: "twin", y: 1.1, length: 0.6, size: 1.1, wave: 0.018, waves: 2.2, tie: { on: false } },
+        paint: { ring: { strength: 0.6, color: "#ffffff" } },
+        sculpt: {
+          long: { bottom: 0.85, count: 18 },
+          nendo: {   // the default tips, the middle ones raised off the eyes
+            tips: [[-81.52, 0.887, 0.69, 0.33, null, 6], [-56.458, 0.95, 0.5, 0, null, 5.5], [-42, 1.07], [-36.124, 1.03], [5.627, 1.05, 0.8, 0.04, "c"], [13.563, 1.05, 0.8, 0, "c"], [27.929, 1.035], [41.397, 1.0], [59.583, 0.95, 0.5, 0, null, -3.5], [84, 0.87, 0.66, -0.33, null, -12.5]],
+          },
+        },
+      },
+      face: { eyeSize: 1.35, parts: { eyes: "sparkle" }, blush: { cheeks: { on: true, strength: 0.35 } } },
+      outfit: {
+        shirt: { on: false },
+        pants: { on: false },
+        dress: { on: true, color: "#ffffff", waist: 0.5, hem: 0.3, flare: 0.62, curl: 0.15, hemShape: "scallop", gradient: { on: true, color: "#cbb7f2", start: 0.6, soft: 0.5 } },
+        socks: { color: "#3b3352", top: 0.28 },
+        shoes: { kind: "heels", color: "#3a2f52" },
+      },
+      accessories: [
+        { kind: "ribbon", bone: "head", at: [0.25, 1.25, 0.05], n: [0.5, 0.6, 0.62], spin: -12, size: 0.17, color: "#7a5cc8", mirror: true },   // over the tails' ties
+        { kind: "ribbon", bone: "spine", at: [0, 0.02, -0.128], n: [0, 0.1, -1], size: 0.17, color: "#7a5cc8" },   // at the back of the waist
+        { kind: "ribbon", bone: "upperChest", at: [0, 0.035, 0.142], n: [0, 0.15, 1], size: 0.075, color: "#7a5cc8" },
+        { kind: "band", bone: "neck", at: [0, 0.046, 0.072], size: 0.012, color: "#3b3352" },   // a choker, above the collar
+      ],
+      shading: { style: "soft", rim: { on: true, color: "#fff0ff", strength: 0.5 } },
+    } },
+  },
 };
+
+// ルミナ v2 (2026-10-07, Saori: "e3をルミナv2として入れてもらえますか"): ルミナ with a longer face drawn in straight lines — a little wider (faceNarrow
+// 1.02), the jaw longer under the mouth (jawLength 1.9), its corner low (cheeks fullest at 0.885) and straight from there to the same pointed
+// chin (the V chin's lines, aimed to meet the face's side at that corner: slope 3.2 from y0 0.89). Everything else is ルミナ's own
+{ const o = structuredClone(CHARACTERS.lumina.file.options), b = o.body;
+  b.head.jawLength = 1.9;
+  b.sculpt.faceNarrow = { k: 1.02 };
+  b.sculpt.cheeks.y = 0.885;
+  b.sculpt.chin.v = { on: true, halfW: 0.02, slope: 3.2, y0: 0.89, fadeY: 0.03, k: 0.01, z0: -0.02 };
+  CHARACTERS.lumina2 = { name: { ja: "ルミナ v2", en: "Lumina v2" }, about: { ja: "ルミナの面長・直線の輪郭", en: "Lumina with a longer face in straight lines" }, file: { hinagata: 3, name: "ルミナ v2", options: o } }; }

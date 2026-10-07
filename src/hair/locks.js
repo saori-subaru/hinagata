@@ -15,7 +15,11 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
-const DRAG = 10, VDAMP = 0.5;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
+const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
+// falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
+// the head's speed up or down (smoothed) pushes the locks out from the head's middle line while it falls (the air from below spreads them,
+// more toward the tips) and in against the head and the body while it rises: across, not up and down (they bobbed like jelly)
+const SPREAD_OUT = 0.35, SPREAD_IN = 0.07, SPREAD_V0 = 0.6, SPREAD_V = 0.8, SPREAD_K = 0.1, SPREAD_BACK = 4;   // the tip spread out / drawn in (for the lock's length: a short lock lying on the head hardly moves); the speed (m/s) under which nothing happens (a run's bobbing) and over it for all of it; how firmly they follow; how fast it goes back (/s)
 const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
@@ -116,7 +120,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
     const k = Math.max(1, Math.round(2 * half * tp.wd / ((B.lockSpan ?? 13) * deg)));
     const mid = leave(Math.max(tp.y, HY), tp.a - tp.sw);   // where the clump's middle leaves the head: its hanging locks gather under it
     for (let j = 0; j < k; j++) {
-      const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45 * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
+      const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * (B.lockTipSpread ?? 0.45) * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
       const yH = Math.max(tipY, HY), hang = yH - tipY;   // the part on the head ends at yH; the rest (hang) falls straight down from there
       const tip = leave(yH, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
       // sweep (the row's 6th value): the lock comes straight down, then curves over to the swept tip in its lower part (2026-10-05, Saori:
@@ -148,6 +152,24 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
         front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
+  return out;
+}
+
+/**
+ * Side-swept bangs as locks (2026-10-07, Saori: the locks / block switch apart from the style): each of the block's big strands
+ * ([from angle, to angle, to height angle, radius, bend], degrees; hair/index.js SIDE) is a few locks side by side, from the crown (58°
+ * up) sweeping across the forehead along the hair, coming together a little toward the tip. surf / center / toRoot: as bangLocks
+ */
+export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
+  const deg = Math.PI / 180, out = [];
+  for (const [th0, th1, ph1, w, bend] of defs) {
+    const k = Math.max(1, Math.round(w / 0.026)), lw = 2 * w / k * 1.35 * sx, thick = 0.3;
+    for (let j = 0; j < k; j++) { const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, df = f * (w / 0.25) * 0.9, pts = [];   // df: its place across the strand (radians at the root)
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), th = (th0 + (th1 - th0) * t + bend * Math.sin(Math.PI * t)) * deg + df * (1 - 0.55 * t), ph = (58 + (ph1 - 58) * t) * deg;
+        const d = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], off = 0.5 * lw / sx * thick * width(t) + 0.003 + 0.006 * Math.sin(Math.PI * Math.min(1, t * 1.2)) * (1 - 0.5 * Math.abs(f));
+        const at = surfaceAlong(surf, center, d) + rise(t, off); pts.push(toRoot(center[0] + d[0] * at, center[1] + d[1] * at, center[2] + d[2] * at)); }
+      let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+      out.push({ root: pts[0], pts, len, w: lw, thick, layer: 0, curl: 0, rise: true, stiff: 1 }); } }
   return out;
 }
 
@@ -317,7 +339,10 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     { const e = M.elements, l = Math.hypot(e[4], e[5], e[6]) || 1; GR[0] = e[4] / l; GR[1] = e[5] / l - 1; GR[2] = e[6] / l; }   // gravity, less what the head carries (see step)
     for (const c of CN) { const e = c.bone * 16, [x, y, z] = c.c; c.now[0] = BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]; c.now[1] = BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]; c.now[2] = BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]; }
     TP.set(T); const e = M.elements; for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2]; T[i * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; T[i * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; T[i * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
+    CW[0] = e[0] * RC[0] + e[4] * RC[1] + e[8] * RC[2] + e[12]; CW[1] = e[1] * RC[0] + e[5] * RC[1] + e[9] * RC[2] + e[13]; CW[2] = e[2] * RC[0] + e[6] * RC[1] + e[10] * RC[2] + e[14];   // the head's middle (or the roots')
   }
+  // the middle the locks spread out from (rest): the head's, or the roots' (a tail on the hips) / CW: it now (world) / VY: the roots' speed up (smoothed) / SPR: the spread now (-1 in .. 1 out)
+  const RC = ell ? [...ell.c] : [0, 1, 2].map((q) => specs.reduce((s, sp) => s + sp.pts[0][q], 0) / Math.max(1, NL)), CW = [0, 0, 0]; const LEN = specs.map((s, l) => { let L = 0; for (let i = 1; i < N; i++) L += SEG[l * N + i]; return L; }); let VY = 0, SPR = 0;
   const pp = [0, 0, 0], GR = [0, 0, 0], AIR = [0, 0, 0], TP = new Float32Array(NP * 3); let floorY = 0, sub = 1;   // TP: the targets a frame ago / sub: steps this frame
   function collide(i) {   // point i (root space) out of the head (in its rest space) and the spheres
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
@@ -341,7 +366,9 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         P[j + q] = X[j + q]; X[j + q] += v; }                                     // had laid it out flat behind like a stick (the tennis player's 7 m/s, 2026-10-05); the wind (AIR) streams it now   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
       const ph = PH[l], fl = 1 + 0.35 * Math.sin(clock * 7 + ph * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + ph * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
       X[j] += gx + AIR[0] * fl * h * h * fk; X[j + 1] += gy + (AIR[1] * fl + up) * h * h * fk; X[j + 2] += gz + AIR[2] * fl * h * h * fk;   // the wind (air drag pulling it along)
-      for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
+      if (SPR) { const t = i / (N - 1), dx = T[j] - CW[0], dz = T[j + 2] - CW[2], dl = Math.hypot(dx, dz) || 1, o = (SPR > 0 ? SPR * SPREAD_OUT * t ** 1.5 : SPR * SPREAD_IN * t) * LEN[l] * (floor ? 0.3 : 1), k = Math.min(1, KS[p] + Math.abs(SPR) * SPREAD_K);   // its rest place out or in (not up: what was lifted fell back onto the lock on landing and crumpled it), followed more firmly
+        X[j] += (T[j] + dx / dl * o - X[j]) * k; X[j + 1] += (T[j + 1] - X[j + 1]) * k; X[j + 2] += (T[j + 2] + dz / dl * o - X[j + 2]) * k; }
+      else for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
     for (const { ls, c } of BUNDLES) for (let i = 2; i < N; i++) { const m = [0, 0, 0];
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) m[q] += (X[j + q] - T[j + q]) / ls.length; }
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] + m[q] - X[j + q]) * c; } }
@@ -351,6 +378,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         else { X[a] += dx * f * 0.5; X[a + 1] += dy * f * 0.5; X[a + 2] += dz * f * 0.5; X[b] -= dx * f * 0.5; X[b + 1] -= dy * f * 0.5; X[b + 2] -= dz * f * 0.5; } }
       for (let i = 2; i < N; i++) collide(l * N + i);
     }
+    // then each link exactly its length, from the root out (follow the leader): four rounds left a long chain a few % longer when the head
+    // went up or down fast, and the hair stretched and sprang back on a jump (2026-10-07, Saori: "ジャンプなどで上下に動いた時の髪がバネのように
+    // 伸び縮みする"). The move goes into the point's last position too, so it adds no speed of its own (no jitter, no extra swing)
+    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] / d;
+      const cx = -dx * f, cy = -dy * f, cz = -dz * f; X[b] += cx; X[b + 1] += cy; X[b + 2] += cz; P[b] += cx; P[b + 1] += cy; P[b + 2] += cz; }
   }
   // the mesh from the chain: rings along a Catmull-Rom curve through the points, each a flat lens across the lock, facing out
   const C = new Float32Array(ringsPer * 3), Dd = new Float32Array(ringsPer * 3);
@@ -371,7 +403,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
         const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const x = cx + ax * (u * hw + cu) + ox * w * ht * bulge, y = cy + ay * (u * hw + cu) + oy * w * ht * bulge, z = cz + az * (u * hw + cu) + oz * w * ht * bulge;
           toRest(pos, v, x, y, z, false);
@@ -391,6 +423,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       matrices();
       for (let q = 0; q < 3; q++) AIR[q] = (wind?.[q] ?? 0) * DRAG; airN = Math.hypot(AIR[0], AIR[1], AIR[2]); clock += dt;
       let jump = 0; for (let i = 0; i < NP * 3; i += 3 * N) jump = Math.max(jump, Math.abs(T[i] - X[i]) + Math.abs(T[i + 1] - X[i + 1]) + Math.abs(T[i + 2] - X[i + 2]));   // the roots against where they were
+      { let dy = 0; for (let i = 0; i < NP * 3; i += 3 * N) dy += T[i + 1] - TP[i + 1]; const vy = first || instant || jump > 0.5 || !(dt > 0) ? 0 : dy / NL / dt;
+        VY += (vy - VY) * (1 - Math.exp(-dt * 12)); { const want = Math.max(-1, Math.min(1, -Math.sign(VY) * Math.max(0, Math.abs(VY) - SPREAD_V0) / SPREAD_V)); SPR += (want - SPR) * (1 - Math.exp(-dt * (Math.abs(want) > Math.abs(SPR) ? 12 : SPREAD_BACK))); } if (Math.abs(SPR) < 0.02) SPR = 0; }   // (smoothed: frame times vary)
       if (first || instant || jump > 0.5) { X.set(T); P.set(T); for (let s = 0; s < (first ? 40 : 20); s++) step(H, 0); first = false; acc = 0; }   // settle (also when the avatar was moved far at once: no whip across the scene)
       else if (coarse) { acc = Math.min(acc + dt, 4 * H); const n = Math.floor(acc / H); if (n) { sub = 1; if (n !== kn) { kn = n; KN = K.map((k) => 1 - (1 - k) ** n); } KS = n > 1 ? KN : K; step(n * H, damping ** n, (n + 1) / (2 * n)); KS = K; acc -= n * H; } }
       else { acc = Math.min(acc + dt, 4 * H); sub = Math.max(1, Math.floor(acc / H)); while (acc >= H) { step(H, damping); acc -= H; } }

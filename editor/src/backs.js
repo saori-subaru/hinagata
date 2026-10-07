@@ -6,12 +6,12 @@
 import * as THREE from "three";
 
 const D2R = Math.PI / 180;
-const PATH = { shortLocks: "hair.sculpt.shortLocks.edits", "shortLocks.lie": "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" };
+const PATH = { shortLocks: "hair.sculpt.shortLocks.edits", "shortLocks.lie": "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits", bobLocks: "hair.sculpt.bobLocks.edits", flipLocks: "hair.sculpt.flipLocks.edits" };
 
 /** vp: the viewport / store: the recipe / onSelect(): the selection changed (the panel shows its sliders) */
 export function createBackTool({ vp, store, onSelect = () => {} }) {
   const group = new THREE.Group(); group.visible = false;
-  const mat = new THREE.MeshBasicMaterial({ color: 0x2fa58a, depthTest: false, transparent: true, opacity: 0.9 }), selMat = new THREE.MeshBasicMaterial({ color: 0x4b4acf, depthTest: false });
+  const mat = new THREE.MeshBasicMaterial({ color: 0x2fa58a, depthTest: false, transparent: true, opacity: 0.9 }), selMat = new THREE.MeshBasicMaterial({ color: 0x4b4acf, depthTest: false, transparent: true });
   const geo = new THREE.SphereGeometry(0.0085, 16, 12);
   let on = false, sel = -1, drag = null, av = null, info = { group: null, locks: [] };
   const path = () => PATH[info.group];

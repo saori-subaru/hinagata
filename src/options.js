@@ -56,6 +56,7 @@ export const DEFAULTS = {
       "depth": 1,
       "pivotY": 0.845,
       "pivotZ": 0.006,
+      "jawLength": 1,
       "shift": {
         "z": 0.03,
         "z0": -0.08,
@@ -112,10 +113,14 @@ export const DEFAULTS = {
         }
       },
       "socketScale": 1,
+      "socketSize": 1,
       "faceNarrow": {
         "k": 1,
         "y0": 1.02,
         "y1": 1.12
+      },
+      "faceWiden": {
+        "shift": 0
       },
       "skullTop": {
         "extra": 0,
@@ -330,7 +335,6 @@ export const DEFAULTS = {
       "mouth": {
         "curve": 45,
         "profile": 0,
-        "chinOut": 0,
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,
@@ -677,7 +681,10 @@ export const DEFAULTS = {
         "size": 1
       }
     },
-    "back": "hang",
+    "back": "short",
+    "bangsForm": "locks",
+    "backForm": "locks",
+    "nape": "hang",
     "ahoge": true,
     "sculpt": {
       "hime": {
@@ -743,6 +750,33 @@ export const DEFAULTS = {
           [-64, -70, -40, 0.05, 0],
           [64, 70, -40, 0.05, 0]
         ]
+      },
+      "side": {
+        "strands": [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
+      },
+      "bobLocks": {
+        "count": 17,
+        "span": 150,
+        "width": 0.09,
+        "thick": 0.28,
+        "ph": [56, 36],
+        "below": 0.045,
+        "flick": -0.01,
+        "vary": 0.06,
+        "stiff": 3,
+        "edits": []
+      },
+      "flipLocks": {
+        "count": 17,
+        "span": 150,
+        "width": 0.09,
+        "thick": 0.28,
+        "ph": [56, 36],
+        "below": 0.035,
+        "flick": 0.012,
+        "vary": 0.06,
+        "stiff": 3,
+        "edits": []
       },
       "shortLocks": {
         "on": true,
@@ -1095,7 +1129,30 @@ export function fromQuery(search) {
 // Face parts given with the old Japanese names become ids.
 /** Bangs that are gone, and what they became ("parted" had a tuft in the middle of its parting: 2026-10-05). */
 export const bangsId = (v) => v === "parted" ? "block" : v;
-export const resolveOptions = (user) => { const o = structuredClone(merge(DEFAULTS, user)); Object.assign(o.face.parts, partIds(user?.face?.parts)); o.hair.bangs = bangsId(o.hair.bangs); return o; };
+/**
+ * The hair's forms, apart from its style (2026-10-07, Saori: "髪の毛の、毛束と塊の分離"): hair.bangsForm and hair.backForm, "locks" (separate
+ * locks that move) or "block" (one shape with the head); short hair in locks either lies along the head or hangs off the nape (hair.nape
+ * "lie" / "hang"; Saori: "そのままだと垂らしと普通それぞれに塊を作ることになりますよね" — the two were styles, with the same block).
+ * Older values are read into them, so a saved character stays as it was: bangs "block" (the nendo bangs as one layer) → nendo, block;
+ * back "hang" → short, locks, hanging; back "short" given without a nape → lying (what "short" was); sculpt.nendo.locks / shortLocks.on /
+ * long.locks given false → block. A style without its own locks yet (hime, side, bob, flip) is built as its block.
+ */
+function readHair(o, user) {
+  const U = user?.hair ?? {}, H = o.hair, S = U.sculpt ?? {};
+  if (H.bangs === "block") { H.bangs = "nendo"; if (U.bangsForm == null) H.bangsForm = "block"; }
+  else if (U.bangsForm == null && S.nendo?.locks === false) H.bangsForm = "block";
+  if (H.back === "hang") { H.back = "short"; if (U.nape == null) H.nape = "hang"; if (U.backForm == null) H.backForm = "locks"; }
+  else if (U.back === "short" && U.nape == null) H.nape = "lie";
+  if (U.backForm == null && ((H.back === "short" && S.shortLocks?.on === false) || (H.back === "long" && S.long?.locks === false))) H.backForm = "block";
+  hairForms(H);
+}
+/** The engine's own switches from the forms (hair/index.js, index.js read these), and the style it builds: { bangs, back ("hang" for short
+ *  hair hanging in locks), ahoge }. */
+export function hairForms(H) {
+  const S = H.sculpt; S.nendo.locks = H.bangsForm !== "block"; S.shortLocks.on = S.long.locks = H.backForm !== "block";
+  return { bangs: H.bangs, back: H.back === "short" && H.nape === "hang" && H.backForm !== "block" ? "hang" : H.back, ahoge: H.ahoge };
+}
+export const resolveOptions = (user) => { const o = structuredClone(merge(DEFAULTS, user)); Object.assign(o.face.parts, partIds(user?.face?.parts)); o.hair.bangs = bangsId(o.hair.bangs); readHair(o, user); return o; };
 
 /** Only what differs from base (e.g. a recipe without its defaults, for "copy as code"). Arrays and values compare as a whole. */
 export function diff(base, opt) {

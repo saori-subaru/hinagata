@@ -51,7 +51,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
   const labelOf = (e, id) => h("label", { class: "lab", for: id }, h("span", { title: e.path }, L(e.label)), resetDot(e));
   const helpOf = (e) => e.help ? h("div", { class: "help" }, L(e.help).replace(/^null\b/, t("auto"))) : null;   // "null = …" reads as "Auto = …"
-  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => v === "*set" ? store.get(p) != null : store.get(p) === v);   // only when the values it depends on are set so ("*set": anything but null)
+  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => v === "*set" ? store.get(p) != null : Array.isArray(v) ? v.includes(store.get(p)) : store.get(p) === v);   // only when the values it depends on are set so ("*set": anything but null)
 
   function numberField(e, v) {
     const id = `f${uid++}`;
@@ -163,7 +163,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       // in the eye's frame (same way round as the open eye), used for blinking and as 絵のとじ目
       const closedSrc = store.get("face.images.eyeClosed.src");
       const closedRow = n !== "normal" ? null : h("div", { class: "field" }, h("label", {}, t("f_eyeClosed")),
-        h("div", { class: "chips" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
+        h("div", { class: "chips full" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
           h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint("closed") }, t(closedSrc ? "closedRedraw" : "closedDraw")),
           h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate("closed") }, t("exReadTpl")),
           closedSrc ? h("button", { class: "btn small ghost", type: "button", onclick: () => set({ "face.images.eyeClosed.src": null }) }, t("closedClear")) : null),
@@ -220,14 +220,14 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const toolChip = (T) => h("button", { class: "chip", type: "button", "aria-pressed": String(T.on), onclick: () => { stopTools(T); T.toggle(); } }, t("dragMove"));
   function bangsBlock() {
     const B = ctx.bangs; if (!B) return null;
-    const head = [h("h2", {}, t("bangTufts")), h("span", { class: "cost" }, t("bangN", (store.get("hair.sculpt.nendo.tips") ?? []).length))];
+    const head = [h("h2", {}, t("bangTufts")), h("span", { class: "cost" }, t("bangN", B.count))];
     if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("bangNeedNendo"))] };
     const kids = [h("div", { class: "chips" }, toolChip(B))];
     if (B.on) {
       kids.push(h("div", { class: "help" }, t("bangHelp")),
         h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => B.add() }, t("bangAdd")), h("button", { class: "btn small ghost", type: "button", disabled: B.selected < 0, onclick: () => B.remove() }, t("bangDel"))));
       if (B.selected < 0) kids.push(h("div", { class: "note" }, t("bangPick")));
-      else for (const [k, key, min, max, step] of [[8, "bangWidth", 0.2, 2, 0.05], [5, "bangSweep", -25, 25, 0.5], [7, "bangFlick", -0.04, 0.04, 0.001], [9, "bangWave", 0, 0.05, 0.002], [6, "bangThick", -0.02, 0.03, 0.001]]) {   // the row's width, sweep, flick / curl, wave (hanging tufts) and extra thickness
+      else for (const [k, key, min, max, step] of B.sliders) {   // the row's values (editor/src/bangs.js KINDS: a tuft's width, sweep, flick / curl, wave, extra thickness; a strand's width, bend, root)
         const id = `f${uid++}`, v = B.value(k), num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
         const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
         rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
@@ -290,7 +290,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   // the back hair's locks one by one (editor/src/backs.js)
   function backsBlock() {
     const B = ctx.backs; if (!B) return null;
-    const p = { hang: "hair.sculpt.shortLocks.edits", short: "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" }[store.get("hair.back")], n = p ? (store.get(p) ?? []).length : 0;
+    const bk = store.get("hair.back"), p = store.get("hair.backForm") === "block" ? null : bk === "long" ? "hair.sculpt.long.edits" : bk === "bob" || bk === "flip" ? `hair.sculpt.${bk}Locks.edits` : bk === "short" ? (store.get("hair.nape") === "hang" ? "hair.sculpt.shortLocks.edits" : "hair.sculpt.shortLocks.lie.edits") : null, n = p ? (store.get(p) ?? []).length : 0;
     const head = [h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null];
     if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("backNone"))] };
     const kids = [h("div", { class: "chips" }, toolChip(B),
