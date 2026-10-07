@@ -797,12 +797,16 @@
    "cost": "body",
    "apply": null,
    "min": 0,
-   "max": 0.04,
+   "max": 0.08,
    "step": 0.001,
    "order": 54,
    "section": {
     "ja": "胴",
     "en": "Torso"
+   },
+   "help": {
+    "ja": "強くするときは、くびれの縦の長さ(くわしい設定の waist › height)も長くすると、なめらかな S 字になる",
+    "en": "for a strong waist, make it longer too (waist › height, in the fine-tuning) for a smooth S line"
    }
   },
   "body.torso.hips": {

@@ -91,7 +91,7 @@ const MAIN = [
   ["body.torso.chest", L("胸板", "Chest"), { min: 0.8, max: 1.4, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.bust", L("胸(ふくらみ)", "Bust"), { min: 0, max: 1, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.belly", L("おなか", "Belly"), { min: 0.6, max: 1.15, step: 0.01, section: L("胴", "Torso") }],
-  ["body.torso.waist", L("くびれ", "Waist"), { min: 0, max: 0.04, step: 0.001, section: L("胴", "Torso") }],
+  ["body.torso.waist", L("くびれ", "Waist"), { min: 0, max: 0.08, step: 0.001, section: L("胴", "Torso"), help: L("強くするときは、くびれの縦の長さ(くわしい設定の waist › height)も長くすると、なめらかな S 字になる", "for a strong waist, make it longer too (waist › height, in the fine-tuning) for a smooth S line") }],
   ["body.torso.hips", L("腰の幅", "Hips"), { min: 0.75, max: 1.2, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.butt", L("おしり", "Bottom"), { min: 0.4, max: 1.2, step: 0.01, section: L("胴", "Torso") }],
   ["body.torso.back", L("背中の厚み", "Back"), { min: 0.3, max: 1.2, step: 0.01, section: L("胴", "Torso") }],
