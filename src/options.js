@@ -397,6 +397,7 @@ export const DEFAULTS = {
           "depth": 0.058
         }
       },
+      "legShape": 0,
       "crotch": {
         "y": 0.29,
         "width": 0.025,
