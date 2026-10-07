@@ -448,6 +448,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   for (const k of ARMOR) parts[k] = armorPart(k);   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
   const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" || k === "weaponLGrip" || k === "weaponBelt" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : k === "weaponSheath" ? WO.sheathColor ?? "#4a3326" : WO.color;   // (the belt in the grip's leather, the scabbard its own)
   for (const k of WEAPONS) { parts[k] = skinned(meshPart(k), weaponColor(k), 0.004); if (k === "weaponR" || k === "weaponL") { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, WO.color); } }   // in the hands (clothes/weapons.js)
+  const showSheath = (on) => { for (const k of ["weaponSheath", "weaponBelt"]) parts[k].m.visible = parts[k].o.visible = on; };   // the belt and the scabbard (weapon.sheath): shown or hidden, no rebuild
+  showSheath(WO.sheath !== false);
   lap("shadeAndClothes");
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004, "hair");
   const makeHair = (h) => { const x = makeHair0(h); addHairUV(x.m.geometry); x.m.material.dispose(); x.m.material = hairMat(OPT.colors.hair); return x; };
@@ -827,6 +829,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
      *  bands 2 (light / shadow) or 3 (with a mid tone), soften 0.. how far the shading normals are smoothed (0 = the mesh's own, 1 = default). Keeps the current colors. */
+    /** The belt and the scabbard of a sword or a greatsword (instant): on / off. Kept in options.outfit.weapon.sheath. */
+    setSheath(on) { OPT.outfit.weapon.sheath = !!on; showSheath(!!on); },
     /** Rim light (instant): { on, color, width (0..1: how far in from the edge), strength }. Kept in options.shading.rim. */
     setRim({ on, color, width, strength } = {}) {
       const R = OPT.shading.rim ??= {}; Object.assign(R, Object.fromEntries(Object.entries({ on, color, width, strength }).filter(([, v]) => v !== undefined)));

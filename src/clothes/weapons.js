@@ -101,7 +101,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   //   the left hip slanting back and down; greatsword: the scabbard across the back (behind the right shoulder down to the left hip) on a
   //   strap across the chest. The belt and the strap lie on the body 2.2 cm out (over the clothes) ──
   let sheath = none, belt = none, boxSheath = null, boxBelt = null, sheathBone = null;
-  if (WO.sheath !== false && (R === "sword" || R === "greatsword")) {
+  if (R === "sword" || R === "greatsword") {   // (built either way: weapon.sheath shows or hides them at once, avatar.setSheath)
     const great = R === "greatsword", ON = 0.022;
     const T0 = great ? [-0.2, 0.92, -0.165] : [0.185, 0.475, 0.03], T1 = great ? [0.2, 0.33, -0.15] : add(T0, [norm([0.12, -0.8, -0.55]), 0.5]);
     const d = norm(sub(T1, T0)), L = Math.hypot(...sub(T1, T0)), n0 = great ? [0, 0, -1] : [1, 0, 0], nA = norm(add(n0, [d, -dot(n0, d)])), wA = cross(d, nA);   // nA: the flat side's normal (out of the body), wA: across it
