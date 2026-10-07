@@ -56,7 +56,6 @@ export const DEFAULTS = {
       "depth": 1,
       "pivotY": 0.845,
       "pivotZ": 0.006,
-      "faceLength": 1,
       "shift": {
         "z": 0.03,
         "z0": -0.08,
@@ -331,8 +330,6 @@ export const DEFAULTS = {
       "mouth": {
         "curve": 45,
         "profile": 0,
-        "chinOut": 0,
-        "recess": 0,
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,

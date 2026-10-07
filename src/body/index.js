@@ -60,10 +60,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
   Object.assign(J, armJoints(OPT));
   // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
-  // A longer face (head.faceLength) lifts it too, by as much as its chin comes down, so the neck under it stays as long (2026-10-07, Saori:
-  // "顎がのびて首が短くなってますよ")
-  const FLEN = OPT.body.head.faceLength ?? 1, FACE_LIFT = FLEN > 1 ? (OPT.face.layout.eyeY - 0.05 - OPT.body.sculpt.chin.y) * (FLEN - 1) * OPT.body.head.scale : 0;
-  const NK = OPT.body.sculpt.neck, LIFT = (NK.length ?? 0) + FACE_LIFT; J.head[1] += LIFT;
+  const NK = OPT.body.sculpt.neck, LIFT = NK.length ?? 0; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
   // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
@@ -186,18 +183,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;
   // profile (mouth.profile, 0 = the straight chibi line; 2026-10-07, Saori: "鼻の下の凹みや口のラインなどがあるタイプの横顔"): seen from the side a
-  // soft dip under the nose (halfway down to the mouth, wide across); mouth.chinOut: the chin a little forward (its own value: at profile 2
-  // without it Saori found another deformed face type, "デフォルメの別タイプとして使えそう"). Placed by the face picture's mouth (face.layout.mouthY).
-  // Not the upper lip forward ("かえるみたい", Saori) nor a crease under the mouth (the outline came through over the drawn mouth: a line across
-  // it, its smile cut off)
-  const PRF = OPT.body.sculpt.mouth.profile ?? 0, CHO = OPT.body.sculpt.mouth.chinOut ?? 0, MY = OPT.face?.layout?.mouthY ?? 0.896, gs = (v) => Math.exp(-v * v);
+  // soft dip under the nose (halfway down to the mouth, wide across), placed by the face picture's mouth (face.layout.mouthY). Not the upper
+  // lip forward ("かえるみたい", Saori) nor a crease under the mouth (the outline came through over the drawn mouth: a line across it, its smile
+  // cut off). The chin forward, a set-back mouth and a longer face were tried and taken out ("全てがダメ … 鼻下の凹みだけは残して他は消しましょう")
+  const PRF = OPT.body.sculpt.mouth.profile ?? 0, MY = OPT.face?.layout?.mouthY ?? 0.896, gs = (v) => Math.exp(-v * v);
   const NB = 0.964 + NOSE_DY + NOSE_LIFT - NOSE_UNDER.y, DY = (NB + MY) / 2;   // NB: under the nose; DY: halfway down to the mouth
-  // mouth.recess: everything from under the nose down to just under the mouth set back (a band, flat across the mouth), so with the chin
-  // forward the lips sit behind the line from the nose's tip to the chin's (an E-line; 2026-10-07, Saori: "はなしたぜんたいをへこませ、やや口も凹ませ、
-  // 顎はだしたままで、eラインを")
-  const REC = OPT.body.sculpt.mouth.recess ?? 0, RB = (y) => sstep(MY - 0.03, MY - 0.008, y) * (1 - sstep(NB - 0.006, NB + 0.006, y));
-  const profile = PRF || CHO || REC ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) - REC * 0.008 * RB(y) * gs(x / 0.07) + CHO * 0.007 * gs((y - MY + 0.03) / 0.013) * gs(x / 0.04) : () => 0;
-  if (CHO) P.jawFront = E([0, MY - 0.03, 0.215], [0.03, 0.03, 0.035 + 0.008 * CHO], "head", 0.03);   // something for the chin to come forward from (the jaw ends at the plane there)
+  const profile = PRF ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) : () => 0;
   CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   { const CR = OPT.body.sculpt.crown;   // flat top; tilt > 0 makes it rise toward the back (pivoting at z = pivotZ), so the line from the hairline runs on up to the back of the head
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく
@@ -371,7 +362,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform({ ...OPT.body.head, lift: LIFT, faceY: OPT.face.layout.eyeY - 0.05 }), HEAD_RAW = { ...HEAD };
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT }), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
@@ -406,18 +397,12 @@ export function headTransform(h) {
   const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 }, ly = h.lift ?? 0;
   const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
   const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
-  // faceLength (> 1): the face below faceY (under the eyes) longer by this much, at the front only (fading out behind the cheeks, so the back
-  // of the head and the nape stay): what is drawn or placed there (the mouth and nose pictures, the jaw, side locks) comes down with it.
-  // FS(y, z): a stretched height → the head's own; FU: back (a few steps; its slope stays under 1)
-  const FL = h.faceLength ?? 1, FY = h.faceY ?? 0.95, FK = 1 - 1 / FL, fr = (d) => 0.5 * (d + Math.sqrt(d * d + 0.0004)), fa = (z) => sstep(-0.06, 0.08, z);
-  const FS = FL === 1 ? (y) => y : (y, z) => y + FK * fa(z) * fr(FY - y), FU = FL === 1 ? (y) => y : (y, z) => { let v = y; for (let i = 0; i < 8; i++) v = y - FK * fa(z) * fr(FY - v); return v; };
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && FL === 1, k = Math.min(sx, sy, sz) / stretch * (FL === 1 ? 1 : 0.9);
-  const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, FS(py + (y - ly - py) / sy, Z), Z]; };
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly, k = Math.min(sx, sy, sz) / stretch;
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * FL,
-    toHead,
-    fromHead: (x, y, z) => [x * sx, py + (FU(y, z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(...toHead(x, y, z)) * k,
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
+    toHead: (x, y, z) => [x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)],
+    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)) * k,
   };
 }
 
