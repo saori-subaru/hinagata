@@ -151,3 +151,13 @@ export const CHARACTERS = {
     } },
   },
 };
+
+// ルミナ v2 (2026-10-07, Saori: "e3をルミナv2として入れてもらえますか"): ルミナ with a longer face drawn in straight lines — a little wider (faceNarrow
+// 1.02), the jaw longer under the mouth (jawLength 1.9), its corner low (cheeks fullest at 0.885) and straight from there to the same pointed
+// chin (the V chin's lines, aimed to meet the face's side at that corner: slope 3.2 from y0 0.89). Everything else is ルミナ's own
+{ const o = structuredClone(CHARACTERS.lumina.file.options), b = o.body;
+  b.head.jawLength = 1.9;
+  b.sculpt.faceNarrow = { k: 1.02 };
+  b.sculpt.cheeks.y = 0.885;
+  b.sculpt.chin.v = { on: true, halfW: 0.02, slope: 3.2, y0: 0.89, fadeY: 0.03, k: 0.01, z0: -0.02 };
+  CHARACTERS.lumina2 = { name: { ja: "ルミナ v2", en: "Lumina v2" }, about: { ja: "ルミナの面長・直線の輪郭", en: "Lumina with a longer face in straight lines" }, file: { hinagata: 3, name: "ルミナ v2", options: o } }; }

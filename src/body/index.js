@@ -366,6 +366,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // skull above stays as wide; the eye sockets aren't squeezed, so they stay under the eyes of the face picture
   const FN = OPT.body.sculpt.faceNarrow, faceWarp = (y) => FN.k === 1 ? 1 : 1 - (1 - FN.k) * (1 - sstep(FN.y0, FN.y1, y));
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
+  // faceWiden: the face's sides moved out by shift, as they are (2026-10-07, Saori: "輪郭の左右の角度は変えずに並行移動する方法はないんですかね";
+  // faceNarrow's factor moved the cheeks out more than the jaw, so the sides opened toward the top): a band beside the middle (from inner,
+  // width wide) is stretched across, and everything outside it moves out by shift, so the outline keeps its angles. Only between the brows
+  // (fading out from y0 up to y1) and above the chin (fading out from yc1 down to yc0), so the skull and the chin's point stay; the ears move
+  // with the sides; the eye sockets (added after) stay under the eyes. Across it only shrinks distances; the fades shear it up and down a
+  // little, so the distance is scaled by KW (it never overstates)
+  const FW = OPT.body.sculpt.faceWiden ?? {}, FWD = FW.shift ?? 0;
+  if (FWD) { const f0 = HEAD.f, X0 = FW.inner ?? 0.1, BW = (FW.band ?? 0.06) + FWD, Y0 = FW.y0 ?? 1.02, Y1 = FW.y1 ?? 1.12, C0 = FW.yc0 ?? OPT.body.sculpt.chin.y, C1 = FW.yc1 ?? OPT.body.sculpt.chin.y + 0.07;
+    const KW = 1 / (1 + 1.5 * FWD / Math.min(Y1 - Y0, C1 - C0));
+    HEAD.f = (x, y, z) => { const a = Math.abs(x), s = FWD * (1 - sstep(Y0, Y1, y)) * sstep(C0, C1, y) * sstep(X0, X0 + BW, a); return f0(Math.sign(x) * (a - s), y, z) * KW; }; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y }), HEAD_RAW = { ...HEAD };

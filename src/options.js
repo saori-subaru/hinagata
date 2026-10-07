@@ -119,6 +119,9 @@ export const DEFAULTS = {
         "y0": 1.02,
         "y1": 1.12
       },
+      "faceWiden": {
+        "shift": 0
+      },
       "skullTop": {
         "extra": 0,
         "y": 1.17,
