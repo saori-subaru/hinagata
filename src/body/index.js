@@ -364,7 +364,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FN.k !== 1) { const f0 = HEAD.f, kmin = Math.min(1, FN.k); HEAD.f = (x, y, z) => f0(x / faceWarp(y), y, z) * kmin; }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform({ ...OPT.body.head, lift: LIFT }), HEAD_RAW = { ...HEAD };
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT, faceY: OPT.face.layout.eyeY - 0.05 }), HEAD_RAW = { ...HEAD };
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
@@ -399,12 +399,18 @@ export function headTransform(h) {
   const sx = h.scale * h.width, sy = h.scale, sz = h.scale * h.depth, py = h.pivotY, pz = h.pivotZ, S = h.shift ?? { z: 0 }, ly = h.lift ?? 0;
   const warp = S.z ? (z) => z + S.z * sstep(S.z0, S.z1, z) : (z) => z, unwarp = S.z ? (z) => { let w = z; for (let i = 0; i < 4; i++) w = z - S.z * sstep(S.z0, S.z1, w); return w; } : (z) => z;
   const stretch = S.z ? 1 + 1.5 * S.z / (S.z1 - S.z0) : 1;   // the warp stretches distances by up to this much; divide it out so distances never overstate
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly, k = Math.min(sx, sy, sz) / stretch;
+  // faceLength (> 1): the face below faceY (under the eyes) longer by this much, at the front only (fading out behind the cheeks, so the back
+  // of the head and the nape stay): what is drawn or placed there (the mouth and nose pictures, the jaw, side locks) comes down with it.
+  // FS(y, z): a stretched height → the head's own; FU: back (a few steps; its slope stays under 1)
+  const FL = h.faceLength ?? 1, FY = h.faceY ?? 0.95, FK = 1 - 1 / FL, fr = (d) => 0.5 * (d + Math.sqrt(d * d + 0.0004)), fa = (z) => sstep(-0.06, 0.08, z);
+  const FS = FL === 1 ? (y) => y : (y, z) => y + FK * fa(z) * fr(FY - y), FU = FL === 1 ? (y) => y : (y, z) => { let v = y; for (let i = 0; i < 8; i++) v = y - FK * fa(z) * fr(FY - v); return v; };
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && FL === 1, k = Math.min(sx, sy, sz) / stretch * (FL === 1 ? 1 : 0.9);
+  const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, FS(py + (y - ly - py) / sy, Z), Z]; };
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz),
-    toHead: (x, y, z) => [x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)],
-    fromHead: (x, y, z) => [x * sx, py + (y - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
-    wrap: (f) => identity ? f : (x, y, z) => f(x / sx, py + (y - ly - py) / sy, warp(pz + (z - pz) / sz)) * k,
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * FL,
+    toHead,
+    fromHead: (x, y, z) => [x * sx, py + (FU(y, z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    wrap: (f) => identity ? f : (x, y, z) => f(...toHead(x, y, z)) * k,
   };
 }
 

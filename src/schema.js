@@ -67,6 +67,7 @@ const MAIN = [
   ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.6, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身の標準は 0.7(約5頭身、2026-10-06)。ちびは 0.9", "the tall types: 0.7 (about 5 heads, 2026-10-06); the chibi 0.9") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
+  ["body.head.faceLength", L("顔の長さ（目から下）", "Face length (below the eyes)"), { min: 1, max: 1.5, step: 0.01, section: L("頭", "Head"), help: L("目より下を縦に伸ばす（口・鼻の絵、あご、横の髪もいっしょに下がる）。1 = 今の顔", "the face below the eyes longer (the mouth and nose pictures, the jaw and side locks come down with it). 1 = as before") }],
   ["body.sculpt.neck.width", L("首の太さ", "Neck width"), { min: 0.6, max: 1.2, step: 0.01, section: L("頭", "Head") }],
   ["body.sculpt.neck.length", L("首の長さ", "Neck length"), { min: -0.02, max: 0.06, step: 0.002, section: L("頭", "Head"), help: L("頭ごと上へ(m)", "lifts the head (m)") }],
   ["body.sculpt.neck.follow", L("首を頭の大きさに合わせる", "Neck follows head size"), { min: 0, max: 1.5, step: 0.05, section: L("頭", "Head"), help: L("頭を小さくすると首も細くなる量。0 = 頭の大きさに関係なく同じ太さ", "how much the neck thins with a smaller head. 0 = the same whatever the head") }],

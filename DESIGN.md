@@ -894,3 +894,8 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Profile 2 without the chin (Saori: "横顔の口もと2で顎の出っ張りなくしてみて" → "この顔はデフォルメの別タイプとして使えそう"; "アステルの顔をこれにするといいかも"): the chin is its own value now, `mouth.chinOut` (0 = none, the default; 「横顔のあご先」), and `mouth.profile` is the dip alone. Astel's preset has profile 2.
 - Saori: the cute default face is finished as it is; the profile and a longer face are for other types (tall male characters and so on), so their front may change.
 - The slider is called 「鼻下のへこみ」 (Saori: "横顔の口元じゃなくて、鼻下のへこみでいいんじゃないでしょうか"); the option keeps its name, `body.sculpt.mouth.profile`.
+
+### Face length below the eyes (試作) (2026-10-07, Saori: "横顔作るなら、顔の比率もっと縦に伸ばさないと無理そう" → "メインに入れて試作に進んでください")
+- `body.head.faceLength` (1 = as before; 「顔の長さ（目から下）」, to 1.5): part of the head's transform (headTransform), so everything placed in head space follows: the head's shape, the face picture (its mouth and nose come down and stretch a little with it), the jaw shadow, the ear line, the hair and its locks. Below `faceY` (the eyes' height − 0.05, from face.layout.eyeY) heights are stretched by faceLength, with a soft knee (2 cm), at the front only (fading out from z 0.08 back to −0.06): the back of the head, the nape and the ears stay.
+- Skin weights: the longer chin is all on the head bone (measured at 1.45), so it turns with the head.
+- At 1.3–1.45 the round cheeks are stretched with it (a long round face from the front); a narrower jaw for a grown-up or a man is for the face-shape sliders on top (chin sharpness did little at 0.25).

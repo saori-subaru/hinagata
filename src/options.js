@@ -56,6 +56,7 @@ export const DEFAULTS = {
       "depth": 1,
       "pivotY": 0.845,
       "pivotZ": 0.006,
+      "faceLength": 1,
       "shift": {
         "z": 0.03,
         "z0": -0.08,
