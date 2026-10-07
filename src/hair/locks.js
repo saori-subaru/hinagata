@@ -278,7 +278,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
-  specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * width(t) + 0.003;
+  specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * (s.prof ?? width)(t) + 0.003;
     if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
   X.set(R); P.set(R);
   // bundles (spec.group, cohere 0..1): the locks of a tied tail swing as one. Each point's move off its rest is drawn toward the bundle's mean
@@ -371,7 +371,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
         const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * width(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
         for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const x = cx + ax * (u * hw + cu) + ox * w * ht * bulge, y = cy + ay * (u * hw + cu) + oy * w * ht * bulge, z = cz + az * (u * hw + cu) + oz * w * ht * bulge;
           toRest(pos, v, x, y, z, false);

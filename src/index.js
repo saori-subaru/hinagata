@@ -19,6 +19,7 @@ import { buildBody, makeStretch, isArmBone } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
+import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -119,7 +120,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, armor, weapons } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -265,7 +266,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, armor, weapons } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras } };
   if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
     const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, clothH, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
@@ -430,6 +431,17 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   parts.soles = skinned(meshPart("soles"), OPT.outfit.shoes.soleColor, 0.005, "soles");
   parts.laces = skinned(meshPart("laces"), OPT.outfit.shoes.laceColor, 0.002);   // laced sneakers' laces (empty otherwise)
   parts.socks = skinned(meshPart("socks"), OPT.outfit.socks.color, 0.003, "socks");
+  // the full-body suit (outfit.suit): its second color (accent) on the collar, the cuffs at the wrists, the boots (the feet and ankles) and
+  // panels down the sides, painted by where each point is (base proportions) and which way it faces, as a gradient of two steps (withGrad)
+  const SUIT = { on: { value: 1 }, color: { value: new THREE.Color(OPT.outfit.suit?.accent ?? "#d8433f") }, start: { value: 0.5 }, soft: { value: 0.04 } };
+  parts.suit = skinned(meshPart("suit"), OPT.outfit.suit?.color ?? "#f1f1f4", 0.003, "suit");
+  { const g = parts.suit.m.geometry, Pa = basePos(g), N = g.attributes.normal.array, T = new Float32Array(Pa.length / 3);
+    for (let v = 0; v < T.length; v++) { const x = Pa[v * 3], y = Pa[v * 3 + 1], z = Pa[v * 3 + 2], nx = Math.abs(N[v * 3]);
+      let a = Math.max(sstep(0.772, 0.782, y), 1 - sstep(0.115, 0.125, y));   // the collar, the boots
+      for (const W of WRISTS) { const q = [x - W.h[0], y - W.h[1], z - W.h[2]], t = q[0] * W.d[0] + q[1] * W.d[1] + q[2] * W.d[2]; if (Math.hypot(...q) < 0.12 && t > -0.045) a = 1; }   // the cuffs
+      if ((y > 0.2 && y < 0.6) || (Math.abs(x) > 0.19 && y < 0.74)) a = Math.max(a, sstep(0.84, 0.9, N[v * 3] * Math.sign(x)));   // down the outer sides (of the body under the chest, the legs, the arms)
+      T[v] = a; }
+    g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); parts.suit.wrap = (m) => withGrad(m, SUIT); parts.suit.m.material = parts.suit.wrap(parts.suit.m.material); }
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   const armorPart = (k) => { const x = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, AO.color); } return x; };
   for (const k of ARMOR) parts[k] = armorPart(k);   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
@@ -525,9 +537,19 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
+  // extras (outfit.extras, clothes/extras.js): animal ears and their inner side (on the head), wings (the upper back), a tail (one lock from
+  // the hips: it swings), a halo (a ring over the head, made with the ear line below). Their colors: null = the hair's (a devil's: dark; an angel's wings: white)
+  const XO = OPT.outfit.extras ?? {}, XC = { ears: () => XO.earColor ?? OPT.colors.hair, earsIn: () => XO.earInColor ?? "#f2b9c2", tail: () => XO.tailColor ?? (XO.tail === "devil" ? "#2b2030" : OPT.colors.hair), wings: () => XO.wingColor ?? (XO.wings === "devil" ? "#2b2030" : "#f7f4ee") };
+  parts.extraEars = skinned(meshPart("extraEars"), XC.ears(), 0.004);
+  parts.extraEarsIn = skinned(meshPart("extraEarsIn"), XC.earsIn(), 0.0015);
+  parts.extraWings = skinned(meshPart("extraWings"), XC.wings(), 0.004);
+  { const spec = tailSpec(XO.tail, { hips: Jr.hips, back: surfaceAlong(bodySdfR, Jr.hips, [0, 0, -1]), size: XO.tailSize ?? 1 }), c = Jr.hips;
+    if (spec) { const outward = (x, y, z, M) => { const e = M.elements; return [x - (e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12]), y - (e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13]), z - (e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14])]; };
+      const sim = createLocks({ specs: [spec], head: BI.hips, skeleton, root, outward, lite: LITE, coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.88 });
+      parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
-  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
+  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
   // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
@@ -564,6 +586,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         pts.push(new THREE.Vector3(...HTr.fromHead(p[0] + d[0] * EL.lift, p[1] + d[1] * EL.lift, p[2] + d[2] * EL.lift))); }
       const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, EL.width, 6, false); g.applyMatrix4(inv); earLine.add(new THREE.Mesh(g, mat)); }
     bone.head.add(earLine); }
+  // the halo (outfit.extras.halo): a flat ring floating over the head, tilted back a little, unlit (it glows), carried by the head
+  let halo = null;
+  if (XO.halo) { root.updateMatrixWorld(true); const SK = OPT.body.sculpt.skull, top = HTr.fromHead(0, SK.y + SK.height + 0.1, -0.03), r = Math.hypot(...[0, 1, 2].map((i) => HTr.fromHead(0.12, SK.y, 0)[i] - HTr.fromHead(0, SK.y, 0)[i]));
+    const g = new THREE.TorusGeometry(r, r * 0.085, 10, 56); g.rotateX(Math.PI / 2 - 0.22); g.translate(...top); g.applyMatrix4(bone.head.matrixWorld.clone().invert());
+    halo = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: XO.haloColor ?? "#ffe27a" })); halo.name = "halo"; bone.head.add(halo); }
 
   lap("earLine");
   // face: parts drawn into a texture on a thin copy of the front of the head
@@ -647,7 +674,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     return lo; }
 
   const avatar = {
-    object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, cloth, capeCloth,
+    object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, get halo() { return halo; }, cloth, capeCloth,
     /** internals for tools and checking (shapes, face texture, joints) */
     internals: { TEX, GRAD, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
@@ -686,7 +713,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         const fwd = rootV[0] * fx + rootV[1] * fz, extra = Math.max(0, (lastPose.air ?? 0) * sc - Math.max(0, fwd));
         let wx = -rootV[0] - fx * extra, wz = -rootV[1] - fz * extra; const w = Math.hypot(wx, wz), CAP = 3 * sc, s = w > 1e-6 ? CAP * Math.tanh(w / CAP) / w : 0;
         wind[0] = wx * s; wind[1] = 0; wind[2] = wz * s; }
-      if (sim) for (const k of LOCK_PARTS) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);
+      if (sim) for (const k of [...LOCK_PARTS, "extraTail"]) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);   // (extraTail: outfit.extras.tail)
       if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
       if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
     },
@@ -760,8 +787,15 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
-    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, dress, cape, laces } = {}) {
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent } = {}) {
+      if (suit) { OPT.outfit.suit.color = suit; parts.suit.m.material.color.set(suit); }
+      if (suitAccent) { OPT.outfit.suit.accent = suitAccent; SUIT.color.value.set(suitAccent); }
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
+      // extras (outfit.extras): null = back to the default (the hair's, a devil's dark, an angel's white). The hair's color changes the ones following it
+      if (hair) OPT.colors.hair = hair;
+      for (const [k, v, key] of [["extraEars", ears, "earColor"], ["extraEarsIn", earsIn, "earInColor"], ["extraTail", tail, "tailColor"], ["extraWings", wings, "wingColor"]]) {
+        if (v !== undefined) XO[key] = v; if (v !== undefined || hair) parts[k]?.m.material.color.set(XC[{ extraEars: "ears", extraEarsIn: "earsIn", extraTail: "tail", extraWings: "wings" }[k]]()); }
+      if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
       if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
@@ -900,7 +934,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       const outs = []; root.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
       cloth?.rest(); capeCloth?.rest();   // the skirt and the cape as built (not as the cloth has them now)
-      for (const k of LOCK_PARTS) parts[k]?.sim.rest();   // the locks as they hang in the rest pose
+      for (const k of [...LOCK_PARTS, "extraTail"]) parts[k]?.sim.rest();   // the locks (and a tail) as they hang in the rest pose
       const saved = BONES.map((b) => bone[b].quaternion.clone()), hy = bone.hips.position.y;
       BONES.forEach((b) => bone[b].quaternion.identity()); bone.hips.position.copy(HIPS0);
       const restore = () => { outs.forEach((o) => { o.visible = true; }); BONES.forEach((b, i) => bone[b].quaternion.copy(saved[i])); bone.hips.position.y = hy; };

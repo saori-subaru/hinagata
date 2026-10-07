@@ -5,6 +5,7 @@ import { skirtOf } from "../options.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
+import { buildExtras } from "./extras.js";
 import { armReach, heelBend } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
@@ -159,6 +160,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
   const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
+  // the full-body suit (outfit.suit; 2026-10-07, Saori: "プラグスーツのような全身スーツ"): the body itself 2.5 mm out (as the socks are), from a
+  // high collar (higher at the back) down over the feet, cut off at the wrists. Its second color (collar, cuffs, boots, side panels): index.js
+  const WRISTS = ["L", "R"].map((s) => { const h = J[`hand.${s}`], a = J[`lowerArm.${s}`], l = Math.hypot(h[0] - a[0], h[1] - a[1], h[2] - a[2]); return { h, d: [0, 1, 2].map((i) => (h[i] - a[i]) / l) }; });
+  const suitSdf = (x, y, z, B = bodySdf) => { let d = Math.max(B(x, y, z) - 0.0025, y - (0.81 - 0.12 * z));
+    for (const W of WRISTS) { const q = [x - W.h[0], y - W.h[1], z - W.h[2]]; if (Math.hypot(...q) < 0.15) d = Math.max(d, q[0] * W.d[0] + q[1] * W.d[1] + q[2] * W.d[2] + 0.006); }   // past the wrist (only near the hand: the plane would cut the thigh beside it)
+    return d; };
   const armor = (OPT.outfit.armor.style === "full" ? buildPlate : buildArmor)(OPT, { P, J, HT, bodySdf });   // 鎧: 体にそわせず、かんたんな形をかぶせた硬い部品(軽鎧 armor.js / 全身鎧 plate.js)
   const weapons = buildWeapons(OPT, { J, bodySdf });   // 武器: 手に持つ硬い部品(weapons.js)
   // cape (outfit.cape): a shell over the shoulders that hangs down the back, open in front. Over the shoulders it is the body pushed out
@@ -178,5 +185,5 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const S = smin(cone, mantle, k), zf = -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y);   // zf: the front edge (behind the arms below the shoulders)
       return Math.max(S, -(S + CA.thick), y - (CA.collar - 0.12 * z), z - zf, CA.hem - y); };   // the collar is a little higher at the back
   })() : null;
-  return { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, armor, weapons };
+  return { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT) };   // extras: animal ears, wings (extras.js)
 }

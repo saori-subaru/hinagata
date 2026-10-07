@@ -561,6 +561,19 @@ export const DEFAULTS = {
       "gap": 0.022,
       "thick": 0.009
     },
+    "extras": {
+      "ears": "none",
+      "earColor": null,
+      "earInColor": "#f2b9c2",
+      "tail": "none",
+      "tailColor": null,
+      "tailSize": 1,
+      "halo": false,
+      "haloColor": "#ffe27a",
+      "wings": "none",
+      "wingColor": null,
+      "wingSize": 1
+    },
     "weapon": {
       "right": "none",
       "left": "none",
@@ -587,6 +600,11 @@ export const DEFAULTS = {
       "on": true,
       "color": "#f7f3ea",
       "top": 0.15
+    },
+    "suit": {
+      "on": false,
+      "color": "#f1f1f4",
+      "accent": "#d8433f"
     }
   },
   "hair": {
