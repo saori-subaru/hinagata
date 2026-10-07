@@ -332,6 +332,7 @@ export const DEFAULTS = {
         "curve": 45,
         "profile": 0,
         "chinOut": 0,
+        "recess": 0,
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,

@@ -192,8 +192,12 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // it, its smile cut off)
   const PRF = OPT.body.sculpt.mouth.profile ?? 0, CHO = OPT.body.sculpt.mouth.chinOut ?? 0, MY = OPT.face?.layout?.mouthY ?? 0.896, gs = (v) => Math.exp(-v * v);
   const NB = 0.964 + NOSE_DY + NOSE_LIFT - NOSE_UNDER.y, DY = (NB + MY) / 2;   // NB: under the nose; DY: halfway down to the mouth
-  const profile = PRF || CHO ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) + CHO * 0.007 * gs((y - MY + 0.027) / 0.009) * gs(x / 0.04) : () => 0;
-  if (CHO) P.jawFront = E([0, MY - 0.027, 0.215], [0.03, 0.025, 0.035], "head", 0.03);   // something for the chin to come forward from (the jaw ends at the plane there)
+  // mouth.recess: everything from under the nose down to just under the mouth set back (a band, flat across the mouth), so with the chin
+  // forward the lips sit behind the line from the nose's tip to the chin's (an E-line; 2026-10-07, Saori: "はなしたぜんたいをへこませ、やや口も凹ませ、
+  // 顎はだしたままで、eラインを")
+  const REC = OPT.body.sculpt.mouth.recess ?? 0, RB = (y) => sstep(MY - 0.03, MY - 0.008, y) * (1 - sstep(NB - 0.006, NB + 0.006, y));
+  const profile = PRF || CHO || REC ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) - REC * 0.008 * RB(y) * gs(x / 0.07) + CHO * 0.007 * gs((y - MY + 0.03) / 0.013) * gs(x / 0.04) : () => 0;
+  if (CHO) P.jawFront = E([0, MY - 0.03, 0.215], [0.03, 0.03, 0.035 + 0.008 * CHO], "head", 0.03);   // something for the chin to come forward from (the jaw ends at the plane there)
   CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   { const CR = OPT.body.sculpt.crown;   // flat top; tilt > 0 makes it rise toward the back (pivoting at z = pivotZ), so the line from the hairline runs on up to the back of the head
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく

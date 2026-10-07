@@ -900,3 +900,8 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Skin weights: the longer chin is all on the head bone (measured at 1.45), so it turns with the head.
 - At 1.3–1.45 the round cheeks are stretched with it (a long round face from the front); a narrower jaw for a grown-up or a man is for the face-shape sliders on top (chin sharpness did little at 0.25).
 - It lifted the chin over the neck (Saori: "顎がのびて首が短くなってますよ"): the head now goes up by as much as the chin comes down ((faceY − chin.y) × (faceLength − 1) × head.scale, added to neck.length's lift), so the neck under it stays as long.
+
+### An E-line (試作) (2026-10-07, Saori: "はなしたのへこみをもっとふかくし、はなしたぜんたいをへこませ、やや口も凹ませ、顎はだしたままで、eラインを作ってみてください　それが作れれば展望があります")
+- `mouth.recess` (「口もとの引っ込み」, 0–3): from under the nose to just under the mouth set back as a band (8 mm × recess, flat across the mouth, fading in over 2 cm under it and at the nose's underside; 7 cm wide). With the dip deeper (`profile` to 4) and the chin further forward (`chinOut` to 4), the mouth sits behind the line from the nose's tip to the chin's.
+- The chin bump is taller now (1.3 cm, its middle 3 cm under the mouth): at 3.5 the narrow one (0.9 cm) stood out as a ledge. Its piece (jawFront) grows forward with chinOut (the chin stopped at the piece's front before).
+- Seen working: faceLength 1.3, profile 3, recess 2, chinOut 3.5 (checked with the line from the nose's tip to the chin drawn in, `_cmp.html` sheet). At faceLength 1 it works too, cramped; the front stays as drawn.
