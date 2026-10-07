@@ -156,6 +156,24 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
 }
 
 /**
+ * Side-swept bangs as locks (2026-10-07, Saori: the locks / block switch apart from the style): each of the block's big strands
+ * ([from angle, to angle, to height angle, radius, bend], degrees; hair/index.js SIDE) is a few locks side by side, from the crown (58°
+ * up) sweeping across the forehead along the hair, coming together a little toward the tip. surf / center / toRoot: as bangLocks
+ */
+export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
+  const deg = Math.PI / 180, out = [];
+  for (const [th0, th1, ph1, w, bend] of defs) {
+    const k = Math.max(1, Math.round(w / 0.026)), lw = 2 * w / k * 1.35 * sx, thick = 0.3;
+    for (let j = 0; j < k; j++) { const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, df = f * (w / 0.25) * 0.9, pts = [];   // df: its place across the strand (radians at the root)
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), th = (th0 + (th1 - th0) * t + bend * Math.sin(Math.PI * t)) * deg + df * (1 - 0.55 * t), ph = (58 + (ph1 - 58) * t) * deg;
+        const d = [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], off = 0.5 * lw / sx * thick * width(t) + 0.003 + 0.006 * Math.sin(Math.PI * Math.min(1, t * 1.2)) * (1 - 0.5 * Math.abs(f));
+        const at = surfaceAlong(surf, center, d) + rise(t, off); pts.push(toRoot(center[0] + d[0] * at, center[1] + d[1] * at, center[2] + d[2] * at)); }
+      let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+      out.push({ root: pts[0], pts, len, w: lw, thick, layer: 0, curl: 0, rise: true, stiff: 1 }); } }
+  return out;
+}
+
+/**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
  * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side) }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space

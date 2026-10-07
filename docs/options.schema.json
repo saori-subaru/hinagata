@@ -10614,8 +10614,8 @@
     "en": "Style"
    },
    "help": {
-    "ja": "毛束: 一本ずつ揺れる / かたまり: 頭と一体の形。姫カット・横流しの毛束はまだ無く、かたまりで作られる",
-    "en": "locks swing one by one / a block is one shape with the head. Hime and side-swept have no locks yet: built as a block"
+    "ja": "毛束: 一本ずつ揺れる / かたまり: 頭と一体の形",
+    "en": "locks swing one by one / a block is one shape with the head"
    },
    "when": {
     "hair.bangs": [

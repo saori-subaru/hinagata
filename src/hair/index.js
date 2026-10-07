@@ -39,9 +39,10 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
+  // side-swept: four big strands from the crown (58° up) sweeping across the forehead: [from angle, to angle, to height angle, radius, bend] (degrees)
+  const SIDE = [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]];
   const BANGS = {
-    "side": () => [[-12, 22, -14, 0.085, 10], [-38, -10, -18, 0.07, 8], [24, 46, -20, 0.06, 4], [50, 60, -26, 0.05, 0]]
-      .map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
+    "side": () => SIDE.map(([th0, th1, ph1, w, bend]) => strand({ th0, ph0: 58, th1, ph1, w, bend, off1: 0.03, flat: 0.5, N: 5 })),
     // nendo: figure-style bangs. One thick layer over the forehead that follows the head (thicker toward the hem), its lower edge cut into V points
     // (each tip: angle around the head, height), with shallow grooves running up from the notches between them, so it reads as clumps
     // tips: [angle, height, slope?, skew?, group?]. skew: the left/right edges get different slopes (the clump sweeps sideways);
@@ -146,7 +147,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
       return o.coverEars ? smin(d, Math.max(ear - 0.012, hem - y), 0.02) : smax(d, -ear, EAR_GAP.k);   // coverEars (the bob): the hair goes over the ears instead of around them (carving them out left little holes at the hem)
     } };
   }
-  const bangsAsLocks = (pick) => pick.bangs === "nendo" && OPT.hair.sculpt.nendo.locks;   // the nendo bangs made of locks (hair/locks.js) instead of this layer
+  const bangsAsLocks = (pick) => ["nendo", "hime", "side"].includes(pick.bangs) && OPT.hair.sculpt.nendo.locks;   // the nendo bangs (and the hime cut from its own tips, the side-swept from its strands) made of locks (hair/locks.js) instead of this layer
   // under bangs made of locks the block thins toward the front hairline (hair is thin where it grows), so a gap between the locks shows the
   // forehead running into thin hair, not the 3.6 cm rim the block ended in (it was hidden by the bangs' own layer). The hairline stays where
   // it is: it belongs to the head, not to the hairstyle (2026-10-04, Saori). nendo.lockTaper: how far above the hairline the hair reaches its full thickness
@@ -157,5 +158,5 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
     let o = BACKS[pick.back]; if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
-  return { BANGS, BACKS, hairSdfOf, bangsAsLocks };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks };
 }

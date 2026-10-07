@@ -18,7 +18,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
+import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -487,6 +487,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (o.userData.hairStencil !== test) { Object.assign(o, { stencilWrite: test, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = test; }
       x.o.renderOrder = test ? 1 : 0; }
   }
+  // a lock ending square (the hime cut's): as wide down to near its end, then closing in over the last tenth (the mesh has no cap: a point, but a short one)
+  const HIME_END = (t) => (1 + 0.1 * Math.sin(Math.PI * t)) * (t < 0.88 ? 1 : Math.max(0, 1 - ((t - 0.88) / 0.12) ** 1.5));
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
@@ -512,8 +514,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
     }
     if (bangsOn) {
-      const B = OPT.hair.sculpt.nendo;
-      const specs = bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      // the hime cut in locks (2026-10-07, Saori: "姫カットの毛束タイプ"): the same locks from its own tips (a straight fringe, side locks to the
+      // cheeks), each ending square instead of in a point (HIME_END)
+      const HIME = hairPick.bangs === "hime", B = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: 0.97, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
+      const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE, bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
+      if (HIME) for (const sp of specs) sp.prof = HIME_END;
       const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
       out.bangs = part(specs, { coll: long ? lockColliders(Jr, BI, bodySdfR) : [], ell: null, floor: true, stiff: B.lockStiff ?? 4, damping: long ? 0.88 : 0.8 }, GRAD.bangs);   // floor: not into the forehead (createLocks)
     }
