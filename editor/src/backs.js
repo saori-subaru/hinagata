@@ -6,7 +6,7 @@
 import * as THREE from "three";
 
 const D2R = Math.PI / 180;
-const PATH = { shortLocks: "hair.sculpt.shortLocks.edits", "shortLocks.lie": "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" };
+const PATH = { shortLocks: "hair.sculpt.shortLocks.edits", "shortLocks.lie": "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits", bobLocks: "hair.sculpt.bobLocks.edits", flipLocks: "hair.sculpt.flipLocks.edits" };
 
 /** vp: the viewport / store: the recipe / onSelect(): the selection changed (the panel shows its sliders) */
 export function createBackTool({ vp, store, onSelect = () => {} }) {

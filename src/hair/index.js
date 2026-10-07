@@ -154,9 +154,10 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   const underLocks = (o) => ({ ...o, taper: OPT.hair.sculpt.nendo.lockTaper ?? 0.08 });
   // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
-  const backAsLocks = (pick) => ((pick.back === "short" || pick.back === "hang") && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
+  const backAsLocks = (pick) => (["short", "hang", "bob", "flip"].includes(pick.back) && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
   const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
-    let o = BACKS[pick.back]; if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
+    let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
+    if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
   return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks };
 }

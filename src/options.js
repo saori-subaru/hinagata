@@ -746,6 +746,30 @@ export const DEFAULTS = {
           [64, 70, -40, 0.05, 0]
         ]
       },
+      "bobLocks": {
+        "count": 17,
+        "span": 150,
+        "width": 0.09,
+        "thick": 0.28,
+        "ph": [56, 36],
+        "below": 0.045,
+        "flick": -0.01,
+        "vary": 0.06,
+        "stiff": 3,
+        "edits": []
+      },
+      "flipLocks": {
+        "count": 17,
+        "span": 150,
+        "width": 0.09,
+        "thick": 0.28,
+        "ph": [56, 36],
+        "below": 0.035,
+        "flick": 0.012,
+        "vary": 0.06,
+        "stiff": 3,
+        "edits": []
+      },
       "shortLocks": {
         "on": true,
         "count": 15,

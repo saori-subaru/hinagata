@@ -496,7 +496,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
-    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && (hairPick.back === "short" || hairPick.back === "hang") && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
+    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
@@ -509,6 +509,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
       if (longOn) out.locks = part(longLocks(L, { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      else if (hairPick.back === "bob" || hairPick.back === "flip") {   // a bob or a flip in locks: hanging from the back of the head as the short hair's do, further round to the front, down to that style's hem; the bob's tips curl in a little, the flip's out and up
+        const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
+        out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10 }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }
       else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
         out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8 }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
@@ -948,7 +951,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** The back hair's locks as built (avatar space, rest pose): [{ i, tip: [x, y, z], root }] in the order of their edits (hair.sculpt.*.edits),
      *  and which group they belong to: "shortLocks" (hanging), "shortLocks.lie" (lying) or "long". Empty without back locks. */
     backLocks() { const sim = parts.locks?.sim; if (!sim) return { group: null, locks: [] };
-      const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : "shortLocks";
+      const group = hairPick.back === "long" ? "long" : hairPick.back === "short" ? "shortLocks.lie" : hairPick.back === "bob" || hairPick.back === "flip" ? hairPick.back + "Locks" : "shortLocks";
       return { group, locks: sim.specs.map((s, i) => ({ i, tip: s.pts.at(-1), root: s.pts[0] })) }; },
     bangTipAt(angle, y) { return bangTipAt(angle, y, { ...bangKit(), hangY: OPT.hair.sculpt.nendo.lockHangY ?? 0.86 }); },
 

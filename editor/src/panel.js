@@ -290,7 +290,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   // the back hair's locks one by one (editor/src/backs.js)
   function backsBlock() {
     const B = ctx.backs; if (!B) return null;
-    const bk = store.get("hair.back"), p = store.get("hair.backForm") === "block" ? null : bk === "long" ? "hair.sculpt.long.edits" : bk === "short" ? (store.get("hair.nape") === "hang" ? "hair.sculpt.shortLocks.edits" : "hair.sculpt.shortLocks.lie.edits") : null, n = p ? (store.get(p) ?? []).length : 0;
+    const bk = store.get("hair.back"), p = store.get("hair.backForm") === "block" ? null : bk === "long" ? "hair.sculpt.long.edits" : bk === "bob" || bk === "flip" ? `hair.sculpt.${bk}Locks.edits` : bk === "short" ? (store.get("hair.nape") === "hang" ? "hair.sculpt.shortLocks.edits" : "hair.sculpt.shortLocks.lie.edits") : null, n = p ? (store.get(p) ?? []).length : 0;
     const head = [h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null];
     if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("backNone"))] };
     const kids = [h("div", { class: "chips" }, toolChip(B),
