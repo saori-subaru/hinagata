@@ -60,7 +60,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
   Object.assign(J, armJoints(OPT));
   // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
-  const NK = OPT.body.sculpt.neck, LIFT = NK.length ?? 0; J.head[1] += LIFT;
+  // A longer face (head.faceLength) lifts it too, by as much as its chin comes down, so the neck under it stays as long (2026-10-07, Saori:
+  // "顎がのびて首が短くなってますよ")
+  const FLEN = OPT.body.head.faceLength ?? 1, FACE_LIFT = FLEN > 1 ? (OPT.face.layout.eyeY - 0.05 - OPT.body.sculpt.chin.y) * (FLEN - 1) * OPT.body.head.scale : 0;
+  const NK = OPT.body.sculpt.neck, LIFT = (NK.length ?? 0) + FACE_LIFT; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
   // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
