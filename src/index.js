@@ -13,7 +13,7 @@ import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS 
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
-import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe } from "./options.js";
+import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
@@ -265,7 +265,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   lap("setup");
   // build in workers: the body and the hair at once, then the clothes (they read the body's grid, so the result is the same as here).
   // Whatever a worker can't do (no workers, an error) is simply built here below.
-  const hairPick = { bangs: OPT.hair.bangs, back: OPT.hair.back, ahoge: OPT.hair.ahoge };
+  const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
   const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras } };
   if (workers) {
@@ -851,9 +851,11 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
-    /** Rebuild the hair: pick = { bangs, back, ahoge } (names in internals.hairKit.BANGS / BACKS). Kept in options.hair. */
+    /** Rebuild the hair: pick = { bangs, back, ahoge, bangsForm, backForm, nape } (as options.hair; any of them). Kept in options.hair. */
     setHair(pick) {
-      Object.assign(hairPick, pick, pick.bangs ? { bangs: bangsId(pick.bangs) } : {}); for (const k of ["bangs", "back", "ahoge"]) OPT.hair[k] = hairPick[k]; bangKitMemo = null;
+      const HR = OPT.hair; for (const k of ["bangs", "back", "ahoge", "bangsForm", "backForm", "nape"]) if (k in pick) HR[k] = k === "bangs" ? bangsId(pick[k]) : pick[k];
+      if (HR.bangs === "block") { HR.bangs = "nendo"; HR.bangsForm = "block"; } if (HR.back === "hang") { HR.back = "short"; HR.nape = "hang"; HR.backForm = "locks"; }   // the old names (options.js readHair)
+      Object.assign(hairPick, hairForms(HR)); bangKitMemo = null;
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
@@ -867,6 +869,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
      *  (count, width, thick, flick, stiff, below / bottom …; for shortLocks.lie, pass { lie: { … } }). */
     setLocks(group, values) {
       if (group === "shortLocks.lie") { group = "shortLocks"; values = { lie: values }; }
+      if ((group === "shortLocks" && "on" in values) || (group === "long" && "locks" in values)) { OPT.hair.sculpt[group][group === "long" ? "locks" : "on"] = !!(values.on ?? values.locks); avatar.setHair({ backForm: (values.on ?? values.locks) ? "locks" : "block" }); return; }   // locks or a block: the form now (options.js hairForms)
       const G = OPT.hair.sculpt[group]; for (const [k, v] of Object.entries(structuredClone(values))) { if (v && typeof v === "object" && !Array.isArray(v) && G[k] && typeof G[k] === "object") Object.assign(G[k], v); else G[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
@@ -930,6 +933,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     },
     setBangs(values) {
       const N = OPT.hair.sculpt.nendo, was = hairKit.bangsAsLocks(hairPick); Object.assign(N, structuredClone(values));
+      if ("locks" in values) OPT.hair.bangsForm = values.locks ? "locks" : "block";   // (the form decides it now: options.js hairForms)
       if (!was || !hairKit.bangsAsLocks(hairPick) || ["locks", "lockTaper"].some((k) => k in values)) { avatar.setHair({}); return; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
       if (parts.bangs) { for (const m of [parts.bangs.m, parts.bangs.o]) { root.remove(m); m.geometry.dispose(); } delete parts.bangs; }

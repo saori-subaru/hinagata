@@ -51,7 +51,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
   const labelOf = (e, id) => h("label", { class: "lab", for: id }, h("span", { title: e.path }, L(e.label)), resetDot(e));
   const helpOf = (e) => e.help ? h("div", { class: "help" }, L(e.help).replace(/^null\b/, t("auto"))) : null;   // "null = …" reads as "Auto = …"
-  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => v === "*set" ? store.get(p) != null : store.get(p) === v);   // only when the values it depends on are set so ("*set": anything but null)
+  const shown = (e) => !e.when || Object.entries(e.when).every(([p, v]) => v === "*set" ? store.get(p) != null : Array.isArray(v) ? v.includes(store.get(p)) : store.get(p) === v);   // only when the values it depends on are set so ("*set": anything but null)
 
   function numberField(e, v) {
     const id = `f${uid++}`;
@@ -290,7 +290,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   // the back hair's locks one by one (editor/src/backs.js)
   function backsBlock() {
     const B = ctx.backs; if (!B) return null;
-    const p = { hang: "hair.sculpt.shortLocks.edits", short: "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" }[store.get("hair.back")], n = p ? (store.get(p) ?? []).length : 0;
+    const bk = store.get("hair.back"), p = store.get("hair.backForm") === "block" ? null : bk === "long" ? "hair.sculpt.long.edits" : bk === "short" ? (store.get("hair.nape") === "hang" ? "hair.sculpt.shortLocks.edits" : "hair.sculpt.shortLocks.lie.edits") : null, n = p ? (store.get(p) ?? []).length : 0;
     const head = [h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null];
     if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("backNone"))] };
     const kids = [h("div", { class: "chips" }, toolChip(B),

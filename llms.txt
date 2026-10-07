@@ -131,7 +131,7 @@ Only what differs from the defaults, nested as the options are (in a character f
   (アステル, a hero boy with sword, shield and cape). Each is a character file (version 3); copy its `options` into your own file to start from it.
   In the editor: the character list → 「プリセットから作る」.
 - Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
-  by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
+  by id, layout, blush), `hair` (bangs: nendo / hime / side / none, back: short / bob / flip / long, each made of locks or a block: bangsForm / backForm "locks" | "block"; short locks hang off the nape or lie along the head: nape "hang" | "lie"; ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
   suit (a full-body suit), armor, weapon, extras: animal ears / tail / halo / angel or devil wings), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
 - Faces can be drawn: the user does that in the editor (face tab); you can pick part ids (`face.parts`) or expressions with `avatar.setFace("happy")`.
   Ask for the standard names (`EXPRESSION_SET`: normal, happy, sad, angry, surprised): each character shows its own version of them when

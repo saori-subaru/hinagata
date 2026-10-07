@@ -24,7 +24,7 @@ addEventListener("resize", resize); resize();
 
 // one avatar: bob hair, green shirt, walking. The body: the default is the tall standard (about 5 heads);
 // for a chibi game merge a chibi type: createAvatar({ ...BODY_TYPES.standard, hair: … })
-const avatar = await createAvatar({ hair: { back: "bob", bangs: "block" }, outfit: { shirt: { color: "#8cc084" } } });
+const avatar = await createAvatar({ hair: { back: "bob", bangsForm: "block" }, outfit: { shirt: { color: "#8cc084" } } });
 // the world is built in metres: size the character to it (an adult about 1.7 m), not the world to the character
 avatar.update(0, { instant: true });
 avatar.object.scale.setScalar(1.7 / new THREE.Box3().setFromObject(avatar.object).getSize(new THREE.Vector3()).y);

@@ -17,7 +17,7 @@ export function createBangTool({ vp, store, onSelect = () => {} }) {
   let on = false, sel = -1, drag = null, av = null;
   const tips = () => store.get("hair.sculpt.nendo.tips") ?? [];
   const waist = () => av.internals.HT.toHead(0, av.internals.J.spine[1], 0)[1];   // the lowest a tip goes (head space): the waist
-  const usable = () => ["nendo", "block"].includes(store.get("hair.bangs"));   // both are the nendo tips (as locks / as one layer)
+  const usable = () => store.get("hair.bangs") === "nendo";   // the nendo tips (as locks or as one layer: hair.bangsForm)
 
   // a tip's point (avatar space, rest) → the head bone's own space (the dots are children of the head bone)
   const headLocal = (p) => { const J = av.internals.J.head; return new THREE.Vector3(p[0] - J[0], p[1] - J[1], p[2] - J[2]); };
