@@ -120,7 +120,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
     const k = Math.max(1, Math.round(2 * half * tp.wd / ((B.lockSpan ?? 13) * deg)));
     const mid = leave(Math.max(tp.y, HY), tp.a - tp.sw);   // where the clump's middle leaves the head: its hanging locks gather under it
     for (let j = 0; j < k; j++) {
-      const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * 0.45 * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
+      const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * (B.lockTipSpread ?? 0.45) * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
       const yH = Math.max(tipY, HY), hang = yH - tipY;   // the part on the head ends at yH; the rest (hang) falls straight down from there
       const tip = leave(yH, tipA), r0 = Math.hypot(tip[0], tip[2] - center[2]);
       // sweep (the row's 6th value): the lock comes straight down, then curves over to the swept tip in its lower part (2026-10-05, Saori:
@@ -403,7 +403,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
         const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const x = cx + ax * (u * hw + cu) + ox * w * ht * bulge, y = cy + ay * (u * hw + cu) + oy * w * ht * bulge, z = cz + az * (u * hw + cu) + oz * w * ht * bulge;
           toRest(pos, v, x, y, z, false);
