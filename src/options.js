@@ -82,6 +82,7 @@ export const DEFAULTS = {
     },
     "joints": {
       "hipY": 0.44,
+      "hipX": 0.11,
       "footX": 0.116,
       "kneeX": 0.108
     },
