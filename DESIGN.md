@@ -893,3 +893,4 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Saori also: "横顔作るなら、顔の比率もっと縦に伸ばさないと無理そう". The lower face is a chibi's (the mouth about a tenth of the head above the chin): a lower-face length (stretching the head below the eyes, the face picture's mouth and nose moving with it) is the next thing to try, not done yet.
 - Profile 2 without the chin (Saori: "横顔の口もと2で顎の出っ張りなくしてみて" → "この顔はデフォルメの別タイプとして使えそう"; "アステルの顔をこれにするといいかも"): the chin is its own value now, `mouth.chinOut` (0 = none, the default; 「横顔のあご先」), and `mouth.profile` is the dip alone. Astel's preset has profile 2.
 - Saori: the cute default face is finished as it is; the profile and a longer face are for other types (tall male characters and so on), so their front may change.
+- The slider is called 「鼻下のへこみ」 (Saori: "横顔の口元じゃなくて、鼻下のへこみでいいんじゃないでしょうか"); the option keeps its name, `body.sculpt.mouth.profile`.
