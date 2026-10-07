@@ -26,7 +26,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
-      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04;
+      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
         // longer legs (body.proportion.legs) stretch the skirt below the hips too: what stays on the hips then hung that much deeper, under the
         // thighs when they turned up, and the cloth crumpled pulling it over them (2026-10-05, Saori: a dress sitting, tall body). The share
         // left on the hips shrinks as the legs grow

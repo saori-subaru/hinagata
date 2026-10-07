@@ -9,8 +9,11 @@ import { partIds } from "./face/names.js";
  *  garment, in one color; its skirt takes the dress's hem, flare and pleats). { hem, flare, pleats, pleatDepth, thick, follow, top, tilt, color, dress }
  *  A dress's skirt starts higher (dress.waist: under the chest), so it falls over the belly instead of hugging it. */
 export function skirtOf(OPT) {
-  const PT = OPT.outfit.pants, D = OPT.outfit.dress, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, ...(PT.skirt ?? {}) };
-  if (D?.on) return { ...base, hem: D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: D.waist ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
+  // the hem's shape (2026-10-07, Saori: "スカートやワンピースの先を、おおきなギザギザにしたり、丸っこい段々にしたり、先端を上にカールさせて広げたり、逆にすぼめたり"):
+  // hemShape "plain" | "zigzag" | "scallop" (round lobes) | "tiers" (stacked like ruffles), hemCount (around / tiers), hemDepth (m), curl (-1..1: + the hem flares out and up, − draws in)
+  const PT = OPT.outfit.pants, D = OPT.outfit.dress, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, ...(PT.skirt ?? {}) };
+  const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0 }[k]]));
+  if (D?.on) return { ...base, ...shape(D), hem: D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: D.waist ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
   return PT.kind === "skirt" ? { ...base, top: PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
 }
 export const DEFAULTS = {
@@ -511,7 +514,11 @@ export const DEFAULTS = {
       "flare": 0.45,
       "pleats": 12,
       "pleatDepth": 0.006,
-      "follow": 0.3
+      "follow": 0.3,
+      "hemShape": "plain",
+      "hemCount": 10,
+      "hemDepth": 0.05,
+      "curl": 0
     },
     "pants": {
       "texture": {
@@ -540,10 +547,16 @@ export const DEFAULTS = {
         "pleats": 16,
         "pleatDepth": 0.008,
         "thick": 0.018,
-        "follow": 0.85
+        "follow": 0.85,
+        "hemShape": "plain",
+        "hemCount": 10,
+        "hemDepth": 0.05,
+        "curl": 0
       },
       "hem": 0.3,
       "offset": 0.011,
+      "puff": 0,
+      "bell": 0,
       "top": 0.505,
       "tilt": 0.12
     },

@@ -79,7 +79,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the waistband over a tucked shirt: from 5 cm under the top it goes over the shirt itself, 7 mm out (3 mm: the shirt showed through in streaks at the cells' size), not the body pushed out (that stood
   // 7–10 mm out of the shirt at the sides and the back: a step all round. 2026-10-07, Saori: "ズボン系が分厚くてシャツと段ができている")
   const BAND = LEN === "tuck" ? 0.05 : 0;
-  const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024;
+  // the legs' shape (pants.puff: balloon legs, gathered toward the hem; pants.bell: widening toward the hem; 2026-10-07, Saori: "ズボンを膨らませたり、
+  // 先端を広げたり"): the cloth further out around each leg, not across the middle (the legs would join)
+  const PUFF = OPT.outfit.pants.puff ?? 0, BELLB = OPT.outfit.pants.bell ?? 0, LSPAN = Math.max(0.05, 0.4 - PANTS_HEM);
+  const legGrow = (x, y) => { if (!PUFF && !BELLB) return 0; const t = (0.4 - y) / LSPAN; if (t <= 0) return 0;
+    return sstep(0.02, 0.07, Math.abs(x)) * (PUFF * 0.045 * Math.sin(Math.PI * Math.min(1, t) * 0.92) + BELLB * 0.07 * sstep(0.55, 1, t)); };
+  const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024 - legGrow(x, y);
     if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }
     return Math.max(d, y - top, PANTS_HEM - y); };
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).
@@ -112,12 +117,27 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // over a shirt whose hem is inside the skirt: its top goes over the shirt itself (7 mm out), as the pants' waistband does (a dress stood 2 cm
   // out from the body there, the shirt 1.4 cm: a step under the chest)
   const SK_BAND = HEM < SK_Y0 - 0.03 ? 0.06 : 0;
+  // the hem's shape (skirtOf: hemShape, hemCount, hemDepth, curl; 2026-10-07, Saori): zigzag / scallop cut the hem's edge up between points
+  // or round lobes around it; tiers stack the skirt in steps, each tier flaring out over the top of the next; curl flares the last part out
+  // and up (> 0) or draws it in (< 0)
+  const HS = SK.hemShape ?? "plain", HN = Math.max(2, Math.round(SK.hemCount ?? 10)), HD = SK.hemDepth ?? 0.05, CURL = SK.curl ?? 0, SPAN = Math.max(0.05, SK_Y0 - SK.hem);
+  const hemAt = (x, dz) => { if (HS !== "zigzag" && HS !== "scallop") return SK.hem; const e = 2 * (((Math.atan2(x, dz) / (2 * Math.PI) + 1) * HN) % 1) - 1;
+    return SK.hem + HD * (HS === "zigzag" ? Math.abs(e) : 1 - Math.sqrt(Math.max(0, 1 - e * e))); };
+  const shapeOut = (y) => { const t = Math.min(1, Math.max(0, (SK_Y0 - y) / SPAN)); let e = CURL * 0.12 * sstep(0.55, 1, t) ** 2;
+    return e; };
   const skirtSdf = (x, y, z, B = bodySdf) => {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
-    const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl;   // < 0 inside
+    const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - 0.007 - outer) * sstep(top - SK_BAND, top - 0.015, y);
-    return Math.max(outer, -(outer + SK.thick), y - top, SK.hem - y); };
+    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
+    const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
+    if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
+    // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
+    const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
+    for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
+      d = Math.min(d, Math.max(shell(o), y - Math.min(top, yTop), yBot - y)); }
+    return d; };
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
