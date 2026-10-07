@@ -40,8 +40,6 @@ const K = {
   greatDown: { y: -0.08, grip: GRIP2, b: { ...LUNGE, spine: [0.45, 0, 0], head: [-0.3, 0, 0], "upperArm.L": [-0.784, -0.323, -0.583], "lowerArm.L": [-0.714, -0.169, -1.092], "hand.L": [-1.445, 1.4, 1.15], "upperArm.R": [-1.293, 0.42, 0.84], "lowerArm.R": [-0.046, 0.04, 0.06], "hand.R": [1.36, -0.968, 0.856] } },
   punch: { y: -0.04, b: { ...LEGS, spine: [0.1, 0.35, 0], head: [-0.05, -0.3, 0], "upperArm.R": [-1.267, 0.77, 0.41], "lowerArm.R": [-0.06, 0.052, -0.017], "hand.R": [0, 0, 0] }, grip: { L: 1, R: 1 } },
 };
-/** The greatsword carried on the right shoulder (standing, walking: motion/index.js ARMED_R) */
-export const GREAT_REST = { "upperArm.R": [0.288, -0.226, 0.013], "lowerArm.R": [-1.417, 0.962, 0.682], "hand.R": [-1.763, 0.352, -0.086] };
 
 // keyframes [u (0..1 of T), pose] → a pose of t (one-shot: loops over T, the game plays it once). Each bone eased between frames as a turn
 const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), eu = new THREE.Euler();

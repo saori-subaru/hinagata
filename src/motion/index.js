@@ -90,9 +90,11 @@ const ARMED = { idle: true, walk: true };
 const ARMED_R = {
   upright: { "upperArm.R": [-0.111, -0.041, 0.191], "lowerArm.R": [-1.215, 0.131, 0.749] },
   hang: { "upperArm.R": [-0.013, 0.02, 0.304], "lowerArm.R": [-0.137, -0.068, 0.371], "hand.R": [0.407, -0.365, 0.41] },
-  shoulder: { "upperArm.R": [0.288, -0.226, 0.013], "lowerArm.R": [-1.417, 0.962, 0.682], "hand.R": [-1.763, 0.352, -0.086] },   // a greatsword resting on the right shoulder (solved: motion/combat.js)
+  // a greatsword held low in front in both hands, the blade forward and down (solved as motion/combat.js; 2026-10-07, Saori: carried on the
+  // shoulder it went into the elbow, with the right hand alone and the blade pointing back: "肩に担ぐなら、鞘をつけないと厳しい")
+  low2: { "upperArm.L": [-0.372, -0.141, -0.759], "lowerArm.L": [-0.347, -0.116, -0.961], "hand.L": [-0.434, 1.128, 0.166], "upperArm.R": [-0.762, 0.257, 0.753], "lowerArm.R": [-0.037, 0.033, 0.072], "hand.R": [1.137, -0.814, 0.598] },
 };
-const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang", greatsword: "shoulder" };
+const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang", greatsword: "low2" };
 const TWO_HANDS = { spear: true, greatsword: true };   // their guard and attack hold them in both hands (motion/combat.js: guard_<weapon>, attack_<weapon>)
 const armedArm = (P0, A) => ({ ...A, "upperArm.R": [A["upperArm.R"][0] + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), A["upperArm.R"][1], A["upperArm.R"][2]] });
 
@@ -140,7 +142,7 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
     if (name !== cur) { cur = name; heldT = 0; } else heldT += dt;
     let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK };
     const k = instant || blend === 0 || (P0.sharp && heldT > (blend ?? 0.35)) ? 1 : 1 - Math.exp(-dt * (blend ? 3 / blend : 9));   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
-    if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
+    if (armed && ARMED[name]) P0 = ARMED_OF[weapon] === "low2" ? { ...P0, b: { ...P0.b, ...armed }, grip: { ...P0.grip, L: 1 } } : { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };   // (both hands: no arm swing, the left closed on the grip)
     if (name === "guard" && TWO_HANDS[weapon]) P0 = POSES[`guard_${weapon}`](t);   // two hands on it (the spear held low in one hand ran through the leg)
     else if (name === "attack") { const kind = BARE[weapon] ? "punch" : weapon, A = POSES[`attack_${kind}`] ?? POSES.attack_punch; P0 = A(t);   // the swing for what the right hand holds
       if (!TWO_HANDS[weapon]) P0 = { ...P0, b: { ...P0.b, ...(guardL ?? GUARD_L.bare) }, grip: { ...P0.grip, L: 1 } }; }   // the left keeps its guard (a shield up, or a fist)

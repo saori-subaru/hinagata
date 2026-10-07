@@ -593,7 +593,9 @@ export const DEFAULTS = {
       "shieldMount": "diagonal",
       "color": "#c9d0da",
       "gripColor": "#7a5236",
-      "shieldColor": "#3f63b8"
+      "shieldColor": "#3f63b8",
+      "sheath": true,
+      "sheathColor": "#4a3326"
     },
     "shoes": {
       "kind": "sneaker",

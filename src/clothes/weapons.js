@@ -96,11 +96,31 @@ export function buildWeapons(OPT, { J, bodySdf }) {
         d = Math.min(d, ring, pad); }
       return d; };
   }
+  // ── belt and scabbard (weapon.sheath; 2026-10-07, Saori: "剣と両手剣で腰にベルトと鞘をつけるのはあり"; "大剣の鞘は背中でOK"). Only to look at for
+  //   now: the scabbard is empty, the blade stays in the hand (sheathing and drawing: later). sword: a belt round the waist, the scabbard at
+  //   the left hip slanting back and down; greatsword: the scabbard across the back (behind the right shoulder down to the left hip) on a
+  //   strap across the chest. The belt and the strap lie on the body 2.2 cm out (over the clothes) ──
+  let sheath = none, belt = none, boxSheath = null, boxBelt = null, sheathBone = null;
+  if (WO.sheath !== false && (R === "sword" || R === "greatsword")) {
+    const great = R === "greatsword", ON = 0.022;
+    const T0 = great ? [-0.2, 0.92, -0.165] : [0.185, 0.475, 0.03], T1 = great ? [0.2, 0.33, -0.15] : add(T0, [norm([0.12, -0.8, -0.55]), 0.5]);
+    const d = norm(sub(T1, T0)), L = Math.hypot(...sub(T1, T0)), n0 = great ? [0, 0, -1] : [1, 0, 0], nA = norm(add(n0, [d, -dot(n0, d)])), wA = cross(d, nA);   // nA: the flat side's normal (out of the body), wA: across it
+    const HW = great ? 0.052 : 0.03, HT = great ? 0.013 : 0.011;
+    sheath = (x, y, z) => { const q = sub([x, y, z], T0), a = dot(q, d), w = dot(q, wA), t = dot(q, nA), u = Math.min(1, Math.max(0, a / L));
+      const hw = HW * (1 - 0.35 * u) + (a < 0.035 ? 0.006 : 0) + (a > L - 0.04 ? 0.004 : 0), ht = HT + (a < 0.035 ? 0.004 : 0);   // a throat at the top, a chape at the tip
+      return Math.max((Math.hypot(w / hw, t / ht) - 1) * Math.min(hw, ht), -a, a - L - Math.min(hw, ht) * Math.max(0, 1 - Math.abs(w) / hw)); };   // the tip rounded off
+    const onBody = (x, y, z) => Math.abs(bodySdf(x, y, z) - ON) - 0.006;
+    belt = great ? (x, y, z) => { const nS = [0.78, 0.62, 0]; return Math.max(Math.abs(nS[0] * (x + 0.13) + nS[1] * (y - 0.8)) - 0.017, onBody(x, y, z), 0.4 - y, y - 0.86, Math.abs(x) - 0.24); }   // the strap: a band round the chest, from the right shoulder to the left hip
+      : (x, y, z) => Math.max(Math.abs(y - 0.47) - 0.014, onBody(x, y, z), Math.abs(x) - 0.21);   // the belt (not the hands hanging beside it)
+    sheathBone = great ? "chest" : "hips";
+    const pad = (A, B) => ({ lo: [0, 1, 2].map((i) => Math.min(A[i], B[i]) - 0.07), hi: [0, 1, 2].map((i) => Math.max(A[i], B[i]) + 0.07) });
+    boxSheath = pad(T0, T1); boxBelt = great ? { lo: [-0.28, 0.36, -0.26], hi: [0.28, 0.9, 0.26] } : { lo: [-0.26, 0.43, -0.24], hi: [0.26, 0.52, 0.24] };
+  }
   // the box around each: the corners of a slab around the item, padded
   const box = (c, axes) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];   // axes: [vector, from, to] ×3
     for (const s0 of [1, 2]) for (const s1 of [1, 2]) for (const s2 of [1, 2]) { const p = add(c, [axes[0][0], axes[0][s0]], [axes[1][0], axes[1][s1]], [axes[2][0], axes[2][s2]]); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } }
     return { lo: lo.map((v) => v - 0.02), hi: hi.map((v) => v + 0.02) }; };
   const reach = { sword: [-0.1, 0.53], greatsword: [-0.23, 0.94], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
   const boxR = R === "none" || R === "fist" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" || L === "fist" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
-  return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL };
+  return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL, sheath, belt, boxSheath, boxBelt, sheathBone };
 }

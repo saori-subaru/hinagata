@@ -864,7 +864,8 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - Pants: `puff` (balloon legs, gathered toward the hem) and `bell` (wider toward the hem): the cloth further out around each leg, faded out near the middle so the legs don't join.
 
 ### Fighting (2026-10-07, Saori: "両手剣 / 槍の構えモーションが体を突き抜けてるのをなおし、両手持ちに / 各武器ごとの攻撃モーション / ダメージくらい、気絶ピヨピヨ、倒れなど戦闘系モーション")
-- `outfit.weapon.right` "greatsword": a grip long enough for both hands, a wide guard, a blade about 85 cm; standing and walking it rests on the right shoulder.
+- `outfit.weapon.right` "greatsword": a grip long enough for both hands, a wide guard, a blade about 85 cm. Standing and walking it is held low in front in both hands, the blade forward and down (first it rested on the right shoulder in one hand: the blade pointed back and went into the elbow. Saori: "肩に担ぐなら、鞘をつけないと厳しい").
+- `outfit.weapon.sheath` (default on) and `sheathColor`: a sword has a belt and an empty scabbard at the left hip, slanting back; a greatsword a scabbard across the back on a strap across the chest (Saori: "大剣の鞘は背中でOK"). Only to look at: the blade stays in the hand (sheathing and drawing: later, TODO.md).
 - The spear's guard held it low in one hand at the side, and its shaft ran back through the leg. The spear and the greatsword guard in both hands now (guard_spear / guard_greatsword, played by "guard"): the left hand on the shaft (the grip below the right).
 - One swing per weapon (motion/combat.js, ONE_SHOT): attack_sword, _axe, _spear, _staff, _greatsword, _punch, from the guard, wind up, strike, hold, back. "attack" plays the one for what the right hand holds; a shield (or a bare left hand) keeps its guard.
 - hit (flinching back), stun (swaying on wobbly knees, the head lolling; `stars: true`: five stars circle over the head), down (the knockdown's fall, held lying).

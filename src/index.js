@@ -446,7 +446,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   const armorPart = (k) => { const x = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, AO.color); } return x; };
   for (const k of ARMOR) parts[k] = armorPart(k);   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
-  const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" || k === "weaponLGrip" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : WO.color;
+  const WO = OPT.outfit.weapon, weaponColor = (k) => k === "weaponRGrip" || k === "weaponLGrip" || k === "weaponBelt" ? WO.gripColor : k === "weaponLFace" ? WO.shieldColor : k === "weaponSheath" ? WO.sheathColor ?? "#4a3326" : WO.color;   // (the belt in the grip's leather, the scabbard its own)
   for (const k of WEAPONS) { parts[k] = skinned(meshPart(k), weaponColor(k), 0.004); if (k === "weaponR" || k === "weaponL") { parts[k].m.material.dispose(); parts[k].m.material = metal(OPT.shading.style, WO.color); } }   // in the hands (clothes/weapons.js)
   lap("shadeAndClothes");
   const makeHair0 = (h) => skinned(meshPart(hairPartName(hairPick), h), OPT.colors.hair, 0.004, "hair");
@@ -797,7 +797,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
-    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent } = {}) {
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, sheath, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent } = {}) {
       if (suit) { OPT.outfit.suit.color = suit; parts.suit.m.material.color.set(suit); }
       if (suitAccent) { OPT.outfit.suit.accent = suitAccent; SUIT.color.value.set(suitAccent); }
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
@@ -816,7 +816,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
       if (laces) { parts.laces.m.material.color.set(laces); OPT.outfit.shoes.laceColor = laces; }
       if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
-      for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip", "weaponLGrip"], "gripColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }
+      for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip", "weaponLGrip", "weaponBelt"], "gripColor"], [sheath, ["weaponSheath"], "sheathColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }
     },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
