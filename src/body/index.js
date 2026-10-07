@@ -182,7 +182,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;
-  CUT.mouth = plane((x, y, z) => (0.222 - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
+  // profile (mouth.profile, 0 = the straight chibi line; 2026-10-07, Saori: "鼻の下の凹みや口のラインなどがあるタイプの横顔"): seen from the side a
+  // soft dip under the nose (halfway down to the mouth, wide across); mouth.chinOut: the chin a little forward (its own value: at profile 2
+  // without it Saori found another deformed face type, "デフォルメの別タイプとして使えそう"). Placed by the face picture's mouth (face.layout.mouthY).
+  // Not the upper lip forward ("かえるみたい", Saori) nor a crease under the mouth (the outline came through over the drawn mouth: a line across
+  // it, its smile cut off)
+  const PRF = OPT.body.sculpt.mouth.profile ?? 0, CHO = OPT.body.sculpt.mouth.chinOut ?? 0, MY = OPT.face?.layout?.mouthY ?? 0.896, gs = (v) => Math.exp(-v * v);
+  const NB = 0.964 + NOSE_DY + NOSE_LIFT - NOSE_UNDER.y, DY = (NB + MY) / 2;   // NB: under the nose; DY: halfway down to the mouth
+  const profile = PRF || CHO ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) + CHO * 0.007 * gs((y - MY + 0.027) / 0.009) * gs(x / 0.04) : () => 0;
+  if (CHO) P.jawFront = E([0, MY - 0.027, 0.215], [0.03, 0.025, 0.035], "head", 0.03);   // something for the chin to come forward from (the jaw ends at the plane there)
+  CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   { const CR = OPT.body.sculpt.crown;   // flat top; tilt > 0 makes it rise toward the back (pivoting at z = pivotZ), so the line from the hairline runs on up to the back of the head
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく
   // flat back of the head: cut behind z = -backPlane.z, tilted so the plane leans forward at the top (0 = off)

@@ -79,7 +79,7 @@ export const CHARACTERS = {
       colors: { skin: "#fee5d2", hair: "#906b47" },
       body: {
         head: { width: 0.94 },
-        sculpt: { neck: { width: 0.8 } },
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },   // profile: a dip under the nose seen from the side (2026-10-07, Saori: "アステルの顔をこれにするといいかも")
       },
       outfit: {
         shirt: { color: "#83a8d8", gradient: { color: "#febebe" }, sleeve: "long" },
