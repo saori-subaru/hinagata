@@ -987,3 +987,7 @@ Made a character with the tool (the preset ルミナ, src/presets.js) and added 
 - Other characters: pixel differences of 0.04–0.4 % at the edges (a plain skirt 268 px of 64000, シルヴィ 78, ルミナ before this 84, a chibi dress 25, アステル 0), not visible side by side. thin-check passes (skirted cases a few hundred triangles fewer).
 - `torso.waist`'s slider goes to 0.08 (was 0.04). ルミナ (and ルミナ v2): torso.waist 0.06, sculpt.waist height 0.12, blend 0.07.
 - Still to look at: the scalloped hem's small black slivers (there before), and long pants on legs this close (the cloth fills between them).
+
+### A 6-head body, in progress (2026-10-08, Saori, with a picture of a Genshin character standing; the work and its next steps are at the top of TODO.md)
+- `body.sculpt.bustY` (m, default 0) moves the bust up or down; `body.sculpt.bustX` (m, default null = as before) sets each side's distance from the middle. The spacing was max(6 cm × the chest if over 1, the bust's radius): never under 6 cm, so on a narrow chest the bust stood apart and the chest looked wide. Neither has a slider yet; at their defaults nothing changes (thin-check as before).
+- `proportion.chest` below 0 shortens the chest (the torso's stretch goes to the belly): shoulders to under the bust get shorter. Its slider is 0–1.

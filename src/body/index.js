@@ -118,7 +118,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
   // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
   // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
-  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = Math.max(0.06 * Math.max(1, TO.chest), r * 1.05), cy = 0.645, ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, KU = 0.03, KD = 0.007;
+  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = OPT.body.sculpt.bustX ?? Math.max(0.06 * Math.max(1, TO.chest), r * 1.05), cy = 0.645 + (OPT.body.sculpt.bustY ?? 0), ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, KU = 0.03, KD = 0.007;
+  // (bustY: the bust up or down, m; bustX: how far each side is from the middle, m, null = from the chest. 2026-10-07: a slender 6-head body
+  // wanted it higher and closer: the spacing never went under 6 cm, so on a narrow chest the bust stood apart and the chest looked wide)
     const zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
     const part = (e) => { const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
       return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; };
