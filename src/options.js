@@ -82,6 +82,7 @@ export const DEFAULTS = {
     },
     "joints": {
       "hipY": 0.44,
+      "hipX": 0.11,
       "footX": 0.116,
       "kneeX": 0.108
     },
@@ -396,6 +397,7 @@ export const DEFAULTS = {
           "depth": 0.058
         }
       },
+      "legShape": 0,
       "crotch": {
         "y": 0.29,
         "width": 0.025,

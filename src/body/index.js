@@ -51,10 +51,14 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 脚の付け根(股関節)の高さ。上げると脚が長く胴が短くなり、股下・骨盤の底・太ももの付け根の肉が一緒に上がる(2026-10-02 サオリ「股下が低すぎて胴が長い」)。
   // ⚠️前は股のあいだの溝(CROTCH)だけを上げていたので、骨盤の底とお尻が股より下に垂れたままで見た目の股下が上がらなかった。HL = 0.40 からの上げ幅
   const HIP_Y = OPT.body.joints.hipY ?? 0.4, HL = HIP_Y - 0.4;
+  // hipX: the hip joints' distance from the middle (2026-10-07, Saori, with a Genshin model beside ours: the legs stood apart at the hips' width
+  // and went straight down, so the tops of the thighs stuck out square however narrow the hips; theirs meet at the top and close in to the knees).
+  // legDX(y): how far the leg's line is moved from the default one (0.11 at the hip to 0.108 at the knee) at height y, for the thigh's own pieces
+  const HX = OPT.body.joints.hipX ?? 0.11, legX = (hx, kx, y) => hx + (kx - hx) * Math.min(1, Math.max(0, (HIP_Y - y) / (HIP_Y - 0.25))), legDX = (y) => legX(HX, KNEE_X, y) - legX(0.11, 0.108, y);
   const J = {
     hips: [0, 0.42 + HL * 0.5, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.68, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
     "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
-    "upperLeg.L": [0.11, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
+    "upperLeg.L": [HX, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
   };
   // body.proportion: the shoulders and arms (armJoints above; SHW: how much further out the shoulder joint is), hands: their size (× around the wrist)
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
@@ -267,12 +271,24 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012);
     { const a = j("upperLeg"), b = j("lowerLeg"), d = OPT.body.sculpt.thigh.topDrop ?? 0, L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);   // topDrop: 太ももの肉の上端だけを脚の向きに下げる(股関節=骨の回る点は動かさない)。外側の付け根の張り出しが下がり、くびれから腰へのカーブがゆるくなる
       P[`thigh.${s}`] = C(a.map((v, i) => v + (b[i] - v) * d / L), b, 0.08, 0.066, `upperLeg.${s}`, 0.05); }
-    P[`thighB.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
-    P[`thighF.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.front.y + HL, OPT.body.sculpt.thigh.front.z], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
-    P[`thighIn.${s}`] = E([m * OPT.body.sculpt.thigh.inner.x, OPT.body.sculpt.thigh.inner.y + HL, 0.002], [OPT.body.sculpt.thigh.inner.width, OPT.body.sculpt.thigh.inner.height, 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
+    P[`thighB.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.back.y + HL)), OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
+    P[`thighF.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.front.y + HL)), OPT.body.sculpt.thigh.front.y + HL, OPT.body.sculpt.thigh.front.z], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
+    P[`thighIn.${s}`] = E([m * (OPT.body.sculpt.thigh.inner.x + legDX(OPT.body.sculpt.thigh.inner.y + HL)), OPT.body.sculpt.thigh.inner.y + HL, 0.002], [OPT.body.sculpt.thigh.inner.width, OPT.body.sculpt.thigh.inner.height, 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
     P[`calfO.${s}`] = E([m * (FOOT_X + OPT.body.sculpt.calf.outer.x), OPT.body.sculpt.calf.outer.y, -0.008], [OPT.body.sculpt.calf.outer.width, OPT.body.sculpt.calf.outer.height, 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
     P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.05, `lowerLeg.${s}`, 0.05);   // narrowing to the ankle (0.057 there before: the shin came down as thick as the calf onto the foot, like a boot; 0.045 then narrowed too suddenly. 2026-10-07)
     P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, OPT.body.sculpt.calf.back.z], [OPT.body.sculpt.calf.back.width, 0.068, OPT.body.sculpt.calf.back.depth], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
+    // legShape (0–1; 2026-10-07, Saori: "太ももから膝までが中心に向かって、膝から下は垂直に近い。膝上は内側に入っていて、膝下は少し外側にずれたところから
+    // 始まる…膝はアウトラインに段がある。横から見ると、膝から膝下は少し後ろに出て…段がある。いまただの棒に近い"): placed by the joints, so it fits
+    // legs closed in or apart. The thigh narrows into the knee; a kneecap at the front; under the knee the calf starts a little outside it (its
+    // outer head high, the inner one lower) and bulges out at the back, then narrows to a slim ankle: steps at the knee, front and side
+    { const LS = OPT.body.sculpt.legShape ?? 0;
+      if (LS > 0) { const k = j("lowerLeg"), f = j("foot"), kx = Math.abs(k[0]), LL = k[1] - f[1], q = LS;
+        P[`thigh.${s}`].rb *= 1 - 0.28 * q;   // a slimmer knee
+        P[`calf.${s}`].rb *= 1 - 0.22 * q;   // a slimmer ankle
+        P[`kneeCap.${s}`] = E([m * kx, k[1] + 0.01, k[2] + 0.04 * q], [0.03, 0.032, 0.026], `lowerLeg.${s}`, 0.02);
+        P[`calfOut.${s}`] = E([m * (kx + 0.03 * q), k[1] - 0.26 * LL, k[2] - 0.012], [0.05, 0.3 * LL, 0.05], `lowerLeg.${s}`, 0.035);
+        P[`calfInner.${s}`] = E([m * (kx - 0.022 * q), k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
+        P[`calfBack.${s}`] = E([m * kx, k[1] - 0.32 * LL, k[2] - 0.035 * q], [0.05, 0.32 * LL, 0.05], `lowerLeg.${s}`, 0.035); } }
     // in high heels the foot is narrower (a pump holds it in; the shoe is made around it, and around the round chibi foot it stood out to the
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
     { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", n = HEELS ? 0.68 : 1;
@@ -317,7 +333,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     for (const n of ["upperArm", "sleeve"]) thicken(P[`${n}.${s}`], j("upperArm"), j("lowerArm"), TH.upperArm);
     for (const n of ["foreArm", "foreBulge"]) thicken(P[`${n}.${s}`], j("lowerArm"), j("hand"), TH.forearm);
     for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thighTop ?? TH.thigh, TH.thigh);   // thighTop: at the hip joint (slimmer = the hips don't bulge out at the top of the legs)
-    for (const n of ["calf", "calfO", "calfB"]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
+    for (const n of ["calf", "calfO", "calfB", "calfOut", "calfInner", "calfBack", "kneeCap"]) if (P[`${n}.${s}`]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
@@ -397,7 +413,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
-  const KNEE_IN = cut(E([0, OPT.body.sculpt.knee.inner.y, 0], [OPT.body.sculpt.knee.inner.width, OPT.body.sculpt.knee.inner.height, 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
+  const KNEE_IN = cut(E([0, OPT.body.sculpt.knee.inner.y, 0], [OPT.body.sculpt.knee.inner.width * Math.min(1, KNEE_X / 0.108), OPT.body.sculpt.knee.inner.height, 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
   // 脇の下のくぼみ(2026-10-02 サオリ「青い線(脇)を上げればいい。女の子より上げる必要はない」)。腕の付け根は胴の中にあるので、胸の太い体型(幼児)は
   //   腕と胴が脇より4cm下までひとかたまりになり、腕を上げると水かきのように伸びた。腕の下側の線より下・胴の側面(女の子の幅 x)より外・前後の帯の中だけを削る
   //   = 胸の前と背中の肉は残る(本物の脇と同じく、前後のひだにはさまれたくぼみ)。もともと腕と胴が離れている体型では空を削るだけで形は変わらない

@@ -100,13 +100,22 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   if (SK.dress) { const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, SK_Y0, -0.01 + dz * t) < 0) t += 0.001; return t; };
     const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.015;   // m: over the shirt (1.4 cm) and a little air
     SK_AX = out(1, 0) + m; SK_ZC = (zf + zb) / 2; SK_AZ = (zf - zb) / 2 + m; }
-  const SKIRT = !!skirtOf(OPT), skirtMask = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null;
-  const coneR = (s, c, y) => { const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop; return 1 / Math.hypot(s / ax, c / az); };   // the cone's radius that way (s, c: sin, cos around the center)
+  // skirtMask: the hips, the bottom and the belly, inside the body itself too (so the waist's cut applies: on the pelvis alone a strong waist
+  // still had the cloth hang out at the pelvis' width beside it, 2026-10-07)
+  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null, skirtMask = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  // the cone starts from the body at its top, measured each way (a body's narrowest a little over it), not from an ellipse at the hips'
+  // width: a long, strong waist ran on under the band at the top, and below it the cone came out at the hips' width with a corner at each
+  // side (2026-10-07, Saori: "くびれを作ると…スカートの問題"). Never wider than the old cone; the hips below are draped over as before (DRAPE)
+  const TOPR = SKIRT ? (() => { const NA = 48, R = new Float32Array(NA);
+    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f); let t = 0; while (t < 0.4 && bodySdf(s * t, SK_Y0, SK_ZC + c * t) < 0) t += 0.001; R[a] = t + 0.015; }
+    return (s, c) => { const g = (Math.atan2(s, c) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(g) % NA, t = g - Math.floor(g); return R[a0] * (1 - t) + R[(a0 + 1) % NA] * t; }; })() : null;
+  const coneR = (s, c, y) => { const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, old = 1 / Math.hypot(s / ax, c / az);   // the cone's radius that way (s, c: sin, cos around the center)
+    return Math.min(old, TOPR(s, c) + SK.flare * drop * Math.hypot(s, 0.8 * c)); };
   // DRAPE: the skirt's radius per angle and height (a grid from the top to the hem): at least the cone's; under the furthest the hips reach
   // (skirtMask, 1.5 cm out) straight down, and above it on the line from the top's edge to it (cloth hangs from the top over the bulge, not into its curve)
   const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
     for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f), top = coneR(s, c, SK_Y0), need = [];
-      for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + M : 0); }
+      for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + (0.008 + (M - 0.008) * sstep(0, 0.06, j * DY)) : 0); }   // (just under the top only a little out: it hugs the hips there and flares on below, so a strong waist doesn't leave a shelf where the band at the top lets go, 2026-10-07)
       for (let j = 0; j < NY; j++) { let r = coneR(s, c, SK_Y0 - j * DY);
         for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * j / k); }   // k above j: hangs straight under it; k below: the line from the top
         R[a * NY + j] = r; } }
@@ -130,7 +139,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
-    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
+    if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
