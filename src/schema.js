@@ -281,6 +281,8 @@ const MAIN = [
   ["outfit.weapon.color", L("金属の色", "Metal color"), { section: L("武器", "Weapons"), apply: "setColors" }],
   ["outfit.weapon.gripColor", L("柄の色", "Grip color"), { section: L("武器", "Weapons"), apply: "setColors" }],
   ["outfit.weapon.shieldColor", L("盾の色", "Shield color"), { section: L("武器", "Weapons"), apply: "setColors" }],
+  ["outfit.weapon.sheath", L("ベルトと鞘", "Belt and scabbard"), { section: L("武器", "Weapons"), apply: "setSheath", help: L("剣は腰、両手剣は背中に(いまは飾り: 剣は手に持ったまま)", "a sword's at the hip, a greatsword's on the back (to look at for now: the blade stays in the hand)") }],
+  ["outfit.weapon.sheathColor", L("鞘の色", "Scabbard color"), { when: { "outfit.weapon.sheath": true }, section: L("武器", "Weapons"), apply: "setColors" }],
   ["outfit.socks.on", L("はく", "Wear"), { section: L("靴下", "Socks"), apply: "setWorn" }],
   ["outfit.socks.color", L("靴下の色", "Socks color"), { section: L("靴下", "Socks"), apply: "setColors" }],
   ["outfit.suit.on", L("全身スーツ", "Bodysuit"), { section: L("全身スーツ", "Bodysuit"), apply: "setWorn", help: L("体にぴったりの全身スーツ(えりから足先まで。手首まで)", "skin-tight from a high collar to the feet, to the wrists") }],

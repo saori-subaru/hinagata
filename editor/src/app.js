@@ -69,7 +69,7 @@ function showStats(av, ms = lastMs) {
 }
 
 // instant changes through the engine's own methods (schema `apply`)
-const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.dress.color": "dress", "outfit.cape.color": "cape", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.shoes.laceColor": "laces", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield", "outfit.extras.earColor": "ears", "outfit.extras.earInColor": "earsIn", "outfit.extras.tailColor": "tail", "outfit.extras.wingColor": "wings", "outfit.extras.haloColor": "halo", "outfit.suit.color": "suit", "outfit.suit.accent": "suitAccent" };
+const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.dress.color": "dress", "outfit.cape.color": "cape", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.shoes.laceColor": "laces", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield", "outfit.weapon.sheathColor": "sheath", "outfit.extras.earColor": "ears", "outfit.extras.earInColor": "earsIn", "outfit.extras.tailColor": "tail", "outfit.extras.wingColor": "wings", "outfit.extras.haloColor": "halo", "outfit.suit.color": "suit", "outfit.suit.accent": "suitAccent" };
 let locksT = 0;
 function applyInstant(av, p, v) {
   const k = p.split("."), last = k.at(-1);
@@ -78,6 +78,7 @@ function applyInstant(av, p, v) {
     case "setOutline": av.setOutline({ [last]: v }); return true;
     case "setShading": av.setShading({ [last]: v }); return true;
     case "setRim": av.setRim({ [last]: v }); return true;
+    case "setSheath": av.setSheath(v); return true;
     case "setWorn": av.setWorn({ [k[1]]: v }); return true;
     case "setFace": av.setFace({ [last]: v ?? (store.get("face.noseShadow.on") ? "shadow" : "none") }); return true;   // nose null = follow the nose shadow
     case "setFaceLayout": av.setFaceLayout({ [last]: v }); return true;

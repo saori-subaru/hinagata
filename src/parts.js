@@ -7,7 +7,7 @@
 import { skirtOf } from "./options.js";
 import { armReach } from "./body/index.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
-export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
+export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip", "weaponSheath", "weaponBelt"];   // in the hands: metal, grip / straps, the shield's face
 export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "suit", "cape", ...ARMOR, ...WEAPONS, ...EXTRAS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
@@ -60,6 +60,11 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       if (name === "armorFeet") return { sdf: A.footSdf, lo: [-0.24, -0.01, -0.14], hi: [0.24, 0.14, 0.16], h: H * 0.8, only: /^(foot|lowerLeg)/ };
       return { sdf: A.mailSdf, fast: (x, y, z) => A.mailSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.82, 0.34], h: H * 1.2 }; }
     // weapons (clothes/weapons.js): each bound to one bone (the right hand; the shield to the left forearm)
+    // the belt (or the greatsword's strap) and the empty scabbard (clothes/weapons.js weapon.sheath): the scabbard on one bone, the belt following the body
+    case "weaponSheath": { const Wp = C.weapons; if (!Wp.sheath) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      return { sdf: Wp.sheath, lo: Wp.boxSheath.lo, hi: Wp.boxSheath.hi, h: H * 0.6, bone1: Wp.sheathBone }; }
+    case "weaponBelt": { const Wp = C.weapons; if (!Wp.belt) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      return { sdf: Wp.belt, lo: Wp.boxBelt.lo, hi: Wp.boxBelt.hi, h: Math.min(H * 0.6, 0.007), only: /^(hips|spine|chest|upperChest)/ }; }
     case "weaponR": case "weaponRGrip": case "weaponL": case "weaponLFace": case "weaponLGrip": { const Wp = C.weapons, r = name.startsWith("weaponR"), f = { weaponR: Wp.rMetal, weaponRGrip: Wp.rOther, weaponL: Wp.lMetal, weaponLFace: Wp.lFace, weaponLGrip: Wp.lOther }[name], b = r ? Wp.boxR : Wp.boxL;
       if (!f || !b) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: f, lo: b.lo, hi: b.hi, h: H * 0.5, bone1: r ? "hand.R" : "lowerArm.L" }; }
