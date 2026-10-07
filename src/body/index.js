@@ -376,6 +376,21 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (FWD) { const f0 = HEAD.f, X0 = FW.inner ?? 0.1, BW = (FW.band ?? 0.06) + FWD, Y0 = FW.y0 ?? 1.02, Y1 = FW.y1 ?? 1.12, C0 = FW.yc0 ?? OPT.body.sculpt.chin.y, C1 = FW.yc1 ?? OPT.body.sculpt.chin.y + 0.07;
     const KW = 1 / (1 + 1.5 * FWD / Math.min(Y1 - Y0, C1 - C0));
     HEAD.f = (x, y, z) => { const a = Math.abs(x), s = FWD * (1 - sstep(Y0, Y1, y)) * sstep(C0, C1, y) * sstep(X0, X0 + BW, a); return f0(Math.sign(x) * (a - s), y, z) * KW; }; }
+  // chin.taper (0–1): a pointed chin in straight lines under round cheeks (2026-10-07, Saori: "頬丸いまま顎を尖らせるようにできませんか"; the old
+  // chin.sharp hollowed the cheeks). The face's front outline is measured (its half width W(y), seen from the front over z ≥ 0: the ears and
+  // the back of the head left out). It is convex all the way down, so no line from the chin touches it from outside: the jaw is cut along the
+  // straight line from just above the chin's bottom (narrowed by taper) to the outline at a joint (higher with taper), below the joint only,
+  // and the joint is softened (over 0.04, head space): the cheeks above stay round, the jaw runs straight to the point. Measured per face, so it fits any
+  // face without tuning. Front only (fading out behind z 0 to −0.12, so under the ears it doesn't carve)
+  const TP = 0.65 * Math.min(1, OPT.body.sculpt.chin.taper ?? 0);   // (the slider's 1: beyond about this the cut reached the chin's tip and shortened it)
+  if (TP > 0) { const f0 = HEAD.f, CY = OPT.body.sculpt.chin.y, Ws = []; let prev = 0.12;
+    const halfWidth = (y, from) => { for (let x = from; x > 0; x -= 0.001) for (let z = 0; z <= 0.25; z += 0.02) if (f0(x, y, z) < 0) return x; return 0; };
+    for (let y = CY - 0.04; y < CY + 0.15; y += 0.002) { const w = halfWidth(y, Math.min(0.3, prev + 0.03)); Ws.push([y, w]); if (w) prev = w; }
+    const at = (y) => Ws.reduce((b, q) => Math.abs(q[0] - y) < Math.abs(b[0] - y) ? q : b)[1];
+    const tip = Ws.find(([, w]) => w > 0.002), YA = (tip ? tip[0] : CY) + 0.01, HA = at(YA) * (1 - 0.7 * TP), YT = YA + 0.025 + 0.035 * TP, WT = at(YT);
+    if (WT > HA) { const S = (WT - HA) / (YT - YA), L = Math.hypot(1, S), smax = (a, b, k) => -smin(-a, -b, k);
+      HEAD.f = (x, y, z) => { const d = f0(x, y, z), w = (1 - sstep(YT - 0.005, YT + 0.02, y)) * sstep(-0.12, 0, z); if (w <= 0) return d;
+        const c = (Math.abs(x) - HA - S * (y - YA)) / L; return d + w * (smax(d, c, 0.006) - d); }; } }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y }), HEAD_RAW = { ...HEAD };

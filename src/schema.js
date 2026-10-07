@@ -79,7 +79,8 @@ const MAIN = [
   ["body.sculpt.socketSize", L("眼窩の大きさ", "Eye socket size"), { min: 0.7, max: 1.2, step: 0.01, section: L("輪郭", "Face shape"), help: L("眼窩(目のくぼみと、こめかみへの帯)を目の真ん中を中心に大きく・小さく(倍)。目を小さくするときに合わせて小さくすると、眼窩が輪郭に出ない", "the eye sockets (the dips and the band toward the temple) scaled around the eye's middle (×). Shrink them with smaller eyes, so they don't show in the face's outline") }],
   ["body.sculpt.faceWiden.shift", L("目の横の幅", "Width beside the eyes"), { min: 0, max: 0.03, step: 0.001, section: L("輪郭", "Face shape"), help: L("顔の横を、輪郭の角度を変えずに外へずらす(m、頭の座標)。目・鼻・口とあごの先はそのまま。倍率で広げると、ほおほど外へ出て輪郭が上へ開く", "moves the face's sides out without changing the outline's angles (m, head space); the eyes, nose, mouth and the chin's point stay. Widening by a factor moves the cheeks out more, and the outline opens toward the top") }],
   ["body.sculpt.chin.k", L("あごの角の丸み", "Chin corner"), { min: 0.005, max: 0.04, step: 0.001, section: L("輪郭", "Face shape"), help: L("あごの正面から下への角(小さいほどくっきり)", "the corner from the chin's front to its underside (smaller is crisper)") }],
-  ["body.sculpt.chin.sharp", L("あごのとがり", "Chin sharpness"), { min: 0, max: 0.5, step: 0.01, section: L("輪郭", "Face shape"), help: L("正面から見たあごの下の線: 0 = U字(丸い) / 大きいほどV字", "the jaw's bottom line seen from the front: 0 = a U (round), higher = a V") }],
+  ["body.sculpt.chin.taper", L("あごのとがり", "Chin point"), { min: 0, max: 1, step: 0.01, section: L("輪郭", "Face shape"), help: L("頬は丸いまま、あごを直線でとがらせる(顔の輪郭を測って、あご先からまっすぐ結ぶ)。0 = もとのまま", "a pointed chin in straight lines with the cheeks left round (the face's outline is measured and joined straight to the chin's point); 0 = as it is") }],
+  ["body.sculpt.chin.sharp", L("あごのV字(旧)", "Chin V (old)"), { min: 0, max: 0.5, step: 0.01, tier: "advanced", section: L("輪郭", "Face shape"), help: L("正面から見たあごの下の線: 0 = U字(丸い) / 大きいほどV字。ほおの横までけずるので、ほおがこけやすい(あごのとがり を使う)", "the jaw's bottom line seen from the front: 0 = a U (round), higher = a V. It cuts up the sides too, so the cheeks look hollow: use Chin point") }],
   ["body.sculpt.mouth.profile", L("鼻下のへこみ", "Under-nose dip"), { min: 0, max: 2, step: 0.05, section: L("輪郭", "Face shape"), help: L("横から見た鼻の下のへこみ（0 = まっすぐ）。口の高さに合わせて付く", "seen from the side, a dip under the nose (0 = a straight line), placed by the mouth's height") }],
   ["body.sculpt.chinTip.on", L("あご先の肉", "Chin tip"), { section: L("輪郭", "Face shape"), help: L("あご先に小さなふくらみを足す", "a small piece at the bottom of the chin") }],
   ["body.torso.chest", L("胸板", "Chest"), { min: 0.8, max: 1.4, step: 0.01, section: L("胴", "Torso") }],
@@ -374,7 +375,7 @@ function build() {
     let type = typeOf(v, { ...ex, path });
     if (ex && v === null) type = /\.src$/.test(path) ? "image" : ex.options ? "enum" : /color/i.test(path) ? "color" : "number";   // described values whose default is null
     if (type === "enum" && !ex?.options) type = "json";   // an undescribed string: free value
-    const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? at.apply ?? null };
+    const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? ex.tier ?? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? at.apply ?? null };
     if (type === "number") Object.assign(e, ex && ex.min != null ? { min: ex.min, max: ex.max, step: ex.step } : { ...guessRange(v ?? 0), soft: true });
     if (ex?.options) e.options = ex.options;
     if (ex) e.order = ex.order;   // the editor lists main values in this order

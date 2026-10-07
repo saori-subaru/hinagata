@@ -139,6 +139,7 @@ export const DEFAULTS = {
         "curve": 0.95,
         "k": 0.015,
         "sharp": 0,
+        "taper": 0,
         "sharpZ": [-0.02, 0.14],
         "backZ": 0.12,
         "backRise": 0.7,
