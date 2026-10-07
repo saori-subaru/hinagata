@@ -141,6 +141,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 
 - `avatar.play(name)`; `avatar.update(dt, { camera })` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
   crawl, jumpRise, jumpAir, jumpLand, fall, hardLand, climb, climbOver, sitChair, sitChairGirl, sitFloor, hugKnees, wave, cheer, banzai, guard,
+  attack (the swing for what the right hand holds: sword, greatsword, axe, spear, staff, or a punch; also attack_<weapon>), hit, stun (stars over the head), down,
   throw, chop, stab, pickUp, carry, carryWalk, push, roll, stumble, knockdown, swim, treadWater, wade, glide, sleep, drink, eat, pant, shiver,
   limp, lookAround, listen, hide, balance. A pose is a function of the avatar's clock; `avatar.play(name)` doesn't reset it. To start a move
   from its beginning: `avatar.play(name); avatar.update(0, { t: 0 })` (`update(dt, { t })` sets the clock to t; later updates go on from

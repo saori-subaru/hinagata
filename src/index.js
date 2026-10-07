@@ -41,7 +41,8 @@ export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and 
 import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
 export { holdPole } from "./motion/glide.js";   // gliding under something held overhead; both hands on a pole (motion/glide.js)
 export { SWIM_W, swimHead } from "./motion/swim.js";   // swimming, treading water, wading (motion/swim.js)
-export { ONE_SHOT } from "./motion/survival.js";   // the body's states and the hands' work for living in the wild: pant, shiver, limp, drink, chop, sleep... (motion/survival.js)
+export { ONE_SHOT } from "./motion/survival.js";
+import "./motion/combat.js";   // fighting: two-handed guards, an attack per weapon, hit / stun / down (motion/combat.js)   // the body's states and the hands' work for living in the wild: pant, shiver, limp, drink, chop, sleep... (motion/survival.js)
 
 /**
  * Build an avatar.
@@ -586,6 +587,14 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
         pts.push(new THREE.Vector3(...HTr.fromHead(p[0] + d[0] * EL.lift, p[1] + d[1] * EL.lift, p[2] + d[2] * EL.lift))); }
       const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, EL.width, 6, false); g.applyMatrix4(inv); earLine.add(new THREE.Mesh(g, mat)); }
     bone.head.add(earLine); }
+  // stars circling over the head while a pose asks for them (`stars`: stun, motion/combat.js; 2026-10-07, Saori: "気絶ピヨピヨ"): five small
+  // unlit stars on a tilted ring, carried by the head, made at rest now and shown in update
+  const stars = (() => { root.updateMatrixWorld(true); const SK = OPT.body.sculpt.skull, c = HTr.fromHead(0, SK.y + SK.height + 0.05, -0.01), r = Math.hypot(...[0, 1, 2].map((i) => HTr.fromHead(0.16, SK.y, 0)[i] - HTr.fromHead(0, SK.y, 0)[i]));
+    const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, q = (i % 2 ? 0.42 : 1) * r * 0.22; s[i ? "lineTo" : "moveTo"](Math.cos(a) * q, Math.sin(a) * q); }
+    const g = new THREE.ExtrudeGeometry(s, { depth: r * 0.04, bevelEnabled: false }), mat = new THREE.MeshBasicMaterial({ color: "#ffd84a" });
+    const grp = new THREE.Group(); grp.name = "stars"; grp.visible = false; grp.userData.r = r;
+    for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(g, mat); grp.add(m); }
+    const local = bone.head.worldToLocal(new THREE.Vector3(...c)); grp.position.copy(local); bone.head.add(grp); return grp; })();
   // the halo (outfit.extras.halo): a flat ring floating over the head, tilted back a little, unlit (it glows), carried by the head
   let halo = null;
   if (XO.halo) { root.updateMatrixWorld(true); const SK = OPT.body.sculpt.skull, top = HTr.fromHead(0, SK.y + SK.height + 0.1, -0.03), r = Math.hypot(...[0, 1, 2].map((i) => HTr.fromHead(0.12, SK.y, 0)[i] - HTr.fromHead(0, SK.y, 0)[i]));
@@ -693,6 +702,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       syncCover(); hairLines(); rims();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
+      if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
       if (heldGrip) { root.updateMatrixWorld(); const k = 1 / (root.matrixWorld.getMaxScaleOnAxis() || 1); for (const h of Object.values(held)) h.wrap.scale.setScalar(k * h.scale); }   // held things keep their size in the world
       if (!ST.identity && lastPose.seat != null) lastPose = { ...lastPose, seat: ST.fwd(lastPose.seat) };   // a seat as high as the knees: higher for longer legs
       if (lastPose.seat != null) { const lo = seatLow(lastPose.seatFront ?? Infinity); if (lo < Infinity) {   // aim the hips at where they are now + the gap, and move there smoothly

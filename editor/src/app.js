@@ -266,7 +266,7 @@ const MOTION_GROUPS = [
   ["low", ["crouch", "crawl", "hide"]],
   ["water", ["swim", "breaststroke", "treadWater", "dive", "wade", "drink"]],
   ["hands", ["pickUp", "carry", "carryWalk", "throw", "push", "chop", "eat", "fireDrill"]],
-  ["fight", ["guard", "stab"]],
+  ["fight", ["guard", "attack", "hit", "stun", "down", "knockdown", "stab", "attack_sword", "attack_axe", "attack_spear", "attack_staff", "attack_greatsword", "attack_punch"]],
   ["state", ["pant", "shiver", "limp", "lookAround", "listen"]],
 ];
 function motionGroups() {

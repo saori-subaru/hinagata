@@ -275,7 +275,7 @@ const MAIN = [
   ["outfit.armor.visorColor", L("兜のすき間の色", "Visor slit color"), { section: L("鎧", "Armor") }],
   ["outfit.armor.gap", L("体からの浮き", "Gap from the body"), { min: 0.01, max: 0.05, step: 0.001, section: L("鎧", "Armor") }],
   ["outfit.armor.thick", L("板の厚み", "Plate thickness"), { min: 0.004, max: 0.02, step: 0.001, section: L("鎧", "Armor") }],
-  ["outfit.weapon.right", L("右手に持つもの", "Right hand"), { options: opts({ none: ["なし", "None"], sword: ["剣", "Sword"], axe: ["斧", "Axe"], spear: ["槍", "Spear"], staff: ["杖", "Staff"], fist: ["こぶし(素手)", "Fist (bare)"] }), section: L("武器", "Weapons"), help: L("持つ手は握りこぶしになる", "A hand that holds something makes a fist") }],
+  ["outfit.weapon.right", L("右手に持つもの", "Right hand"), { options: opts({ none: ["なし", "None"], sword: ["剣", "Sword"], greatsword: ["両手剣", "Greatsword"], axe: ["斧", "Axe"], spear: ["槍", "Spear"], staff: ["杖", "Staff"], fist: ["こぶし(素手)", "Fist (bare)"] }), section: L("武器", "Weapons"), help: L("持つ手は握りこぶしになる", "A hand that holds something makes a fist") }],
   ["outfit.weapon.left", L("左手に持つもの", "Left hand"), { options: opts({ none: ["なし", "None"], shield: ["盾", "Shield"], round: ["丸い盾", "Round shield"], fist: ["こぶし(素手)", "Fist (bare)"] }), section: L("武器", "Weapons") }],
   ["outfit.weapon.shieldMount", L("盾のつけ方", "Shield mount"), { options: opts({ straight: ["まっすぐ(上が手首の側)", "Straight (top toward the hand)"], diagonal: ["ななめ(45°)", "Diagonal (45°)"] }), section: L("武器", "Weapons"), help: L("ななめは、構えで前腕をななめに上げたとき盾がまっすぐ立つ", "Diagonal: the shield stands upright when the guard raises the forearm slantwise") }],
   ["outfit.weapon.color", L("金属の色", "Metal color"), { section: L("武器", "Weapons"), apply: "setColors" }],

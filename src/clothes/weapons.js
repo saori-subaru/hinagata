@@ -1,4 +1,4 @@
-// Weapons (outfit.weapon): something in each hand — right: sword / axe / spear / staff, left: shield / round (a buckler). fist: nothing, the hand just closes.
+// Weapons (outfit.weapon): something in each hand — right: sword / greatsword (two hands) / axe / spear / staff, left: shield / round (a buckler). fist: nothing, the hand just closes.
 // Hard shapes made in the hand's own frame (the same D / N / S as the hand in body/index.js), each bound to one bone, so they
 // move exactly with the hand (or, for a shield, the forearm). A hand that holds something closes into a fist (body/index.js).
 //   Per hand: metal (blade, guard, axe head, spear head, rim, boss), the grip / shaft / the shield's straps (leather or wood), and the shield's face.
@@ -38,6 +38,14 @@ export function buildWeapons(OPT, { J, bodySdf }) {
       const blade = Math.max(Math.abs(w) - hw, Math.abs(t) - 0.0075 * (1 - 0.35 * Math.min(1, Math.abs(w) / hw)), 0.06 - a, a - 0.52);   // flat, thicker along the middle, to a point
       const fuller = Math.abs(w) < 0.006 && a > 0.08 && a < 0.4 ? 0.002 : 0;   // a groove down the blade
       const guard = capsule([x, y, z], at(0.058, -0.078), at(0.058, 0.078), 0.014), pommel = Math.hypot(a + 0.068, w, t) - 0.023;
+      return Math.min(blade + fuller, guard, pommel); };
+  }
+  if (R === "greatsword") {   // two-handed (2026-10-07, Saori: "両手剣"): a grip long enough for both hands (the left below the right), a wide guard, a long broad blade
+    rOther = (x, y, z) => capsule([x, y, z], at(-0.17), at(0.06), 0.016);
+    rMetal = (x, y, z) => { const [a, w, t] = loc(x, y, z), hw = 0.046 * Math.min(1, Math.max(0, (0.92 - a) / 0.14)) + 0.001;
+      const blade = Math.max(Math.abs(w) - hw, Math.abs(t) - 0.009 * (1 - 0.35 * Math.min(1, Math.abs(w) / hw)), 0.075 - a, a - 0.92);
+      const fuller = Math.abs(w) < 0.008 && a > 0.1 && a < 0.7 ? 0.0025 : 0;
+      const guard = capsule([x, y, z], at(0.07, -0.11), at(0.07, 0.11), 0.017), pommel = Math.hypot(a + 0.19, w, t) - 0.027;
       return Math.min(blade + fuller, guard, pommel); };
   }
   if (R === "axe") {
@@ -92,7 +100,7 @@ export function buildWeapons(OPT, { J, bodySdf }) {
   const box = (c, axes) => { const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];   // axes: [vector, from, to] ×3
     for (const s0 of [1, 2]) for (const s1 of [1, 2]) for (const s2 of [1, 2]) { const p = add(c, [axes[0][0], axes[0][s0]], [axes[1][0], axes[1][s1]], [axes[2][0], axes[2][s2]]); for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); } }
     return { lo: lo.map((v) => v - 0.02), hi: hi.map((v) => v + 0.02) }; };
-  const reach = { sword: [-0.1, 0.53], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
+  const reach = { sword: [-0.1, 0.53], greatsword: [-0.23, 0.94], axe: [-0.1, 0.46], spear: [-0.47, 1.06], staff: [-0.45, 0.73] }[R] ?? [-0.1, 0.1];
   const boxR = R === "none" || R === "fist" ? null : box(H.G, [[A, ...reach], [W, -0.1, 0.16], [T, -0.05, 0.05]]), boxL = L === "none" || L === "fist" ? null : box(SC, [[Hz, -0.16, 0.16], [V, -0.2, 0.17], [O, -0.15, 0.05]]);
   return { right: R, left: L, rMetal, rOther, lFace, lMetal, lOther, boxR, boxL };
 }
