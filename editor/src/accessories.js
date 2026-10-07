@@ -46,6 +46,9 @@ export function createAccessoryTool({ vp, store, onChange = () => {} }) {
     attach(next) { av = next; if (sel >= list().length) sel = -1; },
     toggle(on = !S.on) { S.on = on; vp.controls.enableRotate = !on; onChange(); },
     set(k, v) { S[k] = v; save(); onChange(); },
+    /** a kind picked: the next click puts a new one of it (2026-10-07, Saori: picking one showed nothing. The last one put was still
+     *  picked, so the click moved it instead, and the tool might not even be on) */
+    choose(k) { S.kind = k; sel = -1; save(); this.toggle(true); },
     pick(i) { sel = sel === i ? -1 : i; onChange(); },
     /** the picked item's own value */
     edit(k, v) { const L = structuredClone(list()); if (!L[sel]) return; L[sel][k] = v; write(L); onChange(); },

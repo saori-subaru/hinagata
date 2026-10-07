@@ -55,8 +55,9 @@ export function buildArmor(OPT, { P, J }) {
   const TH = OPT.body.thickness ?? {};
 
   // ── breastplate: slices of the torso (no arms) from the waist up to the chest; squarish ellipses (n 2.6), smoothed between slices ──
-  const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap"));
-  const Y0 = 0.49, Y1 = 0.75, NS = 26, SL = [];
+  // armor.chest "short": a breastplate that ends under the chest, its lower edge dipping to a point in front (2026-10-07, Saori: a girl's short one)
+  const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap")), SHORT = AR.chest === "short";
+  const Y0 = SHORT ? 0.585 : 0.49, Y1 = 0.75, NS = SHORT ? 18 : 26, SL = [];
   for (let i = 0; i <= NS; i++) { const y = Y0 + (Y1 - Y0) * i / NS; SL.push(slice(torso, [0, y, 0.0], [1, 0, 0], [0, 0, 1], 24)); }
   for (const k of ["a", "b", "cv"]) { const v = SL.map((s) => s[k]); SL.forEach((s, i) => { s[k] = (v[Math.max(0, i - 1)] + 2 * v[i] + v[Math.min(NS, i + 1)]) / 4 + (k === "cv" ? 0 : 0.003); }); }   // smoothed (and a little out, to stay outside the bumps the smoothing shaved)
   const at = (y, k) => { const f = Math.min(NS, Math.max(0, (y - Y0) / (Y1 - Y0) * NS)), i = Math.min(NS - 1, Math.floor(f)), t = f - i; return SL[i][k] * (1 - t) + SL[i + 1][k] * t; };
@@ -66,7 +67,7 @@ export function buildArmor(OPT, { P, J }) {
   const chestSdf = (x, y, z) => {
     const yc = Math.min(Y1, Math.max(Y0, y)), d = sell(x, z - at(yc, "cv"), at(yc, "a"), at(yc, "b"), 2.2) - 0.004 * Math.exp(-((x / 0.014) ** 2)) * (z > 0 ? 1 : 0);   // a low ridge down the middle of the front
     let s = d - AR.gap - AR.thick;
-    s = smax(s, Y0 + 0.012 * (1 - (x / 0.2) ** 2) - y, 0.004);   // bottom edge: a little lower in the middle
+    s = smax(s, (SHORT ? Y0 + 0.03 * Math.min(1, Math.abs(x) / 0.12) : Y0 + 0.012 * (1 - (x / 0.2) ** 2)) - y, 0.004);   // bottom edge: a little lower in the middle (short: to a point, rising to the sides)
     const w = sstep(-0.03, 0.03, z), u = Math.min(1, (x / 0.105) ** 2);   // the top edge: a U-neck, low in front and higher at the back, rising to the shoulders
     s = smax(s, y - ((0.682 + 0.075 * u) * w + (0.722 + 0.035 * u) * (1 - w)), 0.006);
     s = smax(s, y - (Y1 - 0.004), 0.004);
@@ -100,5 +101,16 @@ export function buildArmor(OPT, { P, J }) {
     return (x, y, z) => Math.min(g(x, y, z), cop(x, y, z)); });
   const legSdf = (x, y, z) => GR[x > 0 ? 0 : 1](x, y, z);
 
-  return { chestSdf, shoulderSdf, armSdf, legSdf };
+  // ── tassets (armor.tassets; 2026-10-07, Saori: "腰回りのプレートありなしを選べるようにしたい"): plates hanging from the waist over the hips and
+  // the tops of the thighs, flaring out as they go down, in two lames; open at the front middle (for the legs) and at the back ──
+  const waistSdf = AR.tassets ? (() => { const Y0 = 0.47, Y1 = 0.355, HS = slice(torso, [0, 0.44, 0], [1, 0, 0], [0, 0, 1], 24), FL = 0.35;
+    return (x, y, z) => { const drop = Math.max(0, Y0 - y), ax = HS.a + 0.012 + AR.gap * 0.6 + FL * drop, az = HS.b + 0.01 + AR.gap * 0.6 + FL * 0.7 * drop, v = z - HS.cv;
+      const e = sell(x, v, ax, az, 2.4), th = Math.abs(Math.atan2(x, v)), r = Math.min(ax, az);
+      let d = Math.max(e - AR.thick, -e);   // a shell, thick outward
+      d = smax(d, Math.max(0.13 - th, th - 2.1) * r, 0.004);   // the plates: from beside the middle round to the sides (open in front and at the back)
+      d = smax(d, Math.max(y - Y0, Y1 - y), 0.003);
+      const lame = Math.abs(y - (Y0 + Y1) / 2); if (lame < 0.004) d += 0.002 * (1 - lame / 0.004);   // a groove: two lames
+      return d; }; })() : null;
+
+  return { chestSdf, shoulderSdf, armSdf, legSdf, waistSdf };
 }

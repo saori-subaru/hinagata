@@ -126,13 +126,13 @@ Only what differs from the defaults, nested as the options are (in a character f
   import it from `https://hinagata.pages.dev/src/schema.js` (or the repository's `src/schema.js`). Unknown keys are ignored by the engine, so
   check: a typo silently does nothing.
 - Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; chibi `standard`, `girl`, `sturdy`,
-  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, shoulders.
+  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, feet, shoulders.
 - Ready-made characters: `import { CHARACTERS }` → `createAvatar(CHARACTERS.sylvie.file)` (シルヴィ, an elf girl) or `CHARACTERS.astel.file`
   (アステル, a hero boy with sword, shield and cape). Each is a character file (version 3); copy its `options` into your own file to start from it.
   In the editor: the character list → 「プリセットから作る」.
 - Main areas: `colors` (skin, hair, eyes), `body` (proportion, head, torso, thickness, sculpt.ears.elf…), `face` (parts: eyes / brows / mouth
   by id, layout, blush), `hair` (bangs, back, ahoge, tail, gradient, drawn locks), `outfit` (shirt, pants or skirt, dress, cape, socks, shoes,
-  armor, weapon), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
+  suit (a full-body suit), armor, weapon, extras: animal ears / tail / halo / angel or devil wings), `accessories` (leaf, gem, flower, star, ball, band on a bone), `outline`, `shading`.
 - Faces can be drawn: the user does that in the editor (face tab); you can pick part ids (`face.parts`) or expressions with `avatar.setFace("happy")`.
   Ask for the standard names (`EXPRESSION_SET`: normal, happy, sad, angry, surprised): each character shows its own version of them when
   the user has made one in the editor (`face.expressions`, e.g. its own drawn smile), else the stock one; "normal" is the face it was built with.
@@ -141,6 +141,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 
 - `avatar.play(name)`; `avatar.update(dt, { camera })` every frame. All poses: `import { POSES }` → `Object.keys(POSES)`. Among them: idle, walk, run, sneak,
   crawl, jumpRise, jumpAir, jumpLand, fall, hardLand, climb, climbOver, sitChair, sitChairGirl, sitFloor, hugKnees, wave, cheer, banzai, guard,
+  attack (the swing for what the right hand holds: sword, greatsword, axe, spear, staff, or a punch; also attack_<weapon>), hit, stun (stars over the head), down,
   throw, chop, stab, pickUp, carry, carryWalk, push, roll, stumble, knockdown, swim, treadWater, wade, glide, sleep, drink, eat, pant, shiver,
   limp, lookAround, listen, hide, balance. A pose is a function of the avatar's clock; `avatar.play(name)` doesn't reset it. To start a move
   from its beginning: `avatar.play(name); avatar.update(0, { t: 0 })` (`update(dt, { t })` sets the clock to t; later updates go on from
@@ -158,7 +159,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 - Switching to a fast move: `avatar.play(name, { blend: 0 })`. By default a switch eases over about 0.35 s, which softens a swing's start.
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
-  `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
+  `setShading("toon" | "soft" | "smooth" | "flat")`, `setRim({ on, color, width, strength })`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
 
 ## Your own moves: pose the joints
 

@@ -36,10 +36,16 @@ export function createPaintTool({ vp, store, onChange = () => {} }) {
       ctx.beginPath(); ctx.rect(v.x, v.y, v.w, v.h); ctx.clip();   // inside this view only (no bleeding into the next one)
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   }
-  function paintTo(hit) {   // from the last touch to this one: dabs a third of the brush apart (same part only)
+  // from the last touch to this one: dabs a third of the brush apart. Across two parts (the skin to the shirt, the shirt to the pants) a short
+  // gap goes into both, and a touch that missed (the pointer off an edge for a moment) doesn't break the line; a jump further than GAP does,
+  // and between two parts one further than a few brushes (off a sleeve's edge onto the arm behind it: that's not across a seam) (2026-10-07, Saori: dotted strokes)
+  const GAP = 0.08;
+  function paintTo(hit) {
     const last = stroke.last; stroke.last = hit;
-    if (last && last.target === hit.target) { const d = Math.hypot(hit.p[0] - last.p[0], hit.p[1] - last.p[1], hit.p[2] - last.p[2]), k = Math.min(200, Math.floor(d / Math.max(0.001, S.size * 0.35)));
-      for (let i = 1; i <= k; i++) { const s = i / (k + 1), q = last.p.map((x, j) => x + (hit.p[j] - x) * s), m = last.n.map((x, j) => x + (hit.n[j] - x) * s); dab(hit.target, q, m); } }
+    const d = last ? Math.hypot(hit.p[0] - last.p[0], hit.p[1] - last.p[1], hit.p[2] - last.p[2]) : Infinity;
+    if (d < (last?.target === hit.target ? GAP : Math.max(0.025, 3 * S.size))) { const k = Math.min(200, Math.floor(d / Math.max(0.001, S.size * 0.35))), into = new Set([last.target, hit.target]);
+      for (let i = 1; i <= k; i++) { const s = i / (k + 1), q = last.p.map((x, j) => x + (hit.p[j] - x) * s), m = last.n.map((x, j) => x + (hit.n[j] - x) * s); for (const t of into) dab(t, q, m); }
+      for (const t of into) { stroke.touched.add(t); av.paintSurface(t).update(); } }
     dab(hit.target, hit.p, hit.n); stroke.touched.add(hit.target); av.paintSurface(hit.target).update();
   }
 
@@ -48,7 +54,7 @@ export function createPaintTool({ vp, store, onChange = () => {} }) {
     const hit = touch(e); if (!hit) return;
     stroke = { last: null, touched: new Set() }; vp.controls.enabled = false; vp.canvas.setPointerCapture(e.pointerId); paintTo(hit); e.stopPropagation();
   }, { capture: true });
-  vp.canvas.addEventListener("pointermove", (e) => { if (!stroke) return; const hit = touch(e); if (hit) paintTo(hit); else stroke.last = null; });
+  vp.canvas.addEventListener("pointermove", (e) => { if (!stroke) return; const hit = touch(e); if (hit) paintTo(hit); });
   const up = () => {
     if (!stroke) return; const s = stroke; stroke = null; vp.controls.enabled = true;
     const ch = {}; for (const t of s.touched) { const Sf = av.paintSurface(t), url = Sf.canvas.toDataURL("image/png"); Sf.sync(url); ch[`paint.${t}.src`] = url; }

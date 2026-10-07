@@ -34,7 +34,15 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   let tab = "body", filter = "", editExpr = "normal", faceShown = false;   // editExpr: the expression the face tab edits (shown on the avatar while there)
   const SLOTS = ["eyes", "brows", "mouth", "cheeks"], EXPR_PARTS = new Set([...SLOTS.map((k) => `face.parts.${k}`), "face.expressions"]);   // they are edited with the expression (its block), not in Parts / as JSON
   const open = new Set();   // tabs whose Advanced part is open
-  const set = (changes, commit = true) => store.set(changes, { commit });
+  // the tools that take the left button on the character (painting, accessories, moving tufts, ties, back locks, drawn locks): one at a
+  // time, and none once something else is touched, another tab or another value (2026-10-07, Saori: they stayed on after moving on).
+  // Stopped quietly (no redraw here: a slider being dragged would lose its grip); the panel redraws when the change lands
+  let quiet = false;
+  const TOOLS = () => [ctx.bangs, ctx.backs, ctx.ties, ctx.draw, ctx.paint, ctx.acc].filter(Boolean);
+  const toolOn = (T) => T.on ?? (T.state.on || T.state.move);
+  function stopTools(keep) { quiet = true; try { for (const T of TOOLS()) if (T !== keep && toolOn(T)) { T.toggle(false); T.toggleMove?.(false); } } finally { quiet = false; } }
+  const set = (changes, commit = true) => { stopTools(); store.set(changes, { commit }); };
+  const check = (label, on, change) => h("label", { class: "check" }, h("input", { type: "checkbox", checked: !!on, onchange: (e) => change(e.target.checked) }), label);
 
   // ── controls ──
   function resetDot(e) {
@@ -151,8 +159,17 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate(into) }, t("exReadTpl")),
         h("button", { class: "btn small ghost", type: "button", onclick: () => ctx.onTemplate("parts") }, t("tplMake")),
         usedD ? h("button", { class: "chip", type: "button", "aria-pressed": String(usedD.blink !== false), onclick: () => set({ "face.drawn": drawnList().map((q) => q === usedD ? { ...q, blink: q.blink === false } : q) }) }, t("blink")) : null);
+      // ふつう: the closed eye under its eyes, as an entry of its own (2026-10-07, Saori: "表情普通の下に閉じめを作って、とじめはとじめで設定する"): drawn
+      // in the eye's frame (same way round as the open eye), used for blinking and as 絵のとじ目
+      const closedSrc = store.get("face.images.eyeClosed.src");
+      const closedRow = n !== "normal" ? null : h("div", { class: "field" }, h("label", {}, t("f_eyeClosed")),
+        h("div", { class: "chips" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
+          h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint("closed") }, t(closedSrc ? "closedRedraw" : "closedDraw")),
+          h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate("closed") }, t("exReadTpl")),
+          closedSrc ? h("button", { class: "btn small ghost", type: "button", onclick: () => set({ "face.images.eyeClosed.src": null }) }, t("closedClear")) : null),
+        h("div", { class: "help" }, t("closedHelp")));
       const setSec = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("exprSet"))), pickN, h("div", { class: "help" }, t("exEditHelp", t(`ex_${n}`))),
-        SLOTS.map(slotField), drawRow,
+        slotField("eyes"), closedRow, SLOTS.slice(1).map(slotField), drawRow,
         own ? h("div", { class: "chips" }, h("button", { class: "chip", type: "button", onclick: reset }, t("exResetDefault"))) : null);
       // the pictures as small buttons (with the eye's picture): one puts its eyes, brows and mouth on the expression being edited, as my
       // hairstyles put a hair on (Saori: "登録したら消す以外何もできない"); ☆ keeps it in my parts, × removes it
@@ -198,11 +215,14 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const drawnName = (d) => `${t("pic")}: ${d.name || d.id}`;
   const setDrawn = (list, extra = {}) => set({ "face.drawn": list, ...extra });
   // moving the nendo bangs' tufts on the face (editor/src/bangs.js): the switch, adding / removing, and the picked tuft's own values
+  // the hair's drag tools ({ head, kids }): at the foot of the section they move (2026-10-07, Saori: 結び目を動かす under the tails, as
+  // ドラッグで位置を動かす), or a section of their own when that one isn't shown
+  const toolChip = (T) => h("button", { class: "chip", type: "button", "aria-pressed": String(T.on), onclick: () => { stopTools(T); T.toggle(); } }, t("dragMove"));
   function bangsBlock() {
     const B = ctx.bangs; if (!B) return null;
-    const head = h("div", { class: "sec-h" }, h("h2", {}, t("bangTufts")), h("span", { class: "cost" }, t("bangN", (store.get("hair.sculpt.nendo.tips") ?? []).length)));
-    if (!B.usable) return h("div", { class: "sec" }, head, h("div", { class: "note" }, t("bangNeedNendo")));
-    const kids = [head, h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(B.on), onclick: () => B.toggle() }, t("bangMove")))];
+    const head = [h("h2", {}, t("bangTufts")), h("span", { class: "cost" }, t("bangN", (store.get("hair.sculpt.nendo.tips") ?? []).length))];
+    if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("bangNeedNendo"))] };
+    const kids = [h("div", { class: "chips" }, toolChip(B))];
     if (B.on) {
       kids.push(h("div", { class: "help" }, t("bangHelp")),
         h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => B.add() }, t("bangAdd")), h("button", { class: "btn small ghost", type: "button", disabled: B.selected < 0, onclick: () => B.remove() }, t("bangDel"))));
@@ -214,14 +234,15 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         rng.addEventListener("change", () => B.setValue(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) B.setValue(k, +num.value); });
         kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
     }
-    return h("div", { class: "sec" }, kids);
+    return { head, kids };
   }
-  // painting on the character (editor/src/paint.js)
+  // painting on the character (editor/src/paint.js): the pen and the eraser, each a button of its own (2026-10-07, Saori: the eraser did
+  // nothing until 「キャラに描く」 was on too); pressing the one in use puts it down
   function paintBlock() {
     const P = ctx.paint; if (!P) return null; const S = P.state, painted = P.painted();
-    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("paintTitle"))),
-      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => P.toggle() }, t("paintOn")),
-        h("button", { class: "chip", type: "button", "aria-pressed": String(S.erase), onclick: () => P.set("erase", !S.erase) }, t("paintErase")))];
+    const tool = (erase) => h("button", { class: "chip", type: "button", "aria-pressed": String(S.on && !!S.erase === erase), onclick: () => {
+      if (S.on && !!S.erase === erase) return P.toggle(false); stopTools(P); quiet = true; P.set("erase", erase); quiet = false; P.toggle(true); } }, t(erase ? "paintErase" : "paintPen"));
+    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("paintTitle"))), h("div", { class: "chips" }, tool(false), tool(true))];
     if (S.on) kids.push(h("div", { class: "help" }, t("paintHelp")));
     { const id = `f${uid++}`, inp = h("input", { id, type: "color", value: S.color }); inp.addEventListener("change", () => P.set("color", inp.value));
       kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t("paintColor"))), h("div", { class: "row" }, inp))); }
@@ -240,10 +261,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const colorField = (val, on) => { const id = `f${uid++}`, inp = h("input", { id, type: "color", value: val }); inp.addEventListener("change", () => on(inp.value));
       return h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t("accColor"))), h("div", { class: "row" }, inp)); };
     const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("accTitle")), h("span", { class: "cost" }, t("accN", items.length))),
-      h("div", { class: "chips" }, A.kinds.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(S.kind === k), onclick: () => A.set("kind", k) }, t(`acc_${k}`)))),
+      h("div", { class: "chips" }, A.kinds.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(S.kind === k), onclick: () => { stopTools(A); A.choose(k); } }, t(`acc_${k}`)))),   // a kind picked: the next click puts one (accessories.js choose)
       colorField(S.color, (v) => A.set("color", v)),
-      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => A.toggle() }, t("accOn")),
-        h("button", { class: "chip", type: "button", "aria-pressed": String(S.mirror), onclick: () => A.set("mirror", !S.mirror) }, t("accMirror")))];
+      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => { stopTools(A); A.toggle(); } }, t("accOn")),
+        check(t("accMirror"), S.mirror, (v) => A.set("mirror", v)))];
     if (S.on) kids.push(h("div", { class: "help" }, t(sel >= 0 ? "accHelpMove" : "accHelp")));
     if (items.length) kids.push(h("div", { class: "chips" }, items.map((x, i) => h("button", { class: "chip", type: "button", "aria-pressed": String(sel === i), onclick: () => A.pick(i) }, `${t(`acc_${x.kind}`)} ${i + 1}`))));
     if (it) {
@@ -254,7 +275,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         rng.addEventListener("change", () => A.edit(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) A.edit(k, +num.value); });
         kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
       kids.push(colorField(it.color ?? "#e3c25a", (v) => A.edit("color", v)),
-        h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(!!it.mirror), onclick: () => A.edit("mirror", !it.mirror) }, t("accMirror")),
+        h("div", { class: "chips" }, check(t("accMirror"), it.mirror, (v) => A.edit("mirror", v)),
           h("button", { class: "btn small ghost", type: "button", onclick: () => A.pick(sel) }, t("accNew")), h("button", { class: "btn small ghost", type: "button", onclick: () => A.remove() }, t("accDel"))));
     }
     return h("div", { class: "sec" }, kids);
@@ -262,17 +283,17 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   // the tails' ties by hand (editor/src/ties.js): only with tails
   function tiesBlock() {
     const T = ctx.ties; if (!T || !T.usable) return null;
-    const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("tieTitle"))), h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(T.on), onclick: () => T.toggle() }, t("tieMove")))];
+    const kids = [h("div", { class: "chips" }, toolChip(T))];
     if (T.on) kids.push(h("div", { class: "help" }, t("tieHelp")));
-    return h("div", { class: "sec" }, kids);
+    return { head: [h("h2", {}, t("tieTitle"))], kids };
   }
   // the back hair's locks one by one (editor/src/backs.js)
   function backsBlock() {
     const B = ctx.backs; if (!B) return null;
     const p = { hang: "hair.sculpt.shortLocks.edits", short: "hair.sculpt.shortLocks.lie.edits", long: "hair.sculpt.long.edits" }[store.get("hair.back")], n = p ? (store.get(p) ?? []).length : 0;
-    const head = h("div", { class: "sec-h" }, h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null);
-    if (!B.usable) return h("div", { class: "sec" }, head, h("div", { class: "note" }, t("backNone")));
-    const kids = [head, h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(B.on), onclick: () => B.toggle() }, t("backMove")),
+    const head = [h("h2", {}, t("backTitle")), n ? h("span", { class: "cost" }, t("backN", n)) : null];
+    if (!B.usable) return { head, kids: [h("div", { class: "note" }, t("backNone"))] };
+    const kids = [h("div", { class: "chips" }, toolChip(B),
       n ? h("button", { class: "btn small ghost", type: "button", onclick: () => B.resetAll() }, t("backResetAll")) : null)];
     if (B.on) {
       kids.push(h("div", { class: "help" }, t("backHelp")));
@@ -285,7 +306,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
           kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
         kids.push(h("div", { class: "chips" }, h("button", { class: "btn small ghost", type: "button", onclick: () => B.resetOne() }, t("backReset")))); }
     }
-    return h("div", { class: "sec" }, kids);
+    return { head, kids };
   }
   // my hairstyles (saved in this browser) and drawn locks (editor/src/draw.js)
   function hairsBlock() {
@@ -301,9 +322,9 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   function drawBlock() {
     const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [];
     const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("drawTitle")), h("span", { class: "cost" }, t("drawN", list.length))),
-      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => D.toggle() }, t("drawOn")),
-        list.length ? h("button", { class: "chip", type: "button", "aria-pressed": String(S.move), onclick: () => D.toggleMove() }, t("drawMove")) : null,
-        h("button", { class: "chip", type: "button", "aria-pressed": String(S.mirror), onclick: () => D.set("mirror", !S.mirror) }, t("drawMirror")))];
+      h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => { stopTools(D); D.toggle(); } }, t("drawOn")),
+        list.length ? h("button", { class: "chip", type: "button", "aria-pressed": String(S.move), onclick: () => { stopTools(D); D.toggleMove(); } }, t("drawMove")) : null,
+        check(t("drawMirror"), S.mirror, (v) => D.set("mirror", v)))];
     if (S.on) kids.push(h("div", { class: "help" }, t("drawHelp")));
     if (S.move) kids.push(h("div", { class: "help" }, t("drawMoveHelp")));
     for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1]]) {   // the brush for the next lock
@@ -335,16 +356,27 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   }
 
   function render() {
+    if (quiet) return;
     const scroll = panelEl.scrollTop, focusPath = document.activeElement?.closest?.(".field")?.querySelector("label span")?.title;
-    tabsEl.replaceChildren(...TABS.map((T) => h("button", { type: "button", role: "tab", "aria-selected": String(T.id === tab), onclick: () => { tab = T.id; filter = ""; render(); panelEl.scrollTop = 0; }, html: `${T.icon}<span>${t(`tab_${T.id}`)}</span>` })));
+    tabsEl.replaceChildren(...TABS.map((T) => h("button", { type: "button", role: "tab", "aria-selected": String(T.id === tab), onclick: () => { stopTools(); tab = T.id; filter = ""; render(); panelEl.scrollTop = 0; }, html: `${T.icon}<span>${t(`tab_${T.id}`)}</span>` })));
     const mine = ALL.filter((e) => tabOf(e) === tab), main = mine.filter((e) => e.tier === "main").sort((a, b) => a.order - b.order);
     panelEl.replaceChildren();
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     if (tab !== "face" && faceShown) { ctx.showFace?.(null); faceShown = false; }   // left the face tab: the character's own face again
-    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories" && !EXPR_PARTS.has(e.path)))) panelEl.append(h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)));
+    const secEl = new Map();   // the sections on screen, by their English name
+    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories" && !EXPR_PARTS.has(e.path)))) {
+      const el = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)); panelEl.append(el); secEl.set(es[0].section?.en, el); }
     if (tab === "face") panelEl.append(h("div", { class: "note" }, t("imageNote")));
     if (tab === "outfit") { for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
-    if (tab === "hair") { for (const b of [bangsBlock(), backsBlock(), tiesBlock(), drawBlock(), hairsBlock()]) if (b) panelEl.append(b); }
+    if (tab === "hair") {
+      let prev = secEl.get("Style");   // a tool without its section stands after the one before it (the bangs' after the style)
+      for (const [b, sec] of [[bangsBlock(), "Bang tufts"], [backsBlock(), "Back locks"], [tiesBlock(), "Tails"]]) {
+        const el = secEl.get(sec);
+        if (el) { if (b) el.append(...b.kids); prev = el; }
+        else if (b) { const own = h("div", { class: "sec" }, h("div", { class: "sec-h" }, b.head), b.kids); if (prev) prev.after(own); else panelEl.append(own); prev = own; }
+      }
+      for (const b of [drawBlock(), hairsBlock()]) if (b) panelEl.append(b);
+    }
     const adv = advanced([...main.filter(isDrawn), ...mine.filter((e) => e.tier === "advanced" && e.path !== "hair.drawn" && !e.path.endsWith(".edits"))]); if (adv) panelEl.append(adv);   // one picture at a time: in Advanced; drawn locks and the back locks' edits: their own blocks
     panelEl.scrollTop = scroll;
     if (focusPath) panelEl.querySelector(`label span[title="${CSS.escape(focusPath)}"]`)?.closest(".field")?.querySelector("input, button, select, textarea")?.focus({ preventScroll: true });

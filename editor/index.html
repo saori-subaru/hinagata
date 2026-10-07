@@ -88,6 +88,7 @@ button { cursor: pointer; }
 .chip:hover { border-color: #d5ccbf; }
 .pchip { display: inline-flex; align-items: center; gap: 6px; } .pthumb { width: 30px; height: 22px; object-fit: contain; border-radius: 4px; background: repeating-conic-gradient(#eee 0 25%, #fff 0 50%) 0 0 / 6px 6px; }
 .chip-pair { display: inline-flex; } .chip-pair .chip:first-child { border-radius: var(--pill) 0 0 var(--pill); } .chip-pair .chip:last-child { border-radius: 0 var(--pill) var(--pill) 0; border-left: 0; padding: 6px 9px; }
+.check { display: inline-flex; align-items: center; gap: 6px; padding: 6px 4px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; } .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 
 /* ── viewport overlays ── */

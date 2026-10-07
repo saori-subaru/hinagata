@@ -6,9 +6,10 @@
 
 import { skirtOf } from "./options.js";
 import { armReach } from "./body/index.js";
-export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
+export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
-export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "cape", ...ARMOR, ...WEAPONS];
+export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
+export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "suit", "cape", ...ARMOR, ...WEAPONS, ...EXTRAS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 // a skirt or a cape is a shell under 2 cm thick: meshed with cells about as big (the game quality's), it came out ragged, holed, with its
 // inside's outline showing through in specks (2026-10-05, Saori: "ゲーム用の表示にするとスカートとかマントがジャギジャギ"). Their cells stop here
@@ -25,7 +26,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
-      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04;
+      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
         // longer legs (body.proportion.legs) stretch the skirt below the hips too: what stays on the hips then hung that much deeper, under the
         // thighs when they turned up, and the cloth crumpled pulling it over them (2026-10-05, Saori: a dress sitting, tall body). The share
         // left on the hips shrinks as the legs grow
@@ -49,6 +50,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       : { sdf: C.armor.armSdf, lo: [-0.38 - ax, 0.42 - ay, -0.11], hi: [0.38 + ax, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
     case "armorLegs": return C.armor.helmSdf ? { sdf: C.armor.legSdf, lo: [-0.26, 0.08, -0.15], hi: [0.26, 0.44, 0.17], h: H * 0.8, only: /^(upperLeg|lowerLeg)/ }
       : { sdf: C.armor.legSdf, lo: [-0.24, 0.08, -0.13], hi: [0.24, 0.34, 0.15], h: H * 0.8, only: /^lowerLeg/ };
+    case "armorWaist": return C.armor.waistSdf ? { sdf: C.armor.waistSdf, lo: [-0.32, 0.3, -0.26], hi: [0.32, 0.5, 0.26], h: H * 0.8, only: /^(hips|upperLeg)/ } : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor's tassets: on the hips, following the thighs
     case "armorHelm": case "armorVisor": case "armorDeco": case "armorHands": case "armorFeet": case "armorMail": { const A = C.armor, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor: nothing
       if (!A.helmSdf) return none;
       if (name === "armorHelm") return { sdf: A.helmSdf, lo: [-0.4, 0.7, -0.4], hi: [0.4, 1.52, 0.42], h: H * 0.85, bone1: "head" };
@@ -61,6 +63,13 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     case "weaponR": case "weaponRGrip": case "weaponL": case "weaponLFace": case "weaponLGrip": { const Wp = C.weapons, r = name.startsWith("weaponR"), f = { weaponR: Wp.rMetal, weaponRGrip: Wp.rOther, weaponL: Wp.lMetal, weaponLFace: Wp.lFace, weaponLGrip: Wp.lOther }[name], b = r ? Wp.boxR : Wp.boxL;
       if (!f || !b) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: f, lo: b.lo, hi: b.hi, h: H * 0.5, bone1: r ? "hand.R" : "lowerArm.L" }; }
+    // extras (clothes/extras.js): the ears in head space (as the hair: wrapped into the head's size and shape), the wings on the upper back
+    case "extraEars": case "extraEarsIn": { const E = C.extras, f = name === "extraEars" ? E.earSdf : E.earInSdf;
+      if (!f) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      return { sdf: HT.wrap(f), lo: [-0.5, 0.85, -0.35], hi: [0.5, 1.95, 0.3], h: Math.min(H * 0.6, 0.007), bone1: "head" }; }
+    case "extraWings": { const f = C.extras.wingSdf; if (!f) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      const S = OPT.outfit.extras?.wingSize ?? 1; return { sdf: f, lo: [-0.15 - 0.6 * S, 0.3, -0.15 - 0.55 * S], hi: [0.15 + 0.6 * S, 0.75 + 0.45 * S, 0.05], h: Math.min(H * 0.5, 0.006), bone1: "upperChest" }; }
+    case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
     case "socks": return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, 0.17, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ };
   }
   if (name.startsWith("hair:")) {   // long hair reaches down the back

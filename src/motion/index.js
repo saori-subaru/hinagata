@@ -90,8 +90,10 @@ const ARMED = { idle: true, walk: true };
 const ARMED_R = {
   upright: { "upperArm.R": [-0.111, -0.041, 0.191], "lowerArm.R": [-1.215, 0.131, 0.749] },
   hang: { "upperArm.R": [-0.013, 0.02, 0.304], "lowerArm.R": [-0.137, -0.068, 0.371], "hand.R": [0.407, -0.365, 0.41] },
+  shoulder: { "upperArm.R": [0.288, -0.226, 0.013], "lowerArm.R": [-1.417, 0.962, 0.682], "hand.R": [-1.763, 0.352, -0.086] },   // a greatsword resting on the right shoulder (solved: motion/combat.js)
 };
-const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang" };
+const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang", greatsword: "shoulder" };
+const TWO_HANDS = { spear: true, greatsword: true };   // their guard and attack hold them in both hands (motion/combat.js: guard_<weapon>, attack_<weapon>)
 const armedArm = (P0, A) => ({ ...A, "upperArm.R": [A["upperArm.R"][0] + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), A["upperArm.R"][1], A["upperArm.R"][2]] });
 
 // The guard's arms depend on what each hand holds (the pose itself has the sword's and the straight shield's): a spear is held low at
@@ -129,7 +131,8 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
   const FLARE = Math.atan(skirtFlare);   // the skirt's own slant out from the body at the front (an A-line: flare × 0.8 front to back, clothes): a thigh swinging less than that doesn't reach its front
-  const HOLD = { L: left !== "none", R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
+  // a shield is strapped to the forearm (clothes/weapons.js): its hand is open, and grips only in the guard (2026-10-07, Saori)
+  const HOLD = { L: left !== "none" && !shield, R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
   let cur = null, heldT = 0;   // いまのポーズと、それに切りかえてからの時間
   // blend: seconds the switch to a pose eases over (about; the default ~0.35 s), 0 = the pose at once (2026-10-06: a tennis swing started
   //   0.35 s late, softened, when its pose was switched to)
@@ -138,9 +141,12 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
     let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK };
     const k = instant || blend === 0 || (P0.sharp && heldT > (blend ?? 0.35)) ? 1 : 1 - Math.exp(-dt * (blend ? 3 / blend : 9));   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };
-    if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
+    if (name === "guard" && TWO_HANDS[weapon]) P0 = POSES[`guard_${weapon}`](t);   // two hands on it (the spear held low in one hand ran through the leg)
+    else if (name === "attack") { const kind = BARE[weapon] ? "punch" : weapon, A = POSES[`attack_${kind}`] ?? POSES.attack_punch; P0 = A(t);   // the swing for what the right hand holds
+      if (!TWO_HANDS[weapon]) P0 = { ...P0, b: { ...P0.b, ...(guardL ?? GUARD_L.bare) }, grip: { ...P0.grip, L: 1 } }; }   // the left keeps its guard (a shield up, or a fist)
+    else if (name === "guard") { const b = { ...P0.b, ...guardR, ...guardL };
       if (fighter) { b.spine = [b.spine[0], -0.3, 0]; b.head = [b.head[0], 0.3, 0]; }   // bare-handed: the lead (left) shoulder turned forward, the face kept to the front
-      P0 = { ...P0, b }; }
+      P0 = { ...P0, b, ...(shield ? { grip: { ...P0.grip, L: 1 } } : {}) }; }
     const hg = held(), grip = hg ? { L: Math.max(P0.grip?.L ?? 0, hg.L ?? 0), R: Math.max(P0.grip?.R ?? 0, hg.R ?? 0) } : P0.grip;
     if (grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
     const ft = footTilt();
