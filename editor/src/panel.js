@@ -163,7 +163,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       // in the eye's frame (same way round as the open eye), used for blinking and as 絵のとじ目
       const closedSrc = store.get("face.images.eyeClosed.src");
       const closedRow = n !== "normal" ? null : h("div", { class: "field" }, h("label", {}, t("f_eyeClosed")),
-        h("div", { class: "chips" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
+        h("div", { class: "chips full" }, closedSrc ? h("img", { class: "pthumb", src: closedSrc, alt: "" }) : h("span", { class: "cost" }, t("closedCode")),
           h("button", { class: "btn small", type: "button", onclick: () => ctx.onFacePaint("closed") }, t(closedSrc ? "closedRedraw" : "closedDraw")),
           h("button", { class: "btn small", type: "button", title: t("tplReadInto"), onclick: () => ctx.onReadTemplate("closed") }, t("exReadTpl")),
           closedSrc ? h("button", { class: "btn small ghost", type: "button", onclick: () => set({ "face.images.eyeClosed.src": null }) }, t("closedClear")) : null),
