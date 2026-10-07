@@ -94,7 +94,7 @@ const ARMED_R = {
   // shoulder it went into the elbow, with the right hand alone and the blade pointing back: "肩に担ぐなら、鞘をつけないと厳しい")
   low2: { "upperArm.L": [-0.372, -0.141, -0.759], "lowerArm.L": [-0.347, -0.116, -0.961], "hand.L": [-0.434, 1.128, 0.166], "upperArm.R": [-0.762, 0.257, 0.753], "lowerArm.R": [-0.037, 0.033, 0.072], "hand.R": [1.137, -0.814, 0.598] },
 };
-const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", axe: "hang", greatsword: "low2" };
+const ARMED_OF = { spear: "upright", staff: "upright", sword: "hang", dagger: "hang", axe: "hang", greatsword: "low2" };
 const TWO_HANDS = { spear: true, greatsword: true };   // their guard and attack hold them in both hands (motion/combat.js: guard_<weapon>, attack_<weapon>)
 const armedArm = (P0, A) => ({ ...A, "upperArm.R": [A["upperArm.R"][0] + 0.35 * (P0.b["upperArm.R"]?.[0] ?? 0), A["upperArm.R"][1], A["upperArm.R"][2]] });
 
@@ -107,6 +107,7 @@ const GUARD_R = {
   spear: { "upperArm.R": [0.385,  -0.208,  0.407], "lowerArm.R": [-0.985,  0.347,  1.208] },
   staff: { "upperArm.R": [-0.972, 0.27, 0.444], "lowerArm.R": [-0.279, -0.316, 0.878] },
   bare: { "upperArm.R": [-0.896, 0.131, 0.461], "lowerArm.R": [-1.508, 0.312, 0.927] },
+  dagger: { "upperArm.R": [-0.73, 0.342, 0.508], "lowerArm.R": [-0.76, 0.309, 0.667], "hand.R": [1.036, -0.903, 0.79] },   // held forward low (motion/combat.js daggerGuard)
 };
 const GUARD_L = {
   diagonal: { "shoulder.L": [0, -0.25, 0], "upperArm.L": [-1.575, 0.55, -0.265], "lowerArm.L": [0.043, 0.23, -1.976] },

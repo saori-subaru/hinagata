@@ -85,7 +85,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const legGrow = (x, y) => { if (!PUFF && !BELLB) return 0; const t = (0.4 - y) / LSPAN; if (t <= 0) return 0;
     return sstep(0.02, 0.07, Math.abs(x)) * (PUFF * 0.045 * Math.sin(Math.PI * Math.min(1, t) * 0.92) + BELLB * 0.07 * sstep(0.55, 1, t)); };
   const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024 - legGrow(x, y);
-    if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }
+    if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y) * (1 - sstep(0.17, 0.21, Math.abs(x))); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }   // (the torso only: not round a long sleeve hanging beside it)
     return Math.max(d, y - top, PANTS_HEM - y); };
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).
   // Its cross-section is an ellipse around the hips that widens toward the hem (flare per m of drop); pleats are folds around it that
@@ -129,7 +129,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
-    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - 0.007 - outer) * sstep(top - SK_BAND, top - 0.015, y);
+    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - (SK.dress ? 0.003 : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
