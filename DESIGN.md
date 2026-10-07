@@ -963,3 +963,8 @@ Made a character with the tool (the preset ルミナ, src/presets.js) and added 
 - Its 1 is 0.65 inside: beyond that the cut reached the chin's tip and shortened it. A first try that took the joint from the line of least slope found it at the top (the outline being convex) and cut the cheeks away; the joint now stays low.
 - `chin.sharp` stays in the engine for the faces that use it (ルミナ 0.3, シルヴィ 0.1), folded as 「あごのV字(旧)」. The schema now honours `tier: "advanced"` on a described value (it was main whenever described).
 - Measured on シルヴィ at the old 0.3 (outline width, front, no hair, rows 262…302): the cheeks' rows stay 204 199 193, and from there down it narrows straight to the chin.
+
+### Head height above the brows (2026-10-07, Saori: "あたまの横幅はあるけど縦幅がなくて、シルヴィの眉毛より上を縮めたい場合どうすれば")
+- `body.head.crown` (「頭の高さ(眉より上)」, 0.7–1.2, Head): in the head transform (headTransform's crown / crownY), above a bend just over the brows (face.layout.browY + 0.018, soft) heights are scaled by it, front and back alike: the skull, the hair and its locks, the tails and ties, and accessories on the head come down together; the face under the brows stays.
+- Not skull.height: that lowers the head's ball alone, and the hair built around it broke up at the sides (Sylvie's side locks in pieces).
+- At 1 nothing changes (thin-check's numbers as before).

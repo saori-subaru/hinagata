@@ -393,7 +393,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         const c = (Math.abs(x) - HA - S * (y - YA)) / L; return d + w * (smax(d, c, 0.006) - d); }; } }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
-  const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y }), HEAD_RAW = { ...HEAD };
+  const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y, crownY: (OPT.face?.layout?.browY ?? 1.092) + 0.018 }), HEAD_RAW = { ...HEAD };   // (crown: bent just over the brows)
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
   const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
@@ -435,12 +435,17 @@ export function headTransform(h) {
   // the jaw: JS(y, z) a stretched height → the head's own, JU back (a few steps; its slope stays under 1)
   const JL = h.jawLength ?? 1, JY = h.jawY ?? 0.88, JK = 1 - 1 / JL, fr = (d) => 0.5 * (d + Math.sqrt(d * d + 0.0001)), fa = (z) => sstep(-0.06, 0.08, z);
   const JS = JL === 1 ? (y) => y : (y, z) => y + JK * fa(z) * fr(JY - y), JU = JL === 1 ? (y) => y : (y, z) => { let v = y; for (let i = 0; i < 8; i++) v = y - JK * fa(z) * fr(JY - v); return v; };
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && JL === 1, k = Math.min(sx, sy, sz) / stretch * (JL === 1 ? 1 : 0.9);
-  const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, JS(py + (y - ly - py) / sy, Z), Z]; };
+  // crown (2026-10-07, Saori: "あたまの横幅はあるけど縦幅がなくて、シルヴィの眉毛より上を縮めたい"): above crownY (just over the brows) the head is
+  // that much as tall (front and back alike, with a soft bend): the skull, the hair, its tails and ties, what is put on the head all come down
+  // together, and the face under the brows stays. CS: a squashed height → the head's own, CU back
+  const CR = h.crown ?? 1, CRY = h.crownY ?? 1.11, CK = 1 / CR - 1;
+  const CS = CR === 1 ? (y) => y : (y) => y + CK * fr(y - CRY), CU = CR === 1 ? (y) => y : (y) => { let v = y; for (let i = 0; i < 10; i++) v = y - CK * fr(v - CRY); return v; };
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && JL === 1 && CR === 1, k = Math.min(sx, sy, sz) / stretch * (JL === 1 ? 1 : 0.9) * Math.min(1, CR);
+  const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, CS(JS(py + (y - ly - py) / sy, Z)), Z]; };
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * JL,
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * JL * Math.max(1, CR),
     toHead,
-    fromHead: (x, y, z) => [x * sx, py + (JU(y, z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
+    fromHead: (x, y, z) => [x * sx, py + (JU(CU(y), z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
     wrap: (f) => identity ? f : (x, y, z) => f(...toHead(x, y, z)) * k,
   };
 }

@@ -57,6 +57,7 @@ export const DEFAULTS = {
       "pivotY": 0.845,
       "pivotZ": 0.006,
       "jawLength": 1,
+      "crown": 1,
       "shift": {
         "z": 0.03,
         "z0": -0.08,
