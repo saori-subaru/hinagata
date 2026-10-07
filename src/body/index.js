@@ -29,6 +29,16 @@ export function armReach(OPT) {
   return { x: Math.max(0, h[0] - ARM0["hand.L"][0] + 0.876 * (tip - 0.115)), y: Math.max(0, ARM0["hand.L"][1] - h[1] + 0.483 * (tip - 0.115) + (PR.arms != null ? 0.06 : 0)) };   // (a rigid hand turns down with its steeper forearm: a margin)
 }
 
+/** High heels (shoes.kind "heels"): the foot is tilted toes-down by heelAngle about the ankle, the ball of the foot on the floor (heelPose,
+ *  clothes/index.js). In front of the ball the foot went under the floor (the toes about 2 cm; 2026-10-07, Saori: "ヒールが地面に埋まっている").
+ *  So in the shape the forefoot is bent up at the ball by the same angle, as a foot in a heel is: tilted, it lies flat on the floor. The body
+ *  and the shoes are both read through it: (x, y, z) → the y to read their shape at. null without heels. */
+export function heelBend(OPT) {
+  if (OPT.outfit?.shoes?.kind !== "heels") return null;
+  const t = Math.tan((OPT.outfit.shoes.heelAngle ?? 24) * Math.PI / 180), ball = 0.06 * (OPT.body.proportion?.feet ?? 1);
+  return (x, y, z) => y - Math.max(0, z - ball) * t * (1 - sstep(0.08, 0.13, y));   // (the ball: z 0.06 × the feet's size; only the foot, not the shin above it)
+}
+
 /**
  * Build the body from options.
  * slow: use the plain (unculled) blend, for checking. oldSock: the older eye-socket shape, for comparison.
@@ -114,7 +124,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // chest and belly thinned, the back went flat high up and the hips stood out behind it (2026-10-07, Saori: "凹む場所が上すぎて、下半身がもっさりする")
     const PB = 0.75 * BD;
     P.pelvis = E([0, 0.435 + HL * (1 - sq / 2), -0.005 + PB / 2], [0.157 * TO.hips, 0.115 - HL * sq / 2, 0.1 - PB / 2], "hips", PV.blend ?? 0.12); }
-  if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (0.235 - TO.waist), 0.6, 0], [0.08, 0.16, 0.14], "spine", 0.08));   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)
+  // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)。肋骨の下と骨盤の上のあいだ(本当のウエスト)を、縦に短く削る。
+  // 前は胸のすぐ下(0.6)を中心に縦 0.16 の広い範囲を削っていて、胸の下から一直線に細くなるだけだった(2026-10-07 サオリ「くびれが上の方から細くなるだけ」)
+  const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
+  if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (WS.x - TO.waist), WS.y, 0], [WS.width, WS.height, 0.14], "spine", WS.blend));
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
@@ -181,7 +194,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const eu = nrm([m * EAR.flare, 0, -1]), ev0 = [m * EAR.tilt, 1, 0], ev = nrm(ev0.map((c, i) => c - dot(ev0, eu) * eu[i]));
     const ew = [eu[1] * ev[2] - eu[2] * ev[1], eu[2] * ev[0] - eu[0] * ev[2], eu[0] * ev[1] - eu[1] * ev[0]].map((c) => c * m), ec = [m * EAR.x, EAR.y, -0.022];   // ew: 耳の表(前・外向き)
     { const c = Math.cos(EAR.lean), sn = Math.sin(EAR.lean), u = eu.slice(), v = ev.slice(); for (let i = 0; i < 3; i++) { eu[i] = u[i] * c - v[i] * sn; ev[i] = v[i] * c + u[i] * sn; } }   // 上を後ろへ倒す(横から見て上が広い形に)
-    const ES = OPT.body.sculpt.ears.scale;   // ear size
+    const EL = OPT.body.sculpt.ears.elf, ELF = !!EL?.on;
+    // ear size. Elf ears: the round ear is smaller (0.62), inside the blade's root, which starts lower: the round ear stood out under the blade
+    // (2026-10-07, Saori: "エルフ耳が耳に尖りを被せただけで、下の丸い耳が見えちゃってる"); its line and shade (EARS) shrink with it
+    const ES = OPT.body.sculpt.ears.scale * (ELF ? 0.62 : 1);
     // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
     const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
     if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }
@@ -202,11 +218,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // elf ears (ears.elf, 2026-10-05, Saori): a flat blade from inside the ear out to the side, up and a little back, tapering to a point, its
     // tip bent up a little (curve), flat (its face toward the front). It starts at the ear's middle: the ear's own plate already reaches ~6 cm
     // that way, so length is from there. The hair keeps off it as off the ear
-    const EL = OPT.body.sculpt.ears.elf;
-    if (EL?.on) { const up = EL.angle * Math.PI / 180, bk = EL.back * Math.PI / 180, L = EL.length * ES, W = EL.width * ES, FL = EL.flat, CV = EL.curve;
+    if (ELF) { const ES0 = OPT.body.sculpt.ears.scale, up = EL.angle * Math.PI / 180, bk = EL.back * Math.PI / 180, L0 = 0.035 * ES0, L = EL.length * ES0 + L0, W = Math.max(EL.width, 0.042) * ES0, FL = EL.flat, CV = EL.curve;
       const a = [m * Math.cos(bk) * Math.cos(up), Math.sin(up), -Math.sin(bk) * Math.cos(up)];   // out to the side, up by angle, back by back (degrees)
       const bu = nrm([-a[0] * a[1], 1 - a[1] * a[1], -a[2] * a[1]]), bn = nrm([a[1] * bu[2] - a[2] * bu[1], a[2] * bu[0] - a[0] * bu[2], a[0] * bu[1] - a[1] * bu[0]]);   // bu: up across the blade (the tip bends that way), bn: its face
-      const s0 = ec.slice(), mid = s0.map((v, i) => v + a[i] * L * 0.5 + bu[i] * CV * L * 0.25);
+      const s0 = ec.map((v, i) => v - a[i] * L0), mid = s0.map((v, i) => v + a[i] * L * 0.5 + bu[i] * CV * L * 0.25);
       P[`earTip.${s}`] = { t: 3, k: EL.k, bone: "head", bx0: mid[0], by0: mid[1], bz0: mid[2], br: L * 0.6 + W + CV * L,
         f: (x, y, z) => { const d = [x - s0[0], y - s0[1], z - s0[2]], t = Math.min(1, Math.max(0, (d[0] * a[0] + d[1] * a[1] + d[2] * a[2]) / L));
           const q = [0, 1, 2].map((i) => d[i] - a[i] * t * L - bu[i] * CV * L * t * t), qa = q[0] * a[0] + q[1] * a[1] + q[2] * a[2], qw = q[0] * bn[0] + q[1] * bn[1] + q[2] * bn[2];
@@ -246,11 +261,18 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     P[`thighF.${s}`] = E([m * 0.11, OPT.body.sculpt.thigh.front.y + HL, OPT.body.sculpt.thigh.front.z], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
     P[`thighIn.${s}`] = E([m * OPT.body.sculpt.thigh.inner.x, OPT.body.sculpt.thigh.inner.y + HL, 0.002], [OPT.body.sculpt.thigh.inner.width, OPT.body.sculpt.thigh.inner.height, 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
     P[`calfO.${s}`] = E([m * (FOOT_X + OPT.body.sculpt.calf.outer.x), OPT.body.sculpt.calf.outer.y, -0.008], [OPT.body.sculpt.calf.outer.width, OPT.body.sculpt.calf.outer.height, 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
-    P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.057, `lowerLeg.${s}`, 0.05);
+    P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.045, `lowerLeg.${s}`, 0.05);   // narrowing to the ankle (0.057 there before: the shin came down as thick as the calf onto the foot, like a boot. 2026-10-07)
     P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, OPT.body.sculpt.calf.back.z], [OPT.body.sculpt.calf.back.width, 0.068, OPT.body.sculpt.calf.back.depth], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
     // in high heels the foot is narrower (a pump holds it in; the shoe is made around it, and around the round chibi foot it stood out to the
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
-    P[`foot.${s}`] = E([m * (FOOT_X - 0.002), -0.003 + FOOT_H, 0.015], [OPT.outfit?.shoes?.kind === "heels" ? 0.035 : 0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
+    { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", n = HEELS ? 0.68 : 1;
+      // shoeLast: what shoes (and the plate's sabatons) are made around: the round foot of before (clothes/index.js). Not part of the body
+      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, 0.015], [HEELS ? 0.035 : 0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
+      // the bare foot (2026-10-07, Saori: "裸足の造形が変、元の丸い足に脚の指をつけただけ"): a narrow heel, a long middle, the forefoot wide and
+      // flat under the toes (the ball, a little toward the big toe); all within the shoe's last, so a shoe still covers it
+      P[`foot.${s}`] = E([fx, -0.003 + FOOT_H * 0.92, 0.012], [0.04 * n, FOOT_H * 0.92, 0.068], `foot.${s}`, 0.025);
+      P[`heel.${s}`] = E([fx + m * 0.002, -0.003 + 0.024, -0.034], [0.029 * n, 0.024, 0.03], `foot.${s}`, 0.02);
+      P[`ball.${s}`] = E([fx - m * 0.004, -0.003 + 0.015, 0.05], [0.047 * n, 0.015, 0.03], `foot.${s}`, 0.02); }
     // toes (foot.toes, 2026-10-05, Saori: barefoot like Nahida; "足の指丸まってない？"): the foot's front top is shaved down to them (FOOT_CUT), so the
     // instep slopes to the toes instead of ending in a dome they sat under (curled-looking); the toes lie flat on the ground, pointing forward.
     // A shoe is made around the foot and a smooth toe box over them (toeBox: for the clothes only), so it covers them without their bumps.
@@ -262,6 +284,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         P[`toe${i}.${s}`] = E([cx + m * dx * k * hx, -0.003 + ry * k + 0.001, z0 + dz * k], [rx * k * hx, ry * k, rz * k], `foot.${s}`, 0.004));
       P[`toeBox.${s}`] = E([cx, 0.011, z0 + 0.058 * k], [0.05 * hx, 0.015, 0.032 * k], `foot.${s}`, 0.03);
       FOOT_CUT.push(cut(E([cx, 0.068, z0 + 0.085], [0.08, 0.04, 0.06], `foot.${s}`, 0.012))); } }
+    // the feet's size (body.proportion.feet, ×; 2026-10-07, Saori: "手や足の大きさもスライダーで変えられるようにしたい"): every part of the foot
+    // grown about the ankle, the sole kept on the floor (shoes are made around them: they grow too)
+    { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, 0];
+      const grow = (p) => { if (!p) return; p.cx = O[0] + (p.cx - O[0]) * FK; p.cy = O[1] + (p.cy - O[1]) * FK; p.cz = O[2] + (p.cz - O[2]) * FK; p.rx *= FK; p.ry *= FK; p.rz *= FK; p.k *= FK;
+        p.bx0 = p.cx; p.by0 = p.cy; p.bz0 = p.cz; p.br = Math.max(p.rx, p.ry, p.rz); };
+      for (const n of ["shoeLast", "foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3", "toeBox"]) grow(P[`${n}.${s}`]);
+      if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1)); } }
     // 服用: 半分の長さの袖・すそ
     const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
     P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);
@@ -276,7 +305,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
-  const BODY = Object.entries(P).filter(([k, v]) => !/^(sleeve|leghole|toeBox)/.test(k) && !v.sub).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
+  const BODY = Object.entries(P).filter(([k, v]) => !/^(sleeve|leghole|toeBox|shoeLast)/.test(k) && !v.sub).map(([, v]) => v).concat(BRIDGE);   // 重みづけ用(削る部品は入れない)
   // experimental: a rounded box in front of the face, so the face front (forehead to under the eyes) is a flat plane and the eyes don't wrap around a sphere
   const FB = OPT.body.sculpt.faceBox, faceBox = FB.on ? roundBox([0, FB.y, FB.front - FB.depth], [FB.width, FB.height, FB.depth], FB.round, FB.blend) : null;
   // flat planes: cut the face front at z = cutFront (between cutY0 and cutY1), and the face sides at |x| = sideX (in front of z = sideZ, ahead of the ears)
@@ -335,10 +364,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     return { t: 3, sub: true, k: AP.blend ?? 0.015, bone: "chest", bx0: m * 0.15, by0: 0.64, bz0: 0, br: 0.14,
       f: (x, y, z) => { const X = x * m; if (X <= 0) return 1; const c1 = r - ((X - a[0]) * nx + (y - a[1]) * ny), c2 = -((X - A0[0]) * qx + (y - A0[1]) * qy), c4 = Math.abs(z) - ZW;
         return -smin(-(-smin(-c1, -c2, RND)), -c4, RND); } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
-  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, ...FOOT_CUT, HEAD];
+  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, ...FOOT_CUT, HEAD];
   const BX = 0.5 + armReach(OPT).x;   // (longer arms and wider shoulders reach further out)
-  const bodySdfSlow = blend(BODY_LIST), bodySdf = slow ? bodySdfSlow : blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell);   // ?slow で元の遅い版(確認用)
-  const bodySdfRaw = HT.identity ? bodySdf : blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell);   // the body with the head untransformed (hair is built against it, then transformed with the head)
+  const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
+  const bodySdfSlow = bent(blend(BODY_LIST)), bodySdf = slow ? bodySdfSlow : bent(blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // ?slow で元の遅い版(確認用)
+  const bodySdfRaw = HT.identity ? bodySdf : bent(blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // the body with the head untransformed (hair is built against it, then transformed with the head)
   return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 

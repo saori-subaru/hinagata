@@ -29,7 +29,13 @@ export const DEFAULTS = {
   "shading": {
     "style": "toon",
     "bands": 2,
-    "soften": 1
+    "soften": 1,
+    "rim": {
+      "on": false,
+      "color": "#fff4e0",
+      "width": 0.35,
+      "strength": 0.5
+    }
   },
   "body": {
     "proportion": {
@@ -38,6 +44,7 @@ export const DEFAULTS = {
       "chest": 0.3,
       "arms": 1.17,
       "hands": 1.1,
+      "feet": 1,
       "shoulders": 1
     },
     "head": {
@@ -74,6 +81,13 @@ export const DEFAULTS = {
       "kneeX": 0.108
     },
     "sculpt": {
+      "waist": {
+        "y": 0.555,
+        "height": 0.07,
+        "width": 0.09,
+        "x": 0.225,
+        "blend": 0.04
+      },
       "skull": {
         "width": 0.198,
         "height": 0.24,
@@ -529,7 +543,7 @@ export const DEFAULTS = {
         "follow": 0.85
       },
       "hem": 0.3,
-      "offset": 0.016,
+      "offset": 0.011,
       "top": 0.505,
       "tilt": 0.12
     },
@@ -537,6 +551,7 @@ export const DEFAULTS = {
       "on": false,
       "style": "light",
       "chest": "full",
+      "tassets": false,
       "color": "#b9c2ce",
       "mailColor": "#4b4d58",
       "visorColor": "#16141c",
@@ -616,6 +631,7 @@ export const DEFAULTS = {
       "thick": 0.45,
       "lift": 0.05,
       "spread": 1.5,
+      "gather": 0.8,
       "stiff": 1,
       "size": 1,
       "wave": 0,
@@ -799,12 +815,12 @@ export const DEFAULTS = {
     },
     "jawShadow": {
       "on": false,
-      "color": "#cfa294",
-      "jawNy": [0.75, 0.95],
+      "color": "#ecd3d1",
+      "jawNy": [0.55, 0.85],
       "jawY": [0.8, 0.84, 0.9, 0.95],
-      "backZ": -0.02,
-      "neckY": [0.74, 0.8, 0.84, 0.86],
-      "neckX": [0.03, 0.07]
+      "backZ": -0.05,
+      "neckY": [0.76, 0.81, 0.86, 0.9],
+      "neckX": [0.075, 0.1]
     },
     "blush": {
       "cheeks": {

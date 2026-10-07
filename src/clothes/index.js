@@ -5,14 +5,14 @@ import { skirtOf } from "../options.js";
 import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
-import { armReach } from "../body/index.js";
+import { armReach, heelBend } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
  *  ball of the foot stays on the floor; heel: how high the heel's back is then (the heel's length) */
 export function heelPose(OPT, J) {
-  const th = (OPT.outfit.shoes.heelAngle ?? 24) * Math.PI / 180, A = J["foot.L"], c = Math.cos(th), s = Math.sin(th);
-  const ball = A[1] + ((0 - A[1]) * c - (0.06 - A[2]) * s), lift = Math.max(0, -ball);   // the ball (y 0, z 0.06) turned with the foot
-  const heelY = A[1] + ((-0.001 - A[1]) * c - (-0.035 - A[2]) * s) + lift;   // the heel's underside, turned and lifted
+  const th = (OPT.outfit.shoes.heelAngle ?? 24) * Math.PI / 180, A = J["foot.L"], c = Math.cos(th), s = Math.sin(th), FK = OPT.body.proportion?.feet ?? 1;   // FK: the feet's size
+  const ball = A[1] + ((0 - A[1]) * c - (0.06 * FK - A[2]) * s), lift = Math.max(0, -ball);   // the ball (y 0, z 0.06) turned with the foot
+  const heelY = A[1] + ((-0.001 - A[1]) * c - (-0.035 * FK - A[2]) * s) + lift;   // the heel's underside, turned and lifted
   return { theta: th, lift, heel: Math.max(0.01, heelY) };
 }
 
@@ -75,25 +75,48 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const PM = PL === "shorts" ? 0 : 0.1;   // longer pants: below the thighs the legs alone shape them (the mask's edge made a fold at the knee); higher up the margin would reach the hands
   const LEGS = PL === "shorts" ? null : blend(pick("thigh", "thighF", "thighB", "calf", "calfO", "calfB"));   // the legs without the dent at the outside of the knee (cloth bridges it; following it folded the pants there)
   const pantsCore = (x, y, z, B = bodySdf) => Math.max((LEGS && y < 0.38 ? (b0 => b0 + (Math.min(b0, LEGS(x, y, z)) - b0) * sstep(0.38, 0.33, y))(B(x, y, z)) : B(x, y, z)) + 0.024 - PANTS_OFF, pantsMask(x, y, z) - 0.03 - PM * sstep(0.36, 0.3, y));   // 体の形にそって着せる(横から見て分厚くならないように)
-  const pantsShape = (x, y, z, B = bodySdf) => Math.max(pantsCore(x, y, z, B) - 0.024, y - (PANTS_TOP - PANTS_TILT * z), PANTS_HEM - y);
+  // the waistband over a tucked shirt: from 5 cm under the top it goes over the shirt itself, 7 mm out (3 mm: the shirt showed through in streaks at the cells' size), not the body pushed out (that stood
+  // 7–10 mm out of the shirt at the sides and the back: a step all round. 2026-10-07, Saori: "ズボン系が分厚くてシャツと段ができている")
+  const BAND = LEN === "tuck" ? 0.05 : 0;
+  const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024;
+    if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }
+    return Math.max(d, y - top, PANTS_HEM - y); };
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).
   // Its cross-section is an ellipse around the hips that widens toward the hem (flare per m of drop); pleats are folds around it that
-  // deepen toward the hem. Where the body sticks out of the cone (the bottom at the back) the cloth follows the body instead.
+  // deepen toward the hem. Where the body sticks out of the cone (the bottom at the back) the cloth drapes over it: from the top straight to
+  // the furthest point, then straight down (DRAPE). It followed the body's own shape there, so the bottom's round showed through even with
+  // the bottom, the hips and the thighs at their smallest (2026-10-07, Saori: "ワンピースでお尻の膨らみのシルエットが出てしまう")
   const SK = skirtOf(OPT) ?? { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018 }, TO = OPT.body.torso;   // a dress's skirt is the same (skirtOf, options.js)
   const SK_Y0 = SK.top ?? PANTS_TOP, SK_TILT = SK.tilt ?? PANTS_TILT;   // a dress's skirt starts higher (skirtOf)
   let SK_AX = 0.158 * (TO.hips ?? 1) + 0.022, SK_AZ = 0.128, SK_ZC = -0.012;
   // a dress's skirt starts under the chest: its top ellipse is measured off the body there (just over the shirt), so it neither stands off
   // the back as a ledge (the hips' ellipse is wider than the chest) nor lets the belly push out under it (it is centered on the body, not on the hips)
   if (SK.dress) { const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, SK_Y0, -0.01 + dz * t) < 0) t += 0.001; return t; };
-    const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.02;   // m: over the shirt (1.4 cm) and a little air
+    const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.015;   // m: over the shirt (1.4 cm) and a little air
     SK_AX = out(1, 0) + m; SK_ZC = (zf + zb) / 2; SK_AZ = (zf - zb) / 2 + m; }
+  const SKIRT = !!skirtOf(OPT), skirtMask = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null;
+  const coneR = (s, c, y) => { const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop; return 1 / Math.hypot(s / ax, c / az); };   // the cone's radius that way (s, c: sin, cos around the center)
+  // DRAPE: the skirt's radius per angle and height (a grid from the top to the hem): at least the cone's; under the furthest the hips reach
+  // (skirtMask, 1.5 cm out) straight down, and above it on the line from the top's edge to it (cloth hangs from the top over the bulge, not into its curve)
+  const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
+    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f), top = coneR(s, c, SK_Y0), need = [];
+      for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + M : 0); }
+      for (let j = 0; j < NY; j++) { let r = coneR(s, c, SK_Y0 - j * DY);
+        for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * j / k); }   // k above j: hangs straight under it; k below: the line from the top
+        R[a * NY + j] = r; } }
+    return (x, y, z) => { const dz = z - SK_ZC, f = (Math.atan2(x, dz) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(f) % NA, a1 = (a0 + 1) % NA, ta = f - Math.floor(f);
+      const g = Math.min(NY - 1, Math.max(0, (SK_Y0 - y) / DY)), j0 = Math.min(NY - 2, Math.floor(g)), tj = g - j0, at = (a, j) => R[a * NY + j];
+      const r = (at(a0, j0) * (1 - ta) + at(a1, j0) * ta) * (1 - tj) + (at(a0, j0 + 1) * (1 - ta) + at(a1, j0 + 1) * ta) * tj;
+      return (Math.hypot(x, dz) - r) * 0.9; }; })() : null;
+  // over a shirt whose hem is inside the skirt: its top goes over the shirt itself (7 mm out), as the pants' waistband does (a dress stood 2 cm
+  // out from the body there, the shirt 1.4 cm: a step under the chest)
+  const SK_BAND = HEM < SK_Y0 - 0.03 ? 0.06 : 0;
   const skirtSdf = (x, y, z, B = bodySdf) => {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
-    const cone = (Math.hypot(x / ax, dz / az) - 1) * Math.min(ax, az) + pl;   // < 0 inside the cone
-    const outer = Math.min(cone, Math.max(B(x, y, z) - PANTS_OFF, skirtMask(x, y, z) - 0.03));   // the cloth: the cone, or the hips pushed out where they stick out of it (only the hips: not the hands hanging beside them)
-    return Math.max(outer, -(cone + SK.thick), y - (SK_Y0 - SK_TILT * z), SK.hem - y); };
-  const SKIRT = !!skirtOf(OPT), skirtMask = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null;
+    const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl;   // < 0 inside
+    if (SK_BAND && y > top - SK_BAND) outer += (shirtSdf(x, y, z, B, true) - 0.007 - outer) * sstep(top - SK_BAND, top - 0.015, y);
+    return Math.max(outer, -(outer + SK.thick), y - top, SK.hem - y); };
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
@@ -101,20 +124,22 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // / "boots" (up the calf, following it, the top a little flared) / "heels" (low-cut pumps with a heel: the foot is tilted toes-down in every
   // pose, heelPose; the heel is built slanted so that tilted it stands straight down to the floor)
   const KIND = OPT.outfit.shoes.kind ?? "sneaker", BOOTS = KIND === "boots", HEELS = KIND === "heels";
+  const FK = OPT.body.proportion?.feet ?? 1;   // the feet's size (body.proportion.feet): the heels' own pieces grow with them
   const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
-  const shoeCore = blend(pick("foot", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB"] : []))), soleCore = blend(pick("foot", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
-  const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], a = [f.cx, -0.001, f.cz - 0.05], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
-    return C(a, a.map((v, i) => v + d[i] * HP.heel), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
+  const shoeCore = blend(pick("shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB"] : []))), soleCore = blend(pick("shoeLast", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
+  const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`shoeLast.${s}`], a = [f.cx, -0.001, f.cz - 0.05 * FK], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
+    return C(a, a.map((v, i) => v + d[i] * (HP.heel - 0.005)), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
   // heels: a pointed toe (a flat cone forward and a little toward the big toe, smoothly joined), and no rubber sole: the shoe itself goes down
   // to the floor, all one color (2026-10-05, Saori: "ゴム部分がついてる、先も尖ってない")
-  const toePoints = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03], b = [f.cx - m * 0.01, 0.006, 0.128], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
-    return (x, y, z) => { const p = [x - a[0], y - a[1], z - a[2]], t = Math.min(1, Math.max(0, (p[0] * u[0] + p[1] * u[1] + p[2] * u[2]) / L)), q = [0, 1, 2].map((i) => p[i] - u[i] * t * L), r = 0.028 * (1 - t) + 0.003;
+  const toePoints = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03 * FK], b = [f.cx - m * 0.01 * FK, 0.006, 0.128 * FK], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
+    return (x, y, z) => { const p = [x - a[0], y - a[1], z - a[2]], t = Math.min(1, Math.max(0, (p[0] * u[0] + p[1] * u[1] + p[2] * u[2]) / L)), q = [0, 1, 2].map((i) => p[i] - u[i] * t * L), r = (0.028 * (1 - t) + 0.003) * FK;
       return (Math.hypot(q[0], q[2], q[1] / FY) - r) * FY; }; }) : [];
   // heels: thin leather close to the foot (0.6 cm, not a sneaker's 1.2), over a narrower foot (body/index.js) and a slimmer toe (2026-10-07)
   const SHOE_OFF = HEELS ? 0.006 : SHOE.off;
-  const shoeSdf = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top)
+  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top)
     let d = Math.max(c, y - (TOP - TILT * z), HEELS ? -0.003 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
+  const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
   const soleSdf = HEELS ? () => 1 : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends

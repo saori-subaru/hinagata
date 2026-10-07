@@ -6,7 +6,7 @@
 
 import { skirtOf } from "./options.js";
 import { armReach } from "./body/index.js";
-export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail"];   // the armor's pieces (one mesh each; the last six only in full plate)
+export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip"];   // in the hands: metal, grip / straps, the shield's face
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "cape", ...ARMOR, ...WEAPONS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
@@ -49,6 +49,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       : { sdf: C.armor.armSdf, lo: [-0.38 - ax, 0.42 - ay, -0.11], hi: [0.38 + ax, 0.68, 0.13], h: H * 0.8, only: /^lowerArm/ };
     case "armorLegs": return C.armor.helmSdf ? { sdf: C.armor.legSdf, lo: [-0.26, 0.08, -0.15], hi: [0.26, 0.44, 0.17], h: H * 0.8, only: /^(upperLeg|lowerLeg)/ }
       : { sdf: C.armor.legSdf, lo: [-0.24, 0.08, -0.13], hi: [0.24, 0.34, 0.15], h: H * 0.8, only: /^lowerLeg/ };
+    case "armorWaist": return C.armor.waistSdf ? { sdf: C.armor.waistSdf, lo: [-0.32, 0.3, -0.26], hi: [0.32, 0.5, 0.26], h: H * 0.8, only: /^(hips|upperLeg)/ } : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor's tassets: on the hips, following the thighs
     case "armorHelm": case "armorVisor": case "armorDeco": case "armorHands": case "armorFeet": case "armorMail": { const A = C.armor, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };   // light armor: nothing
       if (!A.helmSdf) return none;
       if (name === "armorHelm") return { sdf: A.helmSdf, lo: [-0.4, 0.7, -0.4], hi: [0.4, 1.52, 0.42], h: H * 0.85, bone1: "head" };

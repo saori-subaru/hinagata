@@ -77,6 +77,7 @@ function applyInstant(av, p, v) {
     case "setColors": av.setColors({ [COLOR_KEY[p]]: v }); return true;
     case "setOutline": av.setOutline({ [last]: v }); return true;
     case "setShading": av.setShading({ [last]: v }); return true;
+    case "setRim": av.setRim({ [last]: v }); return true;
     case "setWorn": av.setWorn({ [k[1]]: v }); return true;
     case "setFace": av.setFace({ [last]: v ?? (store.get("face.noseShadow.on") ? "shadow" : "none") }); return true;   // nose null = follow the nose shadow
     case "setFaceLayout": av.setFaceLayout({ [last]: v }); return true;

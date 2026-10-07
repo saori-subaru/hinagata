@@ -126,7 +126,7 @@ Only what differs from the defaults, nested as the options are (in a character f
   import it from `https://hinagata.pages.dev/src/schema.js` (or the repository's `src/schema.js`). Unknown keys are ignored by the engine, so
   check: a typo silently does nothing.
 - Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; chibi `standard`, `girl`, `sturdy`,
-  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, shoulders.
+  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, feet, shoulders.
 - Ready-made characters: `import { CHARACTERS }` → `createAvatar(CHARACTERS.sylvie.file)` (シルヴィ, an elf girl) or `CHARACTERS.astel.file`
   (アステル, a hero boy with sword, shield and cape). Each is a character file (version 3); copy its `options` into your own file to start from it.
   In the editor: the character list → 「プリセットから作る」.
@@ -158,7 +158,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 - Switching to a fast move: `avatar.play(name, { blend: 0 })`. By default a switch eases over about 0.35 s, which softens a swing's start.
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
-  `setShading("toon" | "smooth" | "flat")`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
+  `setShading("toon" | "soft" | "smooth" | "flat")`, `setRim({ on, color, width, strength })`, `setGradient`, `setAccessories(list)`. Anything else: build a new avatar from the changed recipe.
 
 ## Your own moves: pose the joints
 

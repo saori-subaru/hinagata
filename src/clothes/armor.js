@@ -101,5 +101,16 @@ export function buildArmor(OPT, { P, J }) {
     return (x, y, z) => Math.min(g(x, y, z), cop(x, y, z)); });
   const legSdf = (x, y, z) => GR[x > 0 ? 0 : 1](x, y, z);
 
-  return { chestSdf, shoulderSdf, armSdf, legSdf };
+  // ── tassets (armor.tassets; 2026-10-07, Saori: "腰回りのプレートありなしを選べるようにしたい"): plates hanging from the waist over the hips and
+  // the tops of the thighs, flaring out as they go down, in two lames; open at the front middle (for the legs) and at the back ──
+  const waistSdf = AR.tassets ? (() => { const Y0 = 0.47, Y1 = 0.355, HS = slice(torso, [0, 0.44, 0], [1, 0, 0], [0, 0, 1], 24), FL = 0.35;
+    return (x, y, z) => { const drop = Math.max(0, Y0 - y), ax = HS.a + 0.012 + AR.gap * 0.6 + FL * drop, az = HS.b + 0.01 + AR.gap * 0.6 + FL * 0.7 * drop, v = z - HS.cv;
+      const e = sell(x, v, ax, az, 2.4), th = Math.abs(Math.atan2(x, v)), r = Math.min(ax, az);
+      let d = Math.max(e - AR.thick, -e);   // a shell, thick outward
+      d = smax(d, Math.max(0.13 - th, th - 2.1) * r, 0.004);   // the plates: from beside the middle round to the sides (open in front and at the back)
+      d = smax(d, Math.max(y - Y0, Y1 - y), 0.003);
+      const lame = Math.abs(y - (Y0 + Y1) / 2); if (lame < 0.004) d += 0.002 * (1 - lame / 0.004);   // a groove: two lames
+      return d; }; })() : null;
+
+  return { chestSdf, shoulderSdf, armSdf, legSdf, waistSdf };
 }

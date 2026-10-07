@@ -15,11 +15,17 @@ export const ramp = RAMPS[2];
 const RGB_RAMP = "uniform sampler2D gradientMap;\nvec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) { return texture2D( gradientMap, vec2( dot( normal, lightDirection ) * 0.5 + 0.5, 0.0 ) ).rgb; }";
 export const toon = (c, bands = 2) => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMPS[bands] ?? RAMPS[2] });
   m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <gradientmap_pars_fragment>", RGB_RAMP); }; return m; };
-// shading styles (options.shading.style): "toon" = flat bands (anime) / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors
-export const SHADINGS = ["toon", "smooth", "flat"];
+// "soft" (2026-10-07, Saori: "影つけクレッシェンドの塔のようななめらか版も欲しい"): the toon's shadow color, its edge blended over a wide band,
+// and the lit side darkening a little toward the edge, so forms read round (no shine). As Crescendo Tower's "matte" look (its look.js)
+const SOFT_RAMP = "uniform sampler2D gradientMap;\nvec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) { float d = dot( normal, lightDirection ); vec3 sh = texture2D( gradientMap, vec2( 0.0, 0.0 ) ).rgb;\n  return mix( sh, vec3( 1.0 ), smoothstep( -0.19, 0.36, d ) ) * mix( 0.78, 1.0, smoothstep( 0.0, 1.0, d ) ); }";
+export const softToon = (c) => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMPS[2] });
+  m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <gradientmap_pars_fragment>", SOFT_RAMP); }; return m; };
+// shading styles (options.shading.style): "toon" = flat bands (anime) / "soft" = the toon's colors, blended / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors
+export const SHADINGS = ["toon", "soft", "smooth", "flat"];
 export function shaded(style, c, bands = 2) {
   if (style === "smooth") return new THREE.MeshLambertMaterial({ color: c });
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
+  if (style === "soft") return softToon(c);
   return toon(c, bands);
 }
 // light the mesh by its "shadeN" attribute (normals softened for shading, see smoothNormals in sdf/mesh.js) instead of its own normals.

@@ -158,7 +158,7 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     const cop = dome([k[0], k[1] + 0.006, k[2] + 0.012], [0.075, 0.066, 0.075].map((v) => v * Math.max(1, TH.calf ?? 1)));
     return (x, y, z) => Math.min(cu(x, y, z), gr(x, y, z), cop(x, y, z)); });
   const legSdf = side(LEG);
-  const foot = blend(pick("foot"));
+  const foot = blend(pick("shoeLast"));
   const footSdf = (x, y, z) => Math.max(foot(x, y, z) - 0.014, y - 0.125, -0.002 - y);
 
   // ── mail: the body, 3 mm out, below the helm ──

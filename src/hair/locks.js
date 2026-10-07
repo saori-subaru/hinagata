@@ -55,7 +55,8 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const root = dir.map((v, k) => center[k] + v * (t - 0.012));   // a little under the surface: the root is hidden in the hair
     const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04 - (E.dy ?? 0));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
-    specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0) });   // rise: it gets its thickness gently (no ridge at the root)
+    specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0),   // rise: it gets its thickness gently (no ridge at the root)
+      group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45 });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
   }
   // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
   const keepOut = (p, i) => { const r = 0.004; pushOutEllipsoid(p, ellipsoid.c, ellipsoid.r, r); for (const c of coll) pushOutSphere(p, c.c, c.r + r); };
@@ -182,14 +183,17 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
  */
 export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
   const out = [], n = Math.max(1, Math.round(T.count ?? 9)), S = T.size ?? 1, VOL = T.volume * S, hash = (i) => { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
-  for (const { p, o } of anchors) {
+  // gather (0..1): the tips drawn together to the bundle's middle and the outer locks a little shorter, so the tail narrows to a point as one
+  // bundle (2026-10-07, Saori: "全部先端がバラバラに広がっているけど、収束させて先を細くし、一つの塊として靡くように"); 0 = fanned out as before
+  const GA = T.gather ?? 0.8;
+  anchors.forEach(({ p, o }, ai) => {
     const ul = Math.hypot(o[2], o[0]) || 1, u = [o[2] / ul, 0, -o[0] / ul], v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];   // across the tie: u sideways (level), v
     for (let i = 0; i < n; i++) {
       const a = i * 2.39996 + 0.3, r = Math.sqrt((i + 0.5) / n), dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
-      const len = T.length * (0.82 + 0.3 * hash(i)), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
-      const root = p.map((x, k) => x + dir[k] * VOL * r * 0.45);
+      const len = T.length * ((0.82 + 0.3 * hash(i)) * (1 - GA) + (1.02 - 0.2 * r * r) * GA), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
+      const root = p.map((x, k) => x + dir[k] * VOL * r * 0.45), tipIn = VOL * r * 0.45 * GA;   // tipIn: back toward the bundle's middle at the tip
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 : 0)),   // a cubic Bezier: out from the tie, over, and down
-        root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * fan - (k === 1 ? len : 0))];
+        root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) - (k === 1 ? len : 0))];
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
       if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
@@ -199,9 +203,9 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
         if (ell) pushOutEllipsoid(P[q], ell.c, ell.r, rad(q)); for (const c of coll) pushOutSphere(P[q], c.c, c.r + rad(q));
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }
       let L = 0; for (let q = 1; q < N; q++) L += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
-      out.push({ root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1 });
+      out.push({ root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: 0.7 * GA });   // group: they swing together (createLocks)
     }
-  }
+  });
   return out;
 }
 
@@ -270,13 +274,17 @@ export function colliders(J, BI, sdf) {
  *   trailing behind went into it). slack: how far in past the rest it may go (m)
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001 }) {
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
   specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * width(t) + 0.003;
     if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
   X.set(R); P.set(R);
+  // bundles (spec.group, cohere 0..1): the locks of a tied tail swing as one. Each point's move off its rest is drawn toward the bundle's mean
+  // move there, and they share the flutter's phase (each lock alone fluttered and swung apart, the tips spreading)
+  const GL = new Map(); specs.forEach((s, l) => { if (s.group != null && s.cohere > 0) { if (!GL.has(s.group)) GL.set(s.group, []); GL.get(s.group).push(l); } });
+  const BUNDLES = [...GL.values()].filter((ls) => ls.length > 1).map((ls) => ({ ls, c: specs[ls[0]].cohere })), PH = specs.map((s, l) => s.group != null ? [...GL.keys()].indexOf(s.group) : l);
   let FN = null, FD = null;   // floor: per point, the plane's normal (rest space) and its offset
   if (floor) { FN = new Float32Array(NP * 3); FD = new Float32Array(NP); const I = new THREE.Matrix4();
     for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2], o = outward(x, y, z, I), l = Math.hypot(...o) || 1;
@@ -289,6 +297,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
   { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RG.length) / (ringsPer - 1) * (specs[Math.floor(v / VPL)].grad ?? 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
+  if (uvAt) { const U = new Float32Array(NV * 2);   // per ring: the point along the rest chain at its share of the lock (the mesh isn't made yet: it comes with the first update)
+    for (let l = 0; l < NL; l++) for (let r = 0; r < ringsPer; r++) { const f = r / (ringsPer - 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i, a = specs[l].pts[i], b = specs[l].pts[i + 1];
+      const uv = uvAt(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
+      for (let k = 0; k < RG.length; k++) { const v = l * VPL + r * RG.length + k; U[v * 2] = uv[0]; U[v * 2 + 1] = uv[1]; } }
+    g.setAttribute("hairUV", new THREE.BufferAttribute(U, 2)); }
   const si = new Uint16Array(NV * 4), sw = new Float32Array(NV * 4); for (let v = 0; v < NV; v++) { si[v * 4] = head; sw[v * 4] = 1; }
   g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
   for (const a of ["position", "normal", "shadeN"]) g.attributes[a].setUsage(THREE.DynamicDrawUsage);
@@ -326,9 +339,12 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       for (let q = 0; q < 3; q++) { const raw = X[j + q] - P[j + q], tv = (T[j + q] - TP[j + q]) / sub; let v = raw * keep;
         if (keep) v = q === 1 ? tv + (v - tv) * VDAMP : tv + (raw - tv) * keep;   // its swing is kept against the head's motion, not the world's: moving fast, the world's drag
         P[j + q] = X[j + q]; X[j + q] += v; }                                     // had laid it out flat behind like a stick (the tennis player's 7 m/s, 2026-10-05); the wind (AIR) streams it now   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
-      const fl = 1 + 0.35 * Math.sin(clock * 7 + l * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + l * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
+      const ph = PH[l], fl = 1 + 0.35 * Math.sin(clock * 7 + ph * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + ph * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
       X[j] += gx + AIR[0] * fl * h * h * fk; X[j + 1] += gy + (AIR[1] * fl + up) * h * h * fk; X[j + 2] += gz + AIR[2] * fl * h * h * fk;   // the wind (air drag pulling it along)
       for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
+    for (const { ls, c } of BUNDLES) for (let i = 2; i < N; i++) { const m = [0, 0, 0];
+      for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) m[q] += (X[j + q] - T[j + q]) / ls.length; }
+      for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] + m[q] - X[j + q]) * c; } }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
         if (i === 2) { X[b] -= dx * f; X[b + 1] -= dy * f; X[b + 2] -= dz * f; }   // the one before rides on the head: only this one moves
