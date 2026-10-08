@@ -141,7 +141,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // its front stood forward right up to the collarbone (a shelf the bust hung from). Leaning, the back is fullest high up and the front slopes
   // from the collarbone down to the bust
   const CHEST_D = { w: 0.08, d: 0.066, z: 0.014 };
-  if (AD) { const q = adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest", axes(-(AD.chest.tilt ?? 0.25)));
+  if (AD) { const q = adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.25) * T }, { ...CHEST_D, h: 0.3 * T }, "chest", axes(-(AD.chest.tilt ?? 0.25)));   // (2026-10-08, beside the VRoid body: its bust 0.24 T under the shoulder joint, the waist 0.5 T)
     P.chest = fin(q);   // the ribcage: under the arms to just over the waist
     P.chest.adult = q;   // (as made after the stretch: the bust is set on its front)
     // the shoulder blades: the back fullest just under the shoulders, coming in to the waist (AD.blades: m from the middle, under the shoulder
@@ -155,7 +155,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
   // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
   if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), CA = AD ? { ...CHEST_D, ...AD.chest } : null, bx = OPT.body.sculpt.bustX ?? (AD ? 0.5 * CA.w : Math.max(0.06 * Math.max(1, TO.chest), r * 1.05)), KU = 0.03, KD = 0.007;
-  const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.15) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
+  const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.24) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
   // a chest shortened by the stretch (body.proportion.chest below 0) squashes what is built here upright (at -2 to half: "胸が上下につぶれて
   // 小さくとがって見える", 2026-10-08 Saori). Then the bust's height is measured after the stretch (FY: a height here → where it goes, about
   // the bust's center), so it comes out round; it reaches past the short chest into the belly, whose stretch FY undoes too. Only below 0
@@ -194,8 +194,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   if (AD) { delete P["waist.L"]; delete P["waist.R"];   // the waist is the narrow piece between the ribcage and the pelvis (no cut)
     // the waist reaches well down into the pelvis, its front under the bust's (2026-10-08, Saori: "胸の下の段をはっきりさせて、お腹の凹みは
     // なだらかな方が自然"): it stood as far forward as the bust just under it (no step there) and ended above the pelvis's top (a dip between)
-    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.5) * T }, { w: 0.062, h: 0.3 * T, d: 0.048, z: 0.022 }, "spine"));
-    P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.108, h: 0.36 * T, d: 0.064, z: 0.008 }, "hips")); }
+    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.5) * T }, { w: 0.062, h: 0.3 * T, d: 0.05, z: 0.03 }, "spine"));
+    P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.114, h: 0.36 * T, d: 0.064, z: 0.008 }, "hips")); }
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
@@ -408,7 +408,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // calf behind, high. Sizes in m (AD.legs); the same names as before, so pants are made over them
     if (AD) { for (const n of ["thigh", "thighB", "thighF", "thighIn", "calfO", "calf", "calfB", "kneeCap", "calfOut", "calfInner", "calfBack", "kneeBack"]) delete P[`${n}.${s}`];
       const F = (p) => [p[0], STA.fwd(p[1]), p[2]], Hf = F(j("upperLeg")), Kf = F(j("lowerLeg")), Af = F(j("foot")), LT = Hf[1] - Kf[1], LS = Kf[1] - Af[1];
-      const LG = { thigh: [0.05, 0.03], shin: [0.028, 0.016], front: 0.036, back: 0.036, calf: 0.046, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+      const LG = { thigh: [0.054, 0.03], shin: [0.028, 0.016], front: 0.036, back: 0.036, calf: 0.046, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
       P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
       { const c = at(Hf, Kf, 0.5); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.012], [0.037, 0.44 * LT, LG.front], `upperLeg.${s}`, 0.04)); }   // (down to the knee: it ended above it, a dip there seen from the side)
       { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
