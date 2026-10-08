@@ -410,6 +410,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       const F = (p) => [p[0], STA.fwd(p[1]), p[2]], Hf = F(j("upperLeg")), Kf = F(j("lowerLeg")), Af = F(j("foot")), LT = Hf[1] - Kf[1], LS = Kf[1] - Af[1];
       const LG = { thigh: [0.06, 0.032], shin: [0.03, 0.017], front: 0.04, back: 0.04, calf: 0.046, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
       P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
+      // the outside of the thigh's top, from the hips' width down (2026-10-08, Saori: "くびれから太ももにかけて見本は広がってるけど、雛形は腰で終わって
+      // ストンと落ちてるから、太ももが棒っぽく見える"): the hips' line runs on into the thigh and narrows toward the knee, not ending at the hip
+      { const c = at(Hf, Kf, 0.3); P[`thighOut.${s}`] = fin(E([c[0] + m * (LG.out ?? 0.022), c[1], c[2] - 0.004], [0.048, 0.48 * LT, 0.05], `upperLeg.${s}`, 0.05)); }
       { const c = at(Hf, Kf, 0.5); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.012], [0.037, 0.44 * LT, LG.front], `upperLeg.${s}`, 0.04)); }   // (down to the knee: it ended above it, a dip there seen from the side)
       { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
       P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.014], [0.02, 0.026, 0.014], `lowerLeg.${s}`, 0.03));
