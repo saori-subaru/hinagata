@@ -279,7 +279,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // cut off). The chin forward, a set-back mouth and a longer face were tried and taken out ("全てがダメ … 鼻下の凹みだけは残して他は消しましょう")
   const PRF = OPT.body.sculpt.mouth.profile ?? 0, MY = OPT.face?.layout?.mouthY ?? 0.896, gs = (v) => Math.exp(-v * v);
   const NB = 0.964 + NOSE_DY + NOSE_LIFT - NOSE_UNDER.y, DY = (NB + MY) / 2;   // NB: under the nose; DY: halfway down to the mouth
-  const profile = PRF ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) : () => 0;
+  // mouth.underLip (2026-10-09, Saori, with a Genshin profile: "見本には口のへこみもあるよね"): a soft dip under the lower lip, between the mouth and
+  // the chin's front (m, at the middle; 0 = none): the line from the nose comes down past the lips, goes in, and out again to the chin
+  const UL = OPT.body.sculpt.mouth.underLip ?? 0, UY = MY - (OPT.body.sculpt.mouth.underLipY ?? 0.024);
+  const profile = PRF || UL ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) - UL * gs((y - UY) / 0.011) * gs(x / 0.045) : () => 0;
   CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   { const CR = OPT.body.sculpt.crown;   // flat top; tilt > 0 makes it rise toward the back (pivoting at z = pivotZ), so the line from the hairline runs on up to the back of the head
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく

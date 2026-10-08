@@ -21,7 +21,7 @@ body: {
 ```js
 face: { eyeSize: 1.1, layout: { eyeY: 1.02, browY: 1.108, eyeX: 0.088, browX: 0.082 } },
 body: { head: { width: 0.92, jawLength: 1.1 },
-        sculpt: { chin: { sharp: 0.1, backRise: 1.2, backMax: 0.1 }, nose: { tipZ: 0.272 }, mouth: { back: 0.02, cheekBack: 0.02 } } },
+        sculpt: { chin: { sharp: 0.1, backRise: 1.2, backMax: 0.1 }, nose: { tipZ: 0.28 }, mouth: { back: 0, cheekBack: 0.02, underLip: 0.005 } } },   // 2026-10-09: 鼻の下はへこませず、下唇の下にへこみ（新しい設定 underLip）
 shading: { style: "toon", rim: { on: false } },   // soft + リムだと鼻の下に影が出ず横顔が平たく見える（形はシルヴィと同じ）
 ```
 注意: 鼻先の比較は adult の標準画質で（格子 4.5 mm を 7% に間引く。2026-10-09）。game / fine の格子だと 2 mm ほどの鼻先が落ちて「ちょん切れ」て見える。

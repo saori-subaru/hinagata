@@ -341,7 +341,9 @@ export const DEFAULTS = {
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,
-        "back": 0
+        "back": 0,
+        "underLip": 0,
+        "underLipY": 0.024
       },
       "crown": {
         "y": 1.32,
