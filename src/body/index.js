@@ -58,7 +58,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const J = {
     hips: [0, 0.42 + HL * 0.5, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.68, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
     "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
-    "upperLeg.L": [HX, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, -0.006], "foot.L": [FOOT_X, 0.085, -0.005],
+    "upperLeg.L": [HX, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, OPT.body.adult?.on ? (OPT.body.adult.kneeZ ?? -0.018) : -0.006],   // (adult: the knee further back, so under it the leg comes down a little behind the thigh)
+    "foot.L": [FOOT_X, 0.085, -0.005],
   };
   // body.proportion: the shoulders and arms (armJoints above; SHW: how much further out the shoulder joint is), hands: their size (× around the wrist)
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
@@ -125,14 +126,17 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const fin = (q) => { const lo = STA.inv(q.cy - q.ry - q.k), hi = STA.inv(q.cy + q.ry + q.k); let sl = 1; for (let y = lo; y <= hi; y += 0.005) sl = Math.max(sl, STA.slope(y));
     return { t: 3, k: q.k / sl, bone: q.bone, bx0: q.cx, by0: (lo + hi) / 2, bz0: q.cz, br: Math.max(q.rx, q.rz, (hi - lo) / 2) + q.k, f: (x, y, z) => dPrim(q, x, STA.fwd(y), z) / sl }; };
   const adultPart = (o, d, bone) => E([o.x ?? 0, o.y, o.z ?? d.z], [o.w ?? d.w, o.h ?? d.h, o.d ?? d.d], bone, AD.k);
-  if (AD) { P.chest = fin(adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { w: 0.08, h: 0.27 * T, d: 0.066, z: 0.002 }, "chest"));   // the ribcage: under the arms to just over the waist
+  // the posture (2026-10-08, Saori: "猫背ぽい … 見本みたいに背中を反らせる"): the chest a little forward, the waist further forward (its back
+  // comes in: the hollow of the back), the bottom back; in the picture the back at the waist is ~6 cm in front of the back at the shoulders
+  const CHEST_D = { w: 0.08, d: 0.066, z: 0.014 };
+  if (AD) { P.chest = fin(adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest"));   // the ribcage: under the arms to just over the waist
     P.chest.adult = true; }
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
   // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
   // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
-  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), CA = AD ? { w: 0.08, d: 0.066, z: 0.002, ...AD.chest } : null, bx = OPT.body.sculpt.bustX ?? (AD ? 0.5 * CA.w : Math.max(0.06 * Math.max(1, TO.chest), r * 1.05)), KU = 0.03, KD = 0.007;
+  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), CA = AD ? { ...CHEST_D, ...AD.chest } : null, bx = OPT.body.sculpt.bustX ?? (AD ? 0.5 * CA.w : Math.max(0.06 * Math.max(1, TO.chest), r * 1.05)), KU = 0.03, KD = 0.007;
   const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.15) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
   // a chest shortened by the stretch (body.proportion.chest below 0) squashes what is built here upright (at -2 to half: "胸が上下につぶれて
   // 小さくとがって見える", 2026-10-08 Saori). Then the bust's height is measured after the stretch (FY: a height here → where it goes, about
@@ -158,8 +162,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (WS.x - TO.waist), WS.y, 0], [WS.width, WS.height, 0.14], "spine", WS.blend));
   if (AD) { delete P["waist.L"]; delete P["waist.R"];   // the waist is the narrow piece between the ribcage and the pelvis (no cut)
-    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.46) * T }, { w: 0.062, h: 0.18 * T, d: 0.056, z: 0.006 }, "spine"));
-    P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.108, h: 0.32 * T, d: 0.064, z: -0.008 }, "hips")); }
+    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.46) * T }, { w: 0.062, h: 0.18 * T, d: 0.056, z: 0.03 }, "spine"));
+    P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.108, h: 0.32 * T, d: 0.064, z: 0.004 }, "hips")); }
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
@@ -268,7 +272,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
           return (Math.hypot(qa, qb, qw / FL) - r) * FL * 0.9; } }; }
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
-    if (AD) { const B = AD.butt; P[`butt.${s}`] = fin(adultPart({ ...B, x: m * (B.x ?? 0.055), y: yH + (B.y ?? -0.06) * T }, { w: 0.062, h: 0.2 * T, d: 0.05, z: -0.035 }, "hips")); }
+    if (AD) { const B = AD.butt; P[`butt.${s}`] = fin(adultPart({ ...B, x: m * (B.x ?? 0.055), y: yH + (B.y ?? -0.06) * T }, { w: 0.062, h: 0.2 * T, d: 0.05, z: -0.04 }, "hips")); }
     else { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B) + BB / 2], [0.08, 0.066, 0.075 * B - BB / 2], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
     { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * (0.116 + SHW), 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
@@ -315,6 +319,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         P[`calfOut.${s}`] = E([m * (kx + 0.03 * q), k[1] - 0.26 * LL, k[2] - 0.012], [0.05, 0.3 * LL, 0.05], `lowerLeg.${s}`, 0.035);
         P[`calfInner.${s}`] = E([m * (kx - 0.022 * q), k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
         P[`calfBack.${s}`] = E([m * kx, k[1] - 0.32 * LL, k[2] - 0.035 * q], [0.05, 0.32 * LL, 0.05], `lowerLeg.${s}`, 0.035); } }
+    // adult: the back of the knee filled (seen from the side the slim knee was pinched front and back, "膝がちぎれそう"), made where it comes out
+    if (AD) { const k = j("lowerLeg"), yK = STA.fwd(k[1]), tc = OPT.body.thickness?.calf ?? 1;
+      P[`kneeBack.${s}`] = fin(E([k[0], yK + 0.005, k[2] - 0.012], [0.05 * tc, 0.07, 0.045 * tc], `lowerLeg.${s}`, 0.04)); }
     // in high heels the foot is narrower (a pump holds it in; the shoe is made around it, and around the round chibi foot it stood out to the
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
     { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", n = HEELS ? 0.68 : 1;

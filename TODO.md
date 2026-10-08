@@ -9,8 +9,8 @@
 ```js
 body: {
   head: { scale: 0.44 },
-  proportion: { legs: 2.15, torso: 1.5, chest: 0, shoulders: 0.827 },
-  joints: { hipY: 0.5, hipX: 0.074, kneeX: 0.0425, footX: 0.0425 },
+  proportion: { legs: 2.1, torso: 1.5, chest: 0, shoulders: 0.827 },
+  joints: { hipY: 0.52, hipX: 0.074, kneeX: 0.0425, footX: 0.0425 },   // 股はサオリの希望で 0.5 より上(0.537)
   torso: { chest: 0.63, hips: 0.56, bust: 0.56, back: 0.392, butt: 0.672 },   // adult では胸板・腰・お尻は body.adult のほうが決める
   thickness: { upperArm: 0.504, forearm: 0.476, thigh: 0.434, thighTop: 0.546, calf: 0.42 },
   sculpt: { neck: { width: 0.612 }, bustX: 0.038 },
@@ -22,7 +22,7 @@ body: {
 
 ### 残り（サオリの頼み・気づいたこと）
 1. ~~胸の形を横から見せる~~ 済み（胸の伸び -2 でつぶれていた → B 案へ、そのあと新しい胴へ）
-2. **股が腰より上になっている**: 太ももの付け根のふくらみを股に合わせる（まだ）
+2. ~~股が腰より上~~ 新しい胴で改善（サオリ）。反り腰と膝の裏も 2026-10-08 に直した
 3. ~~ウエストが△~~ 新しい胴で砂時計に
 4. 胸の下に薄いしわが一本、正面で腰の張りが少し強め
 5. ワンピースのスカートの始まる高さ（dress.waist が土台の座標のままで、腰を上げると身ごろがお尻まで張りつく。B でも同じ）
