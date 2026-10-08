@@ -141,6 +141,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
   { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }
   P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  // adult.trap: the slope from the neck to the shoulders [down (m), blend (m)]: blended into the neck over 3.5 cm from the high trap, the neck
+  // widened from halfway down, a △ seen from the front or back (2026-10-09, Saori: "しょうめんとかうしろからみたときに△みたいに上に向かって窄まってる",
+  // a Genshin character's neck stands as a column to the collarbones)
+  if (OPT.body.adult?.on) { const [dy, k] = OPT.body.adult.trap ?? [0.008, 0.015]; P.trap.cy -= dy; P.trap.by0 = P.trap.cy; P.trap.k = k; }   // (default: 8 mm down, blended over 1.5 cm)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
