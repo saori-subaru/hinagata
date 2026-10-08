@@ -51,7 +51,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *           ({ hinagata: 3, name, options }: the editor's 書き出し → JSON). Files carry their version (2: the first tall body): a file of version 1, and a bare recipe
  *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults
  *           (openRecipe in options.js). A bare options object passed in code is today's: the current defaults.
- * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
+ * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
  *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
  *              long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
@@ -75,7 +75,7 @@ function shapeOnly(OPT) {
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
-export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -91,6 +91,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the
   // tennis: 3.5 s → 9.9 s), and a game's players wait for that; so "game" stays the fast one.
   // "lite": the game's cells thinned to 15% and lighter hair locks, about a fifth of those vertices; the same look at a game's distance
+  // the adult body (body.adult) is "fine" unless asked otherwise (2026-10-08, Saori agreed): its slim arms (2.4 cm radius) came out ridged like a
+  // spring on the game's 1.36 cm cells and its toes' gaps didn't show; fine thins back to about as many triangles (the body 1.3 → 1.5 万)
+  const quality = qualityAsked ?? (OPT.body.adult?.on ? "fine" : "game");
   const LITE = quality === "lite", FINE = quality === "fine" && !cell;
   let H = cell || { game: 0.0136, fine: 0.0068, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
   let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.22 : 1);
