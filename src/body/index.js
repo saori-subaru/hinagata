@@ -125,12 +125,21 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // scaled by the steepest stretch over its height (never overstated); its bounds measured back
   const fin = (q) => { const lo = STA.inv(q.cy - q.ry - q.k), hi = STA.inv(q.cy + q.ry + q.k); let sl = 1; for (let y = lo; y <= hi; y += 0.005) sl = Math.max(sl, STA.slope(y));
     return { t: 3, k: q.k / sl, bone: q.bone, bx0: q.cx, by0: (lo + hi) / 2, bz0: q.cz, br: Math.max(q.rx, q.rz, (hi - lo) / 2) + q.k, f: (x, y, z) => dPrim(q, x, STA.fwd(y), z) / sl }; };
-  const adultPart = (o, d, bone) => E([o.x ?? 0, o.y, o.z ?? d.z], [o.w ?? d.w, o.h ?? d.h, o.d ?? d.d], bone, AD.k);
+  const adultPart = (o, d, bone, rot = 0) => E([o.x ?? 0, o.y, o.z ?? d.z], [o.w ?? d.w, o.h ?? d.h, o.d ?? d.d], bone, AD.k, rot);
   // the posture (2026-10-08, Saori: "猫背ぽい … 見本みたいに背中を反らせる"): the chest a little forward, the waist further forward (its back
   // comes in: the hollow of the back), the bottom back; in the picture the back at the waist is ~6 cm in front of the back at the shoulders
+  // The ribcage leans back at the top (chest.tilt, rad; 2026-10-08, Saori: "肩甲骨の位置が下すぎる", "見本は鎖骨からなだらかなラインで胸が
+  // 繋がってるけど、ルミナは鎖骨から急に直角に胸がはじまってる"): upright, its back was fullest at its middle (the shoulder blades too low) and
+  // its front stood forward right up to the collarbone (a shelf the bust hung from). Leaning, the back is fullest high up and the front slopes
+  // from the collarbone down to the bust
   const CHEST_D = { w: 0.08, d: 0.066, z: 0.014 };
-  if (AD) { P.chest = fin(adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest"));   // the ribcage: under the arms to just over the waist
-    P.chest.adult = true; }
+  if (AD) { const q = adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest", axes(-(AD.chest.tilt ?? 0.35)));
+    P.chest = fin(q);   // the ribcage: under the arms to just over the waist
+    P.chest.adult = q;   // (as made after the stretch: the bust is set on its front)
+    // the shoulder blades: the back is fullest just under the shoulders, then comes in to the waist (AD.blades: m from the middle, under the
+    // shoulder joint, z of the center, radii; 2026-10-08, Saori: "肩甲骨の位置が下すぎるのかな")
+    const BL = { x: 0.045, y: -0.02, z: -0.032, w: 0.045, h: 0.05, d: 0.024, ...(AD.blades ?? {}) };
+    if (BL.d > 0) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`blade.${sd}`] = fin(E([m * BL.x, yS + BL.y, BL.z], [BL.w, BL.h, BL.d], "upperChest", AD.k)); }
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
@@ -145,10 +154,18 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, RB = ST ? Math.max(ru, ST.inv(ST.fwd(cy) + ru + KU) - cy, cy - ST.inv(ST.fwd(cy) - rd)) : ru;   // RB: its reach above or below here
   // (bustY: the bust up or down, m; bustX: how far each side is from the middle, m, null = from the chest. 2026-10-07: a slender 6-head body
   // wanted it higher and closer: the spacing never went under 6 cm, so on a narrow chest the bust stood apart and the chest looked wide)
-    const zf = AD ? CA.z + CA.d * Math.sqrt(Math.max(0, 1 - (bx / CA.w) ** 2)) : 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
+    const zf = AD ? (() => { const q = P.chest.adult, Y = STA.fwd(cy); let z = q.cz + 0.3; while (z > q.cz && dPrim(q, bx, Y, z) > 0) z -= 0.001; return z; })() : 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
     const part = (e) => { const ell = (x, y, z) => { const Y = FY(y), ry = Y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (Y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
       return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + RB + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, FY(y))) }; };
     P.bust = Object.assign(part(0.01), { cloth: part(0.04) }); }
+  // adult: the upper chest slopes from the collarbone down to the bust (AD.collar; 2026-10-08, Saori: "見本は鎖骨からなだらかなラインで胸が繋がってる
+  // けど、ルミナは鎖骨から急に直角に胸がはじまってる"): the ribcage's and the bust's tops reached above the shoulder joint, so 1.5 cm under the neck's
+  // front the chest stood 7 cm forward. Everything ahead of a line from the neck's front at the collarbone (y above the shoulder joint, z) going
+  // forward by slope per m down is taken off them (softly), in the middle only (|x| under 9 cm, fading to 13), where it comes out
+  if (AD) { const CL = { y: 0.04, z: 0.03, slope: 0.75, k: 0.02, ...(AD.collar ?? {}) }, yC = yS + CL.y, L = Math.hypot(1, CL.slope), smax = (a, b, k) => -smin(-a, -b, k);
+    const line = (x, Y) => CL.z + (Y > yC ? 8 * (Y - yC) : CL.slope * (yC - Y)) + 0.5 * sstep(0.09, 0.13, Math.abs(x));   // (above the collarbone it turns away fast: no cut, and no jump in the distance, which tore holes; beside the chest: none)
+    const trim = (q) => { if (!q) return; const f0 = q.f; q.f = (x, y, z) => smax(f0(x, y, z), (z - line(x, STA.fwd(y))) / L, CL.k); };   // (both are made after the stretch: t 3)
+    trim(P.chest); trim(P.bust); trim(P.bust?.cloth); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly + BD / 2], [0.165 * TO.belly, 0.14, 0.115 * TO.belly - BD / 2], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
   // (a short pelvis and a short cut made the hips jut out suddenly with a corner, like a clay figurine)
@@ -457,7 +474,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const ZW = AP.depth ?? 0.07, RND = AP.round ?? 0.02;
     return { t: 3, sub: true, k: AP.blend ?? 0.015, bone: "chest", bx0: m * 0.15, by0: 0.64, bz0: 0, br: 0.14,
       f: (x, y, z) => { const X = x * m; if (X <= 0) return 1; const c1 = r - ((X - a[0]) * nx + (y - a[1]) * ny), c2 = -((X - A0[0]) * qx + (y - A0[1]) * qy), c4 = Math.abs(z) - ZW;
-        return -smin(-(-smin(-c1, -c2, RND)), -c4, RND); } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
+        const cut0 = -smin(-(-smin(-c1, -c2, RND)), -c4, RND);
+        // adult: only under the shoulder joint. The torso's side line (c2) runs on inward above the armpit, and on the slim adult chest it
+        // reached the collarbones: holes in the mesh there (2026-10-08)
+        return AD ? -smin(-cut0, -(y - (a[1] - 0.015)), RND) : cut0; } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
   const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, ...FOOT_CUT, HEAD];
   const BX = 0.5 + armReach(OPT).x;   // (longer arms and wider shoulders reach further out)
   const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
