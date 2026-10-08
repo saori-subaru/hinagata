@@ -113,11 +113,27 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return Math.min(old, TOPR(s, c) + SK.flare * drop * Math.hypot(s, 0.8 * c)); };
   // DRAPE: the skirt's radius per angle and height (a grid from the top to the hem): at least the cone's; under the furthest the hips reach
   // (skirtMask, 1.5 cm out) straight down, and above it on the line from the top's edge to it (cloth hangs from the top over the bulge, not into its curve)
+  // AL (adult body): the lines from the top's edge over the hips go on down, an A-line, instead of hanging straight under the hips'
+  // furthest: the skirt no longer shows the bottom's or the thighs' shape under it (2026-10-09, Saori: "後ろから見たときにお尻が浮き出てる",
+  // "普通のスカートをはくと太ももがつきでる")
+  const AL = !!OPT.fit;
   const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
     for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f), top = coneR(s, c, SK_Y0), need = [];
       for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + (0.008 + (M - 0.008) * sstep(0, 0.06, j * DY)) : 0); }   // (just under the top only a little out: it hugs the hips there and flares on below, so a strong waist doesn't leave a shelf where the band at the top lets go, 2026-10-07)
+      // (AL: the steepest line from the top's edge over the hips, from 4 cm down, its slope at most the skirt's flare: lines from just under the
+      // top flared out wildly)
+      let ka = NY, sa = 0; if (AL) for (let k = 4; k < NY; k++) if (need[k] && (need[k] - top) / (k * DY) > sa) { sa = (need[k] - top) / (k * DY); ka = k; }
+      sa = Math.min(sa, SK.flare);
       for (let j = 0; j < NY; j++) { let r = coneR(s, c, SK_Y0 - j * DY);
         for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * j / k); }   // k above j: hangs straight under it; k below: the line from the top
+        if (AL && j > ka) r = Math.max(r, top + sa * j * DY);   // AL: past the steepest point the line from the top goes on
+        R[a * NY + j] = r; } }
+    // adult body: the cloth bridges hollows round the body (the valley between the buttocks, behind the waist): each radius at least the
+    // chord between two points up to 40° either side (where it crosses this direction), so the skirt lies over the bottom as one round, not
+    // hugging each side (2026-10-09, Saori: "後ろから見たときにお尻が浮き出てる"). A chord never reaches past a convex outline, so only hollows fill
+    if (OPT.fit) { const R0 = Float32Array.from(R), K = Math.round(NA * 40 / 360);
+      for (let j = 0; j < NY; j++) for (let a = 0; a < NA; a++) { let r = R0[a * NY + j];
+        for (let d = 1; d <= K; d++) { const r1 = R0[((a - d + NA) % NA) * NY + j], r2 = R0[((a + d) % NA) * NY + j]; r = Math.max(r, 2 * r1 * r2 * Math.cos(d / NA * Math.PI * 2) / (r1 + r2)); }
         R[a * NY + j] = r; } }
     return (x, y, z) => { const dz = z - SK_ZC, f = (Math.atan2(x, dz) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(f) % NA, a1 = (a0 + 1) % NA, ta = f - Math.floor(f);
       const g = Math.min(NY - 1, Math.max(0, (SK_Y0 - y) / DY)), j0 = Math.min(NY - 2, Math.floor(g)), tj = g - j0, at = (a, j) => R[a * NY + j];
