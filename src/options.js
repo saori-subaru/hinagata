@@ -80,6 +80,9 @@ export const DEFAULTS = {
       "thighTop": 0.61,
       "calf": 0.6
     },
+    "adult": {
+      "on": false
+    },
     "joints": {
       "hipY": 0.44,
       "hipX": 0.11,
@@ -87,6 +90,7 @@ export const DEFAULTS = {
       "kneeX": 0.108
     },
     "sculpt": {
+      "bustX": null,
       "waist": {
         "y": 0.555,
         "height": 0.07,
