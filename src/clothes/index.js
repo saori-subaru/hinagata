@@ -104,12 +104,16 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // 2026-10-09, Saori: "普通のスカートをはくと太ももがつきでる")
   // skirtMask: the hips, the bottom and the belly, inside the body itself too (so the waist's cut applies: on the pelvis alone a strong waist
   // still had the cloth hang out at the pelvis' width beside it, 2026-10-07)
-  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly", ...(OPT.fit ? ["thighOut"] : []))) : null, skirtMask = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly", ...(OPT.fit ? ["thighOut"] : []))) : null, skirtMask0 = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  // adult body, the shirt (or a dress's top) under the skirt: the skirt goes over it too, not only over the body (its sides stood out of the
+  // skirt's top at the waist, seen with the arms out: 2026-10-09, Saori: "Aにしてみて … ぼこぼこ")
+  const UNDER = SKIRT && OPT.fit && (OPT.outfit.shirt.on || OPT.outfit.dress?.on) && HEM < (SK_Y0 ?? 1);
+  const skirtMask = !SKIRT ? null : UNDER ? (x, y, z) => Math.min(skirtMask0(x, y, z), y < HEM ? 1 : shirtSdf(x, y, z, bodySdf, true) + 0.002) : skirtMask0;
   // the cone starts from the body at its top, measured each way (a body's narrowest a little over it), not from an ellipse at the hips'
   // width: a long, strong waist ran on under the band at the top, and below it the cone came out at the hips' width with a corner at each
   // side (2026-10-07, Saori: "くびれを作ると…スカートの問題"). Never wider than the old cone; the hips below are draped over as before (DRAPE)
   const TOPR = SKIRT ? (() => { const NA = 48, R = new Float32Array(NA);
-    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f); let t = 0; while (t < 0.4 && bodySdf(s * t, SK_Y0, SK_ZC + c * t) < 0) t += 0.001; R[a] = t + 0.015; }
+    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f); let t = 0; while (t < 0.4 && (UNDER ? skirtMask(s * t, SK_Y0, SK_ZC + c * t) : bodySdf(s * t, SK_Y0, SK_ZC + c * t)) < 0) t += 0.001; R[a] = t + (UNDER ? 0.008 : 0.015); }
     return (s, c) => { const g = (Math.atan2(s, c) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(g) % NA, t = g - Math.floor(g); return R[a0] * (1 - t) + R[(a0 + 1) % NA] * t; }; })() : null;
   // adult body: the flare eases in under the top (EZ: the drop's first EZ m flare little), so the skirt comes out of the waist in a curve,
   // not a corner (2026-10-09, Saori, circling where the dress's front went straight down and then bent out)
