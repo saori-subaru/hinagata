@@ -362,7 +362,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // under it and FOOT_FLAT cuts them level there), and the instep runs from the ankle down to the forefoot as one slope (instep, made below
       // with the feet's size: its top stays at the ankle, so a small foot doesn't come apart from the leg)
       P[`foot.${s}`] = E([fx, -0.007 + FOOT_H * 0.92, 0.012], [0.04 * n, FOOT_H * 0.92, 0.068], `foot.${s}`, 0.03);
-      P[`heel.${s}`] = E([fx + m * 0.002, -0.007 + 0.024, -0.026], [0.028 * n, 0.024, 0.024], `foot.${s}`, 0.025);
+      P[`heel.${s}`] = E([fx + m * 0.002, -0.007 + 0.024, AD ? -0.015 : -0.026], [0.028 * n, 0.024, 0.024], `foot.${s}`, 0.025);   // (adult: under the Achilles tendon, not 2 cm behind it with a dip above: 2026-10-08, Saori, "かかとが後ろにですぎ、かかとの上で急に凹んでる")
       P[`ball.${s}`] = E([fx - m * 0.004, -0.007 + 0.015, 0.05], [0.047 * n, 0.015, 0.03], `foot.${s}`, 0.02); }
     // toes (foot.toes, 2026-10-05, Saori: barefoot like Nahida; "足の指丸まってない？"): the foot's front top is shaved down to them (FOOT_CUT), so the
     // instep slopes to the toes instead of ending in a dome they sat under (curled-looking); the toes lie flat on the ground, pointing forward.
@@ -384,7 +384,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1)); } }
     // the instep: from the ankle (as thick as the leg is there) down to the top of the forefoot, one slope; its top stays at the ankle whatever the feet's size
     { const FK = OPT.body.proportion?.feet ?? 1, fx = m * (FOOT_X - 0.002), th = OPT.body.thickness?.calf ?? 1;
-      P[`instep.${s}`] = C(j("foot"), [fx, -0.003 + 0.02 * FK, 0.05 * FK], 0.04 * th, 0.017 * FK, `foot.${s}`, 0.03); }
+      P[`instep.${s}`] = AD ? C(j("foot"), [fx, -0.003 + 0.014 * FK, 0.085 * FK], 0.04 * th, 0.013 * FK, `foot.${s}`, 0.035)   // (adult: a long low slope from the ankle to the toes, as the VRoid foot's)
+        : C(j("foot"), [fx, -0.003 + 0.02 * FK, 0.05 * FK], 0.04 * th, 0.017 * FK, `foot.${s}`, 0.03); }
     // 服用: 半分の長さの袖・すそ
     const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
     P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);
@@ -411,7 +412,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       { const c = at(Kf, Af, 0.32); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.024], [0.034, 0.27 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); }
       // under the calf, down to the heel: the calf narrowing into the Achilles tendon, not ending in a step halfway (2026-10-08, Saori:
       // "ふくらはぎが突然途中で細くなってる")
-      { const a = at(Kf, Af, 0.45), b = at(Af, Af, 0); P[`calfLow.${s}`] = fin(C([a[0], a[1], a[2] - 0.014], [b[0], b[1] + 0.01, b[2] - 0.012], 0.02, 0.012, `lowerLeg.${s}`, 0.05)); } }
+      { const a = at(Kf, Af, 0.45), b = at(Af, Af, 0); P[`calfLow.${s}`] = fin(C([a[0], a[1], a[2] - 0.014], [b[0], b[1] - 0.035, b[2] - 0.012], 0.02, 0.014, `lowerLeg.${s}`, 0.05)); } }   // (down onto the heel)
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)

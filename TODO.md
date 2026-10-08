@@ -9,7 +9,7 @@
 ```js
 body: {
   head: { scale: 0.44 },
-  proportion: { legs: 2.1, torso: 1.5, chest: 0, shoulders: 0.827 },
+  proportion: { legs: 2.1, torso: 1.5, chest: 0, shoulders: 0.827, feet: 1.08 },
   joints: { hipY: 0.52, hipX: 0.07, kneeX: 0.066, footX: 0.066 },   // 股はサオリの希望で 0.5 より上(0.537)。膝・足首は新しい脚に合わせて 6.6 cm（4.25 だと膝がくっつく）
   torso: { chest: 0.63, hips: 0.56, bust: 0.56, back: 0.392, butt: 0.672 },   // adult では胸板・腰・お尻は body.adult のほうが決める
   thickness: { upperArm: 0.504, forearm: 0.476, thigh: 0.434, thighTop: 0.546, calf: 0.42 },
