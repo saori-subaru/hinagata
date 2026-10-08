@@ -32,6 +32,27 @@ export function armReach(OPT) {
   return { x: Math.max(0, h[0] - ARM0["hand.L"][0] + 0.876 * (tip - 0.115)), y: Math.max(0, ARM0["hand.L"][1] - h[1] + 0.483 * (tip - 0.115) + (PR.arms != null ? 0.06 : 0)) };   // (a rigid hand turns down with its steeper forearm: a margin)
 }
 
+/**
+ * The clothes' heights on the adult body (body.adult; 2026-10-08, Saori, the 6-head body dressed: bare skin between the shirt and the pants,
+ * the hands inside the shirt, a dress's skirt starting at the bottom). The outfit's heights (pants.top, a dress's waist, hems, socks.top) are
+ * in base terms, made for the chibi torso and legs: there they are read as places between the base body's ankle (0.085), knee (0.25), hip
+ * joint (0.44) and shoulder (0.732) and put at the same places between the adult body's, after the stretch, then read back. Returns
+ * { pantsTop, pantsHem, shirtHem, dressWaist, dressHem, skirtHem, socksTop } (base heights; a value left out keeps its own), or null. (The cape not yet.)
+ * The user's options are left as they are (avatar.options): these go to OPT.fit.
+ */
+export function adultFit(OPT) {
+  const AD = OPT.body.adult; if (!AD?.on) return null;
+  const HIP_Y = OPT.body.joints.hipY ?? 0.4, A = armJoints(OPT)["upperArm.L"][1];
+  const J = { "upperLeg.L": [0, HIP_Y, 0], neck: [0, 0.74, 0], chest: [0, 0.62, 0], "upperArm.L": [0, A, 0], "lowerLeg.L": [0, 0.25, 0], "foot.L": [0, 0.085, 0] };
+  const S = makeStretch(OPT, J), yA = S.fwd(0.085), yH = S.fwd(HIP_Y), yS = S.bone("upperArm.L", A), yK = yA + (AD.knee ?? 0.53) * (yH - yA);
+  const R = [[0.085, yA], [0.25, yK], [0.44, yH], [0.732, yS]];
+  const map = (c) => { if (c == null || c <= R[0][0] || c >= R[3][0]) return c; let i = 0; while (c > R[i + 1][0]) i++; const t = (c - R[i][0]) / (R[i + 1][0] - R[i][0]); return S.inv(R[i][1] + t * (R[i + 1][1] - R[i][1])); };
+  const O = OPT.outfit, LEN = O.shirt?.length ?? "tuck", PL = O.pants?.length ?? "shorts";
+  // a tucked shirt goes 3 cm (base; 6 at torso 2) into the pants: at its place it went in 1.7 and the two surfaces crossed in a jagged line
+  const pantsTop = map(O.pants.top), shirtHem = LEN === "tuck" ? Math.min(map(0.455), pantsTop - 0.03) : map({ out: 0.44, crop: 0.6 }[LEN] ?? 0.455);
+  return { pantsTop, pantsHem: map({ knee: 0.2, long: 0.1 }[PL] ?? O.pants.hem), shirtHem,
+    dressWaist: map(O.dress?.waist), dressHem: map(O.dress?.hem), skirtHem: map(O.pants.skirt?.hem ?? 0.3), socksTop: map(O.socks?.top) };
+}
 /** High heels worn: the bare foot isn't bent or narrowed for them when the shoes are off (2026-10-08, Saori, the shoes taken off a character
  *  made with heels: "つま先がうえにかたむいて浮いてる", the toes narrowed out of sight) */
 export const heelsWorn = (OPT) => OPT.outfit?.shoes?.kind === "heels" && OPT.outfit.shoes.on !== false;

@@ -26,14 +26,14 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
-      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
+      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? OPT.fit?.pantsTop ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
         // longer legs (body.proportion.legs) stretch the skirt below the hips too: what stays on the hips then hung that much deeper, under the
         // thighs when they turned up, and the cloth crumpled pulling it over them (2026-10-05, Saori: a dress sitting, tall body). The share
         // left on the hips shrinks as the legs grow
         const FOL = 1 - (1 - (SK.follow ?? 0.55)) / Math.max(1, OPT.body.proportion?.legs ?? 1);   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
         return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, top + 0.05, w], h: clothH || partClothCell(H), only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
-      const y0 = { knee: 0.17, long: 0.07 }[PT.length] ?? 0.2;   // long pants reach the ankles
-      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
+      const y0 = Math.min({ knee: 0.17, long: 0.07 }[PT.length] ?? 0.2, (OPT.fit?.pantsHem ?? 1) - 0.03);   // long pants reach the ankles (the adult body's hems: OPT.fit)
+      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "cape": { const CA = OPT.outfit.cape;   // only built when worn (outfit.cape.on rebuilds the clothes)
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const w = 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;

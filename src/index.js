@@ -15,7 +15,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch, isArmBone } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
@@ -86,6 +86,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   options = openRecipe(options, { bare }).options;
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
+  { const F = adultFit(OPT); if (F) OPT.fit = F; }   // the clothes' heights on the adult body (body/index.js adultFit)
   // "fine" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to
   // about a fifth (meshoptimizer): the vertices "game" has, the look of "high" (the thinning keeps the triangles where the surface turns
   // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the

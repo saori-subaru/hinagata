@@ -39,7 +39,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const gx = f.bx / Lf, gy = f.by / Lf, gz = f.bz / Lf, dx = gx * gy, dy = gy * gy - 1, dz = gz * gy, dl = Math.hypot(dx, dy, dz) || 1;   // d: straight down, across the forearm
     return { ax: a.ax, ay: a.ay, az: a.az, ux: a.bx / L, uy: a.by / L, fx: f.ax, fy: f.ay, fz: f.az, gx, gy, gz, dx: dx / dl, dy: dy / dl, dz: dz / dl, Lf, side: Math.sign(a.ax) }; };
   const ARMS = [arm("L"), arm("R")];
-  const HEM = { tuck: 0.455, out: 0.44, crop: 0.6 }[LEN] ?? 0.455;   // the bottom edge   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
+  const FIT = OPT.fit ?? {}, HEM = FIT.shirtHem ?? { tuck: 0.455, out: 0.44, crop: 0.6 }[LEN] ?? 0.455;   // (FIT: the heights on the adult body, body/index.js adultFit)   // the bottom edge   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
   const COLLAR = { y: OPT.outfit.shirt.collar.y, bowl: OPT.outfit.shirt.collar.bowl, tilt: OPT.outfit.shirt.collar.tilt, front: OPT.outfit.shirt.collar.front, fwd: OPT.outfit.shirt.collar.forward };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   // the bell sleeve: a shell around the forearm from the elbow (as wide as the sleeve) to the cuff, open there. It hangs: the bell's middle
@@ -70,15 +70,15 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       if (BELL && !noBell) d = smin(d, bellShell(x, y, z, A), 0.008); }
     return Math.max(sm(sm(d, neck), fit), HEM - y - (HEM_X < Infinity ? 1.5 * Math.max(0, Math.abs(x) - HEM_X) : 0)); };   // tuck: すそはズボンの中に入れる
   // pants.length: "shorts" (hem = pants.hem) | "knee" (just below the knee) | "long" (to the ankle)
-  const PL = OPT.outfit.pants.length ?? "shorts", PANTS_HEM = { knee: 0.2, long: 0.1 }[PL] ?? OPT.outfit.pants.hem;   // ズボンのすその高さ
+  const PL = OPT.outfit.pants.length ?? "shorts", PANTS_HEM = FIT.pantsHem ?? { knee: 0.2, long: 0.1 }[PL] ?? OPT.outfit.pants.hem;   // ズボンのすその高さ
   const pantsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn", "thighOut", ...(PL === "shorts" ? [] : ["thigh", "calf", "calfO", "calfB"])), CROTCH]);   // ズボンを着せる範囲
-  const PANTS_OFF = OPT.outfit.pants.offset, PANTS_TOP = OPT.outfit.pants.top, PANTS_TILT = OPT.outfit.pants.tilt;   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
+  const PANTS_OFF = OPT.outfit.pants.offset, PANTS_TOP = FIT.pantsTop ?? OPT.outfit.pants.top, PANTS_TILT = OPT.outfit.pants.tilt;   // ズボンの厚み / 上の高さ / 後ろ上がりの傾き
   const PM = PL === "shorts" ? 0 : 0.1;   // longer pants: below the thighs the legs alone shape them (the mask's edge made a fold at the knee); higher up the margin would reach the hands
   const LEGS = PL === "shorts" ? null : blend(pick("thigh", "thighF", "thighB", "thighOut", "calf", "calfO", "calfB"));   // the legs without the dent at the outside of the knee (cloth bridges it; following it folded the pants there)
   const pantsCore = (x, y, z, B = bodySdf) => Math.max((LEGS && y < 0.38 ? (b0 => b0 + (Math.min(b0, LEGS(x, y, z)) - b0) * sstep(0.38, 0.33, y))(B(x, y, z)) : B(x, y, z)) + 0.024 - PANTS_OFF, pantsMask(x, y, z) - 0.03 - PM * sstep(0.36, 0.3, y));   // 体の形にそって着せる(横から見て分厚くならないように)
   // the waistband over a tucked shirt: from 5 cm under the top it goes over the shirt itself, 7 mm out (3 mm: the shirt showed through in streaks at the cells' size), not the body pushed out (that stood
   // 7–10 mm out of the shirt at the sides and the back: a step all round. 2026-10-07, Saori: "ズボン系が分厚くてシャツと段ができている")
-  const BAND = LEN === "tuck" ? 0.05 : 0;
+  const BAND = LEN === "tuck" ? (OPT.fit ? Math.min(0.05, Math.max(0, PANTS_TOP - HEM - 0.008)) : 0.05) : 0;   // (adult: never under the shirt's hem, which is close under the top there: the band hung below it in holes)
   // the legs' shape (pants.puff: balloon legs, gathered toward the hem; pants.bell: widening toward the hem; 2026-10-07, Saori: "ズボンを膨らませたり、
   // 先端を広げたり"): the cloth further out around each leg, not across the middle (the legs would join)
   const PUFF = OPT.outfit.pants.puff ?? 0, BELLB = OPT.outfit.pants.bell ?? 0, LSPAN = Math.max(0.05, 0.4 - PANTS_HEM);
@@ -188,7 +188,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
           parts.push(E(b.map((c, q) => c + u[q] * 0.017), [0.018, 0.011, 0.005], bn, k, [u, v, ww]), C(b, [cx + sx * 0.012, b[1] - 0.012, z + 0.022], 0.0034, 0.003, bn, k)); } } }
     return (x, y, z) => { let d = 1; for (const q of parts) d = Math.min(d, dPrim(q, x, y, z)); return d; }; })() : null;   // (the top found from inside the shoe: lo starts above the sole, where it is inside)
   // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
-  const SOCK_TOP = OPT.outfit.socks.top;   // 靴下のはき口の高さ
+  const SOCK_TOP = FIT.socksTop ?? OPT.outfit.socks.top;   // 靴下のはき口の高さ
   const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
   // the full-body suit (outfit.suit; 2026-10-07, Saori: "プラグスーツのような全身スーツ"): the body itself 2.5 mm out (as the socks are), from a
   // high collar (higher at the back) down over the feet, cut off at the wrists. Its second color (collar, cuffs, boots, side panels): index.js
