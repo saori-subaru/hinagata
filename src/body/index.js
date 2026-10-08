@@ -136,16 +136,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // neck.follow: the neck gets thinner with a smaller head (and thicker with a bigger one), relative to the default head size (2026-10-05, Saori:
   // "頭を小さくすると首が太く見える"); 0 = the same width whatever the head
   const NW = NK.width * Math.pow(OPT.body.head.scale / HEAD_SCALE0, NK.follow ?? 0);
-  // (adult: blended narrowly, so it stands straight up from the shoulders: with 4 cm it flared into them, narrower at the top; 2026-10-09,
-  // Saori: "首が上すぼまりになってるから垂直にしたい")
-  P.neck = C([0, 0.725, -0.032], [0, 0.845 + LIFT, 0.006], 0.057 * NW, 0.056 * NW, "neck", OPT.body.adult?.on ? 0.015 : 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+  P.neck = C([0, 0.725, -0.032], [0, 0.845 + LIFT, 0.006], 0.057 * NW, 0.056 * NW, "neck", 0.04);   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
   // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
   { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }
-  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);
-  // adult: the slope from the neck to the shoulders starts lower and lies flatter, so the neck stands straight down to it instead of widening
-  // into a mound from high up (2026-10-09, Saori: "首が上すぼまり … 垂直にしたい", seen from the front)
-  if (OPT.body.adult?.on) { P.trap.cy -= 0.022; P.trap.by0 = P.trap.cy; P.trap.ry = 0.022; P.trap.k = 0.02; }   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
