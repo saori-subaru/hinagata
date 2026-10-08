@@ -101,8 +101,8 @@ simulated on the CPU every frame. Budget for both:
   about 5 ms a character, 10–13 with a skirt or long hair, 25–30 with a dress, a cape and long hair (a 2.8 GHz cloud CPU). `avatar.detail`
   says what the last update did; `{ detail: "full" | "half" | "low" | "off" }` sets it yourself.
 - `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, about half the build
-  time: crowds, small characters, phones), "fine" (the look of "high" at the vertices of "game", but about 3x as long to build) or
-  "high" (for close-ups and stills; 3–4x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
+  time: crowds, small characters, phones), "fine" (the sharpest shapes, a nose tip or an elf ear's point, at about the triangles of
+  "game", but about 2.5x as long to build the first time; the default for `body.adult`) or "high" (6.8 mm cells unthinned, 2–3x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
   `{ simplify: 0.15 }` thins the "game" mesh to that share of the triangles (meshoptimizer, from your import map's "meshoptimizer", else
   jsDelivr). The face is kept as built on top of the share, a skirt or cape is thinned less, and thinning stops before the shape would change
   by more than 1% of a part's size, so you may get more triangles than the share: the body never goes thin or spiky. At 0.15: a tall body in

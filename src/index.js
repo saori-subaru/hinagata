@@ -15,7 +15,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch, isArmBone } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
@@ -51,10 +51,10 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *           ({ hinagata: 3, name, options }: the editor's 書き出し → JSON). Files carry their version (2: the first tall body): a file of version 1, and a bare recipe
  *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults
  *           (openRecipe in options.js). A bare options object passed in code is today's: the current defaults.
- * settings: { quality: "game" (default) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
- *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
- *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
- *              long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
+ * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
+ *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built at 4.5 mm cells, then thinned to 7 % (meshoptimizer; the face kept as
+ *              built, skirts and capes at most 10.5 mm and 0.45 of their thickness, not thinned): about the triangles of "game" (fewer than
+ *              "high" by half), the sharpest shapes (a nose tip, an elf ear's point), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
@@ -75,7 +75,7 @@ function shapeOnly(OPT) {
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
 }
 
-export async function createAvatar(options = {}, { quality = "game", cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -86,14 +86,22 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   options = openRecipe(options, { bare }).options;
   { const bad = checkOptions(options); if (bad.length) console.warn("Hinagata: options with problems (see docs/options.schema.json):\n" + bad.map((b) => `  ${b.path}: ${b.problem}`).join("\n")); }   // typos would otherwise be silently ignored
   const OPT = resolveOptions(options);
+  { const F = adultFit(OPT); if (F) OPT.fit = F; }   // the clothes' heights on the adult body (body/index.js adultFit)
   // "fine" (2026-10-05, Saori: "ゲーム用でもまだ六万頂点", "スカートやマントがジャギジャギ"): built at the high quality's cells, then thinned to
   // about a fifth (meshoptimizer): the vertices "game" has, the look of "high" (the thinning keeps the triangles where the surface turns
   // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the
   // tennis: 3.5 s → 9.9 s), and a game's players wait for that; so "game" stays the fast one.
   // "lite": the game's cells thinned to 15% and lighter hair locks, about a fifth of those vertices; the same look at a game's distance
+  // the adult body (body.adult) is "fine" unless asked otherwise (2026-10-08, Saori agreed): its slim arms (2.4 cm radius) came out ridged like a
+  // spring on the game's 1.36 cm cells and its toes' gaps didn't show; fine thins back to about as many triangles (the body 1.3 → 1.5 万)
+  // Then "fine" itself at 4.5 mm cells thinned to 7 % (2026-10-09; Saori: "うん、それでお願い", "それがいい"): on the small 6-head head the nose
+  // tip, about 2 mm, fell between 6.8 mm cells and came out cut off square, and an elf ear's thin blade came out in steps with its point gone;
+  // at 4.5 mm both are sharp. The face is kept as built (more triangles there), the rest thinned harder: about as many in all (Sylvie, all
+  // built: 11.3 万 against fine's 12.4 万 and high's 28.3 万), about 2.5x as long to build as "game" (the editor shows a quick build first)
+  const quality = qualityAsked ?? (OPT.body.adult?.on && !cell ? "fine" : "game");
   const LITE = quality === "lite", FINE = quality === "fine" && !cell;
-  let H = cell || { game: 0.0136, fine: 0.0068, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
-  let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.22 : 1);
+  let H = cell || { game: 0.0136, fine: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.07 : 1);
   let MS = null;   // meshoptimizer's simplifier, only when thinning
   if (simplify < 1) {
     const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)
@@ -128,13 +136,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // stretched upward as they are made (mesh), and what moves the character uses the stretched ones: the bones (Jr), the head's transform
   // for things placed in head space (HTr: the hair's locks, the face picture, the ear line) and the body read in place (bodySdfR, for colliders)
   const ST = makeStretch(OPT, J);
-  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.bone(k, v[1]), v[2]]]));   // (rigid arms: the arm's joints ride on the shoulder)
+  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.bone(k, v[1]), v[2] + ST.shz(v[1])]]));   // (rigid arms: the arm's joints ride on the shoulder; adult: the shin leans back, shz)
   const HTr = ST.identity ? HT : { ...HT, identity: false, toHead: (x, y, z) => HT.toHead(x, ST.inv(y), z), fromHead: (x, y, z) => { const p = HT.fromHead(x, y, z); p[1] = ST.fwd(p[1]); return p; },
     wrap: (f) => { const g = HT.wrap(f); return (x, y, z) => g(x, ST.inv(y), z); } };
   // (rigid arms, body.proportion.arms: a point that lands on an arm where the arm moved to is read there)
   const armAt = (x, y, z) => { const t = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] }; weightsAt(x, y, z, t); let a = 0; for (let q = 0; q < 4; q++) if (t.w[q] && isArmBone(BONES[t.idx[q]])) a += t.w[q]; return a; };
-  const bodySdfR = ST.identity ? bodySdf : !ST.rigid ? (x, y, z) => bodySdf(x, ST.inv(y), z) * ST.k
-    : (x, y, z) => { const ya = y - ST.armDy; return armAt(x, ya, z) > 0.5 ? bodySdf(x, ya, z) : bodySdf(x, ST.inv(y), z) * ST.k; };
+  const bodySdfR = ST.identity ? bodySdf : !ST.rigid ? (x, y, z) => { const yb = ST.inv(y); return bodySdf(x, yb, z - ST.shz(yb)) * ST.k; }
+    : (x, y, z) => { const ya = y - ST.armDy; if (armAt(x, ya, z) > 0.5) return bodySdf(x, ya, z); const yb = ST.inv(y); return bodySdf(x, yb, z - ST.shz(yb)) * ST.k; };
   const ARM_BI = new Set(BONES.filter(isArmBone).map((b) => BI[b]));
   /** a vertex's share on the arm bones (rigid arms ride on the shoulder: makeStretch) */
   const armShare = (si, sw, v) => { if (!ST.rigid || !si) return 0; let a = 0; for (let q = 0; q < 4; q++) if (ARM_BI.has(si[v * 4 + q])) a += sw[v * 4 + q]; return a; };
@@ -162,7 +170,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const g = new THREE.BufferGeometry();
     let gp = rec.pos, gn = rec.nor;
     if (!ST.identity) { gp = Float32Array.from(gp); gn = Float32Array.from(gn);   // the proportions: points up by fwd, normals by the slope there (the record stays at the base, for the cache)
-      for (let i = 0, v = 0; i < gp.length; i += 3, v++) { const a = armShare(rec.si, rec.sw, v), s = ST.upSlope(gp[i + 1], a); gp[i + 1] = ST.up(gp[i + 1], a); const ny = gn[i + 1] / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
+      for (let i = 0, v = 0; i < gp.length; i += 3, v++) { const a = armShare(rec.si, rec.sw, v), yb = gp[i + 1], s = ST.upSlope(yb, a), sh = a ? 0 : ST.shz(yb), shd = a || !sh ? 0 : ST.shzD(yb);   // (adult: the shin leans back, shz; normals by its slope too)
+        gp[i + 1] = ST.up(yb, a); gp[i + 2] += sh; const ny = (gn[i + 1] - shd * gn[i + 2]) / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
     g.setAttribute("position", new THREE.BufferAttribute(gp, 3)); g.setAttribute("normal", new THREE.BufferAttribute(gn, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(rec.si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(rec.sw, 4));
     if (!ST.identity) g.userData.basePos = rec.pos;
@@ -576,10 +585,20 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   if (AO.on) wear("armor", true);
   // accessories (options.accessories, src/accessories.js): small meshes, each on one bone; parts "acc<i>" (a mirrored item: "acc<i>.<k>")
   let accKeys = [];
+  // adult body (body.adult): an item on a bone other than the head is put onto the outermost surface (body or clothes) along its normal. Its
+  // place is an offset from the bone's joint, made for the chibi torso: on the adult chest Lumina's chest ribbon stood 2 cm off the dress
+  // (2026-10-09, Saori: "横から見たときの胸のリボンがういてる"). Read on the meshes as built (rest pose); an item put there in the editor stays
+  function snapper() {
+    if (!OPT.body.adult?.on) return null;
+    const ms = Object.entries(parts).filter(([k, x]) => x?.m?.isMesh && x.m.visible && !/^(acc|hair|locks|bangs|tails|extra|weapon)/.test(k)).map(([, x]) => new THREE.Mesh(x.m.geometry));
+    const rc = new THREE.Raycaster(), o = new THREE.Vector3(), d = new THREE.Vector3();
+    return (p, n) => { o.set(...p).addScaledVector(n, 0.08); d.copy(n).negate(); rc.set(o, d); rc.far = 0.16; const h = rc.intersectObjects(ms, false)[0]; return h ? [h.point.x, h.point.y, h.point.z] : null; };
+  }
   function makeAccessories() {
+    const snap = snapper();
     for (const k of accKeys) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; } accKeys = [];
     (OPT.accessories ?? []).forEach((it, i) => { if (!it?.kind || !it.bone) return;
-      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z) }).forEach(({ geo, bone }, k) => {
+      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap }).forEach(({ geo, bone }, k) => {
         const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         const key = k ? `acc${i}.${k}` : `acc${i}`; parts[key] = skinned(geo, it.color ?? "#e8c25a", 0.0025); accKeys.push(key); }); });

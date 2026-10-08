@@ -15,6 +15,10 @@ export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 // inside's outline showing through in specks (2026-10-05, Saori: "ゲーム用の表示にするとスカートとかマントがジャギジャギ"). Their cells stop here
 const THIN = 0.0105;
 export const partClothCell = (H) => Math.min(H * 1.2, THIN);   // a skirt's or a cape's cell at the mesh cell H
+// and never over 0.45 of the cloth's thickness (2026-10-09, Saori: "マントが高品質にしても虫食いみたいなのができる", the skirt's black slivers):
+// a cell spanning both sides of the thin shell put its vertex inside the cloth, between them, where it couldn't be pulled onto either; the
+// slanted triangles round it showed the outline's dark inside through the cloth. At 0.45 of the thickness both sides get their own vertices
+const clothCell = (h, thick) => Math.min(h, (thick ?? 0.018) * 0.45);
 
 export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   // clothH: the skirt's and the cape's cell, if set (the game quality: see index.js)
   const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, foot0 = [-0.22, -0.01, -0.12];
@@ -26,18 +30,18 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
-      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
+      if (SKO) { const SK = SKO, hem = SK.hem ?? 0.3, top = SK.top ?? OPT.fit?.pantsTop ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
         // longer legs (body.proportion.legs) stretch the skirt below the hips too: what stays on the hips then hung that much deeper, under the
         // thighs when they turned up, and the cloth crumpled pulling it over them (2026-10-05, Saori: a dress sitting, tall body). The share
         // left on the hips shrinks as the legs grow
         const FOL = 1 - (1 - (SK.follow ?? 0.55)) / Math.max(1, OPT.body.proportion?.legs ?? 1);   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
-        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, top + 0.05, w], h: clothH || partClothCell(H), only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
-      const y0 = { knee: 0.17, long: 0.07 }[PT.length] ?? 0.2;   // long pants reach the ankles
-      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, 0.55, 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
+        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, top + 0.05, w], h: clothCell(clothH || partClothCell(H), SK.thick), only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
+      const y0 = Math.min({ knee: 0.17, long: 0.07 }[PT.length] ?? 0.2, (OPT.fit?.pantsHem ?? 1) - 0.03);   // long pants reach the ankles (the adult body's hems: OPT.fit)
+      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "cape": { const CA = OPT.outfit.cape;   // only built when worn (outfit.cape.on rebuilds the clothes)
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const w = 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
-      return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: [-w, CA.hem - 0.02, -d], hi: [w, CA.collar + 0.05, CA.wrap + 0.1], h: clothH || partClothCell(H), only: /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }
+      return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: [-w, CA.hem - 0.02, -d], hi: [w, CA.collar + 0.05, CA.wrap + 0.1], h: clothCell(clothH || partClothCell(H), CA.thick), only: /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }
     case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
     case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: /^foot/ }   // thin: their own fine grid
       : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };

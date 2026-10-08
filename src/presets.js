@@ -156,12 +156,23 @@ export const CHARACTERS = {
   },
 };
 
-// ルミナ v2 (2026-10-07, Saori: "e3をルミナv2として入れてもらえますか"): ルミナ with a longer face drawn in straight lines — a little wider (faceNarrow
-// 1.02), the jaw longer under the mouth (jawLength 1.9), its corner low (cheeks fullest at 0.885) and straight from there to the same pointed
-// chin (the V chin's lines, aimed to meet the face's side at that corner: slope 3.2 from y0 0.89). Everything else is ルミナ's own
+// ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
+// 6 heads on the adult body (body.adult), made 2026-10-08/09 beside a Genshin character's picture and her three views, then Saori's VRoid
+// body (DESIGN.md "A 6-head body"): a smaller head, longer torso and legs, the adult torso, legs, hands and feet; a smaller, higher, closer
+// pair of eyes, a narrower head, the nose a little forward and a dip under the lower lip in profile; toon shading (with soft and a rim
+// light her nose looked flat in profile). Clothes and hair are ルミナ's own (their heights follow the adult body: adultFit)
 { const o = structuredClone(CHARACTERS.lumina.file.options), b = o.body;
-  b.head.jawLength = 1.9;
-  b.sculpt.faceNarrow = { k: 1.02 };
-  b.sculpt.cheeks.y = 0.885;
-  b.sculpt.chin.v = { on: true, halfW: 0.02, slope: 3.2, y0: 0.89, fadeY: 0.03, k: 0.01, z0: -0.02 };
-  CHARACTERS.lumina2 = { name: { ja: "ルミナ v2", en: "Lumina v2" }, about: { ja: "ルミナの面長・直線の輪郭", en: "Lumina with a longer face in straight lines" }, file: { hinagata: 3, name: "ルミナ v2", options: o } }; }
+  Object.assign(b.head, { scale: 0.48, width: 0.92, jawLength: 1.1 });
+  Object.assign(b.proportion, { legs: 2.2, torso: 2.0, chest: 0, shoulders: 0.827, feet: 1.08 });
+  Object.assign(b.joints, { hipY: 0.52, hipX: 0.07, kneeX: 0.072, footX: 0.07 });
+  Object.assign(b.torso, { chest: 0.63, hips: 0.56, bust: 0.75, back: 0.392, butt: 0.672 });
+  Object.assign(b.thickness, { upperArm: 0.62, forearm: 0.58, thigh: 0.434, thighTop: 0.546, calf: 0.42 });
+  b.sculpt.neck = { ...b.sculpt.neck, width: 0.612 }; b.sculpt.bustX = 0.038;
+  b.sculpt.chin = { ...b.sculpt.chin, sharp: 0.1, backRise: 1.2, backMax: 0.1 };
+  b.sculpt.nose = { ...(b.sculpt.nose ?? {}), tipZ: 0.28 };
+  b.sculpt.mouth = { ...(b.sculpt.mouth ?? {}), back: 0, cheekBack: 0.02, underLip: 0.005 };
+  b.adult = { on: true };
+  o.face = { ...o.face, eyeSize: 1.1, layout: { ...(o.face.layout ?? {}), eyeY: 1.02, browY: 1.108, eyeX: 0.088, browX: 0.082 } };
+  o.outfit.dress = { ...o.outfit.dress, waist: 0.46 };
+  o.shading = { ...(o.shading ?? {}), style: "toon", rim: { on: false } };
+  CHARACTERS.lumina2 = { name: { ja: "ルミナ v2", en: "Lumina v2" }, about: { ja: "6頭身・大人の体のルミナ", en: "Lumina at about 6 heads, on the adult body" }, file: { hinagata: 3, name: "ルミナ v2", options: o } }; }

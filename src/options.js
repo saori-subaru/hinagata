@@ -11,10 +11,10 @@ import { partIds } from "./face/names.js";
 export function skirtOf(OPT) {
   // the hem's shape (2026-10-07, Saori: "スカートやワンピースの先を、おおきなギザギザにしたり、丸っこい段々にしたり、先端を上にカールさせて広げたり、逆にすぼめたり"):
   // hemShape "plain" | "zigzag" | "scallop" (round lobes) | "tiers" (stacked like ruffles), hemCount (around / tiers), hemDepth (m), curl (-1..1: + the hem flares out and up, − draws in)
-  const PT = OPT.outfit.pants, D = OPT.outfit.dress, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, ...(PT.skirt ?? {}) };
+  const PT = OPT.outfit.pants, D = OPT.outfit.dress, F = OPT.fit ?? {}, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, ...(PT.skirt ?? {}), ...(F.skirtHem != null ? { hem: F.skirtHem } : {}) };   // (OPT.fit: the heights on the adult body, body/index.js adultFit)
   const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0 }[k]]));
-  if (D?.on) return { ...base, ...shape(D), hem: D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: D.waist ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
-  return PT.kind === "skirt" ? { ...base, top: PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
+  if (D?.on) return { ...base, ...shape(D), hem: F.dressHem ?? D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: F.dressWaist ?? D.waist ?? F.pantsTop ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
+  return PT.kind === "skirt" ? { ...base, top: F.pantsTop ?? PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
 }
 export const DEFAULTS = {
   "accessories": [],
@@ -80,6 +80,9 @@ export const DEFAULTS = {
       "thighTop": 0.61,
       "calf": 0.6
     },
+    "adult": {
+      "on": false
+    },
     "joints": {
       "hipY": 0.44,
       "hipX": 0.11,
@@ -87,6 +90,7 @@ export const DEFAULTS = {
       "kneeX": 0.108
     },
     "sculpt": {
+      "bustX": null,
       "waist": {
         "y": 0.555,
         "height": 0.07,
@@ -341,7 +345,9 @@ export const DEFAULTS = {
         "free": 0.95,
         "cheekBack": 0,
         "cheekBackWidth": 0.06,
-        "back": 0
+        "back": 0,
+        "underLip": 0,
+        "underLipY": 0.024
       },
       "crown": {
         "y": 1.32,
