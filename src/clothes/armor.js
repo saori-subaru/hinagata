@@ -56,7 +56,7 @@ export function buildArmor(OPT, { P, J }) {
 
   // ── breastplate: slices of the torso (no arms) from the waist up to the chest; squarish ellipses (n 2.6), smoothed between slices ──
   // armor.chest "short": a breastplate that ends under the chest, its lower edge dipping to a point in front (2026-10-07, Saori: a girl's short one)
-  const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap")), SHORT = AR.chest === "short";
+  const torso = blend(pick("chest", "upperChest", "bust", "belly", "pelvis", "trap")), SHORT = AR.chest === "short";
   const Y0 = SHORT ? 0.585 : 0.49, Y1 = 0.75, NS = SHORT ? 18 : 26, SL = [];
   for (let i = 0; i <= NS; i++) { const y = Y0 + (Y1 - Y0) * i / NS; SL.push(slice(torso, [0, y, 0.0], [1, 0, 0], [0, 0, 1], 24)); }
   for (const k of ["a", "b", "cv"]) { const v = SL.map((s) => s[k]); SL.forEach((s, i) => { s[k] = (v[Math.max(0, i - 1)] + 2 * v[i] + v[Math.min(NS, i + 1)]) / 4 + (k === "cv" ? 0 : 0.003); }); }   // smoothed (and a little out, to stay outside the bumps the smoothing shaved)

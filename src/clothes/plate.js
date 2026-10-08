@@ -104,7 +104,7 @@ export function buildPlate(OPT, { P, J, bodySdf, HT }) {
     decoSdf = (x, y, z) => W2[x > 0 ? 0 : 1](x, y, z); }
 
   // ── cuirass: slices of the torso from the hips to the collar (n 2.3), the faulds flaring out below the waist ──
-  const torso = blend(pick("chest", "bust", "belly", "pelvis", "trap", "butt"));
+  const torso = blend(pick("chest", "upperChest", "bust", "belly", "pelvis", "trap", "butt"));
   const Y0 = 0.4, Y1 = 0.78, NS = 30, SL = [];
   for (let i = 0; i <= NS; i++) { const y = Y0 + (Y1 - Y0) * i / NS; SL.push(slice(torso, [0, y, -0.005], [1, 0, 0], [0, 0, 1], 24)); }
   for (let pass = 0; pass < 2; pass++) for (const k of ["a", "b", "cv"]) { const v = SL.map((s) => s[k]); SL.forEach((s, i) => { s[k] = (v[Math.max(0, i - 1)] + 2 * v[i] + v[Math.min(NS, i + 1)]) / 4 + (k === "cv" ? 0 : 0.002); }); }

@@ -163,9 +163,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // front the chest stood 7 cm forward. Everything ahead of a line from the neck's front at the collarbone (y above the shoulder joint, z) going
   // forward by slope per m down is taken off them (softly), in the middle only (|x| under 9 cm, fading to 13), where it comes out
   if (AD) { const CL = { y: 0.04, z: 0.03, slope: 1, k: 0.02, ...(AD.collar ?? {}) }, yC = yS + CL.y, L = Math.hypot(1, CL.slope), smax = (a, b, k) => -smin(-a, -b, k);
-    const line = (x, Y) => CL.z + (Y > yC ? 8 * (Y - yC) : CL.slope * (yC - Y)) + 0.5 * sstep(0.09, 0.13, Math.abs(x));   // (above the collarbone it turns away fast: no cut, and no jump in the distance, which tore holes; beside the chest: none)
+    const line = (x, Y) => CL.z + (Y > yC ? 0 : CL.slope * (yC - Y)) + 0.5 * sstep(0.09, 0.13, Math.abs(x));   // (above the collarbone straight up, along the neck's front: no jump in the distance, which tore holes; beside the chest: none)
     const trim = (q) => { if (!q) return; const f0 = q.f; q.f = (x, y, z) => smax(f0(x, y, z), (z - line(x, STA.fwd(y))) / L, CL.k); };   // (both are made after the stretch: t 3)
-    trim(P.chest); trim(P.bust); trim(P.bust?.cloth); }
+    // the upper chest filled out to that line (2026-10-08, Saori: "なんで鎖骨の下が窪んでるのかな"): between the neck's piece, which ends just
+    // under the collarbone, and the ribcage, whose top leans back, nothing came forward: straight down 2 cm, then out 2 cm in 1.5 cm. A piece
+    // reaching past the line fills it, so from the collarbone to the bust the front is the line itself
+    P.upperChest = fin(E([0, yS - 0.03, 0.0], [0.07, 0.05, 0.1], "upperChest", 0.03));   // (the shirt is made over it too: clothes/index.js)
+    trim(P.chest); trim(P.bust); trim(P.bust?.cloth); trim(P.upperChest); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly + BD / 2], [0.165 * TO.belly, 0.14, 0.115 * TO.belly - BD / 2], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
   // (a short pelvis and a short cut made the hips jut out suddenly with a corner, like a clay figurine)
