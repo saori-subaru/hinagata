@@ -100,9 +100,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   if (SK.dress) { const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, SK_Y0, -0.01 + dz * t) < 0) t += 0.001; return t; };
     const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.015;   // m: over the shirt (1.4 cm) and a little air
     SK_AX = out(1, 0) + m; SK_ZC = (zf + zb) / 2; SK_AZ = (zf - zb) / 2 + m; }
+  // (adult: the outer thighs' tops too: the hips' line runs on into them, and outside the mask they stood out through the skirt's sides,
+  // 2026-10-09, Saori: "普通のスカートをはくと太ももがつきでる")
   // skirtMask: the hips, the bottom and the belly, inside the body itself too (so the waist's cut applies: on the pelvis alone a strong waist
   // still had the cloth hang out at the pelvis' width beside it, 2026-10-07)
-  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null, skirtMask = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly", ...(OPT.fit ? ["thighOut"] : []))) : null, skirtMask = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
   // the cone starts from the body at its top, measured each way (a body's narrowest a little over it), not from an ellipse at the hips'
   // width: a long, strong waist ran on under the band at the top, and below it the cone came out at the hips' width with a corner at each
   // side (2026-10-07, Saori: "くびれを作ると…スカートの問題"). Never wider than the old cone; the hips below are draped over as before (DRAPE)
