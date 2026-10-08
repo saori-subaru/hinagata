@@ -51,10 +51,10 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *           ({ hinagata: 3, name, options }: the editor's 書き出し → JSON). Files carry their version (2: the first tall body): a file of version 1, and a bare recipe
  *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults
  *           (openRecipe in options.js). A bare options object passed in code is today's: the current defaults.
- * settings: { quality: "game" (default; for body.adult 4.5 mm cells thinned to 7 %) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
- *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built as "high", then thinned to about a fifth (meshoptimizer; the face kept as
- *              built, skirts and capes built at 10.5 mm and not thinned): the vertices of "game", close to "high" in looks, but about 3x as
- *              long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
+ * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
+ *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built at 4.5 mm cells, then thinned to 7 % (meshoptimizer; the face kept as
+ *              built, skirts and capes at most 10.5 mm and 0.45 of their thickness, not thinned): about the triangles of "game" (fewer than
+ *              "high" by half), the sharpest shapes (a nose tip, an elf ear's point), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
@@ -94,14 +94,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // "lite": the game's cells thinned to 15% and lighter hair locks, about a fifth of those vertices; the same look at a game's distance
   // the adult body (body.adult) is "fine" unless asked otherwise (2026-10-08, Saori agreed): its slim arms (2.4 cm radius) came out ridged like a
   // spring on the game's 1.36 cm cells and its toes' gaps didn't show; fine thins back to about as many triangles (the body 1.3 → 1.5 万)
-  // Then at 4.5 mm cells thinned to 7 % ("adult"; Saori: "うん、それでお願い"): on the small 6-head head the nose tip, about 2 mm, fell between
-  // fine's 6.8 mm cells and came out cut off square; at 4.5 mm it is a point. The face is kept as built (more triangles there), the rest is
-  // thinned harder: about as many in all as fine (Lumina's clothes and hair on the candidate: 7.84 万 against 7.81 万); slower to build the first time
-  const ADULT = qualityAsked == null && !cell && !!OPT.body.adult?.on;
-  const quality = qualityAsked ?? (ADULT ? "adult" : "game");
-  const LITE = quality === "lite", FINE = (quality === "fine" || ADULT) && !cell;
-  let H = cell || { game: 0.0136, fine: 0.0068, adult: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
-  let simplify = simplifyAsked ?? (LITE ? 0.15 : ADULT ? 0.07 : FINE ? 0.22 : 1);
+  // Then "fine" itself at 4.5 mm cells thinned to 7 % (2026-10-09; Saori: "うん、それでお願い", "それがいい"): on the small 6-head head the nose
+  // tip, about 2 mm, fell between 6.8 mm cells and came out cut off square, and an elf ear's thin blade came out in steps with its point gone;
+  // at 4.5 mm both are sharp. The face is kept as built (more triangles there), the rest thinned harder: about as many in all (Sylvie, all
+  // built: 11.3 万 against fine's 12.4 万 and high's 28.3 万), about 2.5x as long to build as "game" (the editor shows a quick build first)
+  const quality = qualityAsked ?? (OPT.body.adult?.on && !cell ? "fine" : "game");
+  const LITE = quality === "lite", FINE = quality === "fine" && !cell;
+  let H = cell || { game: 0.0136, fine: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
+  let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.07 : 1);
   let MS = null;   // meshoptimizer's simplifier, only when thinning
   if (simplify < 1) {
     const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)

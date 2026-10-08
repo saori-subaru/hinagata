@@ -25,11 +25,13 @@ const fileName = (s) => (s || "character").replace(/[\\/:*?"<>|]+/g, "_").slice(
 
 // ── view preferences (per browser) ──
 const PREF_KEY = "hinagata.editor.prefs";
-// quality: the editor builds "high" by default (it is the tool you look closely in; games pass their own quality).
+// quality: the editor builds "fine" by default (it is the tool you look closely in; games pass their own quality): a quick "game" build is
+//   shown first and the fine one swapped in once the edits rest (2026-10-09, Saori: "五秒は結構ながい" — fine takes about 5 s, "high" was the
+//   default until then: 2.7 s but 28 万 triangles, an elf ear's edge in steps).
 //   A saved quality counts only if it was picked with the buttons (qualityPicked): "game" was the default until
 //   2026-10-04 and savePrefs stored it with the other prefs, so a stored "game" alone says nothing about a choice.
-const prefs = { bg: "warm", quality: "high", floor: true };
-try { const saved = JSON.parse(localStorage.getItem(PREF_KEY)) || {}; if (!saved.qualityPicked) delete saved.quality; Object.assign(prefs, saved); } catch {}
+const prefs = { bg: "warm", quality: "fine", floor: true };
+try { const saved = JSON.parse(localStorage.getItem(PREF_KEY)) || {}; if (!saved.qualityPicked || saved.qualityAt !== 2) delete saved.quality; Object.assign(prefs, saved); } catch {}   // (qualityAt 2: picked since "fine" changed)
 const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch {} };
 
 // ── characters ──
@@ -47,20 +49,32 @@ function persist() {
 
 // ── 3D view and building ──
 const vp = createViewport($("gl"), $("stage"));
-let building = false, again = false;
+let building = false, again = false, ver = 0, refineT = 0, quick = false, refining = false;   // quick: the avatar shown is the quick build   // ver: counts the recipe's changes (a refined build made from an older one is dropped)
 let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
 const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
+const show = (av, ms) => { av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, ms); };
+// "fine": a quick "game" build right away, then the fine one 0.8 s after the last change, in the background; it is shown only if nothing
+// changed meanwhile (else it waits for the next rest). A recipe built fine before comes from the cache at once
 async function rebuild() {
+  clearTimeout(refineT);
   if (building) { again = true; return; }
   building = true; if (vp.avatar) $("busy").hidden = false;
   try {
     do {
       again = false;
-      const t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: prefs.quality, spare: true });
-      av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, Math.round(performance.now() - t0));
+      const two = prefs.quality === "fine", t0 = performance.now(), av = await createAvatar(structuredClone(store.recipe), { quality: two ? "game" : prefs.quality, spare: true });
+      show(av, Math.round(performance.now() - t0)); quick = two; if (two) refineT = setTimeout(refine, 800);
     } while (again);
   } catch (e) { console.error(e); toast(String(e?.message ?? e)); }
   building = false; $("busy").hidden = true; $("cover").hidden = true;
+}
+async function refine() {
+  if (building) { refineT = setTimeout(refine, 800); return; }
+  const v = ver, t0 = performance.now(); let av; refining = true;
+  try { av = await createAvatar(structuredClone(store.recipe), { quality: "fine", spare: true }); } catch (e) { console.warn(e); refining = false; return; }
+  refining = false;
+  if (v !== ver || building || prefs.quality !== "fine") { av.dispose?.(); return; }   // edited meanwhile: the quick build stays (the next rest refines again)
+  vp.lift(); show(av, Math.round(performance.now() - t0)); quick = false; vp.apply();
 }
 let lastMs = 0;
 function showStats(av, ms = lastMs) {
@@ -100,7 +114,8 @@ function applyInstant(av, p, v) {
 const needsBuild = (p) => !SCHEMA[p]?.apply || !!SCHEMA[p]?.alsoShapes;
 
 store.subscribe((paths, why) => {
-  const av = vp.avatar;
+  const av = vp.avatar; ver++;
+  if (why !== "set" && prefs.quality === "fine" && (quick || refining) && !paths.some(needsBuild)) { clearTimeout(refineT); refineT = setTimeout(refine, 800); }   // an instant change while the quick build shows: the fine one is made from the new recipe (a fine one shown already took it)
   if (why === "set" || why === "undo" || why === "redo" || why === "replace") {   // instant values right away (a gesture's commit doesn't repeat them)
     if (av) { vp.lift(); for (const p of paths) if (SCHEMA[p]?.apply) { try { applyInstant(av, p, store.get(p)); } catch (e) { console.warn(e); } } vp.apply(); }
   }
@@ -142,7 +157,7 @@ const hairs = {
 let imagePath = null;
 const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("diffCount"), resetEl: $("resetTab") }, {
   store, quality: () => prefs.quality,
-  onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; savePrefs(); panel.render(); rebuild(); },
+  onQuality: (q) => { if (prefs.quality === q) return; prefs.quality = q; prefs.qualityPicked = true; prefs.qualityAt = 2; savePrefs(); panel.render(); rebuild(); },
   onImage: (path) => { imagePath = path; $("fileImg").click(); },
   onTemplate: (kind) => showTemplate(kind),
   onReadTemplate: (into = null, put = true) => { tplInto = into === "new" ? NEW : into; drawPut = put; $("fileTpl").click(); },
