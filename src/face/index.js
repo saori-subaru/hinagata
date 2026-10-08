@@ -7,7 +7,7 @@ import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "image"];
+const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "image"];
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -133,11 +133,28 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         dot(0.012, -0.02, 0.0042, 0.0042, "#ffffffe0"); dot(-0.007, -0.013, 0.0018, 0.0018, "#ffffffc0"); dot(0.018, -0.006, 0.0013, 0.0013, "#ffffffb0");
         fctx.restore();
       },
-      classic: (m) => { const { x, y } = EYE, rx = 0.035, ry = 0.047;   // ひとつ前の、塗りつぶしの丸い目
-        const g = fctx.createLinearGradient(0, py(y + ry), 0, py(y - ry)); g.addColorStop(0, "#2a1b26"); g.addColorStop(0.55, "#4a3042"); g.addColorStop(1, "#8a5a72");
+      classic: (m) => { const { x, y } = EYE, rx = 0.035, ry = 0.047, IR = EYE_COL;   // ひとつ前の、塗りつぶしの丸い目。色は目の色(上が暗く下が明るい。2026-10-09 サオリ「くりくりにも色を」)
+        const g = fctx.createLinearGradient(0, py(y + ry), 0, py(y - ry)); g.addColorStop(0, IR[0]); g.addColorStop(0.55, IR[1]); g.addColorStop(1, IR[3]);
         ell(x, y, rx, ry, g); ell(x, y - 0.004, rx * 0.5, ry * 0.55, "#21141d");
         ell(x - 0.012, y + 0.019, 0.011, 0.014, "#fff"); ell(x + 0.014, y - 0.019, 0.005, 0.005, "#ffffffd8");
         lash(m, x, y + ry * 0.92, rx, 0.012); },
+      sanpaku: () => {   // 三白眼(2026-10-09 サオリ): 切れ長の白目に 小さな虹彩が上まぶたへ寄る = 下と左右に白目が見える。太い上まつげ・下まぶたの線
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        const open = () => { fctx.beginPath(); mv(-0.034, 0.002); bz(-0.03, 0.028, 0.012, 0.036, 0.044, 0.014); bz(0.044, -0.01, 0.022, -0.03, -0.002, -0.03); bz(-0.02, -0.03, -0.034, -0.016, -0.034, 0.002); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.034), ...P(0, -0.03)); g.addColorStop(0, "#cfcbd3"); g.addColorStop(0.4, "#f3f1f2"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); open(); fctx.clip();
+        const ir = () => { fctx.beginPath(); fctx.ellipse(...P(0.001, 0.01), pu(0.0165), pu(0.021), 0, 0, Math.PI * 2); };
+        ir(); { const g = fctx.createLinearGradient(...P(0, 0.031), ...P(0, -0.011)); g.addColorStop(0, IR[0]); g.addColorStop(0.45, IR[1]); g.addColorStop(0.8, IR[2]); g.addColorStop(1, IR[3]); fctx.fillStyle = g; fctx.fill(); }
+        ell(cx + 0.001, cy + 0.01, 0.0065, 0.009, "#2a1c22");                                     // 瞳
+        line(0.0022, "#2b2533"); ir(); fctx.stroke();
+        ell(cx - 0.006, cy + 0.018, 0.0045, 0.0045, "#ffffff");                                   // ハイライト(小さく)
+        fctx.restore();
+        line(0.0026, "#6a4c50"); fctx.beginPath(); mv(-0.022, -0.027); qc(0.012, -0.035, 0.041, -0.008); fctx.stroke();   // 下まぶた(長め)
+        fctx.beginPath(); mv(-0.036, 0.0); bz(-0.031, 0.027, 0.012, 0.04, 0.045, 0.018); qc(0.052, 0.01, 0.058, -0.002); qc(0.049, 0.005, 0.042, 0.008);   // 上まつげ(平たく、目じりで跳ねる)
+        bz(0.012, 0.029, -0.026, 0.02, -0.034, 0.0); fctx.closePath(); fctx.fillStyle = "#3a2830"; fctx.fill();
+        fctx.restore();
+      },
       happy: (m) => { const { x, y } = EYE; line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - 0.028), py(y - 0.012)); fctx.quadraticCurveTo(px(x), py(y + 0.028), px(x + 0.028), py(y - 0.012)); fctx.stroke(); },
       closed: (m) => { const { x, y } = EYE; line(0.007); fctx.beginPath(); fctx.moveTo(px(x - 0.028), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y - 0.026), px(x + 0.028), py(y - 0.002)); fctx.stroke();
         fctx.beginPath(); fctx.moveTo(px(x + m * 0.028), py(y - 0.002)); fctx.lineTo(px(x + m * 0.036), py(y + 0.004)); fctx.stroke(); },
@@ -159,8 +176,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     mouth: {
       image: () => imgPart("mouth", MOUTHP.x, MOUTHP.y),
       smile: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.014), py(y + 0.003)); fctx.quadraticCurveTo(px(x), py(y - 0.01), px(x + 0.014), py(y + 0.003)); fctx.stroke(); },
-      open: () => { const { x, y } = MOUTHP; fctx.beginPath(); fctx.moveTo(px(x - 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.016), py(y - 0.02), px(x), py(y - 0.02)); fctx.quadraticCurveTo(px(x - 0.016), py(y - 0.02), px(x - 0.02), py(y + 0.006)); fctx.fillStyle = MOUTH; fctx.fill();
-        fctx.save(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore(); line(0.003); fctx.stroke(); },
+      open: () => { const { x, y } = MOUTHP;
+        const shape = () => { fctx.beginPath(); fctx.moveTo(px(x - 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.016), py(y - 0.02), px(x), py(y - 0.02)); fctx.quadraticCurveTo(px(x - 0.016), py(y - 0.02), px(x - 0.02), py(y + 0.006)); fctx.closePath(); };
+        shape(); fctx.fillStyle = MOUTH; fctx.fill();
+        fctx.save(); shape(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore();
+        line(0.003); shape(); fctx.stroke(); },   // ふちは口の形を引き直してから(前は 舌の楕円の線を描いていて、口とずれて見えた。2026-10-09 サオリ)
       o: () => { const { x, y } = MOUTHP; ell(x, y - 0.004, 0.009, 0.011, MOUTH); line(0.003); fctx.stroke(); },
       cat: () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
       frown: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.013), py(y - 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.013), py(y - 0.006)); fctx.stroke(); },
