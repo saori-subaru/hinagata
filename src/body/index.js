@@ -343,18 +343,21 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const { w, D, N, S } = handFrame(J, s, HK);   // D=指の向き N=手のひらの向き S=親指の側
     const at = (o, ...t) => o.map((v, i) => v + t.reduce((q, [vec, k]) => q + vec[i] * k * HK, 0));   // (offsets in the hand's size)
     const palm = at(w, [D, 0.03], [N, 0.002]);
-    P[`palm.${s}`] = E(palm, [0.034 * HK, 0.05 * HK, 0.019 * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
+    // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
+    // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
+    const FR = AD ? 0.55 : 1, FL = AD ? 1.45 : 1, FS = AD ? 0.7 : 1;
+    P[`palm.${s}`] = E(palm, [0.034 * HK, (AD ? 0.036 : 0.05) * HK, (AD ? 0.012 : 0.019) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
-      const fd = D.map((v, k) => v * Math.cos(sp) + S[k] * Math.sin(sp)), b0 = at(palm, [D, 0.022], [S, o * (fist ? 0.85 : 1)]);
-      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125 * HK, 0.012 * HK, `fingers.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012 * HK, 0.011 * HK, `fingerTips.${s}`, 0.006); return; }
+      const fd = D.map((v, k) => v * Math.cos(sp * FS) + S[k] * Math.sin(sp * FS)), b0 = at(palm, [D, 0.022], [S, o * FS * (fist ? 0.85 : 1)]);
+      if (fist) { const k1 = at(b0, [D, 0.014], [N, 0.026]); P[`finger${i}.${s}`] = C(b0, k1, 0.0125 * HK * FR, 0.012 * HK * FR, `fingers.${s}`, 0.006); P[`fingerTip${i}.${s}`] = C(k1, at(k1, [N, 0.012], [D, -0.022]), 0.012 * HK * FR, 0.011 * HK * FR, `fingerTips.${s}`, 0.006); return; }
       // 開いた指: 付け根側(fingers の骨)と先側(fingerTips の骨)の2本に分ける = 中ほどで曲がる。つなぎ目は溶かす幅を小さく(同じ太さの継ぎ目がふくらまないように)
-      const mid = at(b0, [fd, len * 0.48], [N, 0.003]);
-      P[`finger${i}.${s}`] = C(b0, mid, 0.0125 * HK, 0.012 * HK, `fingers.${s}`, 0.008);   // 指の股はくっきり
-      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len], [N, 0.006]), 0.012 * HK, 0.0115 * HK, `fingerTips.${s}`, 0.002);
+      const mid = at(b0, [fd, len * FL * 0.48], [N, 0.003]);
+      P[`finger${i}.${s}`] = C(b0, mid, 0.0125 * HK * FR, 0.012 * HK * FR, `fingers.${s}`, 0.008);   // 指の股はくっきり
+      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len * FL], [N, 0.006]), 0.012 * HK * FR, (AD ? 0.0095 : 0.0115) * HK * FR, `fingerTips.${s}`, 0.002);
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
-    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022], [D, 0.016], [N, 0.016]), 0.013 * HK, 0.011 * HK, `thumb.${s}`, 0.012);
+    P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022 * FL], [D, 0.016 * FL], [N, 0.016]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012);
     { const a = j("upperLeg"), b = j("lowerLeg"), d = OPT.body.sculpt.thigh.topDrop ?? 0, L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);   // topDrop: 太ももの肉の上端だけを脚の向きに下げる(股関節=骨の回る点は動かさない)。外側の付け根の張り出しが下がり、くびれから腰へのカーブがゆるくなる
       P[`thigh.${s}`] = C(a.map((v, i) => v + (b[i] - v) * d / L), b, 0.08, 0.066, `upperLeg.${s}`, 0.05); }
     P[`thighB.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.back.y + HL)), OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
@@ -382,7 +385,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
     { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", n = heelsWorn(OPT) ? 0.68 : 1;
       // shoeLast: what shoes (and the plate's sabatons) are made around: the round foot of before (clothes/index.js). Not part of the body
-      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, 0.015], [HEELS ? 0.035 : 0.052, FOOT_H, 0.075], `foot.${s}`, 0.04);
+      // (adult: the last's back with the foot's, 1.4 cm in: the shoes stood out behind the adult heel; 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる")
+      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.015], [HEELS ? 0.035 : 0.052, FOOT_H, AD ? 0.072 : 0.075], `foot.${s}`, 0.04);
       // the bare foot (2026-10-07, Saori: "裸足の造形が変、元の丸い足に脚の指をつけただけ"): a narrow heel, a long middle, the forefoot wide and
       // flat under the toes (the ball, a little toward the big toe); all within the shoe's last, so a shoe still covers it
       // Then (Saori, with a photo): the heel stood out too far behind (−0.064 → −0.05), the sole is flat on the floor (the parts reach 4 mm
@@ -390,7 +394,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // with the feet's size: its top stays at the ankle, so a small foot doesn't come apart from the leg)
       // adult: the forefoot longer and thinner, the toes further forward (2026-10-08, Saori: "つま先側は指を含めてもう少し伸ばして薄くしたい")
       const FH = FOOT_H * (AD ? 0.82 : 0.92);
-      P[`foot.${s}`] = E([fx, -0.007 + FH, 0.012], [0.04 * n, FH, 0.068], `foot.${s}`, 0.03);   // (adult: as long, but thinner; the toes make the front: reaching past them it swallowed them)
+      P[`foot.${s}`] = E([fx, -0.007 + FH, AD ? 0.02 : 0.012], [0.04 * n, FH, AD ? 0.064 : 0.068], `foot.${s}`, 0.03);   // (adult: thinner, its back 1 cm in, at the heel's line (it reached 5.6 cm back, behind the heel: the bump over a heel shoe, 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる"); the toes make the front: reaching past them it swallowed them)
       P[`heel.${s}`] = E([fx + m * 0.002, -0.007 + 0.024, AD ? -0.015 : -0.026], [0.028 * n, 0.024, 0.024], `foot.${s}`, 0.025);   // (adult: under the Achilles tendon, not 2 cm behind it with a dip above: 2026-10-08, Saori, "かかとが後ろにですぎ、かかとの上で急に凹んでる")
       P[`ball.${s}`] = AD ? E([fx - m * 0.004, -0.007 + 0.011, 0.056], [0.047 * n, 0.011, 0.03], `foot.${s}`, 0.02) : E([fx - m * 0.004, -0.007 + 0.015, 0.05], [0.047 * n, 0.015, 0.03], `foot.${s}`, 0.02); }
     // toes (foot.toes, 2026-10-05, Saori: barefoot like Nahida; "足の指丸まってない？"): the foot's front top is shaved down to them (FOOT_CUT), so the
