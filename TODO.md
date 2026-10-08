@@ -12,7 +12,7 @@ body: {
   proportion: { legs: 2.2, torso: 2.0, chest: 0, shoulders: 0.827, feet: 1.08 },   // 2026-10-08 夕: 肩を VRoid の高さへ（胴 1.5 → 2.0）
   joints: { hipY: 0.52, hipX: 0.07, kneeX: 0.066, footX: 0.066 },   // 股はサオリの希望で 0.5 より上(0.537)。膝・足首は新しい脚に合わせて 6.6 cm（4.25 だと膝がくっつく）
   torso: { chest: 0.63, hips: 0.56, bust: 0.75, back: 0.392, butt: 0.672 },   // adult では胸板・腰・お尻は body.adult のほうが決める
-  thickness: { upperArm: 0.504, forearm: 0.476, thigh: 0.434, thighTop: 0.546, calf: 0.42 },
+  thickness: { upperArm: 0.62, forearm: 0.58, thigh: 0.434, thighTop: 0.546, calf: 0.42 },   // 腕は VRoid に合わせて太く（脚は adult の部品が決める）
   sculpt: { neck: { width: 0.612 }, bustX: 0.038 },
   adult: { on: true },   // 胸板・くびれ・骨盤・お尻を、伸ばしたあとの座標で肩と股関節から置く（src/body/index.js, DESIGN.md）
 }
