@@ -31,7 +31,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const fctx = faceCanvas.getContext("2d");
   const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
   // 顔の絵も体と同じ陰影で(光を無視すると暗い場所で目だけ光って見える)。setShading で作り直す
-  const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(shaded(style, 0xffffff, bands), { map: faceTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(shaded(style, 0xffffff, bands), { map: faceTex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const faceMat = faceMatFor(OPT.shading.style);
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";
@@ -220,16 +220,19 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   function faceLayerGeometry(src, FACE_WRAP, toHead = null) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled)
     const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, NS = src.attributes.shadeN?.array ?? N0, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
     const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
-    const ok = (v) => { const [x, y, z] = H(v); return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.05 && N0[v * 3 + 2] > 0.3; };
-    const map = new Map(), pos = [], nor = [], uv = [], si = [], sw = [], idx = [];
+    // (the head's front down to where it faces 80° aside: from 72° (normal z 0.3) and z 0.05 the blush ended square on the cheek and the brows'
+    // outer ends were cut off, seen from aside or on a narrower head, 2026-10-09, Saori. The picture is clear outside its parts, so a wider layer costs nothing)
+    const ok = (v) => { const [x, y, z] = H(v); return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17; };
+    const map = new Map(), pos = [], nor = [], uv = [], col = [], si = [], sw = [], idx = [];
     const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
       pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で
       const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
       uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - FACE.y0) / (FACE.y1 - FACE.y0));
+      { const nz = N0[v * 3 + 2], t = (a, b, q) => Math.min(1, Math.max(0, (q - a) / (b - a))), a = t(0.17, 0.3, nz) * t(0.0, 0.03, z) * t(FACE.x1 - 0.004, FACE.x1 - 0.012, Math.abs(x)); col.push(1, 1, 1, a * a * (3 - 2 * a)); }   // the picture fades out toward the layer's edge (no square end on a cheek seen from aside)
       for (let q = 0; q < 4; q++) { si.push(SI[v * 4 + q]); sw.push(SW[v * 4 + q]); } map.set(v, n); return n; };
     for (let t = 0; t < I0.length; t += 3) { const a = I0[t], b = I0[t + 1], c = I0[t + 2]; if (ok(a) && ok(b) && ok(c)) idx.push(add(a), add(b), add(c)); }
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.Float32BufferAttribute(sw, 4)); g.setIndex(idx);
     return g;
   }
