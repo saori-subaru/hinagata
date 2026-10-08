@@ -417,7 +417,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1)); } }
     // the instep: from the ankle (as thick as the leg is there) down to the top of the forefoot, one slope; its top stays at the ankle whatever the feet's size
     { const FK = OPT.body.proportion?.feet ?? 1, fx = m * (FOOT_X - 0.002), th = OPT.body.thickness?.calf ?? 1;
-      P[`instep.${s}`] = AD ? C(j("foot"), [fx, -0.003 + 0.015 * FK, 0.062 * FK], 0.04 * th, 0.012 * FK, `foot.${s}`, 0.035)   // (adult: a long low slope from the ankle to the toes' roots, as the VRoid foot's; on over the toes it buried them)
+      // (adult: from under the ankle's front, low, to the toes' roots, blended narrowly: the shin's front comes straight down and the instep arches
+      // forward out of it, as in a heel or the VRoid foot (2026-10-08, Saori: "足の上の方が、ハイヒールだと反ってるけど、裸足でもこんな風に反るようにしたい");
+      // from the ankle itself it was one straight slope down from high up. On over the toes it buried them)
+      P[`instep.${s}`] = AD ? (() => { const a = j("foot"); return C([fx, a[1] - 0.028, a[2] + 0.018], [fx, -0.003 + 0.014 * FK, 0.062 * FK], 0.026 * Math.max(th, 0.6), 0.012 * FK, `foot.${s}`, 0.02); })()
         : C(j("foot"), [fx, -0.003 + 0.02 * FK, 0.05 * FK], 0.04 * th, 0.017 * FK, `foot.${s}`, 0.03); }
     // 服用: 半分の長さの袖・すそ
     const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
@@ -450,7 +453,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       { const c = at(Kf, Af, 0.32); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.024], [0.034, 0.27 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); }
       // under the calf, down to the heel: the calf narrowing into the Achilles tendon, not ending in a step halfway (2026-10-08, Saori:
       // "ふくらはぎが突然途中で細くなってる")
-      { const a = at(Kf, Af, 0.45), b = at(Af, Af, 0); P[`calfLow.${s}`] = fin(C([a[0], a[1], a[2] - 0.014], [b[0], b[1] - 0.035, b[2] - 0.012], 0.02, 0.014, `lowerLeg.${s}`, 0.05)); } }   // (down onto the heel)
+      { const a = at(Kf, Af, 0.45), b = at(Af, Af, 0); P[`calfLow.${s}`] = fin(C([a[0], a[1], a[2] - 0.014], [b[0], b[1] - (heelsWorn(OPT) ? 0 : 0.035), b[2] - 0.012], 0.02, 0.014, `lowerLeg.${s}`, 0.05)); } }   // (down onto the heel; in heels only to the ankle: the heel tilts back and up with the shoe, and the tendon's skin, on the shin, stood out of the shoe behind)
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
