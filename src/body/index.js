@@ -133,12 +133,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // its front stood forward right up to the collarbone (a shelf the bust hung from). Leaning, the back is fullest high up and the front slopes
   // from the collarbone down to the bust
   const CHEST_D = { w: 0.08, d: 0.066, z: 0.014 };
-  if (AD) { const q = adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest", axes(-(AD.chest.tilt ?? 0.3)));
+  if (AD) { const q = adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { ...CHEST_D, h: 0.27 * T }, "chest", axes(-(AD.chest.tilt ?? 0.25)));
     P.chest = fin(q);   // the ribcage: under the arms to just over the waist
     P.chest.adult = q;   // (as made after the stretch: the bust is set on its front)
-    // the shoulder blades: the back is fullest just under the shoulders, then comes in to the waist (AD.blades: m from the middle, under the
-    // shoulder joint, z of the center, radii; 2026-10-08, Saori: "肩甲骨の位置が下すぎるのかな")
-    const BL = { x: 0.038, y: -0.02, z: -0.03, w: 0.032, h: 0.05, d: 0.014, ...(AD.blades ?? {}) };
+    // the shoulder blades: the back fullest just under the shoulders, coming in to the waist (AD.blades: m from the middle, under the shoulder
+    // joint, z of the center, radii; 2026-10-08, Saori: "肩甲骨の位置が下すぎるのかな"). Off (d 0) since: "肩甲骨はちょっとやりすぎて不自然", then
+    // "肩甲骨の修正一旦戻して" (d 0.014 was the smaller try)
+    const BL = { x: 0.038, y: -0.02, z: -0.03, w: 0.032, h: 0.05, d: 0, ...(AD.blades ?? {}) };
     if (BL.d > 0) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`blade.${sd}`] = fin(E([m * BL.x, yS + BL.y, BL.z], [BL.w, BL.h, BL.d], "upperChest", AD.k)); }
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
@@ -168,7 +169,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // the upper chest filled out to that line (2026-10-08, Saori: "なんで鎖骨の下が窪んでるのかな"): between the neck's piece, which ends just
     // under the collarbone, and the ribcage, whose top leans back, nothing came forward: straight down 2 cm, then out 2 cm in 1.5 cm. A piece
     // reaching past the line fills it, so from the collarbone to the bust the front is the line itself
-    P.upperChest = fin(E([0, yS - 0.03, 0.0], [0.07, 0.05, 0.1], "upperChest", 0.03));   // (the shirt is made over it too: clothes/index.js)
+    P.upperChest = fin(E([0, yS - 0.03, 0.035], [0.07, 0.05, 0.07], "upperChest", 0.03));   // its back stays inside the ribcage (centered at z 0 it stood 5 cm out of the back: a hump between the shoulders); the shirt is made over it too (clothes/index.js)
     trim(P.chest); trim(P.bust); trim(P.bust?.cloth); trim(P.upperChest); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly + BD / 2], [0.165 * TO.belly, 0.14, 0.115 * TO.belly - BD / 2], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
