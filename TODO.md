@@ -17,6 +17,15 @@ body: {
   adult: { on: true },   // 胸板・くびれ・骨盤・お尻を、伸ばしたあとの座標で肩と股関節から置く（src/body/index.js, DESIGN.md）
 }
 ```
+顔（2026-10-08 夕、原神の見本と三面図の横顔に合わせた案。まだサオリの決定待ち）:
+```js
+face: { eyeSize: 1.1, layout: { eyeY: 1.02, browY: 1.108, eyeX: 0.088, browX: 0.082 } },
+body: { head: { width: 0.92, jawLength: 1.1 },
+        sculpt: { chin: { sharp: 0.1, backRise: 1.2, backMax: 0.1 }, nose: { tipZ: 0.272 }, mouth: { back: 0.02, cheekBack: 0.02 } } },
+shading: { style: "toon", rim: { on: false } },   // soft + リムだと鼻の下に影が出ず横顔が平たく見える（形はシルヴィと同じ）
+```
+注意: 鼻先の比較は fine 画質で（adult の標準）。game 画質だと 2 mm ほどの鼻先が格子で落ちて「ちょん切れ」て見える。
+残り: 顔の幅 0.92 で正面の眉の外側が少し欠ける。ほっぺの赤みの端が斜めから四角く切れる。
 測った値（髪のてっぺん〜足の裏 = 1。見本 → 案）: 頭身 6.29 → 6.28、あご 0.841 → 0.839、肩 0.806 → 0.80、胸 0.741 → 0.735、くびれ 0.662 → 0.644、股 0.515 → 0.518、膝 0.263 → 0.256。
 検証ページは `_six.html`（コミットしない）。キャッシュしないサーバー `.claude/launch.json` の hinagata-nocache（8125）で開く（普通の http.server だとブラウザが古い src を使う）。
 
