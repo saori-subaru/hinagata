@@ -58,7 +58,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const J = {
     hips: [0, 0.42 + HL * 0.5, 0], spine: [0, 0.5, 0.01], chest: [0, 0.62, 0], upperChest: [0, 0.68, -0.005], neck: [0, 0.74, -0.005], head: [0, 0.82, 0],
     "shoulder.L": [0.03, 0.732, -0.005], "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01],
-    "upperLeg.L": [HX, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, OPT.body.adult?.on ? (OPT.body.adult.kneeZ ?? -0.018) : -0.006],   // (adult: the knee further back, so under it the leg comes down a little behind the thigh)
+    "upperLeg.L": [HX, HIP_Y, 0], "lowerLeg.L": [KNEE_X, 0.25, OPT.body.adult?.on ? (OPT.body.adult.kneeZ ?? -0.006) : -0.006],   // (adult.kneeZ: the knee further back or forward; under it the leg leans back by itself: makeStretch shz)
     "foot.L": [FOOT_X, 0.085, -0.005],
   };
   // body.proportion: the shoulders and arms (armJoints above; SHW: how much further out the shoulder joint is), hands: their size (× around the wrist)
@@ -402,13 +402,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // calf behind, high. Sizes in m (AD.legs); the same names as before, so pants are made over them
     if (AD) { for (const n of ["thigh", "thighB", "thighF", "thighIn", "calfO", "calf", "calfB", "kneeCap", "calfOut", "calfInner", "calfBack", "kneeBack"]) delete P[`${n}.${s}`];
       const F = (p) => [p[0], STA.fwd(p[1]), p[2]], Hf = F(j("upperLeg")), Kf = F(j("lowerLeg")), Af = F(j("foot")), LT = Hf[1] - Kf[1], LS = Kf[1] - Af[1];
-      const LG = { thigh: [0.05, 0.03], shin: [0.03, 0.019], front: 0.036, back: 0.036, calf: 0.032, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+      const LG = { thigh: [0.05, 0.03], shin: [0.03, 0.019], front: 0.036, back: 0.036, calf: 0.04, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
       P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
-      { const c = at(Hf, Kf, 0.38); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.014], [0.038, 0.32 * LT, LG.front], `upperLeg.${s}`, 0.04)); }
+      { const c = at(Hf, Kf, 0.5); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.012], [0.037, 0.44 * LT, LG.front], `upperLeg.${s}`, 0.04)); }   // (down to the knee: it ended above it, a dip there seen from the side)
       { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
-      P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.02], [0.02, 0.024, 0.014], `lowerLeg.${s}`, 0.02));
+      P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.014], [0.02, 0.026, 0.014], `lowerLeg.${s}`, 0.03));
       P[`calf.${s}`] = fin(C(Kf, Af, LG.shin[0], LG.shin[1], `lowerLeg.${s}`, 0.04));
-      { const c = at(Kf, Af, 0.3); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.016], [0.03, 0.24 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); } }
+      { const c = at(Kf, Af, 0.32); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.02], [0.032, 0.26 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); } }
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
@@ -565,7 +565,12 @@ function roundBox(c, h, r, k) {
 export const isArmBone = (b) => /^(upperArm|lowerArm|hand|fingers|fingerTips|thumb)\./.test(b);
 export function makeStretch(OPT, J) {
   const PR = OPT.body.proportion ?? {}, sL = PR.legs ?? 1, sT = PR.torso ?? 1;
-  if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1, rigid: false, armDy: 0, up: id, upSlope: () => 1, down: id, bone: (b, y) => y }; }
+  // adult: the leg under the knee leans back (2026-10-08, Saori: "膝から下が後ろにずれてなくない？"; her VRoid body's ankle is 2.4 cm behind its
+  // knee, ours was ahead of it): every point is moved back by shz(y) (base height), 0 at the knee to adult.shinBack (m, < 0) at the ankle and
+  // below, smoothly; bones, body, shoes and clothes alike (applied with the stretch, index.js). shzD: its slope, for the normals
+  const AO = OPT.body.adult?.on ? OPT.body.adult : null, yk = J["lowerLeg.L"][1], ya0 = J["foot.L"][1], FZ = AO ? (AO.shinBack ?? -0.025) : 0;
+  const shz = !FZ ? () => 0 : (y) => FZ * sstep(yk, ya0, y), shzD = !FZ ? () => 0 : (y) => (shz(y + 0.0005) - shz(y - 0.0005)) / 0.001;
+  if (sL === 1 && sT === 1) { const id = (y) => y; return { identity: true, fwd: id, inv: id, slope: () => 1, k: 1, lift: 0, legK: 1, rigid: false, armDy: 0, up: id, upSlope: () => 1, down: id, bone: (b, y) => y, shz, shzD }; }
   const ya = 0.12, yh = J["upperLeg.L"][1], yn = J.neck[1], w = 0.03, Y0 = -0.2, D = 0.0005, N = Math.ceil((2.6 - Y0) / D);
   // 脚が伸びるのは股（骨盤の底）から下だけ。股関節までを伸ばしていたので、骨盤の底も一緒に伸びて股が垂れ、股上が長く見えた
   // （2026-10-06 サオリ「足の長さ伸ばすと股上ものびる」）。骨盤の底 = pelvis の楕円の下端 ≈ 股関節の 0.08 下
@@ -585,5 +590,5 @@ export function makeStretch(OPT, J) {
   const down = (Y, a) => { if (!rigid || !a) return inv(Y); if (a >= 1) return Y - armDy;
     let lo = Math.min(inv(Y), Y - armDy), hi = Math.max(inv(Y), Y - armDy); for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (up(m, a) < Y) lo = m; else hi = m; } return (lo + hi) / 2; };
   return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sc, sw), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya),
-    rigid, armDy, up, upSlope, down, bone: (b, y) => rigid && isArmBone(b) ? y + armDy : fwd(y) };   // bone: where a joint at base height y goes
+    rigid, armDy, up, upSlope, down, bone: (b, y) => rigid && isArmBone(b) ? y + armDy : fwd(y), shz, shzD };   // bone: where a joint at base height y goes
 }

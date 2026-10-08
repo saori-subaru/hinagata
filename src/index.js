@@ -128,13 +128,13 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // stretched upward as they are made (mesh), and what moves the character uses the stretched ones: the bones (Jr), the head's transform
   // for things placed in head space (HTr: the hair's locks, the face picture, the ear line) and the body read in place (bodySdfR, for colliders)
   const ST = makeStretch(OPT, J);
-  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.bone(k, v[1]), v[2]]]));   // (rigid arms: the arm's joints ride on the shoulder)
+  const Jr = ST.identity ? J : Object.fromEntries(Object.entries(J).map(([k, v]) => [k, [v[0], ST.bone(k, v[1]), v[2] + ST.shz(v[1])]]));   // (rigid arms: the arm's joints ride on the shoulder; adult: the shin leans back, shz)
   const HTr = ST.identity ? HT : { ...HT, identity: false, toHead: (x, y, z) => HT.toHead(x, ST.inv(y), z), fromHead: (x, y, z) => { const p = HT.fromHead(x, y, z); p[1] = ST.fwd(p[1]); return p; },
     wrap: (f) => { const g = HT.wrap(f); return (x, y, z) => g(x, ST.inv(y), z); } };
   // (rigid arms, body.proportion.arms: a point that lands on an arm where the arm moved to is read there)
   const armAt = (x, y, z) => { const t = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] }; weightsAt(x, y, z, t); let a = 0; for (let q = 0; q < 4; q++) if (t.w[q] && isArmBone(BONES[t.idx[q]])) a += t.w[q]; return a; };
-  const bodySdfR = ST.identity ? bodySdf : !ST.rigid ? (x, y, z) => bodySdf(x, ST.inv(y), z) * ST.k
-    : (x, y, z) => { const ya = y - ST.armDy; return armAt(x, ya, z) > 0.5 ? bodySdf(x, ya, z) : bodySdf(x, ST.inv(y), z) * ST.k; };
+  const bodySdfR = ST.identity ? bodySdf : !ST.rigid ? (x, y, z) => { const yb = ST.inv(y); return bodySdf(x, yb, z - ST.shz(yb)) * ST.k; }
+    : (x, y, z) => { const ya = y - ST.armDy; if (armAt(x, ya, z) > 0.5) return bodySdf(x, ya, z); const yb = ST.inv(y); return bodySdf(x, yb, z - ST.shz(yb)) * ST.k; };
   const ARM_BI = new Set(BONES.filter(isArmBone).map((b) => BI[b]));
   /** a vertex's share on the arm bones (rigid arms ride on the shoulder: makeStretch) */
   const armShare = (si, sw, v) => { if (!ST.rigid || !si) return 0; let a = 0; for (let q = 0; q < 4; q++) if (ARM_BI.has(si[v * 4 + q])) a += sw[v * 4 + q]; return a; };
@@ -162,7 +162,8 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     const g = new THREE.BufferGeometry();
     let gp = rec.pos, gn = rec.nor;
     if (!ST.identity) { gp = Float32Array.from(gp); gn = Float32Array.from(gn);   // the proportions: points up by fwd, normals by the slope there (the record stays at the base, for the cache)
-      for (let i = 0, v = 0; i < gp.length; i += 3, v++) { const a = armShare(rec.si, rec.sw, v), s = ST.upSlope(gp[i + 1], a); gp[i + 1] = ST.up(gp[i + 1], a); const ny = gn[i + 1] / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
+      for (let i = 0, v = 0; i < gp.length; i += 3, v++) { const a = armShare(rec.si, rec.sw, v), yb = gp[i + 1], s = ST.upSlope(yb, a), sh = a ? 0 : ST.shz(yb), shd = a || !sh ? 0 : ST.shzD(yb);   // (adult: the shin leans back, shz; normals by its slope too)
+        gp[i + 1] = ST.up(yb, a); gp[i + 2] += sh; const ny = (gn[i + 1] - shd * gn[i + 2]) / s, l = Math.hypot(gn[i], ny, gn[i + 2]) || 1; gn[i] /= l; gn[i + 1] = ny / l; gn[i + 2] /= l; } }
     g.setAttribute("position", new THREE.BufferAttribute(gp, 3)); g.setAttribute("normal", new THREE.BufferAttribute(gn, 3)); g.setIndex(new THREE.BufferAttribute(rec.idx, 1));
     g.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(rec.si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(rec.sw, 4));
     if (!ST.identity) g.userData.basePos = rec.pos;
