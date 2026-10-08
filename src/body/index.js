@@ -69,6 +69,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const JL = OPT.body.head.jawLength ?? 1, JAW_Y = (OPT.face?.layout?.mouthY ?? 0.896) - 0.016, JAW_LIFT = JL > 1 ? (JAW_Y - OPT.body.sculpt.chin.y) * (JL - 1) * OPT.body.head.scale : 0;
   const NK = OPT.body.sculpt.neck, LIFT = (NK.length ?? 0) + JAW_LIFT; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
+  // adult: the knee at adult.knee of the way from the ankle up to the hip joint, after the stretch (2026-10-08, beside Saori's VRoid body: its
+  // knee 53 % up, ours 39 %: the thighs long, the shins short)
+  if (OPT.body.adult?.on) { const S0 = makeStretch(OPT, J), yA = S0.fwd(J["foot.L"][1]), yHf = S0.fwd(J["upperLeg.L"][1]);
+    J["lowerLeg.L"][1] = J["lowerLeg.R"][1] = S0.inv(yA + (OPT.body.adult.knee ?? 0.53) * (yHf - yA)); }
   // 背中は3か所で曲がる(spine 0.50 / chest 0.62 / upperChest 0.68)=丸まった背中が段にならず曲線になる。
   // 肩の骨(鎖骨)は首の付け根から肩の関節まで、肩の高さで水平にのびる=両肩は肩の高さで回る(2026-10-02 サオリ。旧=upperChestを肩の高さ0.732に置いていた)
   const PARENT = { hips: null, spine: "hips", chest: "spine", upperChest: "chest", neck: "upperChest", head: "neck" };
@@ -121,10 +125,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // by the torso's length T between them, and read back through the stretch (fin). The neck, shoulders, arms and legs are as before.
   const AD = OPT.body.adult?.on ? { chest: {}, waist: {}, hips: {}, butt: {}, k: 0.05, ...OPT.body.adult } : null, STA = AD ? makeStretch(OPT, J) : null;
   const yS = AD ? STA.bone("upperArm.L", J["upperArm.L"][1]) : 0, yH = AD ? STA.fwd(J["upperLeg.L"][1]) : 0, T = yS - yH;
-  // a part made where it comes out (after the stretch) → one read at the base proportions: its height through the stretch, its distance
-  // scaled by the steepest stretch over its height (never overstated); its bounds measured back
-  const fin = (q) => { const lo = STA.inv(q.cy - q.ry - q.k), hi = STA.inv(q.cy + q.ry + q.k); let sl = 1; for (let y = lo; y <= hi; y += 0.005) sl = Math.max(sl, STA.slope(y));
-    return { t: 3, k: q.k / sl, bone: q.bone, bx0: q.cx, by0: (lo + hi) / 2, bz0: q.cz, br: Math.max(q.rx, q.rz, (hi - lo) / 2) + q.k, f: (x, y, z) => dPrim(q, x, STA.fwd(y), z) / sl }; };
+  // a part made where it comes out (after the stretch) → one read at the base proportions: its height through the stretch, its distance as
+  // it is after the stretch (exact across, where these surfaces face: the clothes stand off them by the distance. Scaled down by the steepest
+  // stretch, it put the pants 2x as far off the adult legs, round the hands too); its bounds measured back
+  const fin = (q) => { const lo = STA.inv(q.by0 - q.br - q.k), hi = STA.inv(q.by0 + q.br + q.k);   // (by0 / br: any part's bounding sphere, an ellipsoid's or a capsule's)
+    return { t: 3, k: q.k, bone: q.bone, bx0: q.bx0, by0: (lo + hi) / 2, bz0: q.bz0, br: Math.max(q.br, (hi - lo) / 2) + q.k, f: (x, y, z) => dPrim(q, x, STA.fwd(y), z) }; };
   const adultPart = (o, d, bone, rot = 0) => E([o.x ?? 0, o.y, o.z ?? d.z], [o.w ?? d.w, o.h ?? d.h, o.d ?? d.d], bone, o.k ?? d.k ?? AD.k, rot);
   // the posture (2026-10-08, Saori: "猫背ぽい … 見本みたいに背中を反らせる"): the chest a little forward, the waist further forward (its back
   // comes in: the hollow of the back), the bottom back; in the picture the back at the waist is ~6 cm in front of the back at the shoulders
@@ -391,6 +396,19 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     for (const n of ["foreArm", "foreBulge"]) thicken(P[`${n}.${s}`], j("lowerArm"), j("hand"), TH.forearm);
     for (const n of ["thigh", "thighB", "thighF", "thighIn", "leghole"]) thicken(P[`${n}.${s}`], j("upperLeg"), j("lowerLeg"), TH.thighTop ?? TH.thigh, TH.thigh);   // thighTop: at the hip joint (slimmer = the hips don't bulge out at the top of the legs)
     for (const n of ["calf", "calfO", "calfB", "calfOut", "calfInner", "calfBack", "kneeCap"]) if (P[`${n}.${s}`]) thicken(P[`${n}.${s}`], j("lowerLeg"), j("foot"), TH.calf);
+    // adult legs (2026-10-08, Saori: "腕や脚も元がチビだから、大人体型ように作り直した方がいいのかな"; beside her VRoid body): the chibi's leg
+    // pieces stretched 2.1× upright (a long kneecap, long calves). Made where they come out, between the joints: the thigh tapering from the
+    // hip to the knee with flesh in front and behind (the thigh as deep as wide), a small kneecap, the shin tapering to the ankle with the
+    // calf behind, high. Sizes in m (AD.legs); the same names as before, so pants are made over them
+    if (AD) { for (const n of ["thigh", "thighB", "thighF", "thighIn", "calfO", "calf", "calfB", "kneeCap", "calfOut", "calfInner", "calfBack", "kneeBack"]) delete P[`${n}.${s}`];
+      const F = (p) => [p[0], STA.fwd(p[1]), p[2]], Hf = F(j("upperLeg")), Kf = F(j("lowerLeg")), Af = F(j("foot")), LT = Hf[1] - Kf[1], LS = Kf[1] - Af[1];
+      const LG = { thigh: [0.05, 0.03], shin: [0.03, 0.019], front: 0.036, back: 0.036, calf: 0.032, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+      P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
+      { const c = at(Hf, Kf, 0.38); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.014], [0.038, 0.32 * LT, LG.front], `upperLeg.${s}`, 0.04)); }
+      { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
+      P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.02], [0.02, 0.024, 0.014], `lowerLeg.${s}`, 0.02));
+      P[`calf.${s}`] = fin(C(Kf, Af, LG.shin[0], LG.shin[1], `lowerLeg.${s}`, 0.04));
+      { const c = at(Kf, Af, 0.3); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.016], [0.03, 0.24 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); } }
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
@@ -485,7 +503,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         // adult: only under the shoulder joint. The torso's side line (c2) runs on inward above the armpit, and on the slim adult chest it
         // reached the collarbones: holes in the mesh there (2026-10-08)
         return AD ? -smin(-cut0, -(y - (a[1] - 0.015)), RND) : cut0; } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
-  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, KNEE_IN, ...KNEE_OUT, ...ARMPIT, ...FOOT_CUT, HEAD];
+  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, ...(AD ? [] : [KNEE_IN, ...KNEE_OUT]), ...ARMPIT, ...FOOT_CUT, HEAD];
   const BX = 0.5 + armReach(OPT).x;   // (longer arms and wider shoulders reach further out)
   const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
   const bodySdfSlow = bent(blend(BODY_LIST)), bodySdf = slow ? bodySdfSlow : bent(blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // ?slow で元の遅い版(確認用)
