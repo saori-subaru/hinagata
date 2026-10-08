@@ -113,17 +113,37 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
   P.chest = E([0, 0.68, 0.015 + BD / 2], [0.13 * TO.chest + 0.6 * SHW, 0.1, 0.1 * TO.chest - BD / 2], "chest", 0.05);       // 胸は細め(脇の下を高くする)
+  // body.adult (on: a grown-up torso; 2026-10-08, Saori, after a 6-head picture and its three views: "横から見ると凄い太って見える"). The
+  // torso above was the toddler's, stretched upright: stretching left its depth (deeper than wide at the belly and hips) and smeared what is
+  // placed on it (raising the hips put the torso's whole stretch into 6 cm of belly, 3.25×: no waist, a △). Here the chest, waist, pelvis
+  // and bottom are laid out where they come out, after the stretch (AD.*: m, after it), from the shoulder joint (yS) and the hip joint (yH)
+  // by the torso's length T between them, and read back through the stretch (fin). The neck, shoulders, arms and legs are as before.
+  const AD = OPT.body.adult?.on ? { chest: {}, waist: {}, hips: {}, butt: {}, k: 0.05, ...OPT.body.adult } : null, STA = AD ? makeStretch(OPT, J) : null;
+  const yS = AD ? STA.bone("upperArm.L", J["upperArm.L"][1]) : 0, yH = AD ? STA.fwd(J["upperLeg.L"][1]) : 0, T = yS - yH;
+  // a part made where it comes out (after the stretch) → one read at the base proportions: its height through the stretch, its distance
+  // scaled by the steepest stretch over its height (never overstated); its bounds measured back
+  const fin = (q) => { const lo = STA.inv(q.cy - q.ry - q.k), hi = STA.inv(q.cy + q.ry + q.k); let sl = 1; for (let y = lo; y <= hi; y += 0.005) sl = Math.max(sl, STA.slope(y));
+    return { t: 3, k: q.k / sl, bone: q.bone, bx0: q.cx, by0: (lo + hi) / 2, bz0: q.cz, br: Math.max(q.rx, q.rz, (hi - lo) / 2) + q.k, f: (x, y, z) => dPrim(q, x, STA.fwd(y), z) / sl }; };
+  const adultPart = (o, d, bone) => E([o.x ?? 0, o.y, o.z ?? d.z], [o.w ?? d.w, o.h ?? d.h, o.d ?? d.d], bone, AD.k);
+  if (AD) { P.chest = fin(adultPart({ ...AD.chest, y: yS + (AD.chest.y ?? -0.2) * T }, { w: 0.08, h: 0.27 * T, d: 0.066, z: 0.002 }, "chest"));   // the ribcage: under the arms to just over the waist
+    P.chest.adult = true; }
   // bust (0 = none; a girl's chest, not the chest board): two round swellings on the front of the chest, kept apart (a valley between
   // them even when big). Each is an ellipsoid long above its center (it rises gently out of the chest), short below (a nearly level
   // underside); the forward point is a little low. The part holds the chest itself so the blend can be wider above than below
   // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
   // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
-  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), bx = OPT.body.sculpt.bustX ?? Math.max(0.06 * Math.max(1, TO.chest), r * 1.05), cy = 0.645 + (OPT.body.sculpt.bustY ?? 0), ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, KU = 0.03, KD = 0.007;
+  if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), CA = AD ? { w: 0.08, d: 0.066, z: 0.002, ...AD.chest } : null, bx = OPT.body.sculpt.bustX ?? (AD ? 0.5 * CA.w : Math.max(0.06 * Math.max(1, TO.chest), r * 1.05)), KU = 0.03, KD = 0.007;
+  const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.17) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
+  // a chest shortened by the stretch (body.proportion.chest below 0) squashes what is built here upright (at -2 to half: "胸が上下につぶれて
+  // 小さくとがって見える", 2026-10-08 Saori). Then the bust's height is measured after the stretch (FY: a height here → where it goes, about
+  // the bust's center), so it comes out round; it reaches past the short chest into the belly, whose stretch FY undoes too. Only below 0
+  const ST = AD ? STA : (OPT.body.proportion?.chest ?? 0) < 0 ? makeStretch(OPT, J) : null, FY = ST ? (y) => cy + ST.fwd(y) - ST.fwd(cy) : (y) => y;
+  const ru = r * 1.45, rd = r * 0.72, rz = r * 0.9, RB = ST ? Math.max(ru, ST.inv(ST.fwd(cy) + ru + KU) - cy, cy - ST.inv(ST.fwd(cy) - rd)) : ru;   // RB: its reach above or below here
   // (bustY: the bust up or down, m; bustX: how far each side is from the middle, m, null = from the chest. 2026-10-07: a slender 6-head body
   // wanted it higher and closer: the spacing never went under 6 cm, so on a narrow chest the bust stood apart and the chest looked wide)
-    const zf = 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
-    const part = (e) => { const ell = (x, y, z) => { const ry = y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
-      return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + ru + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, y)) }; };
+    const zf = AD ? CA.z + CA.d * Math.sqrt(Math.max(0, 1 - (bx / CA.w) ** 2)) : 0.015 + 0.098 * TO.chest * Math.sqrt(1 - (bx / (0.13 * TO.chest)) ** 2), cz = zf - r * (0.6 - 0.5 * TO.bust), chest = P.chest;   // zf: the chest's front surface there
+    const part = (e) => { const ell = (x, y, z) => { const Y = FY(y), ry = Y > cy ? ru : rd, a = (Math.sqrt(x * x + e * e) - bx) / r, b = (Y - cy) / ry, c = (z - cz) / rz, k0 = Math.hypot(a, b, c), k1 = Math.hypot(a / r, b / ry, c / rz); return k0 * (k0 - 1) / k1; };   // both sides at once (mirrored; e rounds the middle)
+      return { t: 3, k: 0.002, bone: "chest", bx0: 0, by0: cy, bz0: cz, br: bx + RB + KU, f: (x, y, z) => smin(dPrim(chest, x, y, z), ell(x, y, z), KD + (KU - KD) * sstep(cy - 0.3 * r, cy + 0.9 * r, FY(y))) }; };
     P.bust = Object.assign(part(0.01), { cloth: part(0.04) }); }
   P.belly = E([0, 0.52, -0.08 + 0.115 * TO.belly + BD / 2], [0.165 * TO.belly, 0.14, 0.115 * TO.belly - BD / 2], "spine", 0.1);  // おなかはぽっこり(下ぶくれ)
   // hips: a tall pelvis and a long, soft waist cut, so the side line runs from the waist out to the hips in one smooth curve
@@ -137,6 +157,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // 前は胸のすぐ下(0.6)を中心に縦 0.16 の広い範囲を削っていて、胸の下から一直線に細くなるだけだった(2026-10-07 サオリ「くびれが上の方から細くなるだけ」)
   const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (WS.x - TO.waist), WS.y, 0], [WS.width, WS.height, 0.14], "spine", WS.blend));
+  if (AD) { delete P["waist.L"]; delete P["waist.R"];   // the waist is the narrow piece between the ribcage and the pelvis (no cut)
+    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.49) * T }, { w: 0.062, h: 0.18 * T, d: 0.056, z: 0.006 }, "spine"));
+    P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.108, h: 0.32 * T, d: 0.064, z: -0.008 }, "hips")); }
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
   P.skull = E([0, SK.y, -0.005], [SK.width, SK.height, SK.depth], "head", 0.06);
@@ -245,7 +268,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
           return (Math.hypot(qa, qb, qw / FL) - r) * FL * 0.9; } }; }
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
-    { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B) + BB / 2], [0.08, 0.066, 0.075 * B - BB / 2], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
+    if (AD) { const B = AD.butt; P[`butt.${s}`] = fin(adultPart({ ...B, x: m * (B.x ?? 0.055), y: yH + (B.y ?? -0.06) * T }, { w: 0.062, h: 0.2 * T, d: 0.05, z: -0.035 }, "hips")); }
+    else { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B) + BB / 2], [0.08, 0.066, 0.075 * B - BB / 2], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
     { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * (0.116 + SHW), 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
     P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
