@@ -16,7 +16,10 @@ const ARM0 = { "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.0
 export function armJoints(OPT) {
   const PR = OPT.body.proportion ?? {}, A = PR.arms ?? null, SHW = 0.115 * ((PR.shoulders ?? 1) - 1), out = {};
   for (const [k, v] of Object.entries(ARM0)) out[k] = [v[0] + SHW, v[1], v[2]];
-  if (A != null) { const sT = PR.torso ?? 1, ua = out["upperArm.L"];
+  // adult: the arm laid out only part of the way steeper (adult.armSteep of the torso's factor): at torso 2 the whole way hung the hand
+  // straight down into the adult body's wider hips, and they melted into one surface there (the hip's skin went with the arm: 2026-10-08,
+  // Saori: "腰の両端が上に引っ張られてない？")
+  if (A != null) { const sT = OPT.body.adult?.on ? 1 + ((PR.torso ?? 1) - 1) * (OPT.body.adult.armSteep ?? 0.5) : PR.torso ?? 1, ua = out["upperArm.L"];
     const seg = (a, b) => { const d = [b[0] - a[0], (b[1] - a[1]) * sT, b[2] - a[2]], k = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) * A / Math.hypot(...d); return d.map((v) => v * k); };
     const d1 = seg(ARM0["upperArm.L"], ARM0["lowerArm.L"]), d2 = seg(ARM0["lowerArm.L"], ARM0["hand.L"]);
     out["lowerArm.L"] = ua.map((v, i) => v + d1[i]); out["hand.L"] = out["lowerArm.L"].map((v, i) => v + d2[i]); }
@@ -412,7 +415,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
       // the outside of the thigh's top, from the hips' width down (2026-10-08, Saori: "くびれから太ももにかけて見本は広がってるけど、雛形は腰で終わって
       // ストンと落ちてるから、太ももが棒っぽく見える"): the hips' line runs on into the thigh and narrows toward the knee, not ending at the hip
-      { const c = at(Hf, Kf, 0.3); P[`thighOut.${s}`] = fin(E([c[0] + m * (LG.out ?? 0.022), c[1], c[2] - 0.004], [0.048, 0.48 * LT, 0.05], `upperLeg.${s}`, 0.05)); }
+      { const o = LG.out ?? 0.02, b = at(Hf, Kf, 0.75); P[`thighOut.${s}`] = fin(C([Hf[0] + m * o, Hf[1] - 0.045, Hf[2] - 0.004], [b[0] + m * o * 0.3, b[1], b[2]], 0.046, 0.034, `upperLeg.${s}`, 0.05)); }
+      // (a capsule from just under the hips' widest down toward the knee: as a tall ellipsoid its top reached over the hips and stood up at each
+      // side as a spike, 2026-10-08, Saori: "腰の両端が上に引っ張られてない？")
       { const c = at(Hf, Kf, 0.5); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.012], [0.037, 0.44 * LT, LG.front], `upperLeg.${s}`, 0.04)); }   // (down to the knee: it ended above it, a dip there seen from the side)
       { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
       P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.014], [0.02, 0.026, 0.014], `lowerLeg.${s}`, 0.03));
