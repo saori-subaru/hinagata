@@ -133,7 +133,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // (a step under it); a wide blend above made a crease across the chest like a strap, so it stays narrow and the ellipsoid's long top does the slope.
   // P.bust.cloth: the same with the two sides joined across the middle, for the shirt (cloth bridges the valley)
   if (TO.bust) { const r = 0.058 * Math.cbrt(TO.bust), CA = AD ? { w: 0.08, d: 0.066, z: 0.002, ...AD.chest } : null, bx = OPT.body.sculpt.bustX ?? (AD ? 0.5 * CA.w : Math.max(0.06 * Math.max(1, TO.chest), r * 1.05)), KU = 0.03, KD = 0.007;
-  const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.17) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
+  const cy = AD ? STA.inv(yS + (AD.bustY ?? -0.15) * T) : 0.645 + (OPT.body.sculpt.bustY ?? 0);   // (adult: AD.bustY, × T from the shoulder joint)
   // a chest shortened by the stretch (body.proportion.chest below 0) squashes what is built here upright (at -2 to half: "胸が上下につぶれて
   // 小さくとがって見える", 2026-10-08 Saori). Then the bust's height is measured after the stretch (FY: a height here → where it goes, about
   // the bust's center), so it comes out round; it reaches past the short chest into the belly, whose stretch FY undoes too. Only below 0
@@ -158,7 +158,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (WS.x - TO.waist), WS.y, 0], [WS.width, WS.height, 0.14], "spine", WS.blend));
   if (AD) { delete P["waist.L"]; delete P["waist.R"];   // the waist is the narrow piece between the ribcage and the pelvis (no cut)
-    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.49) * T }, { w: 0.062, h: 0.18 * T, d: 0.056, z: 0.006 }, "spine"));
+    P.belly = fin(adultPart({ ...AD.waist, y: yS + (AD.waist.y ?? -0.46) * T }, { w: 0.062, h: 0.18 * T, d: 0.056, z: 0.006 }, "spine"));
     P.pelvis = fin(adultPart({ ...AD.hips, y: yH + (AD.hips.y ?? 0.05) * T }, { w: 0.108, h: 0.32 * T, d: 0.064, z: -0.008 }, "hips")); }
   // 頭: 中だけでなめらかに溶かして、首とはくっきり分ける
   const SK = OPT.body.sculpt.skull;
