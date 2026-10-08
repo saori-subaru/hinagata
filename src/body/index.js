@@ -402,13 +402,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // calf behind, high. Sizes in m (AD.legs); the same names as before, so pants are made over them
     if (AD) { for (const n of ["thigh", "thighB", "thighF", "thighIn", "calfO", "calf", "calfB", "kneeCap", "calfOut", "calfInner", "calfBack", "kneeBack"]) delete P[`${n}.${s}`];
       const F = (p) => [p[0], STA.fwd(p[1]), p[2]], Hf = F(j("upperLeg")), Kf = F(j("lowerLeg")), Af = F(j("foot")), LT = Hf[1] - Kf[1], LS = Kf[1] - Af[1];
-      const LG = { thigh: [0.05, 0.03], shin: [0.03, 0.019], front: 0.036, back: 0.036, calf: 0.04, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+      const LG = { thigh: [0.05, 0.03], shin: [0.028, 0.016], front: 0.036, back: 0.036, calf: 0.046, ...(AD.legs ?? {}) }, at = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
       P[`thigh.${s}`] = fin(C([Hf[0], Hf[1] + 0.02, Hf[2]], Kf, LG.thigh[0], LG.thigh[1], `upperLeg.${s}`, 0.04));
       { const c = at(Hf, Kf, 0.5); P[`thighF.${s}`] = fin(E([c[0], c[1], c[2] + 0.012], [0.037, 0.44 * LT, LG.front], `upperLeg.${s}`, 0.04)); }   // (down to the knee: it ended above it, a dip there seen from the side)
       { const c = at(Hf, Kf, 0.3); P[`thighB.${s}`] = fin(E([c[0], c[1], c[2] - 0.018], [0.04, 0.3 * LT, LG.back], `upperLeg.${s}`, 0.04)); }
       P[`kneeCap.${s}`] = fin(E([Kf[0], Kf[1] + 0.006, Kf[2] + 0.014], [0.02, 0.026, 0.014], `lowerLeg.${s}`, 0.03));
-      P[`calf.${s}`] = fin(C(Kf, Af, LG.shin[0], LG.shin[1], `lowerLeg.${s}`, 0.04));
-      { const c = at(Kf, Af, 0.32); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.02], [0.032, 0.26 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); } }
+      P[`calf.${s}`] = fin(C(Kf, [Af[0], Af[1], Af[2] - 0.004], LG.shin[0], LG.shin[1], `lowerLeg.${s}`, 0.04));
+      { const c = at(Kf, Af, 0.32); P[`calfB.${s}`] = fin(E([c[0], c[1], c[2] - 0.024], [0.034, 0.27 * LS, LG.calf], `lowerLeg.${s}`, 0.04)); }
+      // under the calf, down to the heel: the calf narrowing into the Achilles tendon, not ending in a step halfway (2026-10-08, Saori:
+      // "ふくらはぎが突然途中で細くなってる")
+      { const a = at(Kf, Af, 0.45), b = at(Af, Af, 0); P[`calfLow.${s}`] = fin(C([a[0], a[1], a[2] - 0.014], [b[0], b[1] + 0.01, b[2] - 0.012], 0.02, 0.012, `lowerLeg.${s}`, 0.05)); } }
   }
   const isHead = (k) => /^(skull|occiput|face|jaw|chinTip|muzzle|nose|ear)/.test(k);
   const BRIDGE = C([0, 1.04 + NOSE_DY, 0.216], [0, 0.97 + NOSE_DY, 0.236], 0.009, 0.011, "head", 0.035);   // 鼻筋(凹ませたあとに足すので、目のあいだは鞍の形になる)
