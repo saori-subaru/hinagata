@@ -167,7 +167,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
-    if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
+    // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
+    // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008), y - top);
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
