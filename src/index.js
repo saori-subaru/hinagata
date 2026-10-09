@@ -472,21 +472,23 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
-  const BANDS = { sailor: bandU(), gloves: bandU(), shoes: bandU(), socks: bandU() };
+  const BANDS = { sailor: bandU(), gloves: bandU(), shoes: bandU(), socks: bandU(), pants: bandU() };
   const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
     g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
   if (trims.sailorSdf) banded("sailor", trims.sailorIn);
   if (trims.gloveSdf) banded("gloves", trims.gloveBand);
   if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
+  if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
   let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
   banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
   function paintBands() {   // the bands' colors and places from the options (instant: setColors, setBands)
     const O = OPT.outfit, SA = O.shirt.sailor ?? {}, GL = O.gloves ?? {}, SH = O.shoes, SS = O.socks.stripes ?? {};
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
     put(BANDS.sailor, SA.line ? [[SA.lineIn ?? 0.008, (SA.lineIn ?? 0.008) + (SA.lineWidth ?? 0.006), SA.line]] : []);
-    const BW = GL.bandWidth ?? 0.022; put(BANDS.gloves, [...(GL.bandColor ? [[-1, BW, GL.bandColor]] : []), ...(GL.lineColor ? [[BW * 0.36, BW * 0.64, GL.lineColor]] : [])]);
+    const BW = GL.bandWidth ?? 0.022; put(BANDS.gloves, [...(GL.bandColor ? [[-1, BW, GL.bandColor]] : []), ...(GL.lineColor ? [[BW * 0.4, BW * 0.6, GL.lineColor]] : [])]);
     put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
+    { const SB = O.pants.skirt ?? {}; put(BANDS.pants, SB.bandColor ? [[-1, SB.bandWidth ?? 0.02, SB.bandColor]] : []); }
     const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
   paintBands();
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);

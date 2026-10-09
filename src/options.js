@@ -472,12 +472,16 @@ export const DEFAULTS = {
         "lineWidth": 0.006,
         "width": 0.085,
         "back": 0.655,
-        "v": 0.665
+        "v": 0.665,
+        "neck": 0.04
       },
       "scarf": {
         "on": false,
         "color": "#1d1d26",
-        "length": 0.1
+        "length": 0.1,
+        "spread": 0.014,
+        "band": 0.013,
+        "width": 0.017
       },
       "underarm": "fit",
       "armhole": null,
@@ -585,7 +589,9 @@ export const DEFAULTS = {
         "hemShape": "plain",
         "hemCount": 10,
         "hemDepth": 0.05,
-        "curl": 0
+        "curl": 0,
+        "bandColor": null,
+        "bandWidth": 0.02
       },
       "hem": 0.3,
       "offset": 0.011,
@@ -685,7 +691,8 @@ export const DEFAULTS = {
       "bowAt": -14,
       "bowSize": 1,
       "bowLength": 1,
-      "bowSpread": 14
+      "bowSpread": 14,
+      "bowTilt": 4
     },
     "suit": {
       "on": false,

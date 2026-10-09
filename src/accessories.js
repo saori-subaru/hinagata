@@ -60,7 +60,7 @@ const SHAPES = {
     for (const m of [1, -1]) { const ball = new THREE.SphereGeometry(0.05, 10, 8); ball.translate(m * 0.26, 0.3, 0); parts.push(ball); }
     const arms = new THREE.TorusGeometry(0.34, 0.045, 8, 28, Math.PI); arms.rotateZ(Math.PI); arms.translate(0, -0.06, 0); parts.push(arms);
     for (const m of [1, -1]) { const s = new THREE.Shape(); s.moveTo(0, 0); s.lineTo(m * 0.14, -0.04); s.lineTo(m * 0.02, 0.2); s.lineTo(0, 0);
-      const fl = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }); fl.translate(m * 0.32, -0.08, -d / 2); parts.push(fl.toNonIndexed()); }
+      const fl = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }); fl.translate(m * 0.32, -0.08, -d / 2); parts.push(fl); }
     const tip = new THREE.ConeGeometry(0.08, 0.14, 10); tip.rotateZ(Math.PI); tip.translate(0, -0.45, 0); parts.push(tip);
     const g = merge(parts.map((p) => p.index ? p.toNonIndexed() : p)); g.scale(1, 1, 0.6); g.translate(0, 0, 0.05); g.computeVertexNormals(); return g; },
 };

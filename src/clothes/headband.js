@@ -26,14 +26,15 @@ export function headbandSdf(OPT, cap) {
   // flat leaf (pointed toward its tip, its face a little turned, leaning back), one more upright than the other as 島風's are
   const S = HB.bowSize ?? 1, b = (HB.bowAt ?? -14) * D2R, kd = nrm(up.map((v, i) => v * Math.cos(b) + [1, 0, 0][i] * Math.sin(b))), K = onBand(kd).map((v, i) => v + kd[i] * 0.012 * S);
   const knot = (x, y, z) => { const q = [(x - K[0]) / 0.034, (y - K[1]) / 0.03, (z - K[2]) / 0.028], k = Math.hypot(...q); return (k - 1) * 0.028 * S; };
-  const loops = [[-(HB.bowSpread ?? 14) * 0.6, 34], [(HB.bowSpread ?? 14) * 1.4, -26]].map(([beta, twist]) => {
+  const SP = HB.bowSpread ?? 14, TL = HB.bowTilt ?? 4;   // the loops at tilt ∓ spread from the knot's upright (島風's: one nearly flat out to her right, the other upright)
+  const loops = [[TL - SP, 34], [TL + SP, -26]].map(([beta, twist]) => {
     const bb = beta * D2R + b, e = nrm([Math.sin(bb), Math.cos(bb), -0.18]), f0 = nrm([-e[0] * e[2], -e[1] * e[2], 1 - e[2] * e[2]]), tw = twist * D2R;   // e: along the loop; f0: its face, toward the front
     const sd = nrm(crs(e, f0)), f = nrm(f0.map((v, i) => v * Math.cos(tw) + sd[i] * Math.sin(tw))), s = nrm(crs(e, f));   // turned about e by twist
     const L = 0.34 * S * (HB.bowLength ?? 1), R = 0.07 * S, TH = 0.011 * S;
     return (x, y, z) => { const q = [x - K[0], y - K[1], z - K[2]], h = dt(q, e), t = Math.min(1, Math.max(0, h / L));
       const w = R * Math.max(0.1, (0.35 + 0.65 * Math.min(1, t / 0.2) ** 0.7) * (1 - 0.25 * t) * Math.sqrt(Math.max(0, 1 - t ** 8))), bend = 0.07 * L * t * t;   // narrow at the knot, wide most of the way, rounding off to its tip
       const qs = dt(q, s), qf = dt(q, f) + bend;
-      return smax((Math.hypot(qs / w, qf / TH) - 1) * Math.min(w, TH), h - L, 0.01); };
+      return smax(smax((Math.hypot(qs / w, qf / TH) - 1) * Math.min(w, TH), h - L, 0.01), -h - 0.02 * S, 0.01); };   // (not past the knot behind: a loop leaning far out showed through on the other side)
   });
   const bow = (x, y, z) => { if (Math.hypot(x - K[0], y - K[1], z - K[2]) > 0.45 * S * (HB.bowLength ?? 1)) return 0.1; return smin(knot(x, y, z), Math.min(loops[0](x, y, z), loops[1](x, y, z)), 0.02 * S); };
   return (x, y, z) => smin(band(x, y, z), bow(x, y, z), 0.012);

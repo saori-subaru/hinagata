@@ -21,7 +21,7 @@ export function buildTrims(OPT, { P, J, bodySdf, shirtSdf }) {
   // inner edges (the V's opening) from the neck to a little above it, so the lapels meet at the point
   const W = SA.width ?? 0.085, BACK = SA.back ?? 0.655, VY = SA.v ?? 0.665, TOPY = J["upperArm.L"][1], NECK = J.neck, ZS = NECK[2] - 0.012;   // ZS: front / back split (the shoulders' line)
   const a = W / Math.max(0.02, TOPY - VY), na = Math.hypot(1, a / sy(VY));   // the outer edge: u = a (y - v); its distance measured in the built (stretched) body
-  const VI = VY + 0.012, ai = 0.04 / Math.max(0.02, NECK[1] - VI), ni = Math.hypot(1, ai / sy(VI));   // the inner edge: u = ai (y - VI), 4 cm wide at the neck
+  const VI = VY + 0.012, ai = (SA.neck ?? 0.04) / Math.max(0.02, NECK[1] - VI), ni = Math.hypot(1, ai / sy(VI));   // the inner edge: u = ai (y - VI), SA.neck wide at the neck (4 cm)
   const outerFront = (u, y) => Math.max((u - a * (y - VY)) / na, u - W);
   const innerV = (u, y) => (ai * (y - VI) - u) / ni;   // > 0 in the V's opening
   const sailorEdge = (x, y, z) => { const u = Math.abs(x); return z < ZS ? Math.max(u - W, (BACK - y) * sy(BACK)) : outerFront(u, y); };   // the outer edge (< 0 inside): the line follows it
@@ -36,17 +36,17 @@ export function buildTrims(OPT, { P, J, bodySdf, shirtSdf }) {
   const frontZ = (x, y) => { let lo = -0.05, hi = 0.3; for (let k = 0; k < 28; k++) { const m = (lo + hi) / 2; if (shirtSdf(x, y, m, bodySdf, true) < 0) lo = m; else hi = m; } return lo; };
   let scarfSdf = null;
   if (SC.on) {
-    const LEN = SC.length ?? 0.1, KY = VY - 0.004, kz = frontZ(0, KY) + TH + 0.006, WS = 0.013;
+    const LEN = SC.length ?? 0.1, KY = VY - 0.004, kz = frontZ(0, KY) + TH + 0.006, WS = SC.band ?? 0.013, TW = (SC.width ?? 0.017) / 0.017;   // WS: how much of the band shows in the V; TW: the tails' and the knot's size
     // the band along the V's edges, a little under the lapels, standing off the shirt less than the collar does (so the collar lies over it)
     const band = (x, y, z, B) => { const g = innerV(Math.abs(x), y); return Math.max(shirtSdf(x, y, z, B, true) - TH * 0.7, -g - 0.003, g - WS, ZS + 0.02 - z, KY - 0.01 - y); };
     // two tails hanging from under the knot, flat, a little apart and slanting out, widening toward their ends; each hangs straight down
     // from the furthest forward the shirt reaches above it (it doesn't follow the chest's curve in)
     const NY = 40, Y0 = KY - 0.008, Y1 = KY - LEN, zAt = new Float32Array(NY + 1);
     { let m = kz - 0.004; for (let i = 0; i <= NY; i++) { const y = Y0 + (Y1 - Y0) * i / NY; m = Math.max(m, frontZ(0.015 + 0.01 * i / NY, y) + 0.008); zAt[i] = m; } }
-    const tail = (x, y, z) => { const t = Math.min(1, Math.max(0, (Y0 - y) / (Y0 - Y1))), cx = 0.006 + 0.014 * t, hw = 0.011 + 0.006 * t, i = Math.min(NY - 1, Math.floor(t * NY)), f = t * NY - i, cz = zAt[i] * (1 - f) + zAt[i + 1] * f;
+    const SPR = SC.spread ?? 0.014, tail = (x, y, z) => { const t = Math.min(1, Math.max(0, (Y0 - y) / (Y0 - Y1))), cx = 0.006 * TW + SPR * t, hw = (0.011 + 0.006 * t) * TW, i = Math.min(NY - 1, Math.floor(t * NY)), f = t * NY - i, cz = zAt[i] * (1 - f) + zAt[i + 1] * f;
       const u = Math.abs(x), cut = (Y1 + 0.012 * Math.abs(u - cx) / hw) - y;   // the end cut in a shallow V (its middle longer)
       return smax(Math.max(Math.abs(u - cx) - hw, Math.abs(z - cz) - 0.004), Math.max(y - Y0, cut), 0.002); };
-    const knot = (x, y, z) => { const q = [x / 0.019, (y - KY) / 0.016, (z - kz) / 0.012], k = Math.hypot(...q); return (k - 1) * 0.012; };
+    const knot = (x, y, z) => { const q = [x / (0.019 * TW), (y - KY) / (0.016 * TW), (z - kz) / 0.012], k = Math.hypot(...q); return (k - 1) * 0.012; };
     scarfSdf = (x, y, z, B = bodySdf) => smin(Math.min(band(x, y, z, B), tail(x, y, z)), knot(x, y, z), 0.006);
     scarfSdf.box = { lo: [-0.11, Y1 - 0.02, ZS], hi: [0.11, NECK[1] + 0.03, kz + 0.06] };
   }
