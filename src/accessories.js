@@ -4,11 +4,11 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), band (a ring around the limb at that
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -49,6 +49,20 @@ const SHAPES = {
       parts.push(smooth(tg)); }
     const k = new THREE.SphereGeometry(0.13, 14, 10); k.scale(0.85, 1, 0.75); k.translate(0, 0, 0.1); parts.push(k);
     return merge(parts); },
+  // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
+  button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
+  // an anchor (2026-10-10, for 島風): the shank with a ring on top and the stock across under it, the arms curving up to the flukes; 1 tall,
+  // flat (it lies on the surface)
+  anchor: () => { const parts = [], d = 0.08;
+    const shank = new THREE.CylinderGeometry(0.045, 0.05, 0.82, 10); shank.translate(0, 0.02, 0); parts.push(shank);
+    const ring = new THREE.TorusGeometry(0.1, 0.035, 8, 20); ring.translate(0, 0.5, 0); parts.push(ring);
+    const stock = new THREE.CylinderGeometry(0.035, 0.035, 0.52, 8); stock.rotateZ(Math.PI / 2); stock.translate(0, 0.3, 0); parts.push(stock);
+    for (const m of [1, -1]) { const ball = new THREE.SphereGeometry(0.05, 10, 8); ball.translate(m * 0.26, 0.3, 0); parts.push(ball); }
+    const arms = new THREE.TorusGeometry(0.34, 0.045, 8, 28, Math.PI); arms.rotateZ(Math.PI); arms.translate(0, -0.06, 0); parts.push(arms);
+    for (const m of [1, -1]) { const s = new THREE.Shape(); s.moveTo(0, 0); s.lineTo(m * 0.14, -0.04); s.lineTo(m * 0.02, 0.2); s.lineTo(0, 0);
+      const fl = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }); fl.translate(m * 0.32, -0.08, -d / 2); parts.push(fl.toNonIndexed()); }
+    const tip = new THREE.ConeGeometry(0.08, 0.14, 10); tip.rotateZ(Math.PI); tip.translate(0, -0.45, 0); parts.push(tip);
+    const g = merge(parts.map((p) => p.index ? p.toNonIndexed() : p)); g.scale(1, 1, 0.6); g.translate(0, 0, 0.05); g.computeVertexNormals(); return g; },
 };
 function smooth(g) {   // vertex normals averaged over the triangles that share a point (a non-indexed geometry, as ExtrudeGeometry makes)
   const P = g.attributes.position, N = new Float32Array(P.count * 3), acc = new Map(), key = (i) => `${P.getX(i).toFixed(4)},${P.getY(i).toFixed(4)},${P.getZ(i).toFixed(4)}`;

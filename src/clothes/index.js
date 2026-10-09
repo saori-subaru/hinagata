@@ -6,6 +6,7 @@ import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
 import { buildExtras } from "./extras.js";
+import { buildTrims } from "./trims.js";
 import { armReach, heelBend } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
@@ -39,7 +40,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const gx = f.bx / Lf, gy = f.by / Lf, gz = f.bz / Lf, dx = gx * gy, dy = gy * gy - 1, dz = gz * gy, dl = Math.hypot(dx, dy, dz) || 1;   // d: straight down, across the forearm
     return { ax: a.ax, ay: a.ay, az: a.az, ux: a.bx / L, uy: a.by / L, fx: f.ax, fy: f.ay, fz: f.az, gx, gy, gz, dx: dx / dl, dy: dy / dl, dz: dz / dl, Lf, side: Math.sign(a.ax) }; };
   const ARMS = [arm("L"), arm("R")];
-  const FIT = OPT.fit ?? {}, HEM = FIT.shirtHem ?? { tuck: 0.455, out: 0.44, crop: 0.6 }[LEN] ?? 0.455;   // (FIT: the heights on the adult body, body/index.js adultFit)   // the bottom edge   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
+  const FIT = OPT.fit ?? {}, HEM = FIT.shirtHem ?? { tuck: 0.455, out: 0.44, crop: SH.crop ?? 0.6 }[LEN] ?? 0.455;   // (FIT: the heights on the adult body, body/index.js adultFit)   // the bottom edge   // シャツは胴と袖の部品を溶かした形(袖はこの形がいちばん自然)
   const COLLAR = { y: OPT.outfit.shirt.collar.y, bowl: OPT.outfit.shirt.collar.bowl, tilt: OPT.outfit.shirt.collar.tilt, front: OPT.outfit.shirt.collar.front, fwd: OPT.outfit.shirt.collar.forward };   // えりぐり: 首のまわりの高さ / 首から離れるほど上がる量(おわん形) / 後ろ上がりの傾き / 前を首に近づける / 中心を前へ
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   // the bell sleeve: a shell around the forearm from the elbow (as wide as the sleeve) to the cuff, open there. It hangs: the bell's middle
@@ -64,7 +65,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     let d = shirtCore(x, y, z) - (0.014 - 0.01 * (1 - sstep(0, 0.025, pit))) - (LEN === "out" ? 0.01 * sstep(0.56, 0.5, y) : 0);   // out: a little looser at the bottom, so it lies over the pants
     if (pit < 0.03) d = -smin(-d, pit + 0.004, 0.006);
     for (const A of ARMS) { if (x * A.side <= 0) continue;
-      if (SLEEVE === "none") { const t = (x - A.ax) * A.ux + (y - A.ay) * A.uy, px = x - A.ax - t * A.ux, py = y - A.ay - t * A.uy;   // sleeveless: cut off the arm just inside the shoulder joint
+      if (SLEEVE === "none" && SH.armhole != null) {   // shirt.armhole (2026-10-10, for 島風's bare shoulders): the armhole a line from the shoulder's top, armhole m in from the joint, down to the armpit; the arm's side of it is cut away above the armpit (the cut below kept the shoulder's cap: a puffed little sleeve)
+        const x0 = A.ax * A.side - SH.armhole, y0 = A.ay + 0.03, x1 = A.ax * A.side + 0.004, y1 = A.ay - 0.05, L = Math.hypot(x1 - x0, y1 - y0), s = (x * A.side - x0) * (y0 - y1) / L + (y - y0) * (x1 - x0) / L;   // s > 0: the arm's side
+        d = sm(d, Math.min(s, y - y1)); }
+      else if (SLEEVE === "none") { const t = (x - A.ax) * A.ux + (y - A.ay) * A.uy, px = x - A.ax - t * A.ux, py = y - A.ay - t * A.uy;   // sleeveless: cut off the arm just inside the shoulder joint
         d = sm(d, -Math.max(t + 0.012, Math.hypot(px, py, z - A.az) - 0.063)); }   // 0.063: around the sleeve only, not the back or chest beside it   // (only around the arm: a plane alone would cut through the body too)
       if (LONG) d = sm(d, (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz - (A.Lf - 0.012));   // long: the cuff just before the wrist
       if (BELL && !noBell) d = smin(d, bellShell(x, y, z, A), 0.008); }
@@ -181,24 +185,35 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // shoes.kind (2026-10-05, Saori: boots, high heels, laced sneakers): "sneaker" (as before) / "laced" (the same with laces, a part of its own)
   // / "boots" (up the calf, following it, the top a little flared) / "heels" (low-cut pumps with a heel: the foot is tilted toes-down in every
   // pose, heelPose; the heel is built slanted so that tilted it stands straight down to the floor)
-  const KIND = OPT.outfit.shoes.kind ?? "sneaker", BOOTS = KIND === "boots", HEELS = KIND === "heels";
+  // / "heelBoots" (2026-10-10, for 島風's: boots on a high heel, the foot tilted as in heels; the heel a flat block (a rudder's fin) and the
+  // sole under the toes are the soles' part, in their own color). Boots of both kinds can have a cuff at the top (shoes.cuff, m: a band
+  // standing out a little, painted shoes.cuffColor in index.js)
+  const KIND = OPT.outfit.shoes.kind ?? "sneaker", HBOOTS = KIND === "heelBoots", BOOTS = KIND === "boots" || HBOOTS, HEELS = KIND === "heels" || HBOOTS, PUMPS = KIND === "heels";
   const FK = OPT.body.proportion?.feet ?? 1;   // the feet's size (body.proportion.feet): the heels' own pieces grow with them
   const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
-  const shoeCore = blend(pick("shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB"] : []))), soleCore = blend(pick("shoeLast", "toeBox"));   // toeBox: over bare toes (body foot.toes), none without them
+  const shoeCore = blend(pick("shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : []))), soleCore = blend(pick("shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])));   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
   const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`shoeLast.${s}`], a = [f.cx, -0.001, f.cz - 0.05 * FK], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
+    if (HBOOTS) { const L = HP.heel - 0.01, w = [0, d[2], -d[1]];   // a block: thin across, long front to back (tapering toward the floor), along d; w: forward across it
+      return { t: 3, bx0: a[0], by0: a[1] - L / 2, bz0: a[2], br: L, k: 0.004, f: (x, y, z) => { const q = [x - a[0], y - a[1] + 0.012, z - a[2] - 0.004], u = q[1] * d[1] + q[2] * d[2], v = q[1] * w[1] + q[2] * w[2], t = Math.min(1, Math.max(0, u / L));
+        const hl = (0.026 - 0.008 * t) * FK, c = (0.004 + 0.006 * t) * FK;   // half its length front to back, its middle moving forward toward the floor
+        const bx = Math.abs(q[0]) - 0.0105 * FK, bv = Math.abs(v - c) - hl, bu = Math.max(-u, u - L);
+        return Math.min(Math.max(bx, bv, bu), 0) + Math.hypot(Math.max(bx, 0), Math.max(bv, 0), Math.max(bu, 0)) - 0.002; } }; }
     return C(a, a.map((v, i) => v + d[i] * (HP.heel - 0.005)), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
   // heels: a pointed toe (a flat cone forward and a little toward the big toe, smoothly joined), and no rubber sole: the shoe itself goes down
   // to the floor, all one color (2026-10-05, Saori: "ゴム部分がついてる、先も尖ってない")
-  const toePoints = HEELS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03 * FK], b = [f.cx - m * 0.01 * FK, 0.006, 0.128 * FK], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
+  const toePoints = PUMPS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03 * FK], b = [f.cx - m * 0.01 * FK, 0.006, 0.128 * FK], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
     return (x, y, z) => { const p = [x - a[0], y - a[1], z - a[2]], t = Math.min(1, Math.max(0, (p[0] * u[0] + p[1] * u[1] + p[2] * u[2]) / L)), q = [0, 1, 2].map((i) => p[i] - u[i] * t * L), r = (0.028 * (1 - t) + 0.003) * FK;
       return (Math.hypot(q[0], q[2], q[1] / FY) - r) * FY; }; }) : [];
   // heels: thin leather close to the foot (0.6 cm, not a sneaker's 1.2), over a narrower foot (body/index.js) and a slimmer toe (2026-10-07)
-  const SHOE_OFF = HEELS ? 0.006 : SHOE.off;
-  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? 0.004 + 0.008 * sstep(TOP - 0.04, TOP, y) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top)
-    let d = Math.max(c, y - (TOP - TILT * z), HEELS ? -0.003 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
-    for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
+  const SHOE_OFF = PUMPS ? 0.006 : SHOE.off, CUFF = BOOTS ? OPT.outfit.shoes.cuff ?? 0 : 0;
+  const shoeTop = (x, y, z) => TOP - TILT * z - y;   // how far under the top (m, base): the cuff is painted by it
+  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
+    let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
+    if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
-  const soleSdf = HEELS ? () => 1 : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
+  const soleSdf0 = PUMPS ? () => 1 : HBOOTS ? (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - 0.004, y - 0.009, -0.007 - y)   // (heel boots: a thin sole, a little wider than the boot, its bottom under the socks' (2.5 mm under the foot): they showed white under it)
+    : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
+  const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
   const lacesSdf = KIND === "laced" ? (() => { const parts = [], surf = (x, z) => { let lo = 0.025, hi = 0.14; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (shoeSdf(x, m, z) < 0) lo = m; else hi = m; } return lo; };
@@ -242,5 +257,6 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const S = smin(cone, mantle, k), zf = -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y);   // zf: the front edge (behind the arms below the shoulders)
       return Math.max(S, -(S + CA.thick), y - (CA.collar - 0.12 * z), z - zf, CA.hem - y); };   // the collar is a little higher at the back
   })() : null;
-  return { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT) };   // extras: animal ears, wings (extras.js)
+  return { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+    trims: buildTrims(OPT, { P, J, bodySdf, shirtSdf }) };   // a sailor collar and scarf, gloves, hip strings (trims.js)
 }

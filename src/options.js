@@ -81,7 +81,8 @@ export const DEFAULTS = {
       "calf": 0.6
     },
     "adult": {
-      "on": false
+      "on": false,
+      "knee": 0.53
     },
     "joints": {
       "hipY": 0.44,
@@ -462,7 +463,24 @@ export const DEFAULTS = {
       "sleeve": "short",
       "bell": 0.08,
       "length": "tuck",
+      "crop": 0.6,
+      "sailor": {
+        "on": false,
+        "color": "#26325f",
+        "line": "#ffffff",
+        "lineIn": 0.008,
+        "lineWidth": 0.006,
+        "width": 0.085,
+        "back": 0.655,
+        "v": 0.665
+      },
+      "scarf": {
+        "on": false,
+        "color": "#1d1d26",
+        "length": 0.1
+      },
       "underarm": "fit",
+      "armhole": null,
       "collar": {
         "y": 0.764,
         "bowl": 2.2,
@@ -618,6 +636,8 @@ export const DEFAULTS = {
       "laceColor": "#f4f1ea",
       "bootHeight": 0.21,
       "heelAngle": 24,
+      "cuff": 0,
+      "cuffColor": null,
       "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
@@ -630,7 +650,42 @@ export const DEFAULTS = {
     "socks": {
       "on": true,
       "color": "#f7f3ea",
-      "top": 0.15
+      "top": 0.15,
+      "stripes": {
+        "on": false,
+        "color": "#d8403a",
+        "width": 0.022,
+        "gap": 0.022
+      }
+    },
+    "gloves": {
+      "on": false,
+      "color": "#ffffff",
+      "length": 1,
+      "bandColor": null,
+      "lineColor": null,
+      "bandWidth": 0.022
+    },
+    "strings": {
+      "on": false,
+      "color": "#1c1c22",
+      "rise": 0.05,
+      "width": 0.006,
+      "span": 1
+    },
+    "headband": {
+      "on": false,
+      "color": "#1c1c22",
+      "width": 0.026,
+      "tilt": 8,
+      "at": 0,
+      "lift": 0.02,
+      "down": 0.13,
+      "bow": "none",
+      "bowAt": -14,
+      "bowSize": 1,
+      "bowLength": 1,
+      "bowSpread": 14
     },
     "suit": {
       "on": false,

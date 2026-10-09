@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import { ACCESSORY_KINDS } from "../../src/accessories.js";
 
-const SIZE = { leaf: 0.08, gem: 0.03, flower: 0.05, star: 0.05, ball: 0.03, ribbon: 0.12, band: 0.012 };
+const SIZE = { leaf: 0.08, gem: 0.03, flower: 0.05, star: 0.05, ball: 0.03, ribbon: 0.12, band: 0.012, button: 0.018, anchor: 0.07 };
 
 /** vp: the viewport / store: the recipe / onChange(): the tool's state changed (the panel redraws) */
 export function createAccessoryTool({ vp, store, onChange = () => {} }) {

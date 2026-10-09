@@ -11,7 +11,7 @@ import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint } from "./materials.js";
+import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
@@ -72,7 +72,8 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
-  return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on } };   // a dress is a shape (its skirt), and a cape is only built when worn
+  return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
+    trimsOn: [OPT.outfit.shirt?.sailor?.on, OPT.outfit.shirt?.scarf?.on, OPT.outfit.gloves?.on, OPT.outfit.strings?.on, OPT.outfit.headband?.on].map((v) => !!v) } };   // a dress is a shape (its skirt), and a cape and the trims are only built when worn
 }
 
 export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
@@ -129,7 +130,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, trims } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -155,11 +156,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const PROF = [];   // per mesh: vertex count and build time (ms)
   let bodyAt = (x, y, z) => bodySdf(x, y, z);   // body distance; after the body is meshed, read back from its grid (clothes don't recompute the body)
   // name: which part (the cache key inside this character) / fast: cheaper sdf for grid sampling / bone1: bind everything to this bone / only: RegExp of bones allowed
-  function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null) {
+  function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null, make = null) {   // make: a part made directly as triangles ({ pos, nor, idx }), not from a distance
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
     if (w && MS) { rec = simplified(rec, name); }   // a worker builds full meshes; they are thinned here (with their skin weights)
     if (w) fresh[name] = rec;
+    if (!rec && make) { const r = make(); const { si, sw } = skinOf(r.pos, weightsAt, BI, bone1, only, soft); rec = fresh[name] = { ...r, si, sw }; time = { sample: 0, project: 0 }; }
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
@@ -186,7 +188,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
     const cloth = name === "cape" || (name === "pants" && skirtOf(OPT));
-    const share = !cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4));
+    // the trims (clothes/trims.js) are small and thin: the hip strings, a few mm wide, came out in dashes thinned to 7 % (2026-10-10); the
+    // scarf, the collar and the headband's bow are thinned as cloth is
+    const trim = name === "strings" ? 1 : /^(scarf|sailor|headband)$/.test(name) ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
+    const share = trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
     let lock = null;
@@ -280,10 +285,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, trims } };
   if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
-    const run = (part, grid = null, split) => buildPartInWorkers(part, job, partSpec(part, { OPT, H, clothH, kit }), grid, split).then((r) => { pre[part] = r; }, () => {});
+    const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
     const hairN = hairPartName(hairPick), jh = need(hairN) ? run(hairN) : null;   // the hair doesn't need the body: start it together with the body
     if (need("body")) await run("body");
     await Promise.all([jh, ...CLOTHES.filter((n) => need(n) && !LATER.has(n)).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
@@ -394,7 +399,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
-  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft);
+  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
@@ -456,6 +461,34 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if ((y > 0.2 && y < 0.6) || (Math.abs(x) > 0.19 && y < 0.74)) a = Math.max(a, sstep(0.84, 0.9, N[v * 3] * Math.sign(x)));   // down the outer sides (of the body under the chest, the legs, the arms)
       T[v] = a; }
     g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); parts.suit.wrap = (m) => withGrad(m, SUIT); parts.suit.m.material = parts.suit.wrap(parts.suit.m.material); }
+  // trims (clothes/trims.js, headband.js; 2026-10-10, for 島風): a sailor collar and its scarf, gloves, hip strings, a headband. Built only
+  // when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
+  const TR = { sailor: OPT.outfit.shirt.sailor ?? {}, scarf: OPT.outfit.shirt.scarf ?? {}, gloves: OPT.outfit.gloves ?? {}, strings: OPT.outfit.strings ?? {}, headband: OPT.outfit.headband ?? {} };
+  parts.sailor = skinned(meshPart("sailor"), TR.sailor.color ?? "#26325f", 0.004, "sailor");
+  parts.scarf = skinned(meshPart("scarf"), TR.scarf.color ?? "#1d1d26", 0.003, "scarf");
+  parts.gloves = skinned(meshPart("gloves"), TR.gloves.color ?? "#ffffff", 0.003, "gloves");
+  parts.strings = skinned(meshPart("strings"), TR.strings.color ?? "#1c1c22", 0.0015);
+  parts.headband = skinned(meshPart("headband"), TR.headband.color ?? "#1c1c22", 0.003, "headband");
+  // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
+  // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
+  const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
+  const BANDS = { sailor: bandU(), gloves: bandU(), shoes: bandU(), socks: bandU() };
+  const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
+    for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
+    g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
+  if (trims.sailorSdf) banded("sailor", trims.sailorIn);
+  if (trims.gloveSdf) banded("gloves", trims.gloveBand);
+  if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
+  let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
+  banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
+  function paintBands() {   // the bands' colors and places from the options (instant: setColors, setBands)
+    const O = OPT.outfit, SA = O.shirt.sailor ?? {}, GL = O.gloves ?? {}, SH = O.shoes, SS = O.socks.stripes ?? {};
+    const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
+    put(BANDS.sailor, SA.line ? [[SA.lineIn ?? 0.008, (SA.lineIn ?? 0.008) + (SA.lineWidth ?? 0.006), SA.line]] : []);
+    const BW = GL.bandWidth ?? 0.022; put(BANDS.gloves, [...(GL.bandColor ? [[-1, BW, GL.bandColor]] : []), ...(GL.lineColor ? [[BW * 0.36, BW * 0.64, GL.lineColor]] : [])]);
+    put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
+    const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
+  paintBands();
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   const armorPart = (k) => { const x = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, AO.color); } return x; };
   for (const k of ARMOR) parts[k] = armorPart(k);   // armor: hard pieces (clothes/armor.js, plate.js), shiny; full plate also has mail under it and a dark slab behind the visor
@@ -574,7 +607,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
-  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
+  const GARMENTS = { shirt: ["shirt", "sailor", "scarf"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR, gloves: ["gloves"], strings: ["strings"], headband: ["headband"] };   // (the collar and the scarf go with the shirt)
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
   // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
@@ -674,7 +707,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
 
   lap("cover");
   // motion
-  const HEEL = OPT.outfit.shoes.kind === "heels" ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
+  const HEEL = ["heels", "heelBoots"].includes(OPT.outfit.shoes.kind) ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
   const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip });
   let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null, blendT = null;   // follower: the rig this avatar dresses (follow); blendT: play's blend
   // The joints to pose by hand (avatar.joints, 2026-10-06, Saori: Hinagata is there to save a game's makers time, and an agent writing a
@@ -831,7 +864,17 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
     /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
-    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, sheath, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent } = {}) {
+    setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, sheath, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent,
+      sailor, sailorLine, scarf, gloves, gloveBand, gloveBandLine, strings, headband, stripes, cuff } = {}) {
+      // the trims (clothes/trims.js) and the bands painted on parts; a band's color null takes the band away (sailorLine, gloveBand(Line)) or
+      // follows the part's (cuff)
+      const O = OPT.outfit;
+      for (const [c, k, o] of [[sailor, "sailor", O.shirt.sailor], [scarf, "scarf", O.shirt.scarf], [gloves, "gloves", O.gloves], [strings, "strings", O.strings], [headband, "headband", O.headband]]) if (c) { o.color = c; parts[k].m.material.color.set(c); }
+      if (sailorLine !== undefined) O.shirt.sailor.line = sailorLine;
+      if (gloveBand !== undefined) O.gloves.bandColor = gloveBand;
+      if (gloveBandLine !== undefined) O.gloves.lineColor = gloveBandLine;
+      if (stripes) O.socks.stripes.color = stripes;
+      if (cuff !== undefined) O.shoes.cuffColor = cuff;
       if (suit) { OPT.outfit.suit.color = suit; parts.suit.m.material.color.set(suit); }
       if (suitAccent) { OPT.outfit.suit.accent = suitAccent; SUIT.color.value.set(suitAccent); }
       if (skin) { parts.body.toonMat.color.set(skin); OPT.colors.skin = skin; }
@@ -851,7 +894,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (laces) { parts.laces.m.material.color.set(laces); OPT.outfit.shoes.laceColor = laces; }
       if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }
       for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip", "weaponLGrip", "weaponBelt"], "gripColor"], [sheath, ["weaponSheath"], "sheathColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }
+      paintBands();   // (the boots' cuff follows their color when it has none of its own)
     },
+    /** The bands painted on parts (instant), as { "dotted.path": value }: the collar's line (outfit.shirt.sailor.line, lineIn, lineWidth), the
+     *  gloves' cuff (outfit.gloves.bandColor, lineColor), the boots' cuff color (outfit.shoes.cuffColor), the socks' stripes (outfit.socks.stripes.*). */
+    setBands(ch = {}) { for (const [p, v] of Object.entries(ch)) { const k = p.split("."); let o = OPT; for (const q of k.slice(0, -1)) o = o[q] ??= {}; o[k.at(-1)] = v; } paintBands(); },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
     /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */

@@ -49,13 +49,13 @@ export function adultFit(OPT) {
   const map = (c) => { if (c == null || c <= R[0][0] || c >= R[3][0]) return c; let i = 0; while (c > R[i + 1][0]) i++; const t = (c - R[i][0]) / (R[i + 1][0] - R[i][0]); return S.inv(R[i][1] + t * (R[i + 1][1] - R[i][1])); };
   const O = OPT.outfit, LEN = O.shirt?.length ?? "tuck", PL = O.pants?.length ?? "shorts";
   // a tucked shirt goes 3 cm (base; 6 at torso 2) into the pants: at its place it went in 1.7 and the two surfaces crossed in a jagged line
-  const pantsTop = map(O.pants.top), shirtHem = LEN === "tuck" ? Math.min(map(0.455), pantsTop - 0.03) : map({ out: 0.44, crop: 0.6 }[LEN] ?? 0.455);
+  const pantsTop = map(O.pants.top), shirtHem = LEN === "tuck" ? Math.min(map(0.455), pantsTop - 0.03) : map({ out: 0.44, crop: O.shirt?.crop ?? 0.6 }[LEN] ?? 0.455);
   return { pantsTop, pantsHem: map({ knee: 0.2, long: 0.1 }[PL] ?? O.pants.hem), shirtHem,
     dressWaist: map(O.dress?.waist), dressHem: map(O.dress?.hem), skirtHem: map(O.pants.skirt?.hem ?? 0.3), socksTop: map(O.socks?.top) };
 }
 /** High heels worn: the bare foot isn't bent or narrowed for them when the shoes are off (2026-10-08, Saori, the shoes taken off a character
  *  made with heels: "つま先がうえにかたむいて浮いてる", the toes narrowed out of sight) */
-export const heelsWorn = (OPT) => OPT.outfit?.shoes?.kind === "heels" && OPT.outfit.shoes.on !== false;
+export const heelsWorn = (OPT) => (OPT.outfit?.shoes?.kind === "heels" || OPT.outfit?.shoes?.kind === "heelBoots") && OPT.outfit.shoes.on !== false;
 /** High heels (shoes.kind "heels"): the foot is tilted toes-down by heelAngle about the ankle, the ball of the foot on the floor (heelPose,
  *  clothes/index.js). In front of the ball the foot went under the floor (the toes about 2 cm; 2026-10-07, Saori: "ヒールが地面に埋まっている").
  *  So in the shape the forefoot is bent up at the ball by the same angle, as a foot in a heel is: tilted, it lies flat on the floor. The body
@@ -386,10 +386,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`kneeBack.${s}`] = fin(E([k[0], yK + 0.005, k[2] - 0.012], [0.05 * tc, 0.07, 0.045 * tc], `lowerLeg.${s}`, 0.04)); }
     // in high heels the foot is narrower (a pump holds it in; the shoe is made around it, and around the round chibi foot it stood out to the
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
-    { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", n = heelsWorn(OPT) ? 0.68 : 1;
+    { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", HBOOT = OPT.outfit?.shoes?.kind === "heelBoots", n = heelsWorn(OPT) ? 0.68 : 1;
       // shoeLast: what shoes (and the plate's sabatons) are made around: the round foot of before (clothes/index.js). Not part of the body
       // (adult: the last's back with the foot's, 1.4 cm in: the shoes stood out behind the adult heel; 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる")
-      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.015], [HEELS ? 0.035 : 0.052, FOOT_H, AD ? 0.072 : 0.075], `foot.${s}`, 0.04);
+      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.015], [HEELS ? 0.035 : HBOOT ? 0.042 : 0.052, FOOT_H, AD ? 0.072 : 0.075], `foot.${s}`, 0.04);
       // the bare foot (2026-10-07, Saori: "裸足の造形が変、元の丸い足に脚の指をつけただけ"): a narrow heel, a long middle, the forefoot wide and
       // flat under the toes (the ball, a little toward the big toe); all within the shoe's last, so a shoe still covers it
       // Then (Saori, with a photo): the heel stood out too far behind (−0.064 → −0.05), the sole is flat on the floor (the parts reach 4 mm
