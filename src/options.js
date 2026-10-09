@@ -902,7 +902,9 @@ export const DEFAULTS = {
         "spread": 0.25,
         "tips": 0.035,
         "teeth": 9,
-        "curve": 0.8
+        "curve": 0.8,
+        "split": 0,
+        "splitAngle": 55
       },
       "bob": {
         "tips": 0.045,

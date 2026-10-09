@@ -90,7 +90,19 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
   return specs;
 }
 // long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
-export const longLocks = (L, kit) => ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });   // kit.hugY: see drape
+// split (0..1; 2026-10-10, Saori, with 島風's figure from behind: "うしろがみは…二股にわかれてもちあげる"): the long hair parted down the
+// back into two bundles, each lifted out to its side and a little back, its locks gathered toward the tips and swinging as one
+export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });   // kit.hugY: see drape
+  const S = L.split ?? 0; if (!(S > 0)) return specs;
+  const A = S * (L.splitAngle ?? 55) * Math.PI / 180, GAP = 0.03 * S, rotZ = (v, t) => [v[0] * Math.cos(t) - v[1] * Math.sin(t), v[0] * Math.sin(t) + v[1] * Math.cos(t), v[2]], rotX = (v, t) => [v[0], v[1] * Math.cos(t) - v[2] * Math.sin(t), v[1] * Math.sin(t) + v[2] * Math.cos(t)];
+  for (const s of specs) { const side = s.root[0] >= 0 ? 1 : -1, P = s.pts, N = P.length, Q = [P[0]];
+    for (let i = 1; i < N; i++) { const u = i / (N - 1); let d = [P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]];
+      d = rotX(rotZ(d, side * A * u ** 0.8), A * 0.35 * u); Q.push([Q[i - 1][0] + d[0] + side * GAP * (Math.min(1, u * 4) - Math.min(1, (i - 1) / (N - 1) * 4)), Q[i - 1][1] + d[1], Q[i - 1][2] + d[2]]); }   // out to its side (about the front-back axis) and back; the two bundles parted by GAP from near the root (the nape shows between them)
+    s.pts = Q; s.side = side; s.group = `split${side}`; s.cohere = Math.max(s.cohere ?? 0, 0.7); }
+  for (const side of [1, -1]) { const B = specs.filter((s) => s.side === side); if (!B.length) continue; const N = B[0].pts.length;   // each bundle's locks gathered toward its middle line, more toward the tips
+    for (let i = 1; i < N; i++) { const m = [0, 1, 2].map((k) => B.reduce((a, s) => a + s.pts[i][k], 0) / B.length), g = 0.55 * S * (i / (N - 1)) ** 1.4;
+      for (const s of B) for (let k = 0; k < 3; k++) s.pts[i][k] += (m[k] - s.pts[i][k]) * g; } }
+  return specs; };
 
 /** How far from c along the unit direction d the surface of f is (c inside it): halving the range, inside → outside. */
 export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
