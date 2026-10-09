@@ -55,7 +55,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // (nearer the bell's surface than the shirt without the bell: where the bell's lower side lies against the hips, "off the body" missed some)
   const bellOf = BELL ? (x, y, z, B = bodySdf) => { for (const A of ARMS) { if (x * A.side <= 0) continue; const b = Math.abs(bellShell(x, y, z, A));
     if (b < 0.008 && b < Math.abs(shirtSdf(x, y, z, B, true)) - 0.001) return A.side > 0 ? "L" : "R"; } return null; } : null;
-  const shirtSdf = (x, y, z, B = bodySdf, noBell = false) => {   // B: 体の距離(服を作るときは格子から読む速い版を渡す)
+  const shirtSdf = (x, y, z, B = bodySdf, noBell = false, noHole = false) => {   // noHole: without shirt.armhole (the sailor collar lies on over the bare shoulder: cut with the shirt it ended halfway along the shoulder)
+      // B: 体の距離(服を作るときは格子から読む速い版を渡す)
     const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nx = x, nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;   // 首の柱(少し前に傾く)からの位置
     const neck = y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (nx * nx + rz * rz));   // えりぐり: 首から離れるほど高くなるおわん形の面で切る(首に沿う布と平行にならないので、ふちがガタつかない)
     const sm = (a, b) => -smin(-a, -b, 0.012);   // 角を丸めて切る
@@ -65,10 +66,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     let d = shirtCore(x, y, z) - (0.014 - 0.01 * (1 - sstep(0, 0.025, pit))) - (LEN === "out" ? 0.01 * sstep(0.56, 0.5, y) : 0);   // out: a little looser at the bottom, so it lies over the pants
     if (pit < 0.03) d = -smin(-d, pit + 0.004, 0.006);
     for (const A of ARMS) { if (x * A.side <= 0) continue;
-      if (SLEEVE === "none" && SH.armhole != null) {   // shirt.armhole (2026-10-10, for 島風's bare shoulders): the armhole a line from the shoulder's top, armhole m in from the joint, down to the armpit; the arm's side of it is cut away above the armpit (the cut below kept the shoulder's cap: a puffed little sleeve)
+      if (SLEEVE === "none" && SH.armhole != null && !noHole) {   // shirt.armhole (2026-10-10, for 島風's bare shoulders): the armhole a line from the shoulder's top, armhole m in from the joint, down to the armpit; the arm's side of it is cut away above the armpit (the cut below kept the shoulder's cap: a puffed little sleeve)
         const x0 = A.ax * A.side - SH.armhole, y0 = A.ay + 0.03, x1 = A.ax * A.side + 0.004, y1 = A.ay - 0.05, L = Math.hypot(x1 - x0, y1 - y0), s = (x * A.side - x0) * (y0 - y1) / L + (y - y0) * (x1 - x0) / L;   // s > 0: the arm's side
         d = sm(d, Math.min(s, y - y1)); }
-      else if (SLEEVE === "none") { const t = (x - A.ax) * A.ux + (y - A.ay) * A.uy, px = x - A.ax - t * A.ux, py = y - A.ay - t * A.uy;   // sleeveless: cut off the arm just inside the shoulder joint
+      else if (SLEEVE === "none" && SH.armhole == null) { const t = (x - A.ax) * A.ux + (y - A.ay) * A.uy, px = x - A.ax - t * A.ux, py = y - A.ay - t * A.uy;   // sleeveless: cut off the arm just inside the shoulder joint
         d = sm(d, -Math.max(t + 0.012, Math.hypot(px, py, z - A.az) - 0.063)); }   // 0.063: around the sleeve only, not the back or chest beside it   // (only around the arm: a plane alone would cut through the body too)
       if (LONG) d = sm(d, (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz - (A.Lf - 0.012));   // long: the cuff just before the wrist
       if (BELL && !noBell) d = smin(d, bellShell(x, y, z, A), 0.008); }

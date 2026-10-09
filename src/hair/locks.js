@@ -335,7 +335,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     root.updateMatrixWorld(true);
     for (let k = 0; k < bones.length; k++) { tmp.multiplyMatrices(bones[k].matrixWorld, skeleton.boneInverses[k]); BM.set(tmp.elements, k * 16); }
     floorY = root.matrixWorld.elements[13];
-    M.fromArray(BM, head * 16); Mi.copy(M).invert();
+    M.fromArray(BM, head * 16); Mi.copy(M).invert(); SC = Math.hypot(M.elements[0], M.elements[1], M.elements[2]) || 1;   // SC: the avatar's scale (its object scaled to the world): the chains are in world space, their lengths and radii in rest space
     { const e = M.elements, l = Math.hypot(e[4], e[5], e[6]) || 1; GR[0] = e[4] / l; GR[1] = e[5] / l - 1; GR[2] = e[6] / l; }   // gravity, less what the head carries (see step)
     for (const c of CN) { const e = c.bone * 16, [x, y, z] = c.c; c.now[0] = BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]; c.now[1] = BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]; c.now[2] = BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]; }
     TP.set(T); const e = M.elements; for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2]; T[i * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; T[i * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; T[i * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
@@ -343,15 +343,15 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   }
   // the middle the locks spread out from (rest): the head's, or the roots' (a tail on the hips) / CW: it now (world) / VY: the roots' speed up (smoothed) / SPR: the spread now (-1 in .. 1 out)
   const RC = ell ? [...ell.c] : [0, 1, 2].map((q) => specs.reduce((s, sp) => s + sp.pts[0][q], 0) / Math.max(1, NL)), CW = [0, 0, 0]; const LEN = specs.map((s, l) => { let L = 0; for (let i = 1; i < N; i++) L += SEG[l * N + i]; return L; }); let VY = 0, SPR = 0;
-  const pp = [0, 0, 0], GR = [0, 0, 0], AIR = [0, 0, 0], TP = new Float32Array(NP * 3); let floorY = 0, sub = 1;   // TP: the targets a frame ago / sub: steps this frame
+  const pp = [0, 0, 0], GR = [0, 0, 0], AIR = [0, 0, 0], TP = new Float32Array(NP * 3); let floorY = 0, sub = 1, SC = 1;   // TP: the targets a frame ago / sub: steps this frame
   function collide(i) {   // point i (root space) out of the head (in its rest space) and the spheres
     const e = Mi.elements, j = i * 3, x = X[j], y = X[j + 1], z = X[j + 2], r = RAD[i];
     pp[0] = e[0] * x + e[4] * y + e[8] * z + e[12]; pp[1] = e[1] * x + e[5] * y + e[9] * z + e[13]; pp[2] = e[2] * x + e[6] * y + e[10] * z + e[14];
     const q0 = pp[0], q1 = pp[1], q2 = pp[2]; if (ell) pushOutEllipsoid(pp, ell.c, ell.r, r);
     if (FN) { const k = FN[j] * pp[0] + FN[j + 1] * pp[1] + FN[j + 2] * pp[2] - FD[i]; if (k < 0) { pp[0] -= FN[j] * k; pp[1] -= FN[j + 1] * k; pp[2] -= FN[j + 2] * k; } }
     if (pp[0] !== q0 || pp[1] !== q1 || pp[2] !== q2) { const f = M.elements; X[j] = f[0] * pp[0] + f[4] * pp[1] + f[8] * pp[2] + f[12]; X[j + 1] = f[1] * pp[0] + f[5] * pp[1] + f[9] * pp[2] + f[13]; X[j + 2] = f[2] * pp[0] + f[6] * pp[1] + f[10] * pp[2] + f[14]; }
-    for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, c.r + r); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
-    if (X[j + 1] < floorY + r) X[j + 1] = floorY + r;   // the floor (the avatar's feet)
+    for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, (c.r + r) * SC); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
+    if (X[j + 1] < floorY + r * SC) X[j + 1] = floorY + r * SC;   // the floor (the avatar's feet)
   }
   let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
   function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
@@ -366,14 +366,14 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         P[j + q] = X[j + q]; X[j + q] += v; }                                     // had laid it out flat behind like a stick (the tennis player's 7 m/s, 2026-10-05); the wind (AIR) streams it now   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
       const ph = PH[l], fl = 1 + 0.35 * Math.sin(clock * 7 + ph * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + ph * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
       X[j] += gx + AIR[0] * fl * h * h * fk; X[j + 1] += gy + (AIR[1] * fl + up) * h * h * fk; X[j + 2] += gz + AIR[2] * fl * h * h * fk;   // the wind (air drag pulling it along)
-      if (SPR) { const t = i / (N - 1), dx = T[j] - CW[0], dz = T[j + 2] - CW[2], dl = Math.hypot(dx, dz) || 1, o = (SPR > 0 ? SPR * SPREAD_OUT * t ** 1.5 : SPR * SPREAD_IN * t) * LEN[l] * (floor ? 0.3 : 1), k = Math.min(1, KS[p] + Math.abs(SPR) * SPREAD_K);   // its rest place out or in (not up: what was lifted fell back onto the lock on landing and crumpled it), followed more firmly
+      if (SPR) { const t = i / (N - 1), dx = T[j] - CW[0], dz = T[j + 2] - CW[2], dl = Math.hypot(dx, dz) || 1, o = (SPR > 0 ? SPR * SPREAD_OUT * t ** 1.5 : SPR * SPREAD_IN * t) * LEN[l] * SC * (floor ? 0.3 : 1), k = Math.min(1, KS[p] + Math.abs(SPR) * SPREAD_K);   // its rest place out or in (not up: what was lifted fell back onto the lock on landing and crumpled it), followed more firmly
         X[j] += (T[j] + dx / dl * o - X[j]) * k; X[j + 1] += (T[j + 1] - X[j + 1]) * k; X[j + 2] += (T[j + 2] + dz / dl * o - X[j + 2]) * k; }
       else for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
     for (const { ls, c } of BUNDLES) for (let i = 2; i < N; i++) { const m = [0, 0, 0];
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) m[q] += (X[j + q] - T[j + q]) / ls.length; }
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] + m[q] - X[j + q]) * c; } }
     for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
-      for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i]) / d;
+      for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i] * SC) / d;
         if (i === 2) { X[b] -= dx * f; X[b + 1] -= dy * f; X[b + 2] -= dz * f; }   // the one before rides on the head: only this one moves
         else { X[a] += dx * f * 0.5; X[a + 1] += dy * f * 0.5; X[a + 2] += dz * f * 0.5; X[b] -= dx * f * 0.5; X[b + 1] -= dy * f * 0.5; X[b + 2] -= dz * f * 0.5; } }
       for (let i = 2; i < N; i++) collide(l * N + i);
@@ -381,7 +381,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     // then each link exactly its length, from the root out (follow the leader): four rounds left a long chain a few % longer when the head
     // went up or down fast, and the hair stretched and sprang back on a jump (2026-10-07, Saori: "ジャンプなどで上下に動いた時の髪がバネのように
     // 伸び縮みする"). The move goes into the point's last position too, so it adds no speed of its own (no jitter, no extra swing)
-    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] / d;
+    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] * SC / d;
       const cx = -dx * f, cy = -dy * f, cz = -dz * f; X[b] += cx; X[b + 1] += cy; X[b + 2] += cz; P[b] += cx; P[b + 1] += cy; P[b + 2] += cz; }
   }
   // the mesh from the chain: rings along a Catmull-Rom curve through the points, each a flat lens across the lock, facing out

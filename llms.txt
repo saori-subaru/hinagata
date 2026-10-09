@@ -163,6 +163,7 @@ Only what differs from the defaults, nested as the options are (in a character f
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
   `setShading("toon" | "soft" | "smooth" | "flat")`, `setRim({ on, color, width, strength })`, `setGradient`, `setAccessories(list)`,
   `setBands({ "outfit.socks.stripes.color": … })` (the collar's line, the gloves' and boots' cuffs, the stripes). Anything else: build a new avatar from the changed recipe.
+- A breeze through the hair: `avatar.update(dt, { camera, wind: [2, 0, 0] })` (m/s, world axes, in the avatar's own size; its own motion streams the hair anyway).
 
 ## Your own moves: pose the joints
 

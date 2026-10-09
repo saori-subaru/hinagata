@@ -27,7 +27,7 @@ export function buildTrims(OPT, { P, J, bodySdf, shirtSdf }) {
   const sailorEdge = (x, y, z) => { const u = Math.abs(x); return z < ZS ? Math.max(u - W, (BACK - y) * sy(BACK)) : outerFront(u, y); };   // the outer edge (< 0 inside): the line follows it
   const sailorRegion = (x, y, z) => { const u = Math.abs(x), e = sailorEdge(x, y, z); return z < ZS ? e : smax(e, innerV(u, y), 0.004); };
   const TH = 0.005;   // how far it stands off the shirt
-  const sailorSdf = SA.on ? (x, y, z, B = bodySdf) => Math.max(shirtSdf(x, y, z, B, true) - TH, sailorRegion(x, y, z)) : null;
+  const sailorSdf = SA.on ? (x, y, z, B = bodySdf) => Math.max(shirtSdf(x, y, z, B, true, true) - TH, sailorRegion(x, y, z)) : null;
   // for the line (painted: index.js cuts a band SA.lineIn from the outer edge, SA.lineWidth wide): how far in from the outer edge (m, as built)
   const sailorIn = (x, y, z) => -sailorEdge(x, y, z);
 
