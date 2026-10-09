@@ -30,8 +30,8 @@
     "en": "Accessories"
    },
    "help": {
-    "ja": "[{ kind, bone, at, n, spin, size, color, mirror }] 体に付ける小物。kind: leaf(葉っぱ) / gem(宝石) / flower(花) / star(星) / ball(玉) / ribbon(リボン) / button(ボタン) / anchor(いかり) / band(輪: 腕輪・足首・首)。bone の上に乗る。at: 頭なら頭の座標、ほかは骨の関節からのずれ。n: 向き(表面の向き)。spin: 向きのまわりの回転(度)。size: 大きさ(m、band は輪の太さ)。mirror: 反対側にも",
-    "en": "[{ kind, bone, at, n, spin, size, color, mirror }] small pieces on the body. kind: leaf / gem / flower / star / ball / ribbon (a bow) / button / anchor / band (a ring around the limb: bracelet, anklet, choker), riding on bone. at: head space for the head, else the offset from the bone's joint. n: the way it faces (the surface's normal). spin: turned around n (degrees). size: m (a band: how thick the ring is). mirror: on the other side too"
+    "ja": "[{ kind, bone, at, n, spin, size, color, mirror, lift }] 体に付ける小物。kind: leaf(葉っぱ) / gem(宝石) / flower(花) / star(星) / ball(玉) / ribbon(リボン) / button(ボタン) / anchor(いかり) / band(輪: 腕輪・足首・首)。bone の上に乗る。at: 頭なら頭の座標、ほかは骨の関節からのずれ。n: 向き(表面の向き)。spin: 向きのまわりの回転(度)。size: 大きさ(m、band は輪の太さ)。mirror: 反対側にも。lift: 表面から浮かせる(m)",
+    "en": "[{ kind, bone, at, n, spin, size, color, mirror, lift }] small pieces on the body (lift: m off the surface). kind: leaf / gem / flower / star / ball / ribbon (a bow) / button / anchor / band (a ring around the limb: bracelet, anklet, choker), riding on bone. at: head space for the head, else the offset from the bone's joint. n: the way it faces (the surface's normal). spin: turned around n (degrees). size: m (a band: how thick the ring is). mirror: on the other side too"
    }
   },
   "colors.skin": {
