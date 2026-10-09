@@ -197,6 +197,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // (the forest's chibi paper-thin from the side, spikes from the shoulders to the thighs, shins gone; tools/thin-check.mjs).
     // And a brake: stop where the shape would change by more than THIN_ERROR (of the mesh's size, the normals counted too) even short of
     // the count. At 0.15 a body's thinning changes it by 0.3-0.4%, so the brake holds only when a share asks for too much.
+    // the shirt (a dress's top) where a skirt's top crosses it is kept as built too: thinned, its big triangles made the crossing a jagged
+    // line round the waist (2026-10-09, Saori: "ギザギザ消せる？"; only at "fine", the thinned build)
+    { const SK = name === "shirt" ? skirtOf(OPT) : null; if (SK?.top != null) { lock = new Uint8Array(pos.length / 3);
+      for (let v = 0; v < lock.length; v++) if (Math.abs(pos[v * 3 + 1] - SK.top) < 0.035) lock[v] = 1; } }
     let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
     const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
     const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);

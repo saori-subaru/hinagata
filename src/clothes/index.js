@@ -100,24 +100,49 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   if (SK.dress) { const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, SK_Y0, -0.01 + dz * t) < 0) t += 0.001; return t; };
     const zf = out(0, 1) - 0.01, zb = -out(0, -1) - 0.01, m = 0.015;   // m: over the shirt (1.4 cm) and a little air
     SK_AX = out(1, 0) + m; SK_ZC = (zf + zb) / 2; SK_AZ = (zf - zb) / 2 + m; }
+  // (adult: the outer thighs' tops too: the hips' line runs on into them, and outside the mask they stood out through the skirt's sides,
+  // 2026-10-09, Saori: "普通のスカートをはくと太ももがつきでる")
   // skirtMask: the hips, the bottom and the belly, inside the body itself too (so the waist's cut applies: on the pelvis alone a strong waist
   // still had the cloth hang out at the pelvis' width beside it, 2026-10-07)
-  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly")) : null, skirtMask = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  const SKIRT = !!skirtOf(OPT), skirtHips = SKIRT ? blend(pick("pelvis", "butt", "belly", ...(OPT.fit ? ["thighOut"] : []))) : null, skirtMask0 = SKIRT ? (x, y, z) => Math.max(skirtHips(x, y, z), bodySdf(x, y, z)) : null;
+  // adult body, the shirt (or a dress's top) under the skirt: the skirt goes over it too, not only over the body (its sides stood out of the
+  // skirt's top at the waist, seen with the arms out: 2026-10-09, Saori: "Aにしてみて … ぼこぼこ")
+  const UNDER = SKIRT && OPT.fit && (OPT.outfit.shirt.on || OPT.outfit.dress?.on) && HEM < (SK_Y0 ?? 1);
+  const skirtMask = !SKIRT ? null : UNDER ? (x, y, z) => Math.min(skirtMask0(x, y, z), y < HEM ? 1 : shirtSdf(x, y, z, bodySdf, true) + 0.002) : skirtMask0;
   // the cone starts from the body at its top, measured each way (a body's narrowest a little over it), not from an ellipse at the hips'
   // width: a long, strong waist ran on under the band at the top, and below it the cone came out at the hips' width with a corner at each
   // side (2026-10-07, Saori: "くびれを作ると…スカートの問題"). Never wider than the old cone; the hips below are draped over as before (DRAPE)
   const TOPR = SKIRT ? (() => { const NA = 48, R = new Float32Array(NA);
-    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f); let t = 0; while (t < 0.4 && bodySdf(s * t, SK_Y0, SK_ZC + c * t) < 0) t += 0.001; R[a] = t + 0.015; }
+    for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f); let t = 0; while (t < 0.4 && (UNDER ? skirtMask(s * t, SK_Y0, SK_ZC + c * t) : bodySdf(s * t, SK_Y0, SK_ZC + c * t)) < 0) t += 0.001; R[a] = t + (UNDER ? 0.008 : 0.015); }
     return (s, c) => { const g = (Math.atan2(s, c) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(g) % NA, t = g - Math.floor(g); return R[a0] * (1 - t) + R[(a0 + 1) % NA] * t; }; })() : null;
-  const coneR = (s, c, y) => { const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, old = 1 / Math.hypot(s / ax, c / az);   // the cone's radius that way (s, c: sin, cos around the center)
+  // adult body: the flare eases in under the top (EZ: the drop's first EZ m flare little), so the skirt comes out of the waist in a curve,
+  // not a corner (2026-10-09, Saori, circling where the dress's front went straight down and then bent out)
+  const EZ = OPT.fit ? 0.05 : 0, ease = (d) => EZ ? d - EZ * (1 - Math.exp(-d / EZ)) : d;
+  const coneR = (s, c, y) => { const drop = ease(Math.max(0, SK_Y0 - y)), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, old = 1 / Math.hypot(s / ax, c / az);   // the cone's radius that way (s, c: sin, cos around the center)
     return Math.min(old, TOPR(s, c) + SK.flare * drop * Math.hypot(s, 0.8 * c)); };
   // DRAPE: the skirt's radius per angle and height (a grid from the top to the hem): at least the cone's; under the furthest the hips reach
   // (skirtMask, 1.5 cm out) straight down, and above it on the line from the top's edge to it (cloth hangs from the top over the bulge, not into its curve)
+  // AL (adult body): the lines from the top's edge over the hips go on down, an A-line, instead of hanging straight under the hips'
+  // furthest: the skirt no longer shows the bottom's or the thighs' shape under it (2026-10-09, Saori: "後ろから見たときにお尻が浮き出てる",
+  // "普通のスカートをはくと太ももがつきでる")
+  const AL = !!OPT.fit;
   const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
     for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f), top = coneR(s, c, SK_Y0), need = [];
       for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + (0.008 + (M - 0.008) * sstep(0, 0.06, j * DY)) : 0); }   // (just under the top only a little out: it hugs the hips there and flares on below, so a strong waist doesn't leave a shelf where the band at the top lets go, 2026-10-07)
+      // (AL: the steepest line from the top's edge over the hips, from 4 cm down, its slope at most the skirt's flare: lines from just under the
+      // top flared out wildly)
+      let ka = NY, sa = 0; if (AL) for (let k = 4; k < NY; k++) if (need[k] && (need[k] - top) / (k * DY) > sa) { sa = (need[k] - top) / (k * DY); ka = k; }
+      sa = Math.min(sa, SK.flare);
       for (let j = 0; j < NY; j++) { let r = coneR(s, c, SK_Y0 - j * DY);
         for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * j / k); }   // k above j: hangs straight under it; k below: the line from the top
+        if (AL && j > ka) r = Math.max(r, top + sa * ease(j * DY));   // AL: past the steepest point the line from the top goes on
+        R[a * NY + j] = r; } }
+    // adult body: the cloth bridges hollows round the body (the valley between the buttocks, behind the waist): each radius at least the
+    // chord between two points up to 40° either side (where it crosses this direction), so the skirt lies over the bottom as one round, not
+    // hugging each side (2026-10-09, Saori: "後ろから見たときにお尻が浮き出てる"). A chord never reaches past a convex outline, so only hollows fill
+    if (OPT.fit) { const R0 = Float32Array.from(R), K = Math.round(NA * 40 / 360);
+      for (let j = 0; j < NY; j++) for (let a = 0; a < NA; a++) { let r = R0[a * NY + j];
+        for (let d = 1; d <= K; d++) { const r1 = R0[((a - d + NA) % NA) * NY + j], r2 = R0[((a + d) % NA) * NY + j]; r = Math.max(r, 2 * r1 * r2 * Math.cos(d / NA * Math.PI * 2) / (r1 + r2)); }
         R[a * NY + j] = r; } }
     return (x, y, z) => { const dz = z - SK_ZC, f = (Math.atan2(x, dz) / (Math.PI * 2) + 1) % 1 * NA, a0 = Math.floor(f) % NA, a1 = (a0 + 1) % NA, ta = f - Math.floor(f);
       const g = Math.min(NY - 1, Math.max(0, (SK_Y0 - y) / DY)), j0 = Math.min(NY - 2, Math.floor(g)), tj = g - j0, at = (a, j) => R[a * NY + j];
@@ -142,7 +167,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
-    if (HS !== "tiers") return Math.max(shell(outer), y - top, hemAt(x, dz) - y);
+    // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
+    // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008), y - top);
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
