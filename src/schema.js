@@ -73,7 +73,7 @@ const MAIN = [
   ["body.joints.footX", L("足首の間隔", "Ankle spacing"), { min: 0.04, max: 0.13, step: 0.001, section: L("脚", "Legs"), help: L("足首の、体の真ん中からの距離", "the ankles' distance from the middle") }],
   ["body.sculpt.legShape", L("脚の形(膝・ふくらはぎ)", "Leg shape (knees, calves)"), { min: 0, max: 1.5, step: 0.01, section: L("脚", "Legs"), help: L("0 = 棒のような脚(もとのまま)。上げると、太ももが膝へ細くなり、膝の前にでっぱり、膝の下でふくらはぎが外とうしろへふくらみ、足首が細くなる(関節の位置に合わせて置く)", "0 = straight like a stick (as before). Higher: the thigh narrows into the knee, a kneecap at the front, the calf bulges out and back under the knee, a slimmer ankle (placed by the joints)") }],
   ["body.proportion.shoulders", L("肩幅", "Shoulder width"), { min: 0.75, max: 1.5, step: 0.01, section: L("頭身", "Proportions"), help: L("肩の関節を外へ(倍)。肩の肉と、首から肩への線・胸もいっしょに広がる", "moves the shoulder joints out (×); the shoulders' flesh, the line from the neck and the chest widen with them") }],
-  ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.4, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身の標準は 0.7(約5頭身、2026-10-06)。ちびは 0.9", "the tall types: 0.7 (about 5 heads, 2026-10-06); the chibi 0.9") }],
+  ["body.head.scale", L("頭の大きさ", "Head size"), { min: 0.4, max: 1.05, step: 0.01, section: L("頭", "Head"), help: L("高頭身の標準は 0.64(約4.5頭身、2026-10-10)。大人 0.48、ちびは 0.9", "the tall types: 0.64 (about 4.5 heads, 2026-10-10); the adult 0.48; the chibi 0.9") }],
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.sculpt.neck.width", L("首の太さ", "Neck width"), { min: 0.6, max: 1.2, step: 0.01, section: L("頭", "Head") }],

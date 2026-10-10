@@ -17,9 +17,16 @@ const tx = async (mode, f) => { try { const d = await db(); return await new Pro
 // skull's top (the hair's line a little over 1)
 function measure(av) {
   const I = av.internals, f = I.bodySdf, m = measureCharacter(av.options), rest = (k) => m.at[k] - m.lift;
+  // the top of the hair: the hair's shape without the ahoge (Saori: "アホ毛が頭頂扱いになってませんか": its tip stood 5 cm over the hair,
+  // and a picture's top of the hair was put up there), down the middle; a part that isn't the hair (a helmet) can stand higher
   let top = rest("skull");
+  if (av.parts.hair?.m.visible && I.hairKit && I.hairPick) {
+    const hs = I.hairKit.hairSdfOf({ ...I.hairPick, ahoge: false }), g = (x, y, z) => hs(...I.HT.toHead(x, y, z));
+    const any = (y) => { for (let z = -0.3; z < 0.3; z += 0.004) if (g(0, y, z) < 0) return true; return false; };
+    let y = top; while (y < top + 0.3 && any(y + 0.002)) y += 0.002; top = y;
+  }
   for (const [k, x] of Object.entries(av.parts)) {
-    if (!x.m.visible || x.sim || /^(acc|weapon|extra|headband|armorDeco)/.test(k)) continue;   // (what stands above the hair: a bow's loops, ears, a plume)
+    if (k === "hair" || !x.m.visible || x.sim || /^(acc|weapon|extra|headband|armorDeco)/.test(k)) continue;   // (what stands above the hair: a bow's loops, ears, a plume)
     const g = x.m.geometry; if (!g.attributes.position?.count) continue; g.computeBoundingBox(); top = Math.max(top, g.boundingBox.max.y);
   }
   const front = (y) => { for (let z = 0.4; z > -0.2; z -= 0.002) if (f(0, y, z) < 0) return z; return 0; };   // (the chin's line is drawn at the chin's depth: seen from near and above, at the middle it stood low)

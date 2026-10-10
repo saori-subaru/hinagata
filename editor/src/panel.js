@@ -122,9 +122,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       // every value a type sets (torso, limbs, proportions, head size), as paths
       const leaves = (o, pre, out = {}) => { for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object") leaves(v, `${pre}.${k}`, out); else out[`${pre}.${k}`] = v; } return out; };
       const on = (b) => Object.entries(leaves(b.body, "body")).every(([p, v]) => store.get(p) === v);
-      const row = (tall) => h("div", { class: "chips" }, h("span", { class: "cost" }, t(tall ? "bodyTall" : "bodyChibi")), Object.entries(BODY_TYPES).filter(([k]) => k.endsWith("Tall") === tall).map(([k, b]) =>
-        h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => set(leaves(b.body, "body")) }, bodyTypeName(k.replace(/Tall$/, "")))));
-      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row(false), row(true));
+      const kind = (k) => k.match(/(Tall|Adult)$/)?.[1] ?? "";   // the chibi, the tall and the adult (about 6 heads) rows
+      const row = (suffix, label) => h("div", { class: "chips" }, h("span", { class: "cost" }, t(label)), Object.entries(BODY_TYPES).filter(([k]) => kind(k) === suffix).map(([k, b]) =>
+        h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => set(leaves(b.body, "body")) }, bodyTypeName(k.replace(/(Tall|Adult)$/, "")))));
+      return h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, t("bodyType")), h("span", { class: "cost" }, t("cost_body"))), row("", "bodyChibi"), row("Tall", "bodyTall"), row("Adult", "bodyAdult"));
     }
     if (tab === "face") {
       // the expressions, edited one at a time (2026-10-06, Saori: picking a face, then registering it on a row, then building the next one was

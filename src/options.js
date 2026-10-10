@@ -52,7 +52,7 @@ export const DEFAULTS = {
       "shoulders": 1
     },
     "head": {
-      "scale": 0.7,
+      "scale": 0.64,
       "width": 1,
       "depth": 1,
       "pivotY": 0.845,
@@ -1197,14 +1197,16 @@ export function diff(base, opt) {
 // default character"). A recipe is only what differs from the defaults, so changing a default would silently change every character
 // saved before. So recipes have a version, and what each change of the defaults replaced is kept here: a recipe of an older version is
 // read with the defaults it was made against filled in under it, and comes out as the same character.
-//   - A character file says its version: { "hinagata": 3, "name": "…", "options": { … } } (the editor's export).
+//   - A character file says its version: { "hinagata": 4, "name": "…", "options": { … } } (the editor's export).
 //   - Version 2 (2026-10-06, the first tall default: about 4 heads) is read with that tall body; version 3 (the same day, later: Saori
-//     "普通に頭でかすぎてバランス悪い") has the smaller head, longer legs and arms of its own (OLD_DEFAULTS[3] keeps what it replaced).
+//     "普通に頭でかすぎてバランス悪い") has the smaller head, longer legs and arms of its own (OLD_DEFAULTS[3] keeps what it replaced);
+//     version 4 (2026-10-10, Saori: "4.5くらいにしたい", the 6-head adult body being made) the head 0.64: 4.48 heads (was 0.7: 4.19).
 //   - Recipes stored without a version are version 1 (the chibi defaults): bare recipe files (character.json as the sync helper and
 //     agents wrote them before), { "hinagata": 1, … } files, the editor's characters saved in a browser before, ?o= links made before.
 //   - A bare options object in code (createAvatar({ … })) is today's: the current defaults.
-export const RECIPE_VERSION = 3;
-/** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body, OLD_DEFAULTS[3] = version 2's tall body). */
+export const RECIPE_VERSION = 4;
+/** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body, OLD_DEFAULTS[3] = version 2's tall body,
+ *  OLD_DEFAULTS[4] = version 3's head). */
 export const OLD_DEFAULTS = {
   2: { body: {   // the chibi (about 3 heads; the values BODY_TYPES.toddler has): the default body until 2026-10-06
     proportion: { legs: 1, torso: 1 }, head: { scale: 0.9 },
@@ -1212,6 +1214,7 @@ export const OLD_DEFAULTS = {
     thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 } } },
   3: { body: {   // the first tall default (about 4 heads: 3.9 measured, chin to crown against the height): 2026-10-06, until the same evening
     proportion: { legs: 1.65, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.82 } } },   // (arms null: they stretched with the torso)
+  4: { body: { head: { scale: 0.7 } } },   // the tall default at 4.19 heads (measureCharacter: chin to crown against the height): 2026-10-06 to 10-10
 };
 const oldValues = (version) => { let o = {}; for (let v = RECIPE_VERSION; v > version; v--) o = merge(o, OLD_DEFAULTS[v] ?? {}); return o; };   // (the oldest wins)
 /** The defaults as they were at a recipe version. */

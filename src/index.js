@@ -48,7 +48,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
 
 /**
  * Build an avatar.
- * options:  see DEFAULTS (src/options.js); anything left out uses the default (since 2026-10-06 the tall standard body, BODY_TYPES.standardTall;
+ * options:  see DEFAULTS (src/options.js); anything left out uses the default (since 2026-10-06 the tall standard body, BODY_TYPES.standardTall, about 4.5 heads since 2026-10-10;
  *           merge a chibi BODY_TYPES entry for a chibi). Also a URL of a character file ("player.json"), and a character file as it is
  *           ({ hinagata: 3, name, options }: the editor's 書き出し → JSON). Files carry their version (2: the first tall body): a file of version 1, and a bare recipe
  *           file fetched from a URL (no "hinagata": as files were written before 2026-10-06), is read with the old chibi defaults

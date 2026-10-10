@@ -1,6 +1,6 @@
 # Hinagata
 
-> A 3D character engine for the browser (three.js) that makes anime-style characters, tall (the default, about 5 heads) or chibi.
+> A 3D character engine for the browser (three.js) that makes anime-style characters, tall (the default, about 4.5 heads), adult (about 6) or chibi.
 > A character is a recipe: a small JSON object of options, built into a skinned, animated avatar at runtime. Made for vibe coding: you
 > (the agent) make the game and give it characters; the user fine-tunes them in the editor at https://hinagata.pages.dev, live, while you
 > keep working.
@@ -12,7 +12,7 @@ Source: https://github.com/saori-subaru/hinagata (public). Everything below is s
 The world's scale comes from what the game is, not from the default character.
 - Build the game world at real scale, in metres (a tennis court is 23.77 m long, a door 2 m high, a car 4.5 m). Size the character to the
   game: scale `avatar.object` (an adult about 1.7 m, a child about 1.2 m). Don't shrink the court, the rooms or the camera to the character.
-- Use the default body (tall, about 5 heads) unless the user asks for chibi, cute or kids. Then merge a chibi body type (`BODY_TYPES.standard`,
+- Use the default body (tall, about 4.5 heads) unless the user asks for chibi, cute or kids. Then merge a chibi body type (`BODY_TYPES.standard`,
   `.girl`, `.sturdy`, `.toddler`) into the recipe, and then it is fine to scale the world to them (a chibi game).
 - Don't make the game look childish unless the user asked for it: the UI, colors, camera and sounds follow what the game is.
 
@@ -42,10 +42,10 @@ goes. The character is one asset among the court, the ball and the UI:
 ## The character file and the live link
 
 1. Keep the character in its own file, `character.json`, and have the game load it (`createAvatar("character.json")`). Don't bury it in
-   code. One file per character. Write it as the editor exports it: `{ "hinagata": 3, "name": "…", "options": { the recipe } }`.
-   `"hinagata"` is the recipe version (the defaults the recipe is written against): 3 = today's (the tall body, about 5 heads). Version 2
-   (the first tall body, about 4 heads), version 1 and a file that is only a recipe (no `"hinagata"`: the old chibi defaults) are read with
-   the defaults they were made against, so old characters stay as they were. Write new files as version 3.
+   code. One file per character. Write it as the editor exports it: `{ "hinagata": 4, "name": "…", "options": { the recipe } }`.
+   `"hinagata"` is the recipe version (the defaults the recipe is written against): 4 = today's (the tall body, about 4.5 heads). Version 3
+   (its head a little bigger, about 4.2), version 2 (the first tall body), version 1 and a file that is only a recipe (no `"hinagata"`: the old chibi defaults) are read with
+   the defaults they were made against, so old characters stay as they were. Write new files as version 4.
    A file the user saved from the editor (書き出し → JSON / Export → JSON) works as it is: to put their character in the game, they drop it
    in place of the file.
 2. Start the live sync so the user can fine-tune it in the editor while you work on the game (they don't need to ask for it):
@@ -64,7 +64,7 @@ goes. The character is one asset among the court, the ball and the UI:
 
 The sync works when you run on the user's own machine (the editor in their browser reaches 127.0.0.1). A cloud agent can't reach it:
 then hand the user an editor link with the character in it instead: `https://hinagata.pages.dev/editor/?o=` + encodeURIComponent(JSON of
-the character file, `{ "hinagata": 3, "options": … }`; a bare recipe in a link is read as an old one, with the chibi defaults).
+the character file, `{ "hinagata": 4, "options": … }`; a bare recipe in a link is read as an old one, with the chibi defaults).
 
 ## Use it in a page
 
@@ -114,7 +114,7 @@ simulated on the CPU every frame. Budget for both:
 
 Only what differs from the defaults, nested as the options are (in a character file it is the `"options"`). Example:
 ```json
-{ "hinagata": 3, "name": "Lena", "options": {
+{ "hinagata": 4, "name": "Lena", "options": {
   "colors": { "hair": "#f3f1ee", "eyes": "#4fb36a" },
   "body": { "head": { "scale": 0.74 } },
   "hair": { "bangs": "nendo", "back": "long", "tail": { "kind": "side", "side": "L" }, "gradient": { "on": true, "color": "#5fae6a" } },
@@ -125,8 +125,8 @@ Only what differs from the defaults, nested as the options are (in a character f
 - Check a recipe: `checkOptions(recipe)` → [{ path, problem }] (empty = fine). In a page it comes from `src/index.js`; in Node (no three.js)
   import it from `https://hinagata.pages.dev/src/schema.js` (or the repository's `src/schema.js`). Unknown keys are ignored by the engine, so
   check: a typo silently does nothing.
-- Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; chibi `standard`, `girl`, `sturdy`,
-  `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, feet, shoulders.
+- Body types: `import { BODY_TYPES }`: tall `standardTall` (the default), `girlTall`, `sturdyTall`; adult `girlAdult` (about 6 heads on
+  the adult body: ルミナ v2's body, not her face); chibi `standard`, `girl`, `sturdy`, `toddler`. Merge one into the recipe (`{ ...BODY_TYPES.girl, hair: … }`); each sets the whole body (torso, limbs, proportions, head size). Proportions: `body.proportion` legs, torso, arms (their own length; null = stretched with the torso, as the chibi), hands, feet, shoulders.
 - Ready-made characters: `import { CHARACTERS }` → `createAvatar(CHARACTERS.sylvie.file)` (シルヴィ, an elf girl), `CHARACTERS.astel.file`
   (アステル, a hero boy with sword, shield and cape), `CHARACTERS.lumina.file` (ルミナ, a pretty girl with twin tails and bows) or `CHARACTERS.lumina2.file` (ルミナ v2: the same with a longer face in straight lines). Each is a character file (version 3); copy its `options` into your own file to start from it.
   In the editor: the character list → 「プリセットから作る」.

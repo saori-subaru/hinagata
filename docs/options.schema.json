@@ -533,7 +533,7 @@
   "body.head.scale": {
    "path": "body.head.scale",
    "type": "number",
-   "default": 0.7,
+   "default": 0.64,
    "label": {
     "ja": "頭の大きさ",
     "en": "Head size"
@@ -551,8 +551,8 @@
     "en": "Head"
    },
    "help": {
-    "ja": "高頭身の標準は 0.7(約5頭身、2026-10-06)。ちびは 0.9",
-    "en": "the tall types: 0.7 (about 5 heads, 2026-10-06); the chibi 0.9"
+    "ja": "高頭身の標準は 0.64(約4.5頭身、2026-10-10)。大人 0.48、ちびは 0.9",
+    "en": "the tall types: 0.64 (about 4.5 heads, 2026-10-10); the adult 0.48; the chibi 0.9"
    }
   },
   "body.head.width": {

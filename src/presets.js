@@ -1,4 +1,4 @@
-// Ready-made characters (2026-10-06, Saori made them in the editor): character files, version 3 (the 5-head tall defaults).
+// Ready-made characters (2026-10-06, Saori made them in the editor): character files, version 3 (the tall defaults with a head of 0.7: they keep it under version 4's 0.64).
 // In a game: createAvatar(CHARACTERS.sylvie.file). In the editor: the character list → 「プリセットから作る」.
 // Add one: make it in the editor, Export → JSON (or copy the code), and put its options here with the version it was made in.
 export const CHARACTERS = {
