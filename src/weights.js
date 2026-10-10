@@ -29,8 +29,10 @@ export function makeWeights({ BODY, BONES, BI, J }) {
   const SIG = 0.013;
   const WL = new Map(), WACC = new Float32Array(64), WD = new Float64Array(512), WF = new Float64Array(512);
   function weightsAt(x, y, z, out, only) {   // only: この骨だけに付ける(ズボンが腕に引っぱられないように)
-    const key = only ? only.source : "";
-    let L = WL.get(key); if (!L) { L = only ? BODY.filter((p) => only.test(p.bone)) : BODY; WL.set(key, L); }
+    // under the ankles only the point's own side: on feet set close (the adult type's, 3 cm apart) a foot's toes took weight from the other
+    // foot and stretched back toward it walking (2026-10-10, Saori: "つまさきがはみでてる…後ろ足のくつがのびます")
+    const side = y < 0.07 ? (x >= 0 ? ".L" : ".R") : "", key = (only ? only.source : "") + side;
+    let L = WL.get(key); if (!L) { L = BODY.filter((p) => (!only || only.test(p.bone)) && (!side || !/\.[LR]$/.test(p.bone) || p.bone.endsWith(side))); WL.set(key, L); }
     // まず外接球で大まかな距離を出し、いちばん近そうな部品で上限を決める。上限より十分遠い部品は測らない(結果は同じ)
     let best = 0; for (let n = 0; n < L.length; n++) { const p = L[n]; WF[n] = Math.hypot(x - p.bx0, y - p.by0, z - p.bz0) - p.br; if (WF[n] < WF[best]) best = n; }
     let sg = SIG;   // around the shoulder joint the parts share over a wider band (the arm/chest seam bends smoothly instead of creasing)

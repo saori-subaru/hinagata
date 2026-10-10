@@ -15,9 +15,11 @@ export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "s
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 // only these bones, each side's own: a point at x >= 0 follows only the character's left ones. The shoes: on feet set close (the adult body
 // type's ankles 7 cm from the middle) a shoe's inner side took weight from the other foot, and stretched across to it when the legs parted
-// (2026-10-10, Saori: "大人体形で歩くと足同士がくっついています"). Not the socks: they lie on the skin, whose weights the other leg shares a little,
-// and sided they parted from it (the skin showed through in streaks)
-const sided = (re) => ({ L: new RegExp("(?=.*\\.L$)" + re.source), R: new RegExp("(?=.*\\.R$)" + re.source) });
+// (2026-10-10, Saori: "大人体形で歩くと足同士がくっついています"). below: sided only under this height (base space), re above it. The socks are
+// sided only on the foot, inside the shoe: there their toes took weight from the other foot and stretched back out of the shoe walking
+// ("つまさきがはみでてる…後ろ足のくつがのびます"); above, they lie on the skin, whose weights the other leg shares a little, and sided they
+// parted from it (the skin showed through over-the-knee socks in streaks)
+const sided = (re, below = null) => ({ L: new RegExp("(?=.*\\.L$)" + re.source), R: new RegExp("(?=.*\\.R$)" + re.source), all: re, below });
 // a skirt or a cape is a shell under 2 cm thick: meshed with cells about as big (the game quality's), it came out ragged, holed, with its
 // inside's outline showing through in specks (2026-10-05, Saori: "ゲーム用の表示にするとスカートとかマントがジャギジャギ"). Their cells stop here
 const THIN = 0.0105;
@@ -89,7 +91,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
     // the box reaches the socks' top (2026-10-07: it stopped at 0.17, so socks over 0.17 were cut there, though the slider went to 0.3; the
     // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
-    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/ }; }
+    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: sided(top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/, 0.07) }; }
   }
   // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
   const GP = partNamed(name);
@@ -106,7 +108,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
  *  soft: { bone, k(x, y, z) } — only the fraction k of the weight on other bones is kept, the rest goes to that bone (a skirt: mostly the hips) */
 export function skinOf(pos, weightsAt, BI, bone1, only, soft = null) {
   const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
-  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only?.L ? (pos[v * 3] >= 0 ? only.L : only.R) : only);   // (only: a RegExp, or { L, R }: sided)
+  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only?.L ? (only.below != null && pos[v * 3 + 1] >= only.below ? only.all : pos[v * 3] >= 0 ? only.L : only.R) : only);   // (only: a RegExp, or { L, R }: sided)
     if (soft?.front && !bone1) { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], k = soft.k(x, y, z), f = soft.front(z), sL = Math.min(1, Math.max(0, 0.5 + x / 0.16));   // the skirt: the hips, and toward the hem the front on the skirt bones / the rest on the thighs, by side (the middle half and half)
       const W = [[soft.bone, 1 - k], ["skirt.L", k * f * sL], ["skirt.R", k * f * (1 - sL)], ["upperLeg.L", k * (1 - f) * sL], ["upperLeg.R", k * (1 - f) * (1 - sL)]].sort((a, b) => b[1] - a[1]).slice(0, 4), sum = W.reduce((a, w) => a + w[1], 0);
       W.forEach(([b, w], q) => { tmp.idx[q] = BI[b]; tmp.w[q] = w / sum; }); }
