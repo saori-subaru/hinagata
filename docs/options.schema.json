@@ -6367,6 +6367,259 @@
     "outfit.shirt.length": "crop"
    }
   },
+  "outfit.shirt.underarm": {
+   "path": "outfit.shirt.underarm",
+   "type": "enum",
+   "default": "fit",
+   "label": {
+    "ja": "わきの下",
+    "en": "Underarm"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "options": [
+    {
+     "value": "fit",
+     "label": {
+      "ja": "ぴったり",
+      "en": "Fitted"
+     }
+    },
+    {
+     "value": "loose",
+     "label": {
+      "ja": "ゆったり",
+      "en": "Loose"
+     }
+    }
+   ],
+   "order": 188,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   }
+  },
+  "outfit.shirt.armhole": {
+   "path": "outfit.shirt.armhole",
+   "type": "number",
+   "default": null,
+   "label": {
+    "ja": "袖ぐりの位置",
+    "en": "Armhole"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": -0.02,
+   "max": 0.08,
+   "step": 0.001,
+   "order": 171,
+   "nullable": true,
+   "section": {
+    "ja": "シャツ",
+    "en": "Shirt"
+   },
+   "help": {
+    "ja": "そでなしの袖ぐり: 肩の関節からどれだけ内側で切るか(m)。肩が出る。null = 肩先まで布が残る(前のまま)",
+    "en": "sleeveless: how far in from the shoulder joint the armhole is cut (m), baring the shoulder; null = the cloth goes over the shoulder's cap (as before)"
+   },
+   "when": {
+    "outfit.shirt.sleeve": "none"
+   }
+  },
+  "outfit.shirt.collar.y": {
+   "path": "outfit.shirt.collar.y",
+   "type": "number",
+   "default": 0.764,
+   "label": {
+    "en": "shirt › collar › y"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.382,
+   "max": 1.146,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "shirt › collar"
+   }
+  },
+  "outfit.shirt.collar.bowl": {
+   "path": "outfit.shirt.collar.bowl",
+   "type": "number",
+   "default": 2.2,
+   "label": {
+    "en": "shirt › collar › bowl"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 1.1,
+   "max": 3.3,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "shirt › collar"
+   }
+  },
+  "outfit.shirt.collar.tilt": {
+   "path": "outfit.shirt.collar.tilt",
+   "type": "number",
+   "default": 0.3,
+   "label": {
+    "en": "shirt › collar › tilt"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.15,
+   "max": 0.45,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "shirt › collar"
+   }
+  },
+  "outfit.shirt.collar.front": {
+   "path": "outfit.shirt.collar.front",
+   "type": "number",
+   "default": 0.35,
+   "label": {
+    "en": "shirt › collar › front"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.175,
+   "max": 0.525,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › collar"
+   }
+  },
+  "outfit.shirt.collar.forward": {
+   "path": "outfit.shirt.collar.forward",
+   "type": "number",
+   "default": 0.01,
+   "label": {
+    "en": "shirt › collar › forward"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.005,
+   "max": 0.015,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › collar"
+   }
+  },
+  "outfit.shirt.shoulderFit.x0": {
+   "path": "outfit.shirt.shoulderFit.x0",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "en": "shirt › shoulder fit › x 0"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": -0.05,
+   "max": 0.05,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › shoulder fit"
+   }
+  },
+  "outfit.shirt.shoulderFit.xWidth": {
+   "path": "outfit.shirt.shoulderFit.xWidth",
+   "type": "number",
+   "default": 0.13,
+   "label": {
+    "en": "shirt › shoulder fit › x width"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.065,
+   "max": 0.195,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › shoulder fit"
+   }
+  },
+  "outfit.shirt.shoulderFit.offset": {
+   "path": "outfit.shirt.shoulderFit.offset",
+   "type": "number",
+   "default": 0.006,
+   "label": {
+    "en": "shirt › shoulder fit › offset"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.003,
+   "max": 0.009,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "shirt › shoulder fit"
+   }
+  },
+  "outfit.shirt.shoulderFit.y0": {
+   "path": "outfit.shirt.shoulderFit.y0",
+   "type": "number",
+   "default": 0.67,
+   "label": {
+    "en": "shirt › shoulder fit › y 0"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.335,
+   "max": 1.005,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › shoulder fit"
+   }
+  },
+  "outfit.shirt.shoulderFit.y1": {
+   "path": "outfit.shirt.shoulderFit.y1",
+   "type": "number",
+   "default": 0.75,
+   "label": {
+    "en": "shirt › shoulder fit › y 1"
+   },
+   "group": "outfit",
+   "tier": "advanced",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.375,
+   "max": 1.125,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "shirt › shoulder fit"
+   }
+  },
   "outfit.shirt.sailor.on": {
    "path": "outfit.shirt.sailor.on",
    "type": "boolean",
@@ -6408,7 +6661,8 @@
    },
    "when": {
     "outfit.shirt.sailor.on": true
-   }
+   },
+   "colorKey": "sailor"
   },
   "outfit.shirt.sailor.line": {
    "path": "outfit.shirt.sailor.line",
@@ -6645,7 +6899,8 @@
    },
    "when": {
     "outfit.shirt.scarf.on": true
-   }
+   },
+   "colorKey": "scarf"
   },
   "outfit.shirt.scarf.length": {
    "path": "outfit.shirt.scarf.length",
@@ -6757,259 +7012,6 @@
    },
    "when": {
     "outfit.shirt.scarf.on": true
-   }
-  },
-  "outfit.shirt.underarm": {
-   "path": "outfit.shirt.underarm",
-   "type": "enum",
-   "default": "fit",
-   "label": {
-    "ja": "わきの下",
-    "en": "Underarm"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "clothes",
-   "apply": null,
-   "options": [
-    {
-     "value": "fit",
-     "label": {
-      "ja": "ぴったり",
-      "en": "Fitted"
-     }
-    },
-    {
-     "value": "loose",
-     "label": {
-      "ja": "ゆったり",
-      "en": "Loose"
-     }
-    }
-   ],
-   "order": 188,
-   "section": {
-    "ja": "シャツ",
-    "en": "Shirt"
-   }
-  },
-  "outfit.shirt.armhole": {
-   "path": "outfit.shirt.armhole",
-   "type": "number",
-   "default": null,
-   "label": {
-    "ja": "袖ぐりの位置",
-    "en": "Armhole"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "clothes",
-   "apply": null,
-   "min": -0.02,
-   "max": 0.05,
-   "step": 0.001,
-   "order": 171,
-   "nullable": true,
-   "section": {
-    "ja": "シャツ",
-    "en": "Shirt"
-   },
-   "help": {
-    "ja": "そでなしの袖ぐり: 肩の関節からどれだけ内側で切るか(m)。肩が出る。null = 肩先まで布が残る(前のまま)",
-    "en": "sleeveless: how far in from the shoulder joint the armhole is cut (m), baring the shoulder; null = the cloth goes over the shoulder's cap (as before)"
-   },
-   "when": {
-    "outfit.shirt.sleeve": "none"
-   }
-  },
-  "outfit.shirt.collar.y": {
-   "path": "outfit.shirt.collar.y",
-   "type": "number",
-   "default": 0.764,
-   "label": {
-    "en": "shirt › collar › y"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.382,
-   "max": 1.146,
-   "step": 0.0001,
-   "soft": true,
-   "section": {
-    "en": "shirt › collar"
-   }
-  },
-  "outfit.shirt.collar.bowl": {
-   "path": "outfit.shirt.collar.bowl",
-   "type": "number",
-   "default": 2.2,
-   "label": {
-    "en": "shirt › collar › bowl"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 1.1,
-   "max": 3.3,
-   "step": 0.01,
-   "soft": true,
-   "section": {
-    "en": "shirt › collar"
-   }
-  },
-  "outfit.shirt.collar.tilt": {
-   "path": "outfit.shirt.collar.tilt",
-   "type": "number",
-   "default": 0.3,
-   "label": {
-    "en": "shirt › collar › tilt"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.15,
-   "max": 0.45,
-   "step": 0.01,
-   "soft": true,
-   "section": {
-    "en": "shirt › collar"
-   }
-  },
-  "outfit.shirt.collar.front": {
-   "path": "outfit.shirt.collar.front",
-   "type": "number",
-   "default": 0.35,
-   "label": {
-    "en": "shirt › collar › front"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.175,
-   "max": 0.525,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › collar"
-   }
-  },
-  "outfit.shirt.collar.forward": {
-   "path": "outfit.shirt.collar.forward",
-   "type": "number",
-   "default": 0.01,
-   "label": {
-    "en": "shirt › collar › forward"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.005,
-   "max": 0.015,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › collar"
-   }
-  },
-  "outfit.shirt.shoulderFit.x0": {
-   "path": "outfit.shirt.shoulderFit.x0",
-   "type": "number",
-   "default": 0,
-   "label": {
-    "en": "shirt › shoulder fit › x 0"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": -0.05,
-   "max": 0.05,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › shoulder fit"
-   }
-  },
-  "outfit.shirt.shoulderFit.xWidth": {
-   "path": "outfit.shirt.shoulderFit.xWidth",
-   "type": "number",
-   "default": 0.13,
-   "label": {
-    "en": "shirt › shoulder fit › x width"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.065,
-   "max": 0.195,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › shoulder fit"
-   }
-  },
-  "outfit.shirt.shoulderFit.offset": {
-   "path": "outfit.shirt.shoulderFit.offset",
-   "type": "number",
-   "default": 0.006,
-   "label": {
-    "en": "shirt › shoulder fit › offset"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.003,
-   "max": 0.009,
-   "step": 0.0001,
-   "soft": true,
-   "section": {
-    "en": "shirt › shoulder fit"
-   }
-  },
-  "outfit.shirt.shoulderFit.y0": {
-   "path": "outfit.shirt.shoulderFit.y0",
-   "type": "number",
-   "default": 0.67,
-   "label": {
-    "en": "shirt › shoulder fit › y 0"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.335,
-   "max": 1.005,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › shoulder fit"
-   }
-  },
-  "outfit.shirt.shoulderFit.y1": {
-   "path": "outfit.shirt.shoulderFit.y1",
-   "type": "number",
-   "default": 0.75,
-   "label": {
-    "en": "shirt › shoulder fit › y 1"
-   },
-   "group": "outfit",
-   "tier": "advanced",
-   "cost": "clothes",
-   "apply": null,
-   "min": 0.375,
-   "max": 1.125,
-   "step": 0.001,
-   "soft": true,
-   "section": {
-    "en": "shirt › shoulder fit"
    }
   },
   "outfit.cape.texture.src": {
@@ -10144,7 +10146,7 @@
    "cost": "clothes",
    "apply": null,
    "min": 8,
-   "max": 40,
+   "max": 45,
    "step": 1,
    "order": 328,
    "section": {
@@ -10535,6 +10537,74 @@
     "outfit.socks.stripes.on": true
    }
   },
+  "outfit.suit.on": {
+   "path": "outfit.suit.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "全身スーツ",
+    "en": "Bodysuit"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setWorn",
+   "order": 292,
+   "section": {
+    "ja": "全身スーツ",
+    "en": "Bodysuit"
+   },
+   "help": {
+    "ja": "体にぴったりの全身スーツ(えりから足先まで。手首まで)",
+    "en": "skin-tight from a high collar to the feet, to the wrists"
+   }
+  },
+  "outfit.suit.color": {
+   "path": "outfit.suit.color",
+   "type": "color",
+   "default": "#f1f1f4",
+   "label": {
+    "ja": "スーツの色",
+    "en": "Suit color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 293,
+   "section": {
+    "ja": "全身スーツ",
+    "en": "Bodysuit"
+   },
+   "when": {
+    "outfit.suit.on": true
+   }
+  },
+  "outfit.suit.accent": {
+   "path": "outfit.suit.accent",
+   "type": "color",
+   "default": "#d8433f",
+   "label": {
+    "ja": "差し色",
+    "en": "Accent color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": "setColors",
+   "order": 294,
+   "section": {
+    "ja": "全身スーツ",
+    "en": "Bodysuit"
+   },
+   "help": {
+    "ja": "えり・手首・ブーツ・脇の線",
+    "en": "the collar, the cuffs, the boots, the side panels"
+   },
+   "when": {
+    "outfit.suit.on": true
+   }
+  },
   "outfit.gloves.on": {
    "path": "outfit.gloves.on",
    "type": "boolean",
@@ -10576,7 +10646,8 @@
    },
    "when": {
     "outfit.gloves.on": true
-   }
+   },
+   "colorKey": "gloves"
   },
   "outfit.gloves.length": {
    "path": "outfit.gloves.length",
@@ -10727,7 +10798,8 @@
    },
    "when": {
     "outfit.strings.on": true
-   }
+   },
+   "colorKey": "strings"
   },
   "outfit.strings.rise": {
    "path": "outfit.strings.rise",
@@ -10854,7 +10926,8 @@
    },
    "when": {
     "outfit.headband.on": true
-   }
+   },
+   "colorKey": "headband"
   },
   "outfit.headband.width": {
    "path": "outfit.headband.width",
@@ -11142,74 +11215,6 @@
    },
    "when": {
     "outfit.headband.bow": "bunny"
-   }
-  },
-  "outfit.suit.on": {
-   "path": "outfit.suit.on",
-   "type": "boolean",
-   "default": false,
-   "label": {
-    "ja": "全身スーツ",
-    "en": "Bodysuit"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "instant",
-   "apply": "setWorn",
-   "order": 292,
-   "section": {
-    "ja": "全身スーツ",
-    "en": "Bodysuit"
-   },
-   "help": {
-    "ja": "体にぴったりの全身スーツ(えりから足先まで。手首まで)",
-    "en": "skin-tight from a high collar to the feet, to the wrists"
-   }
-  },
-  "outfit.suit.color": {
-   "path": "outfit.suit.color",
-   "type": "color",
-   "default": "#f1f1f4",
-   "label": {
-    "ja": "スーツの色",
-    "en": "Suit color"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "instant",
-   "apply": "setColors",
-   "order": 293,
-   "section": {
-    "ja": "全身スーツ",
-    "en": "Bodysuit"
-   },
-   "when": {
-    "outfit.suit.on": true
-   }
-  },
-  "outfit.suit.accent": {
-   "path": "outfit.suit.accent",
-   "type": "color",
-   "default": "#d8433f",
-   "label": {
-    "ja": "差し色",
-    "en": "Accent color"
-   },
-   "group": "outfit",
-   "tier": "main",
-   "cost": "clothes",
-   "apply": "setColors",
-   "order": 294,
-   "section": {
-    "ja": "全身スーツ",
-    "en": "Bodysuit"
-   },
-   "help": {
-    "ja": "えり・手首・ブーツ・脇の線",
-    "en": "the collar, the cuffs, the boots, the side panels"
-   },
-   "when": {
-    "outfit.suit.on": true
    }
   },
   "hair.paint.strands.on": {

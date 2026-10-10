@@ -4,6 +4,7 @@
 // BODY_TYPES.toddler's values) before, and the same day a bigger-headed tall one (3.9 measured). Recipes saved before are read with the
 // values they were made against: see RECIPE_VERSION and openRecipe below.
 import { partIds } from "./face/names.js";
+import { addDefaults } from "./garments/index.js";
 
 /** The skirt this outfit has, or null: the pants made a skirt (pants.kind "skirt"), or a dress (outfit.dress.on: the shirt and a skirt as one
  *  garment, in one color; its skirt takes the dress's hem, flare and pleats). { hem, flare, pleats, pleatDepth, thick, follow, top, tilt, color, dress }
@@ -464,25 +465,6 @@ export const DEFAULTS = {
       "bell": 0.08,
       "length": "tuck",
       "crop": 0.6,
-      "sailor": {
-        "on": false,
-        "color": "#26325f",
-        "line": "#ffffff",
-        "lineIn": 0.008,
-        "lineWidth": 0.006,
-        "width": 0.085,
-        "back": 0.655,
-        "v": 0.665,
-        "neck": 0.04
-      },
-      "scarf": {
-        "on": false,
-        "color": "#1d1d26",
-        "length": 0.1,
-        "spread": 0.014,
-        "band": 0.013,
-        "width": 0.017
-      },
       "underarm": "fit",
       "armhole": null,
       "collar": {
@@ -663,36 +645,6 @@ export const DEFAULTS = {
         "width": 0.022,
         "gap": 0.022
       }
-    },
-    "gloves": {
-      "on": false,
-      "color": "#ffffff",
-      "length": 1,
-      "bandColor": null,
-      "lineColor": null,
-      "bandWidth": 0.022
-    },
-    "strings": {
-      "on": false,
-      "color": "#1c1c22",
-      "rise": 0.05,
-      "width": 0.006,
-      "span": 1
-    },
-    "headband": {
-      "on": false,
-      "color": "#1c1c22",
-      "width": 0.026,
-      "tilt": 8,
-      "at": 0,
-      "lift": 0.02,
-      "down": 0.13,
-      "bow": "none",
-      "bowAt": -14,
-      "bowSize": 1,
-      "bowLength": 1,
-      "bowSpread": 14,
-      "bowTilt": 4
     },
     "suit": {
       "on": false,
@@ -1049,6 +1001,8 @@ export const DEFAULTS = {
 };
 
 // Old short URL names used while sculpting (e.g. ?nz=0.27) → option paths. Handy for quick tuning in the browser.
+addDefaults(DEFAULTS);   // the garment parts' own defaults (src/garments: a part brings its options with it)
+
 export const SHORT = {
   "hy": "body.joints.hipY",
   "fx": "body.joints.footX",

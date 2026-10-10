@@ -26,6 +26,7 @@ import { POSES, createPosePlayer } from "./motion/index.js";
 import { createCloth } from "./cloth.js";
 import { accessoryGeometries } from "./accessories.js";
 import { createFollower } from "./follow.js";
+import { PARTS, partNamed, partOptions, builtKey } from "./garments/index.js";
 
 export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
@@ -73,7 +74,7 @@ function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
-    trimsOn: [OPT.outfit.shirt?.sailor?.on, OPT.outfit.shirt?.scarf?.on, OPT.outfit.gloves?.on, OPT.outfit.strings?.on, OPT.outfit.headband?.on].map((v) => !!v) } };   // a dress is a shape (its skirt), and a cape and the trims are only built when worn
+    garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
 export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
@@ -130,7 +131,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, trims } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -188,9 +189,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
     const cloth = name === "cape" || (name === "pants" && skirtOf(OPT));
-    // the trims (clothes/trims.js) are small and thin: the hip strings, a few mm wide, came out in dashes thinned to 7 % (2026-10-10); the
-    // scarf, the collar and the headband's bow are thinned as cloth is
-    const trim = name === "strings" ? 1 : /^(scarf|sailor|headband)$/.test(name) ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
+    // the garment parts (src/garments) say how: "keep" (the hip strings, a few mm wide, came out in dashes thinned to 7 %, 2026-10-10),
+    // "cloth" (the scarf, the collar, the headband's bow), or as the body
+    const thin = partNamed(name)?.thin, trim = thin === "keep" ? 1 : thin === "cloth" ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
     const share = trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
@@ -285,7 +286,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, trims } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, shirtSdf, bellOf, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, garments } };
   if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
     const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
@@ -461,32 +462,25 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if ((y > 0.2 && y < 0.6) || (Math.abs(x) > 0.19 && y < 0.74)) a = Math.max(a, sstep(0.84, 0.9, N[v * 3] * Math.sign(x)));   // down the outer sides (of the body under the chest, the legs, the arms)
       T[v] = a; }
     g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); parts.suit.wrap = (m) => withGrad(m, SUIT); parts.suit.m.material = parts.suit.wrap(parts.suit.m.material); }
-  // trims (clothes/trims.js, headband.js; 2026-10-10, for 島風): a sailor collar and its scarf, gloves, hip strings, a headband. Built only
-  // when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
-  const TR = { sailor: OPT.outfit.shirt.sailor ?? {}, scarf: OPT.outfit.shirt.scarf ?? {}, gloves: OPT.outfit.gloves ?? {}, strings: OPT.outfit.strings ?? {}, headband: OPT.outfit.headband ?? {} };
-  parts.sailor = skinned(meshPart("sailor"), TR.sailor.color ?? "#26325f", 0.004, "sailor");
-  parts.scarf = skinned(meshPart("scarf"), TR.scarf.color ?? "#1d1d26", 0.003, "scarf");
-  parts.gloves = skinned(meshPart("gloves"), TR.gloves.color ?? "#ffffff", 0.003, "gloves");
-  parts.strings = skinned(meshPart("strings"), TR.strings.color ?? "#1c1c22", 0.0015);
-  parts.headband = skinned(meshPart("headband"), TR.headband.color ?? "#1c1c22", 0.003, "headband");
+  // the garment parts (src/garments; 2026-10-10, for 島風: a sailor collar and its scarf, gloves, hip strings, a headband, and any part added
+  // there). Built only when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
+  for (const p of PARTS) parts[p.name] = skinned(meshPart(p.name), partOptions(OPT, p).color ?? p.defaults?.color ?? "#888888", p.outline, p.soft ? p.name : null);
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
-  const BANDS = { sailor: bandU(), gloves: bandU(), shoes: bandU(), socks: bandU(), pants: bandU() };
+  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
   const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
     g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
-  if (trims.sailorSdf) banded("sailor", trims.sailorIn);
-  if (trims.gloveSdf) banded("gloves", trims.gloveBand);
+  for (const p of PARTS) if (p.bands && garments[p.name]) banded(p.name, p.bands.value(garments[p.name]));
   if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
   if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
   let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
   banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
   function paintBands() {   // the bands' colors and places from the options (instant: setColors, setBands)
-    const O = OPT.outfit, SA = O.shirt.sailor ?? {}, GL = O.gloves ?? {}, SH = O.shoes, SS = O.socks.stripes ?? {};
+    const O = OPT.outfit, SH = O.shoes, SS = O.socks.stripes ?? {};
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
-    put(BANDS.sailor, SA.line ? [[SA.lineIn ?? 0.008, (SA.lineIn ?? 0.008) + (SA.lineWidth ?? 0.006), SA.line]] : []);
-    const BW = GL.bandWidth ?? 0.022; put(BANDS.gloves, [...(GL.bandColor ? [[-1, BW, GL.bandColor]] : []), ...(GL.lineColor ? [[BW * 0.4, BW * 0.6, GL.lineColor]] : [])]);
+    for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
     put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
     { const SB = O.pants.skirt ?? {}; put(BANDS.pants, SB.bandColor ? [[-1, SB.bandWidth ?? 0.02, SB.bandColor]] : []); }
     const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
@@ -609,18 +603,20 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
-  const GARMENTS = { shirt: ["shirt", "sailor", "scarf"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR, gloves: ["gloves"], strings: ["strings"], headband: ["headband"] };   // (the collar and the scarf go with the shirt)
+  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
+  for (const p of PARTS) (GARMENTS[p.group] ??= []).push(p.name);   // the garment parts (src/garments) go with their group (the collar and the scarf with the shirt) or are their own
+  const outfitOf = (g) => OPT.outfit[g] ?? partOptions(OPT, partNamed(g));   // (a part's own garment: its options, wherever they are)
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
   // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
-  const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => OPT.outfit[g].on !== false || isDress(g);
-  const wear = (g, on) => { OPT.outfit[g].on = on;
+  const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => outfitOf(g).on !== false || isDress(g);
+  const wear = (g, on) => { outfitOf(g).on = on;
     if (g === "armor" && on && LATER.size) for (const k of ARMOR) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } x.m.material.dispose(); x.o.material.dispose(); LATER.delete(k); parts[k] = armorPart(k); }   // built now (see LATER)
     for (const k of GARMENTS[g]) show(k, on || isDress(g));
     if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
       if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes", "cape"]) for (const k of GARMENTS[h]) show(k, !plate && worn(h)); show("hair", !plate); for (const k of LOCK_PARTS) if (parts[k]) show(k, !plate); }
       else if (plate) for (const k of GARMENTS[g]) show(k, false); } };
-  for (const g in GARMENTS) if (OPT.outfit[g].on === false) wear(g, false);
+  for (const g in GARMENTS) if (outfitOf(g).on === false) wear(g, false);
   if (AO.on) wear("armor", true);
   // accessories (options.accessories, src/accessories.js): small meshes, each on one bone; parts "acc<i>" (a mirrored item: "acc<i>.<k>")
   let accKeys = [];
@@ -866,16 +862,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
 
-    /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }. Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor). */
+    /** Colors (instant): { skin, hair, eyes, shirt, pants, socks, shoes, soles, armor }, and each garment part's by its name (src/garments: sailor,
+     *  scarf, gloves, strings, headband...). Kept in options (colors.*, outfit.*.color, outfit.shoes.soleColor, the part's color). */
     setColors({ skin, hair, eyes, shirt, pants, shoes, soles, socks, armor, weapon, grip, shield, sheath, dress, cape, laces, ears, earsIn, tail, wings, halo: haloC, suit, suitAccent,
-      sailor, sailorLine, scarf, gloves, gloveBand, gloveBandLine, strings, headband, stripes, cuff } = {}) {
-      // the trims (clothes/trims.js) and the bands painted on parts; a band's color null takes the band away (sailorLine, gloveBand(Line)) or
-      // follows the part's (cuff)
+      stripes, cuff, ...more } = {}) {
+      // the garment parts; the bands painted on parts (a band's color null follows the part's: cuff; the parts' bands: setBands)
       const O = OPT.outfit;
-      for (const [c, k, o] of [[sailor, "sailor", O.shirt.sailor], [scarf, "scarf", O.shirt.scarf], [gloves, "gloves", O.gloves], [strings, "strings", O.strings], [headband, "headband", O.headband]]) if (c) { o.color = c; parts[k].m.material.color.set(c); }
-      if (sailorLine !== undefined) O.shirt.sailor.line = sailorLine;
-      if (gloveBand !== undefined) O.gloves.bandColor = gloveBand;
-      if (gloveBandLine !== undefined) O.gloves.lineColor = gloveBandLine;
+      for (const p of PARTS) { const c = more[p.name]; if (c) { partOptions(OPT, p).color = c; parts[p.name].m.material.color.set(c); } }
       if (stripes) O.socks.stripes.color = stripes;
       if (cuff !== undefined) O.shoes.cuffColor = cuff;
       if (suit) { OPT.outfit.suit.color = suit; parts.suit.m.material.color.set(suit); }
@@ -899,8 +892,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [c, k, key] of [[weapon, ["weaponR", "weaponL"], "color"], [grip, ["weaponRGrip", "weaponLGrip", "weaponBelt"], "gripColor"], [sheath, ["weaponSheath"], "sheathColor"], [shield, ["weaponLFace"], "shieldColor"]]) if (c) { for (const q of k) parts[q].m.material.color.set(c); OPT.outfit.weapon[key] = c; }
       paintBands();   // (the boots' cuff follows their color when it has none of its own)
     },
-    /** The bands painted on parts (instant), as { "dotted.path": value }: the collar's line (outfit.shirt.sailor.line, lineIn, lineWidth), the
-     *  gloves' cuff (outfit.gloves.bandColor, lineColor), the boots' cuff color (outfit.shoes.cuffColor), the socks' stripes (outfit.socks.stripes.*). */
+    /** The bands painted on parts (instant), as { "dotted.path": value }: the garment parts' (src/garments: the collar's line, outfit.shirt.sailor.line,
+     *  lineIn, lineWidth; the gloves' cuff, outfit.gloves.bandColor, lineColor), the boots' cuff color (outfit.shoes.cuffColor), the socks' stripes (outfit.socks.stripes.*). */
     setBands(ch = {}) { for (const [p, v] of Object.entries(ch)) { const k = p.split("."); let o = OPT; for (const q of k.slice(0, -1)) o = o[q] ??= {}; o[k.at(-1)] = v; } paintBands(); },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },

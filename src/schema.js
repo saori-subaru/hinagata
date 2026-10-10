@@ -4,6 +4,7 @@
 // No three.js here (node tools and workers can read it). tools/schema.mjs writes docs/options.schema.json from it.
 import { DEFAULTS, bangsId } from "./options.js";
 import { PART_LABELS, partIds } from "./face/names.js";
+import { PARTS, schemaEntries } from "./garments/index.js";
 
 /*
  Entry: {
@@ -24,6 +25,7 @@ import { PART_LABELS, partIds } from "./face/names.js";
    apply     the avatar method that applies it without a rebuild ("setColors" …), or null (needs a new build for now)
    alsoShapes  set when an instant change also moves a shape on the next build (eye position → eye sockets)
    order     main values: their place in the editor's panels
+   colorKey  a color the avatar's setColors takes by this key ({ sailor: "#26325f" }): the garment parts' colors
    when      { path: value, … }: the value only matters (and an editor only shows it) when those other values are set so ("*set": anything but null)
  }
 */
@@ -33,6 +35,7 @@ const opts = (o) => Object.entries(o).map(([value, [ja, en]]) => ({ value, label
 const partOpts = (slot) => Object.entries(PART_LABELS[slot]).map(([value, l]) => ({ value, label: { ...l } }));
 
 // [path, label, extra]. extra: { min, max, step, options, nullable, help, section, cost, apply, tier, alsoShapes }
+const partEntries = (test) => schemaEntries(PARTS.filter(test));
 const MAIN = [
   // look
   ["colors.skin", L("肌の色", "Skin"), { group: "body", section: L("色", "Colors"), apply: "setColors" }],
@@ -214,23 +217,9 @@ const MAIN = [
   ["outfit.shirt.sleeve", L("袖", "Sleeves"), { options: opts({ short: ["半袖", "Short"], none: ["そでなし", "None"], long: ["長袖", "Long"], bell: ["ベル袖", "Bell"] }), section: L("シャツ", "Shirt") }],
   ["outfit.shirt.bell", L("袖口の広がり", "Bell width"), { when: { "outfit.shirt.sleeve": "bell" }, min: 0.02, max: 0.12, step: 0.005, section: L("シャツ", "Shirt"), help: L("ベル袖の袖口が手首からどれだけ広がるか(m)", "how much wider than the wrist the bell's opening is (m)") }],
   ["outfit.shirt.length", L("丈", "Length"), { options: opts({ tuck: ["入れる", "Tucked in"], out: ["出す", "Out"], crop: ["短い", "Cropped"] }), section: L("シャツ", "Shirt") }],
-  ["outfit.shirt.armhole", L("袖ぐりの位置", "Armhole"), { when: { "outfit.shirt.sleeve": "none" }, nullable: true, min: -0.02, max: 0.05, step: 0.001, section: L("シャツ", "Shirt"), help: L("そでなしの袖ぐり: 肩の関節からどれだけ内側で切るか(m)。肩が出る。null = 肩先まで布が残る(前のまま)", "sleeveless: how far in from the shoulder joint the armhole is cut (m), baring the shoulder; null = the cloth goes over the shoulder's cap (as before)") }],
+  ["outfit.shirt.armhole", L("袖ぐりの位置", "Armhole"), { when: { "outfit.shirt.sleeve": "none" }, nullable: true, min: -0.02, max: 0.08, step: 0.001, section: L("シャツ", "Shirt"), help: L("そでなしの袖ぐり: 肩の関節からどれだけ内側で切るか(m)。肩が出る。null = 肩先まで布が残る(前のまま)", "sleeveless: how far in from the shoulder joint the armhole is cut (m), baring the shoulder; null = the cloth goes over the shoulder's cap (as before)") }],
   ["outfit.shirt.crop",L("短い丈のすその高さ", "Cropped hem height"), { when: { "outfit.shirt.length": "crop" }, min: 0.5, max: 0.66, step: 0.005, section: L("シャツ", "Shirt"), help: L("丈が「短い」のときのすその高さ(脚を伸ばす前の体で: 脚の付け根は 0.44、肩は 0.73)。0.6 = 胸の下", "the hem's height when cropped, on the body before it is stretched (the hips at 0.44, the shoulders at 0.73): 0.6 = under the chest") }],
-  ["outfit.shirt.sailor.on", L("セーラー襟", "Sailor collar"), { cost: "clothes", section: L("セーラー襟", "Sailor collar"), help: L("シャツの上に平たい襟(後ろは四角、前はV字)。着たときだけ作る", "a flat collar over the shirt (square at the back, a V in front); built only when worn") }],
-  ["outfit.shirt.sailor.color", L("襟の色", "Collar color"), { when: { "outfit.shirt.sailor.on": true }, section: L("セーラー襟", "Sailor collar"), cost: "instant", apply: "setColors" }],
-  ["outfit.shirt.sailor.line", L("襟の線の色", "Collar line color"), { when: { "outfit.shirt.sailor.on": true }, nullable: true, section: L("セーラー襟", "Sailor collar"), cost: "instant", apply: "setBands", help: L("null = 線なし(ふちに沿った線の色)", "null = none (a line along the edge)") }],
-  ["outfit.shirt.sailor.lineIn", L("線のふちからの距離", "Line's distance from the edge"), { when: { "outfit.shirt.sailor.on": true }, min: 0, max: 0.03, step: 0.001, section: L("セーラー襟", "Sailor collar"), cost: "instant", apply: "setBands", help: L("m", "m") }],
-  ["outfit.shirt.sailor.lineWidth", L("線の太さ", "Line width"), { when: { "outfit.shirt.sailor.on": true }, min: 0.002, max: 0.02, step: 0.001, section: L("セーラー襟", "Sailor collar"), cost: "instant", apply: "setBands", help: L("m", "m") }],
-  ["outfit.shirt.sailor.width", L("襟の幅", "Collar width"), { when: { "outfit.shirt.sailor.on": true }, min: 0.05, max: 0.13, step: 0.001, section: L("セーラー襟", "Sailor collar"), help: L("後ろと肩の上の幅(真ん中から m)", "its half width at the back and over the shoulders (m from the middle)") }],
-  ["outfit.shirt.sailor.back", L("後ろの下端", "Back flap's bottom"), { when: { "outfit.shirt.sailor.on": true }, min: 0.58, max: 0.72, step: 0.002, section: L("セーラー襟", "Sailor collar"), help: L("背中の四角の下の高さ(伸ばす前の体で。肩は 0.73)", "the back flap's bottom height, on the body before it is stretched (the shoulders at 0.73)") }],
-  ["outfit.shirt.sailor.v", L("前のVの深さ", "V's point"), { when: { "outfit.shirt.sailor.on": true }, min: 0.58, max: 0.72, step: 0.002, section: L("セーラー襟", "Sailor collar"), help: L("前でV字の先が来る高さ(伸ばす前の体で)", "the height of the V's point in front, on the body before it is stretched") }],
-  ["outfit.shirt.sailor.neck", L("首元のVの幅", "V's width at the neck"), { when: { "outfit.shirt.sailor.on": true }, min: 0, max: 0.08, step: 0.001, section: L("セーラー襟", "Sailor collar"), help: L("首のところでVがどれだけ開くか(m)。小さいほど襟が首を囲む", "how wide the V opens at the neck (m); less wraps the collar round the neck") }],
-  ["outfit.shirt.scarf.on", L("スカーフ", "Scarf"), { cost: "clothes", section: L("セーラー襟", "Sailor collar"), help: L("襟のVに沿って、先で結んで垂らす。着たときだけ作る", "along the collar's V, knotted at its point, two tails hanging; built only when worn") }],
-  ["outfit.shirt.scarf.color", L("スカーフの色", "Scarf color"), { when: { "outfit.shirt.scarf.on": true }, section: L("セーラー襟", "Sailor collar"), cost: "instant", apply: "setColors" }],
-  ["outfit.shirt.scarf.length", L("スカーフの長さ", "Scarf length"), { when: { "outfit.shirt.scarf.on": true }, min: 0.03, max: 0.2, step: 0.005, section: L("セーラー襟", "Sailor collar"), help: L("結び目から垂れる長さ(伸ばす前の体で m)", "how far the tails hang below the knot (m, on the body before it is stretched)") }],
-  ["outfit.shirt.scarf.spread", L("スカーフの先の開き", "Tails' spread"), { when: { "outfit.shirt.scarf.on": true }, min: 0, max: 0.06, step: 0.001, section: L("セーラー襟", "Sailor collar"), help: L("2本の先が下でどれだけ離れるか(m)", "how far apart the two tails' ends are (m)") }],
-  ["outfit.shirt.scarf.band", L("Vに見える幅", "Band showing in the V"), { when: { "outfit.shirt.scarf.on": true }, min: 0, max: 0.03, step: 0.001, section: L("セーラー襟", "Sailor collar"), help: L("襟のVのふちに見えるスカーフの幅(m)。0 = 襟の下に隠れる", "how much of the scarf shows along the V's edges (m); 0 = hidden under the collar") }],
-  ["outfit.shirt.scarf.width", L("スカーフの先の太さ", "Tails' width"), { when: { "outfit.shirt.scarf.on": true }, min: 0.008, max: 0.04, step: 0.001, section: L("セーラー襟", "Sailor collar"), help: L("先の半分の幅(m)。結び目も一緒に大きくなる", "half a tail's width at its end (m); the knot grows with it") }],
+  ...partEntries((p) => p.path.startsWith("outfit.shirt.")),   // the garment parts over the shirt (src/garments: the sailor collar, the scarf)
   ["outfit.shirt.underarm", L("わきの下", "Underarm"), { options: opts({ fit: ["ぴったり", "Fitted"], loose: ["ゆったり", "Loose"] }), section: L("シャツ", "Shirt") }],
   ["outfit.shirt.gradient.on", L("すそグラデ", "Hem gradient"), { section: L("シャツ", "Shirt") }],
   ["outfit.shirt.gradient.color", L("すそグラデの色", "Hem gradient color"), { when: { "outfit.shirt.gradient.on": true }, section: L("シャツ", "Shirt") }],
@@ -343,35 +332,13 @@ const MAIN = [
   ["outfit.socks.stripes.color", L("しまの色", "Stripe color"), { when: { "outfit.socks.stripes.on": true }, section: L("靴下", "Socks"), cost: "instant", apply: "setBands" }],
   ["outfit.socks.stripes.width", L("しまの太さ", "Stripe width"), { when: { "outfit.socks.stripes.on": true }, min: 0.005, max: 0.06, step: 0.001, section: L("靴下", "Socks"), cost: "instant", apply: "setBands", help: L("m", "m") }],
   ["outfit.socks.stripes.gap", L("しまの間隔", "Gap between stripes"), { when: { "outfit.socks.stripes.on": true }, min: 0.005, max: 0.06, step: 0.001, section: L("靴下", "Socks"), cost: "instant", apply: "setBands", help: L("m", "m") }],
-  ["outfit.gloves.on", L("手袋", "Gloves"), { cost: "clothes", section: L("手袋", "Gloves"), help: L("着たときだけ作る", "built only when worn") }],
-  ["outfit.gloves.color", L("手袋の色", "Gloves color"), { when: { "outfit.gloves.on": true }, section: L("手袋", "Gloves"), cost: "instant", apply: "setColors" }],
-  ["outfit.gloves.length", L("手袋の長さ", "Gloves length"), { when: { "outfit.gloves.on": true }, min: 0, max: 1.9, step: 0.02, section: L("手袋", "Gloves"), help: L("0 = 手首まで / 1 = ひじまで / 2 = 肩まで", "0 = to the wrist / 1 = to the elbow / 2 = to the shoulder") }],
-  ["outfit.gloves.bandColor", L("口の帯の色", "Cuff band color"), { when: { "outfit.gloves.on": true }, nullable: true, section: L("手袋", "Gloves"), cost: "instant", apply: "setBands", help: L("null = 帯なし(はき口の帯の色)", "null = none (a band round the top)") }],
-  ["outfit.gloves.lineColor", L("帯の線の色", "Cuff line color"), { when: { "outfit.gloves.on": true }, nullable: true, section: L("手袋", "Gloves"), cost: "instant", apply: "setBands", help: L("null = 線なし(帯のまん中の線の色)", "null = none (a line along the band's middle)") }],
-  ["outfit.gloves.bandWidth", L("帯の幅", "Cuff band width"), { when: { "outfit.gloves.on": true }, min: 0.005, max: 0.06, step: 0.001, section: L("手袋", "Gloves"), help: L("m", "m") }],
-  ["outfit.strings.on", L("腰の紐", "Hip strings"), { cost: "clothes", section: L("腰の紐", "Hip strings"), help: L("腰にかかる細い紐(ハイレグの下着の、ローライズのスカートから見える紐)。着たときだけ作る", "thin strings round the hips (a high-cut underwear's, showing over a low skirt); built only when worn") }],
-  ["outfit.strings.color", L("紐の色", "Strings color"), { when: { "outfit.strings.on": true }, section: L("腰の紐", "Hip strings"), cost: "instant", apply: "setColors" }],
-  ["outfit.strings.rise", L("横の高さ", "Rise at the sides"), { when: { "outfit.strings.on": true }, min: 0, max: 0.12, step: 0.002, section: L("腰の紐", "Hip strings"), help: L("脚の付け根から、横でどこまで上がるか(伸ばす前の体で m)", "how far above the hip joints it rises at the sides (m, on the body before it is stretched)") }],
-  ["outfit.strings.width", L("紐の太さ", "Strings width"), { when: { "outfit.strings.on": true }, min: 0.003, max: 0.02, step: 0.001, section: L("腰の紐", "Hip strings"), help: L("m", "m") }],
-  ["outfit.strings.span", L("上がり方", "How it rises"), { when: { "outfit.strings.on": true }, min: 0.3, max: 3, step: 0.05, section: L("腰の紐", "Hip strings"), help: L("1 = なだらかな弧 / 大きいほど前から急に上がる", "1 = a gentle arch; more rises steeply from the front") }],
-  ["outfit.headband.on", L("カチューシャ", "Headband"), { cost: "clothes", section: L("カチューシャ", "Headband"), help: L("髪の上に、耳から耳へ。着たときだけ作る", "over the hair from ear to ear; built only when worn") }],
-  ["outfit.headband.color", L("カチューシャの色", "Headband color"), { when: { "outfit.headband.on": true }, section: L("カチューシャ", "Headband"), cost: "instant", apply: "setColors" }],
-  ["outfit.headband.bow", L("リボン", "Bow"), { when: { "outfit.headband.on": true }, options: opts({ none: ["なし", "None"], bunny: ["うさ耳リボン", "Bunny-ear bow"] }), section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.width", L("幅", "Width"), { when: { "outfit.headband.on": true }, min: 0.01, max: 0.06, step: 0.001, section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.tilt", L("前への傾き", "Tilt forward"), { when: { "outfit.headband.on": true }, min: -30, max: 40, step: 1, section: L("カチューシャ", "Headband"), help: L("度。大きいほど頭の上で前に", "degrees: more puts it further forward over the top") }],
-  ["outfit.headband.at", L("前後の位置", "Forward / back"), { when: { "outfit.headband.on": true }, min: -0.1, max: 0.1, step: 0.002, section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.lift", L("髪からの浮き", "Off the hair"), { when: { "outfit.headband.on": true }, min: 0, max: 0.05, step: 0.001, section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.bowAt", L("リボンの位置", "Bow's place"), { when: { "outfit.headband.bow": "bunny" }, min: -80, max: 80, step: 1, section: L("カチューシャ", "Headband"), help: L("頭のてっぺんからの角度(度)。+ = 左へ", "degrees from the top; + = toward the character's left") }],
-  ["outfit.headband.bowSize", L("リボンの大きさ", "Bow size"), { when: { "outfit.headband.bow": "bunny" }, min: 0.5, max: 1.8, step: 0.05, section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.bowLength", L("耳の長さ", "Loop length"), { when: { "outfit.headband.bow": "bunny" }, min: 0.5, max: 2.5, step: 0.05, section: L("カチューシャ", "Headband") }],
-  ["outfit.headband.bowSpread", L("耳の開き", "Loops' spread"), { when: { "outfit.headband.bow": "bunny" }, min: 0, max: 80, step: 1, section: L("カチューシャ", "Headband"), help: L("2本の耳が開く角度(度)", "how far apart the two loops lean (degrees)") }],
-  ["outfit.headband.bowTilt", L("耳の傾き", "Loops' tilt"), { when: { "outfit.headband.bow": "bunny" }, min: -60, max: 60, step: 1, section: L("カチューシャ", "Headband"), help: L("2本まとめて傾ける(度)。− = 右へ", "both loops leaned together (degrees); − = toward the character's right") }],
+  ...partEntries((p) => !p.path.startsWith("outfit.shirt.")),   // the other garment parts (src/garments: gloves, hip strings, a headband, and any part added there)
   ["outfit.shoes.on", L("はく", "Wear"), { section: L("靴", "Shoes"), apply: "setWorn" }],
   ["outfit.shoes.kind", L("靴の種類", "Kind"), { options: opts({ sneaker: ["スニーカー", "Sneakers"], laced: ["紐付きスニーカー", "Laced sneakers"], boots: ["ブーツ", "Boots"], heels: ["ハイヒール", "High heels"], heelBoots: ["ヒールブーツ", "Heeled boots"] }), section: L("靴", "Shoes") }],
   ["outfit.shoes.color", L("靴の色", "Shoes color"), { section: L("靴", "Shoes"), apply: "setColors" }],
   ["outfit.shoes.laceColor", L("靴紐の色", "Lace color"), { when: { "outfit.shoes.kind": "laced" }, section: L("靴", "Shoes"), apply: "setColors" }],
   ["outfit.shoes.bootHeight", L("ブーツの高さ", "Boot height"), { when: { "outfit.shoes.kind": ["boots", "heelBoots"] }, min: 0.12, max: 0.3, step: 0.005, section: L("靴", "Shoes"), help: L("はき口の高さ(m)", "the top's height (m)") }],
-  ["outfit.shoes.heelAngle", L("ヒールの高さ", "Heel height"), { when: { "outfit.shoes.kind": ["heels", "heelBoots"] }, min: 8, max: 40, step: 1, section: L("靴", "Shoes"), help: L("つま先立ちの角度(度)。大きいほどヒールが高い", "how far the foot tips forward (degrees): more is a higher heel") }],
+  ["outfit.shoes.heelAngle", L("ヒールの高さ", "Heel height"), { when: { "outfit.shoes.kind": ["heels", "heelBoots"] }, min: 8, max: 45, step: 1, section: L("靴", "Shoes"), help: L("つま先立ちの角度(度)。大きいほどヒールが高い", "how far the foot tips forward (degrees): more is a higher heel") }],
   ["outfit.extras.ears", L("獣耳", "Animal ears"), { options: opts({ none: ["なし", "None"], cat: ["ねこ", "Cat"], fox: ["きつね", "Fox"], bunny: ["うさぎ", "Bunny"], bear: ["くま", "Bear"] }), section: L("付けもの", "Extras") }],
   ["outfit.extras.earColor", L("耳の色", "Ear color"), { nullable: true, section: L("付けもの", "Extras"), apply: "setColors", help: L("null = 髪の色", "null = the hair color") }],
   ["outfit.extras.earInColor", L("耳の内側の色", "Inner ear color"), { section: L("付けもの", "Extras"), apply: "setColors" }],
@@ -440,7 +407,7 @@ function build() {
     if (ex?.options) e.options = ex.options;
     if (ex) e.order = ex.order;   // the editor lists main values in this order
     if (ex?.nullable || v === null) e.nullable = true;
-    for (const k of ["section", "help", "alsoShapes", "when", "reverse"]) if (ex?.[k]) e[k] = ex[k];
+    for (const k of ["section", "help", "alsoShapes", "when", "reverse", "colorKey"]) if (ex?.[k]) e[k] = ex[k];
     if (!ex) e.section = { en: human(path.split(".").slice(0, -1).join(".")) || path };
     S[path] = e; } };
   walk(DEFAULTS, "");

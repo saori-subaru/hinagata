@@ -5,12 +5,12 @@
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
 import { skirtOf, hairForms } from "./options.js";
-import { headbandSdf } from "./clothes/headband.js";
+import { PARTS, partNamed } from "./garments/index.js";
 import { armReach } from "./body/index.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip", "weaponSheath", "weaponBelt"];   // in the hands: metal, grip / straps, the shield's face
 export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
-export const TRIMS = ["sailor", "scarf", "gloves", "strings", "headband"];   // clothes/trims.js and headband.js: a sailor collar and its scarf, gloves, hip strings, a headband (and its bow)
+export const TRIMS = PARTS.map((p) => p.name);   // the garment parts (src/garments): a sailor collar and its scarf, gloves, hip strings, a headband (and its bow), and any part added there
 export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "suit", "cape", ...ARMOR, ...WEAPONS, ...EXTRAS, ...TRIMS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
 // a skirt or a cape is a shell under 2 cm thick: meshed with cells about as big (the game quality's), it came out ragged, holed, with its
@@ -81,18 +81,15 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       return { sdf: HT.wrap(f), lo: [-0.5, 0.85, -0.35], hi: [0.5, 1.95, 0.3], h: Math.min(H * 0.6, 0.007), bone1: "head" }; }
     case "extraWings": { const f = C.extras.wingSdf; if (!f) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const S = OPT.outfit.extras?.wingSize ?? 1; return { sdf: f, lo: [-0.15 - 0.6 * S, 0.3, -0.15 - 0.55 * S], hi: [0.15 + 0.6 * S, 0.75 + 0.45 * S, 0.05], h: Math.min(H * 0.5, 0.006), bone1: "upperChest" }; }
-    // trims (clothes/trims.js): over the shirt (the collar, the scarf), the arms (gloves), the hips (strings); the headband in head space
-    case "sailor": case "scarf": case "gloves": case "strings": case "headband": { const T = C.trims, none = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
-      if (name === "sailor") return !T.sailorSdf ? none : { sdf: T.sailorSdf, fast: (x, y, z) => T.sailorSdf(x, y, z, B), lo: [-0.24, 0.6, -0.16], hi: [0.24, 0.84, 0.2], h: Math.min(H, 0.008), only: /^(spine|chest|upperChest|neck|shoulder)/ };
-      if (name === "scarf") return !T.scarfSdf ? none : { sdf: T.scarfSdf, fast: (x, y, z) => T.scarfSdf(x, y, z, B), lo: T.scarfSdf.box.lo, hi: T.scarfSdf.box.hi, h: Math.min(H * 0.6, 0.0035), only: /^(chest|upperChest|neck)/ };
-      if (name === "gloves") return !T.gloveSdf ? none : { sdf: T.gloveSdf, lo: [-0.47 - ax, 0.3 - ay, -0.16], hi: [0.47 + ax, 0.8, 0.16], h: H * 0.7, only: /^(upperArm|lowerArm|hand|fingers|fingerTips|thumb)/ };
-      if (name === "strings") return !T.stringsMesh ? none : { make: T.stringsMesh, sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, only: /^(hips|spine|upperLeg)/ };   // (a ribbon made directly: make)
-      const f = headbandSdf(OPT, hairKit.hairSdfOf(hairForms(OPT.hair))); return !f ? none : { sdf: HT.wrap(f), lo: [-0.36, 0.95, -0.3], hi: [0.36, 1.75, 0.26], h: Math.min(H * 0.6, 0.004), bone1: "head" }; }
     case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
     // the box reaches the socks' top (2026-10-07: it stopped at 0.17, so socks over 0.17 were cut there, though the slider went to 0.3; the
     // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
     case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/ }; }
   }
+  // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
+  const GP = partNamed(name);
+  if (GP) { const st = C.garments[name]; if (!st) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+    return GP.spec(st, { OPT, H, B, ax, ay, kit, hairCap: () => hairKit.hairSdfOf(hairForms(OPT.hair)) }); }
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));
     return { sdf: HT.wrap(hairKit.hairSdfOf(pick)), lo: [-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], hi: [0.4, 1.5, 0.38], h: H * OPT.quality.hairCell, bone1: "head" };

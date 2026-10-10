@@ -4,9 +4,12 @@
 // so editing the sculpt code (or any option) makes a new key by itself — old entries are never served by mistake.
 // Only the newest KEEP characters are kept. Anything that fails (no IndexedDB, private mode, quota) just means "not cached".
 
+import { PARTS } from "./garments/index.js";
+
 const DB = "hinagata-mesh", MESH = "mesh", META = "meta", KEEP = 12;
 // modules whose code changes the generated geometry or its skin weights
-const SOURCES = ["index.js", "options.js", "parts.js", "build.js", "worker.js", "weights.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "clothes/index.js", "clothes/armor.js", "clothes/plate.js", "clothes/weapons.js", "clothes/extras.js", "hair/index.js", "rig.js"];
+const SOURCES = ["index.js", "options.js", "parts.js", "build.js", "worker.js", "weights.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "clothes/index.js", "clothes/armor.js", "clothes/plate.js", "clothes/weapons.js", "clothes/extras.js", "hair/index.js", "rig.js", "garments/registry.js", "garments/index.js"];
+// and every garment part's module (src/garments: definePart's src, import.meta.url), or its functions' text when it didn't say where it is
 
 function fnv(s, h) { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 /** A short key from any mix of strings and JSON-able values. */
@@ -19,8 +22,10 @@ let srcHash = null;
 setTimeout(() => { try { sourceHash(); } catch { /* no fetch: fine */ } }, 0);   // start fetching the sources as soon as the library loads (the first avatar doesn't wait for it)
 /** Hash of the generator's source files (fetched once per page; the browser usually has them cached already). */
 export function sourceHash() {
-  srcHash ??= Promise.all(SOURCES.map((p) => fetch(new URL("./" + p, import.meta.url)).then((r) => (r.ok ? r.text() : "")).catch(() => "")))
-    .then((texts) => hashKey(...texts));
+  const urls = [...SOURCES.map((p) => new URL("./" + p, import.meta.url).href), ...new Set(PARTS.map((p) => p.src).filter(Boolean))];
+  const inline = PARTS.filter((p) => !p.src).map((p) => Object.values(p).filter((v) => typeof v === "function").join("\n"));
+  srcHash ??= Promise.all(urls.map((u) => fetch(u).then((r) => (r.ok ? r.text() : "")).catch(() => "")))
+    .then((texts) => hashKey(...texts, ...inline));
   return srcHash;
 }
 

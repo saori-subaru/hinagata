@@ -3,16 +3,18 @@
 // size and shape); one mesh, one color.
 // The band is the hair pushed out a little (a solid, as the socks are: only its outside shows, its cut sides go into the hair) and cut to a
 // slab across the head; the hair's own shape is read only near the slab (it is the expensive part).
+import { definePart } from "./registry.js";
 import { smin } from "../sdf/prim.js";
+
+const L = (ja, en) => ({ ja, en }), SEC = L("カチューシャ", "Headband");
 
 const smax = (a, b, k) => -smin(-a, -b, k);
 const nrm = (v) => { const l = Math.hypot(...v) || 1; return v.map((c) => c / l); };
 const crs = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const dt = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
-/** The headband's distance (head space), or null. cap: the hair's own distance (head space, hair/index.js hairSdfOf) */
-export function headbandSdf(OPT, cap) {
-  const HB = OPT.outfit.headband; if (!HB?.on) return null;
+// the headband's distance (head space). cap: the hair's own distance (head space, hair/index.js hairSdfOf)
+function headbandSdf(OPT, HB, cap) {
   const SK = OPT.body.sculpt.skull, C0 = [0, SK.y, -0.005], D2R = Math.PI / 180;
   const th = (HB.tilt ?? 8) * D2R, n = [0, -Math.sin(th), Math.cos(th)], up = [0, Math.cos(th), Math.sin(th)];   // the band's plane: upright through the skull's middle, its top leaning forward by tilt
   const Z0 = HB.at ?? 0, W = HB.width ?? 0.026, T = HB.lift ?? 0.02, LOW = SK.y - (HB.down ?? 0.13);   // its place (forward of the middle), width, how far over the hair, how far down the sides
@@ -39,3 +41,25 @@ export function headbandSdf(OPT, cap) {
   const bow = (x, y, z) => { if (Math.hypot(x - K[0], y - K[1], z - K[2]) > 0.45 * S * (HB.bowLength ?? 1)) return 0.1; return smin(knot(x, y, z), Math.min(loops[0](x, y, z), loops[1](x, y, z)), 0.02 * S); };
   return (x, y, z) => smin(band(x, y, z), bow(x, y, z), 0.012);
 }
+
+definePart({ src: import.meta.url,
+  name: "headband", path: "outfit.headband", section: SEC, outline: 0.003, thin: "cloth",
+  defaults: { on: false, color: "#1c1c22", width: 0.026, tilt: 8, at: 0, lift: 0.02, down: 0.13, bow: "none", bowAt: -14, bowSize: 1, bowLength: 1, bowSpread: 14, bowTilt: 4 },
+  schema: [
+    ["on", L("カチューシャ", "Headband"), { help: L("髪の上に、耳から耳へ。着たときだけ作る", "over the hair from ear to ear; built only when worn") }],
+    ["color", L("カチューシャの色", "Headband color"), { when: { ".on": true } }],
+    ["bow", L("リボン", "Bow"), { when: { ".on": true }, options: [{ value: "none", label: L("なし", "None") }, { value: "bunny", label: L("うさ耳リボン", "Bunny-ear bow") }] }],
+    ["width", L("幅", "Width"), { when: { ".on": true }, min: 0.01, max: 0.06, step: 0.001 }],
+    ["tilt", L("前への傾き", "Tilt forward"), { when: { ".on": true }, min: -30, max: 40, step: 1, help: L("度。大きいほど頭の上で前に", "degrees: more puts it further forward over the top") }],
+    ["at", L("前後の位置", "Forward / back"), { when: { ".on": true }, min: -0.1, max: 0.1, step: 0.002 }],
+    ["lift", L("髪からの浮き", "Off the hair"), { when: { ".on": true }, min: 0, max: 0.05, step: 0.001 }],
+    ["bowAt", L("リボンの位置", "Bow's place"), { when: { ".bow": "bunny" }, min: -80, max: 80, step: 1, help: L("頭のてっぺんからの角度(度)。+ = 左へ", "degrees from the top; + = toward the character's left") }],
+    ["bowSize", L("リボンの大きさ", "Bow size"), { when: { ".bow": "bunny" }, min: 0.5, max: 1.8, step: 0.05 }],
+    ["bowLength", L("耳の長さ", "Loop length"), { when: { ".bow": "bunny" }, min: 0.5, max: 2.5, step: 0.05 }],
+    ["bowSpread", L("耳の開き", "Loops' spread"), { when: { ".bow": "bunny" }, min: 0, max: 80, step: 1, help: L("2本の耳が開く角度(度)", "how far apart the two loops lean (degrees)") }],
+    ["bowTilt", L("耳の傾き", "Loops' tilt"), { when: { ".bow": "bunny" }, min: -60, max: 60, step: 1, help: L("2本まとめて傾ける(度)。− = 右へ", "both loops leaned together (degrees); − = toward the character's right") }],
+  ],
+  // over the hair: made in the part table, where the hair is (spec's hairCap(): the hair's distance, head space; kit.HT wraps head space onto the head)
+  build: ({ OPT, O }) => ({ OPT, O }),
+  spec: (st, { H, kit, hairCap }) => ({ sdf: kit.HT.wrap(headbandSdf(st.OPT, st.O, hairCap())), lo: [-0.36, 0.95, -0.3], hi: [0.36, 1.75, 0.26], h: Math.min(H * 0.6, 0.004), bone1: "head" }),
+});

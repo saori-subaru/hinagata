@@ -6,8 +6,8 @@ import { buildArmor } from "./armor.js";
 import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
 import { buildExtras } from "./extras.js";
-import { buildTrims } from "./trims.js";
-import { armReach, heelBend } from "../body/index.js";
+import { buildGarments } from "../garments/index.js";
+import { armReach, heelBend, makeStretch } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
  *  ball of the foot stays on the floor; heel: how high the heel's back is then (the heel's length) */
@@ -263,5 +263,5 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       return Math.max(S, -(S + CA.thick), y - (CA.collar - 0.12 * z), z - zf, CA.hem - y); };   // the collar is a little higher at the back
   })() : null;
   return { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
-    trims: buildTrims(OPT, { P, J, bodySdf, shirtSdf }) };   // a sailor collar and scarf, gloves, hip strings (trims.js)
+    garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)) }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }
