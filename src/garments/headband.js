@@ -39,7 +39,7 @@ function headbandSdf(OPT, HB, cap) {
       return smax(smax((Math.hypot(qs / w, qf / TH) - 1) * Math.min(w, TH), h - L, 0.01), -h - 0.02 * S, 0.01); };   // (not past the knot behind: a loop leaning far out showed through on the other side)
   });
   const bow = (x, y, z) => { if (Math.hypot(x - K[0], y - K[1], z - K[2]) > 0.45 * S * (HB.bowLength ?? 1)) return 0.1; return smin(knot(x, y, z), Math.min(loops[0](x, y, z), loops[1](x, y, z)), 0.02 * S); };
-  return (x, y, z) => smin(band(x, y, z), bow(x, y, z), 0.012);
+  const f = (x, y, z) => smin(band(x, y, z), bow(x, y, z), 0.012); f.reach = { c: K, r: 0.45 * S * (HB.bowLength ?? 1) }; return f;   // reach: the bow stays within this (head space)
 }
 
 definePart({ src: import.meta.url,
@@ -61,5 +61,8 @@ definePart({ src: import.meta.url,
   ],
   // over the hair: made in the part table, where the hair is (spec's hairCap(): the hair's distance, head space; kit.HT wraps head space onto the head)
   build: ({ OPT, O }) => ({ OPT, O }),
-  spec: (st, { H, kit, hairCap }) => ({ sdf: kit.HT.wrap(headbandSdf(st.OPT, st.O, hairCap())), lo: [-0.36, 0.95, -0.3], hi: [0.36, 1.75, 0.26], h: Math.min(H * 0.6, 0.004), bone1: "head" }),
+  // the box: the band's, and the bow's reach carried onto the head (a chibi's big head took the loops' tips up out of a fixed box: Saori, "うさみみのさきが引いても切れてしまいます")
+  spec: (st, { H, kit, hairCap }) => { const f = headbandSdf(st.OPT, st.O, hairCap()), lo = [-0.36, 0.95, -0.3], hi = [0.36, 1.75, 0.26];
+    if (f.reach) { const { c, r } = f.reach; for (const dx of [-r, r]) for (const dy of [-r, r]) for (const dz of [-r, r]) { const p = kit.HT.fromHead(c[0] + dx, c[1] + dy, c[2] + dz); for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], p[i]); hi[i] = Math.max(hi[i], p[i]); } } }
+    return { sdf: kit.HT.wrap(f), lo, hi, h: Math.min(H * 0.6, 0.004), bone1: "head" }; },
 });

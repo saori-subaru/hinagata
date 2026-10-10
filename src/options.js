@@ -5,6 +5,7 @@
 // values they were made against: see RECIPE_VERSION and openRecipe below.
 import { partIds } from "./face/names.js";
 import { addDefaults } from "./garments/index.js";
+import { buildBody, makeStretch } from "./body/index.js";
 
 /** The skirt this outfit has, or null: the pants made a skirt (pants.kind "skirt"), or a dress (outfit.dress.on: the shirt and a skirt as one
  *  garment, in one color; its skirt takes the dress's hem, flare and pleats). { hem, flare, pleats, pleatDepth, thick, follow, top, tilt, color, dress }
@@ -850,7 +851,7 @@ export const DEFAULTS = {
         "damping": 0.9,
         "yc": 1.0,
         "zc": -0.02,
-        "bottom": 0.55,
+        "bottom": 0.3692,
         "spread": 0.25,
         "tips": 0.035,
         "teeth": 9,
@@ -1200,11 +1201,14 @@ export function diff(base, opt) {
 //   - A character file says its version: { "hinagata": 4, "name": "…", "options": { … } } (the editor's export).
 //   - Version 2 (2026-10-06, the first tall default: about 4 heads) is read with that tall body; version 3 (the same day, later: Saori
 //     "普通に頭でかすぎてバランス悪い") has the smaller head, longer legs and arms of its own (OLD_DEFAULTS[3] keeps what it replaced);
-//     version 4 (2026-10-10, Saori: "4.5くらいにしたい", the 6-head adult body being made) the head 0.64: 4.48 heads (was 0.7: 4.19).
+//     version 4 (2026-10-10, Saori: "4.5くらいにしたい", the 6-head adult body being made) the head 0.64: 4.48 heads (was 0.7: 4.19);
+//     version 5 (the same day, Saori: 島風 as a chibi lost her long hair) hair.sculpt.long.bottom in base space (the body before
+//     body.proportion stretches it, as the clothes' heights): it was the tips' height on the character as built, so a shorter body left the
+//     hair no length. Older files are carried over (longBottom): read into base space, written back as they were.
 //   - Recipes stored without a version are version 1 (the chibi defaults): bare recipe files (character.json as the sync helper and
 //     agents wrote them before), { "hinagata": 1, … } files, the editor's characters saved in a browser before, ?o= links made before.
 //   - A bare options object in code (createAvatar({ … })) is today's: the current defaults.
-export const RECIPE_VERSION = 4;
+export const RECIPE_VERSION = 5;
 /** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body, OLD_DEFAULTS[3] = version 2's tall body,
  *  OLD_DEFAULTS[4] = version 3's head). */
 export const OLD_DEFAULTS = {
@@ -1215,7 +1219,16 @@ export const OLD_DEFAULTS = {
   3: { body: {   // the first tall default (about 4 heads: 3.9 measured, chin to crown against the height): 2026-10-06, until the same evening
     proportion: { legs: 1.65, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.82 } } },   // (arms null: they stretched with the torso)
   4: { body: { head: { scale: 0.7 } } },   // the tall default at 4.19 heads (measureCharacter: chin to crown against the height): 2026-10-06 to 10-10
+  5: { hair: { sculpt: { long: { bottom: 0.55 } } } },   // the long hair's tips at 0.55 as built (version 4 and before; longBottom carries it over)
 };
+// version 4 and before: hair.sculpt.long.bottom was the tips' height on the character as built. To base space (reading an old file) or back
+// (writing one), on that recipe's own body
+const r4 = (x) => Math.round(x * 1e6) / 1e6;   // (to a µm: carried back and forth, the locks come out the same)
+function longBottom(options, toBase) {
+  const b = options?.hair?.sculpt?.long?.bottom; if (b == null) return options;
+  const R = resolveOptions(options), ST = makeStretch(R, buildBody(R).J), o = structuredClone(options);
+  o.hair.sculpt.long.bottom = r4(toBase ? ST.inv(b) : ST.fwd(b)); return o;
+}
 const oldValues = (version) => { let o = {}; for (let v = RECIPE_VERSION; v > version; v--) o = merge(o, OLD_DEFAULTS[v] ?? {}); return o; };   // (the oldest wins)
 /** The defaults as they were at a recipe version. */
 export const defaultsAt = (version) => merge(DEFAULTS, oldValues(version));
@@ -1231,9 +1244,10 @@ export function openRecipe(input, { bare = RECIPE_VERSION } = {}) {
   const file = isCharacterFile(input), raw = file ? input.options : isObj(input) ? input : {};
   let version = file ? (Number.isInteger(input.hinagata) && input.hinagata >= 1 ? input.hinagata : 1) : bare;
   if (version > RECIPE_VERSION) { console.warn(`Hinagata: a recipe of version ${version}, made by a newer Hinagata (this one reads up to ${RECIPE_VERSION}); read as ${RECIPE_VERSION}`); version = RECIPE_VERSION; }
-  return { options: version < RECIPE_VERSION ? merge(oldValues(version), raw) : raw, name: file && typeof input.name === "string" ? input.name : null, version, file };
+  const old = version < RECIPE_VERSION ? merge(oldValues(version), raw) : raw;
+  return { options: version < 5 ? longBottom(old, true) : old, name: file && typeof input.name === "string" ? input.name : null, version, file };
 }
 /** Options in today's terms → the recipe a file of an older version holds (only what differs from that version's defaults). */
-export const recipeAt = (version, options) => version >= RECIPE_VERSION ? diff(DEFAULTS, options) : diff(defaultsAt(version), merge(DEFAULTS, options));
+export const recipeAt = (version, options) => version >= RECIPE_VERSION ? diff(DEFAULTS, options) : diff(defaultsAt(version), version < 5 ? longBottom(merge(DEFAULTS, options), false) : merge(DEFAULTS, options));
 /** A character file of today's version, as the editor exports it. */
 export const characterFile = (options, name) => ({ hinagata: RECIPE_VERSION, ...(name ? { name } : {}), options });

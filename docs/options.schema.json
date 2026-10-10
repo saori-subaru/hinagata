@@ -14859,7 +14859,7 @@
   "hair.sculpt.long.bottom": {
    "path": "hair.sculpt.long.bottom",
    "type": "number",
-   "default": 0.55,
+   "default": 0.3692,
    "label": {
     "ja": "長さ",
     "en": "Length"
@@ -14877,8 +14877,8 @@
     "en": "Back locks"
    },
    "help": {
-    "ja": "右ほど長い(値は毛先の高さ。太ももの上まで)",
-    "en": "right is longer (the value is the tips' height; down to the thighs)"
+    "ja": "右ほど長い(値は毛先の高さ。伸ばす前の体で: 体型を変えても同じところまで)",
+    "en": "right is longer (the value is the tips' height, on the body before it is stretched: they reach the same place whatever the body type)"
    },
    "when": {
     "hair.back": "long"

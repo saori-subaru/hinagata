@@ -18,7 +18,7 @@ onmessage = ({ data: m }) => {
       const B = buildBody(m.opt, m.debug);
       kit = { bodySdf: B.bodySdf, HT: B.HT, BI: B.BI, weightsAt: makeWeights({ BODY: B.BODY, BONES: B.BONES, BI: B.BI, J: B.J }),
         clothes: buildClothes(m.opt, { P: B.P, J: B.J, HT: B.HT, CROTCH: B.CROTCH, bodySdf: B.bodySdf, ARMPIT: B.ARMPIT }),
-        hairKit: buildHair(m.opt, { P: B.P, CUT: B.CUT, PLANES: B.PLANES, faceWarp: B.faceWarp, bodySdf: B.bodySdfRaw }) };
+        hairKit: buildHair(m.opt, { P: B.P, J: B.J, CUT: B.CUT, PLANES: B.PLANES, faceWarp: B.faceWarp, bodySdf: B.bodySdfRaw }) };
       kitKey = m.key;
     }
     const s = partSpec(m.part, { OPT: m.opt, H: m.H, clothH: m.clothH, kit, bodyAt: m.grid ? gridSampler(m.grid, kit.bodySdf) : null });

@@ -7,12 +7,12 @@
 //   … --engine path/to/hinagata                                                       and the editor runs that checkout's engine (below)
 //   (get it with: curl -O https://hinagata.pages.dev/sync.mjs — or tools/sync.mjs in the repository)
 //
-// The file is the character: a character file as the editor exports it, { "hinagata": 4, "name": …, "options": { the recipe: only what
+// The file is the character: a character file as the editor exports it, { "hinagata": 5, "name": …, "options": { the recipe: only what
 // differs from the defaults } }. Whoever writes it (an agent, you in a text editor, git) is shown in the editor within a moment; what you
 // change in the editor is written back into it (pretty-printed, keys in a steady order), so the agent sees your tweaks as a diff. A file
-// that doesn't exist yet is made ({ "hinagata": 4, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
+// that doesn't exist yet is made ({ "hinagata": 5, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
 // against. Version 1, and a bare recipe file (the options alone, as files were before 2026-10-06), mean the old chibi defaults; version 2
-// the first tall body (about 4 heads, a bigger head); version 3 the tall body with a head of 0.7 (about 4.2 heads), version 4 today's (about 4.5 heads). A file keeps its form and version: the
+// the first tall body (about 4 heads, a bigger head); version 3 the tall body with a head of 0.7 (about 4.2 heads), version 4 about 4.5 heads, version 5 today's (the long hair's length in base space, as the clothes' heights). A file keeps its form and version: the
 // editor writes a bare file back bare, relative to the old defaults, and a version 2 file back as version 2.
 //
 // It prints a link: the editor opened with ?sync=<port>&key=<key> connects here. The key (random, per run) keeps other web pages from
@@ -50,7 +50,7 @@ const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url
 const LINK = `${EDITOR}?sync=${PORT}&key=${KEY}${ENGINE ? "&engine=" + encodeURIComponent(ENGINE_URL) : ""}`;
 
 // RECIPE_VERSION in src/options.js (this file has no dependencies): the version of a file made here
-const VERSION = 4;
+const VERSION = 5;
 // the file's content (a character file, or a bare recipe), parsed; rev counts changes from either side
 let recipe = {}, rev = 0, written = null;
 const isFile = (d) => !!d && typeof d === "object" && "hinagata" in d && !!d.options && typeof d.options === "object" && !Array.isArray(d.options);

@@ -2,8 +2,12 @@
 // grow on the scalp (angle around the head, height) and where their tips end, and follow the head's shape.
 import { smin, E, C, G, dPrim, blend, sstep } from "../sdf/prim.js";
 import { grad } from "../sdf/mesh.js";
+import { makeStretch } from "../body/index.js";
 
-export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, bodySdf }) {
+export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = () => 1, bodySdf }) {
+  // hair.sculpt.long.bottom is a height in base space (the body before body.proportion stretches it; recipe version 5): the block's curtain
+  // takes it as built (as it did the number before), so the same long hair looks the same
+  const LONG_BOTTOM = J ? makeStretch(OPT, J).fwd(OPT.hair.sculpt.long.bottom) : OPT.hair.sculpt.long.bottom;
   //  髪: 前髪ブロック + 後ろ髪ブロック(ピーロと同じ分け方)。それぞれ差し替えられる
   //  前髪の毛束は「根元の位置(頭のまわりの角度・高さ)→毛先の高さ」で決めて、頭の形に沿わせる
   const KX = OPT.body.sculpt.skull.width / 0.249;   // hair follows the skull width
@@ -104,7 +108,7 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   function longCurtain(o, base) {
     const L = o.long, e = (x, z) => skullOnly(x, L.yc, z) - (o.r[0] - 0.282 * KX) - SHELL;
     const f = (x, y, z) => { const sp = 1 + L.spread * Math.max(0, L.yc - y), th = Math.atan2(x, z);
-      const bottom = L.bottom + L.tips * (1 - Math.pow(Math.abs(Math.cos(th * L.teeth)), 2)) + L.curve * x * x;   // points along the lower edge, the sides a little higher
+      const bottom = LONG_BOTTOM + L.tips * (1 - Math.pow(Math.abs(Math.cos(th * L.teeth)), 2)) + L.curve * x * x;   // points along the lower edge, the sides a little higher
       const ear = earDist(x, y, z) - EAR_GAP.gap;
       return smax(smax(smax(smax(e(x / sp, z), z - L.zc, 0.03), bottom - y, 0.012), y - L.yc - 0.04, 0.05), -ear, EAR_GAP.k); };
     return { ...base, by0: 0.85, br: 0.65, f: (x, y, z) => smin(base.f(x, y, z), f(x, y, z), 0.03) };

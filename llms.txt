@@ -42,10 +42,10 @@ goes. The character is one asset among the court, the ball and the UI:
 ## The character file and the live link
 
 1. Keep the character in its own file, `character.json`, and have the game load it (`createAvatar("character.json")`). Don't bury it in
-   code. One file per character. Write it as the editor exports it: `{ "hinagata": 4, "name": "…", "options": { the recipe } }`.
-   `"hinagata"` is the recipe version (the defaults the recipe is written against): 4 = today's (the tall body, about 4.5 heads). Version 3
-   (its head a little bigger, about 4.2), version 2 (the first tall body), version 1 and a file that is only a recipe (no `"hinagata"`: the old chibi defaults) are read with
-   the defaults they were made against, so old characters stay as they were. Write new files as version 4.
+   code. One file per character. Write it as the editor exports it: `{ "hinagata": 5, "name": "…", "options": { the recipe } }`.
+   `"hinagata"` is the recipe version (the defaults the recipe is written against): 5 = today's (the tall body, about 4.5 heads). Version 4
+   (the long hair's length on the character as built), version 3 (a head a little bigger), version 2 (the first tall body), version 1 and a file that is only a recipe (no `"hinagata"`: the old chibi defaults) are read with
+   the defaults they were made against, so old characters stay as they were. Write new files as version 5.
    A file the user saved from the editor (書き出し → JSON / Export → JSON) works as it is: to put their character in the game, they drop it
    in place of the file.
 2. Start the live sync so the user can fine-tune it in the editor while you work on the game (they don't need to ask for it):
@@ -64,7 +64,7 @@ goes. The character is one asset among the court, the ball and the UI:
 
 The sync works when you run on the user's own machine (the editor in their browser reaches 127.0.0.1). A cloud agent can't reach it:
 then hand the user an editor link with the character in it instead: `https://hinagata.pages.dev/editor/?o=` + encodeURIComponent(JSON of
-the character file, `{ "hinagata": 4, "options": … }`; a bare recipe in a link is read as an old one, with the chibi defaults).
+the character file, `{ "hinagata": 5, "options": … }`; a bare recipe in a link is read as an old one, with the chibi defaults).
 
 ## Use it in a page
 
@@ -114,7 +114,7 @@ simulated on the CPU every frame. Budget for both:
 
 Only what differs from the defaults, nested as the options are (in a character file it is the `"options"`). Example:
 ```json
-{ "hinagata": 4, "name": "Lena", "options": {
+{ "hinagata": 5, "name": "Lena", "options": {
   "colors": { "hair": "#f3f1ee", "eyes": "#4fb36a" },
   "body": { "head": { "scale": 0.74 } },
   "hair": { "bangs": "nendo", "back": "long", "tail": { "kind": "side", "side": "L" }, "gradient": { "on": true, "color": "#5fae6a" } },
@@ -150,7 +150,7 @@ node tools/measure.mjs character.json --to 0.38                # a height on the
 ```
 (in a clone of the repository; the sync helper's MCP tools `measure` and `fit_proportions` do the same when it runs from the repository or
 with --engine). In code: `measureCharacter(recipe)` and `fitProportions(recipe, { heads, hip, knee, shoulder, chin, height })` (no
-three.js: Node too). Heights in options (a skirt's hem, a sock's top, a collar's back) are in base space, the body before
+three.js: Node too). Heights in options (a skirt's hem, a sock's top, a collar's back, the long hair's tips) are in base space, the body before
 `body.proportion` stretches it, so a centimetre there can be several on the character: convert with `--to` / `measure.base(y)` instead.
 Widths aren't stretched. The height is to the top of the head without the hair, standing in its shoes; heads = height ÷ (top of the head
 to the chin). The fit turns `body.head.scale`, `body.proportion.legs` and `.torso` (and `body.adult.knee` on the adult body); start a
