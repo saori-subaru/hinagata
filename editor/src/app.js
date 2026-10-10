@@ -13,6 +13,7 @@ import { createPaintTool } from "./paint.js";
 import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
 import { connectSync } from "./sync.js";
+import { createReference } from "./reference.js";
 import { t, setLang, getLang, translatePage, poseName, groupName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -49,6 +50,8 @@ function persist() {
 
 // ── 3D view and building ──
 const vp = createViewport($("gl"), $("stage"));
+const ref = createReference({ vp, t, h, prefs, savePrefs, onChange: () => renderViewControls() });   // a reference picture over the view (reference.js)
+ref.load(cur.id);
 let building = false, again = false, ver = 0, refineT = 0, quick = false, refining = false;   // quick: the avatar shown is the quick build   // ver: counts the recipe's changes (a refined build made from an older one is dropped)
 let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
 const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
@@ -246,6 +249,7 @@ const ICON = {
   clay: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle></svg>',
   wire: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="M4 12h16M12 4v16M4 4l16 16"></path></svg>',
   bones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="7" cy="19" r="2"></circle><circle cx="17" cy="19" r="2"></circle><path d="M12 7v6l-5 6M12 13l5 6"></path></svg>',
+  ref: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 16l5-5 4 4 3-3 6 6"></path><circle cx="15.5" cy="8.5" r="1.5"></circle></svg>',
   floor: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="16" rx="9" ry="3.5"></ellipse></svg>',
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>',
   caret: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>',
@@ -256,7 +260,8 @@ function renderViewControls() {
   $("views").replaceChildren(...VIEW_NAMES.map((v) => h("button", { type: "button", "aria-pressed": String(v === curView), onclick: () => { curView = v; vp.view(v); renderViewControls(); } }, t(`v_${v}`))));
   const D = vp.displayState;
   $("display").replaceChildren(...["clay", "wire", "bones", "floor"].map((k) => h("button", { class: "ico", type: "button", "aria-pressed": String(D[k]), "aria-label": t(`d_${k}`), title: t(`d_${k}`), html: ICON[k],
-    onclick: () => { vp.display(k, !D[k]); if (k === "floor") { prefs.floor = !D[k]; savePrefs(); } renderViewControls(); } })));
+    onclick: () => { vp.display(k, !D[k]); if (k === "floor") { prefs.floor = !D[k]; savePrefs(); } renderViewControls(); } })),
+    h("button", { class: "ico", type: "button", "aria-pressed": String(ref.open || ref.shown), "aria-label": t("d_ref"), title: t("d_ref"), html: ICON.ref, onclick: () => ref.toggle() }));
   $("bg").replaceChildren(...Object.keys(BACKGROUNDS).map((k) => h("option", { value: k, selected: k === prefs.bg }, t(`bg_${k}`))));
   const M = vp.motion;
   $("poses").replaceChildren(
@@ -326,7 +331,7 @@ $("lang").addEventListener("click", (e) => { const l = e.target.closest("button"
 function switchTo(c) {
   store.commit(); persist();
   cur = c; lib.current = c.id; $("name").value = c.name;
-  store.replace(recipeOf(c.recipe)); syncUndo(); renderLibrary();
+  store.replace(recipeOf(c.recipe)); syncUndo(); renderLibrary(); ref.load(c.id);
 }
 const ago = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? t("justNow") : m < 60 ? t("minAgo", m) : m < 60 * 24 ? t("hAgo", Math.round(m / 60)) : new Date(ms).toLocaleDateString(getLang()); };
 function renderLibrary() {
@@ -348,7 +353,7 @@ $("libDel").addEventListener("click", () => {
   if (!confirm(t("confirmDelete", cur.name))) return;
   lib.chars = lib.chars.filter((c) => c.id !== cur.id);
   if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
-  cur = lib.chars[0]; lib.current = cur.id; $("name").value = cur.name; store.replace(recipeOf(cur.recipe)); syncUndo(); renderLibrary();
+  cur = lib.chars[0]; lib.current = cur.id; $("name").value = cur.name; store.replace(recipeOf(cur.recipe)); syncUndo(); renderLibrary(); ref.load(cur.id);
 });
 
 // ── export ──

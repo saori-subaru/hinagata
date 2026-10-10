@@ -129,6 +129,20 @@ button { cursor: pointer; }
 .motionList .chip { padding: 5px 11px; font-size: 12px; }
 .motionList h3 { margin: 0 0 6px; font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
 .motionList section:first-child .chip { border-color: var(--accent-soft); }
+/* the reference picture (reference.js): over the 3D view, under the buttons */
+.ref-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.ref-img { position: absolute; max-width: none; user-select: none; }
+.ref-guides .ref-line { position: absolute; left: 0; right: 0; border-top: 1px dashed #4b4acf99; }
+.ref-guides .ref-line span { position: absolute; right: 10px; top: -15px; font: 500 10.5px var(--mono); color: var(--accent-ink); background: #fbfaf7cc; padding: 0 4px; border-radius: 4px; }
+.ref-handle { position: absolute; height: 0; border-top: 2px solid #d8433f; pointer-events: auto; cursor: ns-resize; }
+.ref-handle::before { content: ""; position: absolute; left: 0; right: 0; top: -9px; height: 16px; }   /* (an easier target than 2 px) */
+.ref-handle span { position: absolute; left: 4px; top: -19px; font-size: 11px; font-weight: 600; color: #fff; background: #d8433f; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.refPanel { position: absolute; z-index: 3; right: 14px; top: 60px; width: min(260px, 70%); display: grid; gap: 8px; justify-items: start; padding: 12px 14px 14px;
+  background: var(--surface); border-radius: var(--r-panel); box-shadow: var(--shadow-2); font-size: 12.5px; }
+.refPanel h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.refPanel .hint { margin: -2px 0 0; color: var(--faint); font-size: 11.5px; }
+.refPanel .chk { display: flex; align-items: center; gap: 6px; }
+.refPanel .rng { display: grid; gap: 4px; width: 100%; } .refPanel .rng input { width: 100%; margin: 0 0 4px; }
 .stats { font: 500 11px var(--mono); color: var(--muted); display: grid; gap: 2px; }
 .busy { position: absolute; z-index: 3; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--ink); color: #fff; border-radius: var(--pill); padding: 6px 14px; font-size: 12.5px; font-weight: 600; }
 .busy i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 0.9s ease-in-out infinite alternate; }

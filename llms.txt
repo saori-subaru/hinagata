@@ -248,5 +248,7 @@ headband: 島風's were made this way) is a part, one file in your own copy of t
 
 https://hinagata.pages.dev (the editor) — the user's tool: sliders for every main option, dragging hair tufts and tails on the head,
 drawing locks of hair and face parts, painting on the clothes, accessories by clicking, poses to preview, export to code or GLB.
+A reference picture can be put over or beside the character at its size, with height guides (its chin, shoulders, hips, knees as
+shares of its height, and how many heads tall it is): when the user has a picture of the character they want, suggest it.
 `?o=<character file JSON>` opens a character as a new one; `?sync=<port>&key=<key>` (the sync helper's link) follows a file. New
 characters there start tall; the body type row offers the chibi ones.

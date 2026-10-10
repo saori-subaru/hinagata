@@ -98,12 +98,14 @@ export function createViewport(canvas, stage) {
   // ── motion clock ──
   const M = { pose: "idle", playing: true, speed: 1 };
   let last = performance.now();
+  const hooks = [];   // called after each frame is drawn (overlays that follow the camera: reference.js)
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (tween) { const k = Math.min(1, (now - tween.s) / 380), e = 1 - (1 - k) ** 3; camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e); if (k >= 1) tween = null; }
     if (avatar) { const d = M.playing ? dt * M.speed : 0; if (!demos.step(avatar, d)) avatar.update(d); chair.visible = !!avatar.lastPose?.chair; }
     controls.update(); renderer.render(scene, camera);
+    for (const f of hooks) f();
   }
   requestAnimationFrame(frame);
 
@@ -129,5 +131,5 @@ export function createViewport(canvas, stage) {
     return url.slice(url.indexOf(",") + 1);
   }
 
-  return { view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  return { onFrame: (f) => hooks.push(f), stage, view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }
