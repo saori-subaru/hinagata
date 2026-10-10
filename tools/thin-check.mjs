@@ -35,12 +35,20 @@ const PAGE = `http://127.0.0.1:${server.address().port}/tools/thin-check.html?${
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "hinagata-thin-"));
 const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check",
   "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--window-size=1200,900", "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
-const done = (code) => { try { chrome.kill(); } catch {} server.close(); setTimeout(() => { try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} process.exit(code); }, 300); };
-const wsUrl = await new Promise((resolve, reject) => { let buf = ""; chrome.stderr.on("data", (d) => { buf += d; const m = buf.match(/DevTools listening on (ws:\/\/\S+)/); if (m) resolve(m[1]); });
-  chrome.on("exit", (c) => reject(new Error(`Chrome exited (${c})`))); setTimeout(() => reject(new Error("Chrome didn't start")), 20000); });
+// done: close the browser through DevTools (Edge's first process exits at once and its browser goes on in others, which killing it left
+// running: 2026-10-10, a dozen headless Edge processes holding the profile), then remove the profile
+let closeBrowser = null;
+const done = (code) => { try { closeBrowser?.(); } catch {} try { chrome.kill(); } catch {} server.close(); setTimeout(() => { try { fs.rmSync(profile, { recursive: true, force: true }); } catch {} process.exit(code); }, 1200); };
+// where DevTools listens: from stderr (Chrome) or from the profile's DevToolsActivePort file (Edge, whose first process exits with 0 before saying it)
+const wsUrl = await new Promise((resolve, reject) => { let buf = "", ok = false; const got = (u) => { if (!ok) { ok = true; resolve(u); } };
+  chrome.stderr.on("data", (d) => { buf += d; const m = buf.match(/DevTools listening on (ws:\/\/\S+)/); if (m) got(m[1]); });
+  const port = path.join(profile, "DevToolsActivePort"), poll = setInterval(() => { try { const [p, id] = fs.readFileSync(port, "utf8").trim().split(/\r?\n/); if (p && id) { clearInterval(poll); got(`ws://127.0.0.1:${p}${id}`); } } catch {} }, 200);
+  chrome.on("exit", (c) => { if (c !== 0) { clearInterval(poll); reject(new Error(`the browser exited (${c})`)); } });
+  setTimeout(() => { clearInterval(poll); reject(new Error("the browser didn't start")); }, 30000); });
 
 // the DevTools protocol, by hand: one page target, Runtime.evaluate until the page sets window.RESULT
 const ws = new WebSocket(wsUrl); await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
+closeBrowser = () => ws.send(JSON.stringify({ id: 999999, method: "Browser.close" }));
 let nid = 0; const waiting = new Map();
 ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.id && waiting.has(m.id)) { const w = waiting.get(m.id); waiting.delete(m.id); m.error ? w.j(new Error(m.error.message)) : w.r(m.result); }
   else if (m.method === "Runtime.exceptionThrown") console.error("page:", m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);

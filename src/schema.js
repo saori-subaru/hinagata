@@ -434,6 +434,7 @@ function build() {
     let type = typeOf(v, { ...ex, path });
     if (ex && v === null) type = /\.src$/.test(path) ? "image" : ex.options ? "enum" : /color/i.test(path) ? "color" : "number";   // described values whose default is null
     if (type === "enum" && !ex?.options) type = "json";   // an undescribed string: free value
+    if (ex?.type) type = ex.type;   // an entry may say its type (a color or a number whose default is null: guessed from its name, "band" was taken for a number)
     const e = { path, type, default: v, label: ex?.label ?? { en: human(path) }, group: ex?.group ?? at.group, tier: ex ? ex.tier ?? "main" : "advanced", cost: ex?.cost ?? at.cost, apply: ex?.apply ?? at.apply ?? null };
     if (type === "number") Object.assign(e, ex && ex.min != null ? { min: ex.min, max: ex.max, step: ex.step } : { ...guessRange(v ?? 0), soft: true });
     if (ex?.options) e.options = ex.options;
