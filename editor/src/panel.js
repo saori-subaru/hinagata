@@ -1,6 +1,6 @@
 // The inspector: tabs, and controls generated from the schema (src/schema.js).
 // Main values are shown in schema order under their sections; every other value of the tab sits in the folded "Advanced" part.
-import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET, PART_LABELS } from "../../src/index.js";
+import { SCHEMA, DEFAULTS, BODY_TYPES, EXPRESSIONS, EXPRESSION_SET, PART_LABELS } from "hinagata/index.js";
 import { getPath, isDefault, diffCount } from "./store.js";
 import { t, L, bodyTypeName } from "./i18n.js";
 

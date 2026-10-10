@@ -5,7 +5,7 @@
 // dabs fill the gap, so a quick stroke stays unbroken. The canvas shows on the character at once; releasing writes it into the recipe
 // (paint.<part>.src, one undo step). The camera doesn't turn while painting (the right button still pans).
 import * as THREE from "three";
-import { paintPixel, paintViews } from "../../src/paint.js";
+import { paintPixel, paintViews } from "hinagata/paint.js";
 
 /** vp: the viewport / store: the recipe / onChange(): the tool's state changed (the panel redraws) */
 export function createPaintTool({ vp, store, onChange = () => {} }) {

@@ -52,7 +52,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   // the character's drawn expressions (face.drawn): their own eye / brow / mouth, placed like the ふつう ones ("eye@<id>" …)
   const DRAWN = (OPT.face.drawn ?? []).filter((d) => d && d.id != null), BLINKS = new Set([...BLINKS0, ...DRAWN.filter((d) => d.blink !== false).map((d) => DRAWN_PREFIX + d.id)]);
   for (const d of DRAWN) for (const k of ["eye", "eyeL", "brow", "mouth"]) PART_IMG[`${k}@${d.id}`] = { ...PART_IMG[k], src: d[k] ?? null };
-  for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
+  for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
   const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
   const imgOr = (keys, x, y) => { const k = keys.find((q) => PART_IMG[q]?.img); if (k) imgPart(k, x, y); return !!k; };   // the first of these pictures that is loaded
   const PARTS = {

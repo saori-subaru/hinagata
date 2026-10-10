@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS, RECIPE_VERSION, EXPRESSIONS } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS, RECIPE_VERSION, EXPRESSIONS } from "hinagata/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -38,7 +38,7 @@ const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pr
 const lib = loadLibrary();
 const shared = new URLSearchParams(location.search).get("o"), SYNC = (({ sync, key }) => sync && key ? { port: +sync, key } : null)(Object.fromEntries(new URLSearchParams(location.search)));   // SYNC: live sync with a recipe file (sync.js)
 // ?o=: a character file ({ hinagata: 3, name, options }: the links made since 2026-10-06, of their version), or a bare recipe (links made before: the chibi defaults)
-if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
+if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } { const keep = new URLSearchParams(location.search); keep.delete("o"); const q = keep.toString(); history.replaceState(null, "", location.pathname + (q ? "?" + q : "")); } }   // (the sync and the engine stay)
 if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
 let cur = lib.chars.find((c) => c.id === lib.current) ?? lib.chars[0]; lib.current = cur.id;
 const store = createStore(recipeOf(cur.recipe));
@@ -182,6 +182,8 @@ if (SYNC) connectSync({ ...SYNC, store,
     try { return { png: vp.capture({ view: a.view, size: a.size, bg: BACKGROUNDS[prefs.bg]?.[0] ?? "#ebe5dc" }) }; }
     finally { if (a.pose) { av.play(POSES[was] ? was : "idle"); av.update(0, { instant: true }); } }
   } });
+function showEngine() { const u = window.HINAGATA_ENGINE; if (!u) return; const el = $("engineState"); el.hidden = false; el.textContent = t("engineLocal", new URL(u).host); el.title = `${t("engineTip")} (${u})`; }   // someone's own engine (index.html, ?engine=)
+showEngine();
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null, drawPut = true;   // drawPut: what is read also goes onto the expression being edited (false: a drawing redrawn from its own button)   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
@@ -319,7 +321,7 @@ addEventListener("keydown", (e) => {
   else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); store.redo(); }
 });
 function renderLang() { for (const b of $("lang").children) b.setAttribute("aria-pressed", String(b.dataset.lang === getLang())); }
-$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); showSync(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
+$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); showSync(); showEngine(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
 
 function switchTo(c) {
   store.commit(); persist();

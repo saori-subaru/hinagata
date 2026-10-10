@@ -1,7 +1,7 @@
 // The 3D view: camera and view buttons, light and floor, display aids (clay, wireframe, bones), background, motion clock, PNG capture.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { clayMat } from "../../src/materials.js";
+import { clayMat } from "hinagata/materials.js";
 import { createDemos } from "./demos.js";
 
 const VIEWS = {   // [camera position, target]

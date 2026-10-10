@@ -9,7 +9,7 @@
 //   Esc drops it) and eyedropper.
 // The template under the drawing is in layers (2026-10-05, Saori: "下絵はレイヤー形式にして、顔、顔のパーツで表示非表示と透明度"): the face
 // (the head, skin only) and its parts (the guide face), each shown or hidden and with its own opacity; the frames always on top of them.
-import { faceSheetLayers, sheetLayout } from "../../src/index.js";
+import { faceSheetLayers, sheetLayout } from "hinagata/index.js";
 
 const PARTS = ["eye", "eyeL", "brow", "mouth", "nose"];
 const TOOLS = ["pen", "eraser", "fill", "path", "pick"];

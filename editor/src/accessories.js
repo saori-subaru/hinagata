@@ -3,7 +3,7 @@
 // facing the way the surface faces. While an item is picked, a click moves it instead ("Add another" lets go of it). The picked item has its
 // size, turn, color and mirror; each change is one undo step. The camera doesn't turn while the tool is on (the right button still pans).
 import * as THREE from "three";
-import { ACCESSORY_KINDS } from "../../src/accessories.js";
+import { ACCESSORY_KINDS } from "hinagata/accessories.js";
 
 const SIZE = { leaf: 0.08, gem: 0.03, flower: 0.05, star: 0.05, ball: 0.03, ribbon: 0.12, band: 0.012, button: 0.018, anchor: 0.07 };
 

@@ -6,7 +6,7 @@
 // recipe file is version 1 (the chibi defaults it was written against) and is written back as one, relative to those defaults. In the
 // editor the recipe is in today's terms (openRecipe), like every other character.
 import { changedPaths, getPath, compact, recipeOf } from "./store.js";
-import { openRecipe, recipeAt } from "../../src/index.js";
+import { openRecipe, recipeAt } from "hinagata/index.js";
 
 /** { port, key }: where the helper is / store: the recipe / onStart(recipe, fileName): the first recipe, resolved (the app switches to it) /
  *  onStatus(state, fileName): "on" | "off" | "error" */

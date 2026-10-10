@@ -6,7 +6,7 @@
 2. ~~schema の型を明示できるように（null の色が数値と推測された）~~ 済み
 3. ~~thin-check が Edge で動く・終わったら Edge を閉じる~~ 済み
 4. ~~パーツを1ファイルで登録できる仕組み~~ 済み（src/garments、definePart。島風のパーツも移した。DESIGN.md "Garment parts that describe themselves"）
-5. 同期ツールで手元のエンジンを配る（sync.mjs --engine、エディタの ?engine=）：公開エディタのまま、ユーザーの改造版エンジンで見られる
+5. ~~同期ツールで手元のエンジンを配る（sync.mjs --engine、エディタの ?engine=）~~ 済み（localhost のエンジンだけ受け付ける）
 6. llms.txt に「パーツの足し方」：上の仕組みと、手元で確かめる手順（schema.mjs、thin-check、エディタ）
 7. エディタに参考画像を重ねる機能（髪の頂点と床をそろえて並べる・重ねる、各部の高さを割合で）
 8. 服の高さ・幅を実寸や身長比で指定できる道（いまは伸ばす前の体の座標で、大人の体の腰まわりは約4.6倍）

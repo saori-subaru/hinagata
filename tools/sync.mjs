@@ -4,6 +4,7 @@
 //
 //   node sync.mjs character.json [--port 8790] [--editor https://…/editor/]          a helper you run yourself
 //   node sync.mjs character.json --mcp [--port 8790]                                  the same, as an agent's MCP server (stdio)
+//   … --engine path/to/hinagata                                                       and the editor runs that checkout's engine (below)
 //   (get it with: curl -O https://hinagata.pages.dev/sync.mjs — or tools/sync.mjs in the repository)
 //
 // The file is the character: a character file as the editor exports it, { "hinagata": 3, "name": …, "options": { the recipe: only what
@@ -22,6 +23,12 @@
 //                 "request" { rid, cmd, args }: something only the editor can do (a picture of the character), answered with
 //   POST /response { rid, result | error }
 //
+// --engine <a checkout of the repository, or its src/> (2026-10-10, after 島風: a user's agent added parts to its own copy of the engine, and
+// the user had no way to see them in the editor short of serving a copy of the editor too): the engine's files are served here under
+// /engine/<key>/src/ (read-only: that src/ and the img/ beside it only), and the link opens the site's editor with &engine=<that URL>: the editor loads the engine
+// from this machine (it takes ?engine= only from localhost). Reload the editor after changing the engine. The MCP tools' options (find_options,
+// check_recipe) come from that engine's schema too (src/schema.js, read when first asked: restart this after adding options).
+//
 // MCP (--mcp; JSON-RPC over stdin / stdout, logs on stderr): tools for the agent: editor_link, get_recipe, update_recipe, check_recipe,
 // find_options (the options' schema: docs/options.schema.json next to this file in the repository, else the site's copy) and screenshot
 // (rendered by the connected editor). Claude Code: claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp
@@ -29,13 +36,17 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2), opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : d; }, flag = (k) => { const i = args.indexOf(k); return i >= 0 ? !!args.splice(i, 1) : false; };
-const PORT = +opt("--port", 8790), EDITOR = opt("--editor", "https://hinagata.pages.dev/editor/"), MCP = flag("--mcp"), FILE = args[0];
+const PORT = +opt("--port", 8790), EDITOR = opt("--editor", "https://hinagata.pages.dev/editor/"), MCP = flag("--mcp"), ENGINE_ARG = opt("--engine", null), FILE = args[0];
 const say = (...m) => (MCP ? console.error : console.log)(...m);   // MCP: stdout is the protocol's
-if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 8790] [--editor URL]"); process.exit(1); }
-const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), LINK = `${EDITOR}?sync=${PORT}&key=${KEY}`;
+if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 8790] [--editor URL] [--engine path/to/hinagata]"); process.exit(1); }
+// the engine's directory (the one holding index.js and schema.js): a checkout's src/, or that directory itself
+const ENGINE = ENGINE_ARG && [path.join(ENGINE_ARG, "src"), ENGINE_ARG].map((d) => path.resolve(d)).find((d) => fs.existsSync(path.join(d, "index.js")) && fs.existsSync(path.join(d, "schema.js")));
+if (ENGINE_ARG && !ENGINE) { console.error(`--engine ${ENGINE_ARG}: no engine there (a checkout of the repository, or its src/, with index.js and schema.js)`); process.exit(1); }
+const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), ENGINE_URL = `http://127.0.0.1:${PORT}/engine/${KEY}/src/`;
+const LINK = `${EDITOR}?sync=${PORT}&key=${KEY}${ENGINE ? "&engine=" + encodeURIComponent(ENGINE_URL) : ""}`;
 
 // RECIPE_VERSION in src/options.js (this file has no dependencies): the version of a file made here
 const VERSION = 3;
@@ -77,10 +88,20 @@ const cors = (req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS"); res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Hinagata-Key");
   res.setHeader("Access-Control-Allow-Private-Network", "true");   // a page on the web reaching a local server (Chrome asks first)
 };
+// the engine's files (--engine): its src/ and the img/ beside it (the face's stock eye), nothing else; never cached (an edit shows on the
+// editor's next reload)
+const TYPES = { ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".glsl": "text/plain" };
+const ROOT = ENGINE && path.dirname(ENGINE), SERVED = ENGINE ? [ENGINE, path.join(ROOT, "img")] : [];
+function serveEngine(rel, res) {
+  const p = path.resolve(ROOT, rel);
+  if (!SERVED.some((d) => p.startsWith(d + path.sep)) || !TYPES[path.extname(p)]) { res.writeHead(404); return res.end(); }
+  fs.readFile(p, (e, b) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": TYPES[path.extname(p)], "Cache-Control": "no-store" }); res.end(b); });
+}
 const body = (req, then) => { let b = ""; req.on("data", (d) => { b += d; if (b.length > 48 << 20) req.destroy(); }); req.on("end", () => { let m; try { m = JSON.parse(b); } catch { m = null; } then(m); }); };
 http.createServer((req, res) => {
   cors(req, res);
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
+  if (ENGINE && req.url.startsWith(`/engine/${KEY}/`) && req.method === "GET") return serveEngine(decodeURIComponent(new URL(req.url, "http://x").pathname.slice(`/engine/${KEY}/`.length)), res);   // (the key in the path: a module's own imports keep it)
   const url = new URL(req.url, "http://x"), key = url.searchParams.get("key") ?? req.headers["x-hinagata-key"];
   if (key !== KEY) { res.writeHead(403, { "Content-Type": "text/plain" }); return res.end("wrong key"); }
   if (url.pathname === "/recipe" && req.method === "GET") { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ recipe, rev, file: NAME })); }
@@ -102,7 +123,7 @@ http.createServer((req, res) => {
   }
   res.writeHead(404); res.end();
 }).on("error", (e) => { say(`Hinagata sync: ${e.code === "EADDRINUSE" ? `port ${PORT} is taken (another sync running? --port another)` : e.message}`); if (!MCP) process.exit(1); })
-  .listen(PORT, "127.0.0.1", () => say(`Hinagata sync: ${file}\n  open the editor with:\n  ${LINK}\n  ${MCP ? "(MCP server on stdio)" : "(Ctrl+C to stop)"}`));
+  .listen(PORT, "127.0.0.1", () => say(`Hinagata sync: ${file}${ENGINE ? `\n  engine: ${ENGINE}` : ""}\n  open the editor with:\n  ${LINK}\n  ${MCP ? "(MCP server on stdio)" : "(Ctrl+C to stop)"}`));
 
 if (MCP) mcp();
 
@@ -110,6 +131,8 @@ if (MCP) mcp();
 let SCHEMA = null;
 async function schema() {
   if (SCHEMA) return SCHEMA;
+  if (ENGINE) try { const { SCHEMA: S } = await import(pathToFileURL(path.join(ENGINE, "schema.js")).href); return SCHEMA = JSON.parse(JSON.stringify(S)); }   // (the engine's own: its added parts' options too)
+    catch (e) { say(`  the engine's schema couldn't be read (${e.message}); using the repository's docs/options.schema.json`); }
   const here = path.dirname(fileURLToPath(import.meta.url));
   for (const f of [path.join(here, "../docs/options.schema.json"), path.join(here, "options.schema.json")]) try { return SCHEMA = JSON.parse(fs.readFileSync(f, "utf8")).options; } catch {}
   const r = await fetch(new URL("../options.schema.json", EDITOR)); if (!r.ok) throw new Error(`couldn't get the options' schema (${r.status})`);
