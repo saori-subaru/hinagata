@@ -4,14 +4,15 @@
 //
 //   node sync.mjs character.json [--port 8790] [--editor https://…/editor/]          a helper you run yourself
 //   node sync.mjs character.json --mcp [--port 8790]                                  the same, as an agent's MCP server (stdio)
+//   … --engine path/to/hinagata                                                       and the editor runs that checkout's engine (below)
 //   (get it with: curl -O https://hinagata.pages.dev/sync.mjs — or tools/sync.mjs in the repository)
 //
-// The file is the character: a character file as the editor exports it, { "hinagata": 3, "name": …, "options": { the recipe: only what
+// The file is the character: a character file as the editor exports it, { "hinagata": 4, "name": …, "options": { the recipe: only what
 // differs from the defaults } }. Whoever writes it (an agent, you in a text editor, git) is shown in the editor within a moment; what you
 // change in the editor is written back into it (pretty-printed, keys in a steady order), so the agent sees your tweaks as a diff. A file
-// that doesn't exist yet is made ({ "hinagata": 3, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
+// that doesn't exist yet is made ({ "hinagata": 4, "options": {} }). "hinagata" is the recipe version: the defaults the recipe is written
 // against. Version 1, and a bare recipe file (the options alone, as files were before 2026-10-06), mean the old chibi defaults; version 2
-// the first tall body (about 4 heads, a bigger head); version 3 today's tall body (about 5 heads). A file keeps its form and version: the
+// the first tall body (about 4 heads, a bigger head); version 3 the tall body with a head of 0.7 (about 4.2 heads), version 4 today's (about 4.5 heads). A file keeps its form and version: the
 // editor writes a bare file back bare, relative to the old defaults, and a version 2 file back as version 2.
 //
 // It prints a link: the editor opened with ?sync=<port>&key=<key> connects here. The key (random, per run) keeps other web pages from
@@ -22,23 +23,34 @@
 //                 "request" { rid, cmd, args }: something only the editor can do (a picture of the character), answered with
 //   POST /response { rid, result | error }
 //
+// --engine <a checkout of the repository, or its src/> (2026-10-10, after 島風: a user's agent added parts to its own copy of the engine, and
+// the user had no way to see them in the editor short of serving a copy of the editor too): the engine's files are served here under
+// /engine/<key>/src/ (read-only: that src/ and the img/ beside it only), and the link opens the site's editor with &engine=<that URL>: the editor loads the engine
+// from this machine (it takes ?engine= only from localhost). Reload the editor after changing the engine. The MCP tools' options (find_options,
+// check_recipe) come from that engine's schema too (src/schema.js, read when first asked: restart this after adding options).
+//
 // MCP (--mcp; JSON-RPC over stdin / stdout, logs on stderr): tools for the agent: editor_link, get_recipe, update_recipe, check_recipe,
 // find_options (the options' schema: docs/options.schema.json next to this file in the repository, else the site's copy) and screenshot
-// (rendered by the connected editor). Claude Code: claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp
+// (rendered by the connected editor), and with the engine (inside the repository, or --engine) measure and fit_proportions (src/measure.js:
+// the proportions, base space ↔ on the character, the body from heads tall and shares). Claude Code: claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2), opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : d; }, flag = (k) => { const i = args.indexOf(k); return i >= 0 ? !!args.splice(i, 1) : false; };
-const PORT = +opt("--port", 8790), EDITOR = opt("--editor", "https://hinagata.pages.dev/editor/"), MCP = flag("--mcp"), FILE = args[0];
+const PORT = +opt("--port", 8790), EDITOR = opt("--editor", "https://hinagata.pages.dev/editor/"), MCP = flag("--mcp"), ENGINE_ARG = opt("--engine", null), FILE = args[0];
 const say = (...m) => (MCP ? console.error : console.log)(...m);   // MCP: stdout is the protocol's
-if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 8790] [--editor URL]"); process.exit(1); }
-const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), LINK = `${EDITOR}?sync=${PORT}&key=${KEY}`;
+if (!FILE) { console.error("usage: node sync.mjs character.json [--mcp] [--port 8790] [--editor URL] [--engine path/to/hinagata]"); process.exit(1); }
+// the engine's directory (the one holding index.js and schema.js): a checkout's src/, or that directory itself
+const ENGINE = ENGINE_ARG && [path.join(ENGINE_ARG, "src"), ENGINE_ARG].map((d) => path.resolve(d)).find((d) => fs.existsSync(path.join(d, "index.js")) && fs.existsSync(path.join(d, "schema.js")));
+if (ENGINE_ARG && !ENGINE) { console.error(`--engine ${ENGINE_ARG}: no engine there (a checkout of the repository, or its src/, with index.js and schema.js)`); process.exit(1); }
+const file = path.resolve(FILE), KEY = crypto.randomBytes(9).toString("base64url"), ENGINE_URL = `http://127.0.0.1:${PORT}/engine/${KEY}/src/`;
+const LINK = `${EDITOR}?sync=${PORT}&key=${KEY}${ENGINE ? "&engine=" + encodeURIComponent(ENGINE_URL) : ""}`;
 
 // RECIPE_VERSION in src/options.js (this file has no dependencies): the version of a file made here
-const VERSION = 3;
+const VERSION = 4;
 // the file's content (a character file, or a bare recipe), parsed; rev counts changes from either side
 let recipe = {}, rev = 0, written = null;
 const isFile = (d) => !!d && typeof d === "object" && "hinagata" in d && !!d.options && typeof d.options === "object" && !Array.isArray(d.options);
@@ -77,10 +89,20 @@ const cors = (req, res) => {
   res.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS"); res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Hinagata-Key");
   res.setHeader("Access-Control-Allow-Private-Network", "true");   // a page on the web reaching a local server (Chrome asks first)
 };
+// the engine's files (--engine): its src/ and the img/ beside it (the face's stock eye), nothing else; never cached (an edit shows on the
+// editor's next reload)
+const TYPES = { ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".glsl": "text/plain" };
+const ROOT = ENGINE && path.dirname(ENGINE), SERVED = ENGINE ? [ENGINE, path.join(ROOT, "img")] : [];
+function serveEngine(rel, res) {
+  const p = path.resolve(ROOT, rel);
+  if (!SERVED.some((d) => p.startsWith(d + path.sep)) || !TYPES[path.extname(p)]) { res.writeHead(404); return res.end(); }
+  fs.readFile(p, (e, b) => { if (e) { res.writeHead(404); return res.end(); } res.writeHead(200, { "Content-Type": TYPES[path.extname(p)], "Cache-Control": "no-store" }); res.end(b); });
+}
 const body = (req, then) => { let b = ""; req.on("data", (d) => { b += d; if (b.length > 48 << 20) req.destroy(); }); req.on("end", () => { let m; try { m = JSON.parse(b); } catch { m = null; } then(m); }); };
 http.createServer((req, res) => {
   cors(req, res);
   if (req.method === "OPTIONS") { res.writeHead(204); return res.end(); }
+  if (ENGINE && req.url.startsWith(`/engine/${KEY}/`) && req.method === "GET") return serveEngine(decodeURIComponent(new URL(req.url, "http://x").pathname.slice(`/engine/${KEY}/`.length)), res);   // (the key in the path: a module's own imports keep it)
   const url = new URL(req.url, "http://x"), key = url.searchParams.get("key") ?? req.headers["x-hinagata-key"];
   if (key !== KEY) { res.writeHead(403, { "Content-Type": "text/plain" }); return res.end("wrong key"); }
   if (url.pathname === "/recipe" && req.method === "GET") { res.writeHead(200, { "Content-Type": "application/json" }); return res.end(JSON.stringify({ recipe, rev, file: NAME })); }
@@ -102,14 +124,25 @@ http.createServer((req, res) => {
   }
   res.writeHead(404); res.end();
 }).on("error", (e) => { say(`Hinagata sync: ${e.code === "EADDRINUSE" ? `port ${PORT} is taken (another sync running? --port another)` : e.message}`); if (!MCP) process.exit(1); })
-  .listen(PORT, "127.0.0.1", () => say(`Hinagata sync: ${file}\n  open the editor with:\n  ${LINK}\n  ${MCP ? "(MCP server on stdio)" : "(Ctrl+C to stop)"}`));
+  .listen(PORT, "127.0.0.1", () => say(`Hinagata sync: ${file}${ENGINE ? `\n  engine: ${ENGINE}` : ""}\n  open the editor with:\n  ${LINK}\n  ${MCP ? "(MCP server on stdio)" : "(Ctrl+C to stop)"}`));
 
 if (MCP) mcp();
+
+// ── the engine's measure (src/measure.js: proportions; --engine's, or the repository's next to this file) ──
+let MEASURE = null;
+async function measurer() {
+  if (MEASURE) return MEASURE;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  for (const d of [ENGINE, path.join(here, "../src")].filter(Boolean)) { const p = path.join(d, "measure.js"); if (fs.existsSync(p)) return MEASURE = await import(pathToFileURL(p).href); }
+  throw new Error("measuring needs the engine: run this helper from the repository (tools/sync.mjs) or with --engine path/to/hinagata");
+}
 
 // ── the options' schema (for checking and finding options): next to this file in the repository, else the site's copy ──
 let SCHEMA = null;
 async function schema() {
   if (SCHEMA) return SCHEMA;
+  if (ENGINE) try { const { SCHEMA: S } = await import(pathToFileURL(path.join(ENGINE, "schema.js")).href); return SCHEMA = JSON.parse(JSON.stringify(S)); }   // (the engine's own: its added parts' options too)
+    catch (e) { say(`  the engine's schema couldn't be read (${e.message}); using the repository's docs/options.schema.json`); }
   const here = path.dirname(fileURLToPath(import.meta.url));
   for (const f of [path.join(here, "../docs/options.schema.json"), path.join(here, "options.schema.json")]) try { return SCHEMA = JSON.parse(fs.readFileSync(f, "utf8")).options; } catch {}
   const r = await fetch(new URL("../options.schema.json", EDITOR)); if (!r.ok) throw new Error(`couldn't get the options' schema (${r.status})`);
@@ -146,6 +179,10 @@ function mcp() {
       inputSchema: { type: "object", properties: { query: { type: "string" }, limit: { type: "number", description: "default 30" } }, required: ["query"] } },
     { name: "screenshot", description: "A picture of the character as it is now, rendered by the connected editor (it must be open: editor_link). view: free | front | side | back | face; pose: idle (default), walk, run, sitChair, sitFloor, wave, …",
       inputSchema: { type: "object", properties: { view: { type: "string" }, pose: { type: "string" }, size: { type: "number", description: "pixels, default 640" } } } },
+    { name: "measure", description: "The character's proportions: height (m, to the top of the head, in its shoes), heads tall, and the chin, shoulders, hip joints, knees and ankles (m and shares of the height). to: a height on the character (a share of its height, or metres as \"0.62m\") as the options take heights (base space: the body before body.proportion stretches it), e.g. for a skirt's hem; at: an option's height (base space) on the character. Needs the engine (this helper inside the repository, or --engine).",
+      inputSchema: { type: "object", properties: { to: { type: "string" }, at: { type: "number" } } } },
+    { name: "fit_proportions", description: "The body options that come nearest the proportions asked (heads: heads tall; hip, knee, shoulder, chin: heights as shares of the height; height: m), turning body.head.scale, body.proportion.legs and torso (and body.adult.knee on the adult body). Returns { set } and what it measures before and after; apply set with update_recipe. Start a chibi from a chibi body type. Needs the engine.",
+      inputSchema: { type: "object", properties: { heads: { type: "number" }, hip: { type: "number" }, knee: { type: "number" }, shoulder: { type: "number" }, chin: { type: "number" }, height: { type: "number" } } } },
   ];
   const text = (t) => ({ content: [{ type: "text", text: t }] });
   async function call(name, a = {}) {
@@ -164,6 +201,14 @@ function mcp() {
       hits.sort((x, y) => (x.tier === "main" ? 0 : 1) - (y.tier === "main" ? 0 : 1) || (x.order ?? 1e9) - (y.order ?? 1e9));
       const line = (e) => `${e.path} (${e.type}${e.type === "number" ? ` ${e.min}..${e.max}` : ""}${e.options ? `: ${e.options.map((o) => o.value).join(" | ")}` : ""}${e.nullable ? ", null = auto" : ""}) default ${JSON.stringify(e.default)} — ${L(e.label)}${e.help ? `: ${L(e.help)}` : ""}${e.when ? ` [only when ${JSON.stringify(e.when)}]` : ""}`;
       return text(hits.length ? hits.slice(0, a.limit ?? 30).map(line).join("\n") + (hits.length > (a.limit ?? 30) ? `\n… ${hits.length - (a.limit ?? 30)} more` : "") : "nothing found");
+    }
+    if (name === "measure" || name === "fit_proportions") {
+      const M = await measurer(), f3 = (v) => +v.toFixed(3), brief = (m) => ({ height: f3(m.height), heads: +m.heads.toFixed(2), lift: f3(m.lift), at: Object.fromEntries(Object.entries(m.at).map(([k, v]) => [k, f3(v)])), share: Object.fromEntries(Object.entries(m.share).map(([k, v]) => [k, f3(v)])) });
+      if (name === "fit_proportions") { const r = M.fitProportions(recipe, a); return text(JSON.stringify({ set: r.set, before: brief(r.before), after: brief(r.after) }, null, 2)); }
+      const m = M.measureCharacter(recipe);
+      if (a.to != null) { const v = String(a.to).endsWith("m") ? parseFloat(a.to) : parseFloat(a.to) * m.height; return text(JSON.stringify({ onCharacter: f3(v), base: f3(m.base(v)) })); }
+      if (a.at != null) { const v = m.built(+a.at); return text(JSON.stringify({ base: +a.at, onCharacter: f3(v), share: f3(v / m.height) })); }
+      return text(JSON.stringify(brief(m), null, 2));
     }
     if (name === "screenshot") { const r = await ask("screenshot", { view: a.view ?? "free", pose: a.pose ?? null, size: a.size ?? 640 }); return { content: [{ type: "image", data: r.png, mimeType: "image/png" }] }; }
     throw new Error(`unknown tool ${name}`);

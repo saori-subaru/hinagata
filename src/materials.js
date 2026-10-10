@@ -49,6 +49,29 @@ export function withGrad(m, U) {
   m.customProgramCacheKey = () => "grad|" + key;
   return m;
 }
+/** Bands of color on a part (2026-10-10, for 島風: a sailor collar's line, a glove's cuff and the line on it, a boot's cuff, striped socks).
+ *  bandT is a value per vertex that runs smoothly over the part (a distance from an edge, a height) and is cut into bands in the fragment
+ *  shader, so a band's edges stay crisp on the big triangles of a thinned mesh (a color per vertex would smear over them).
+ *  U: { n (ranges used, 0..3), lo, hi (vec3: the ranges' ends), c0, c1, c2 (their colors; a later range over an earlier one),
+ *       period (> 0: stripes instead: where (bandT - phase) / period's fraction is under duty, c0) } as uniforms ({ value }) */
+export function withBands(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { bN: U.n, bLo: U.lo, bHi: U.hi, bC0: U.c0, bC1: U.c1, bC2: U.c2, bPeriod: U.period, bDuty: U.duty, bPhase: U.phase });
+    sh.vertexShader = "attribute float bandT;\nvarying float vBandT;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vBandT = bandT;");
+    sh.fragmentShader = `uniform float bN, bPeriod, bDuty, bPhase;
+uniform vec3 bLo, bHi, bC0, bC1, bC2;
+varying float vBandT;
+float bIn(float t, float lo, float hi) { float w = fwidth(t) * 0.7 + 1e-6; return smoothstep(lo - w, lo + w, t) * (1.0 - smoothstep(hi - w, hi + w, t)); }
+` + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  if (bPeriod > 0.0) { float s = (vBandT - bPhase) / bPeriod, f = fract(s), w = fwidth(s) * 0.7 + 1e-6, d = f < bDuty ? min(f, bDuty - f) : -min(f - bDuty, 1.0 - f);
+    diffuseColor.rgb = mix(diffuseColor.rgb, bC0, smoothstep(-w, w, d)); }
+  else { if (bN > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC0, bIn(vBandT, bLo.x, bHi.x));
+    if (bN > 1.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC1, bIn(vBandT, bLo.y, bHi.y));
+    if (bN > 2.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC2, bIn(vBandT, bLo.z, bHi.z)); }`); };
+  m.customProgramCacheKey = () => "bands|" + key;
+  return m;
+}
 /** A picture on a garment, projected (the meshes have no UVs: they are remade from shapes on every change). From texP / texN, each vertex's
  *  place and normal when the mesh was made (they stay with the cloth when it moves). U.mode: 0 = tile (from the three axes, blended by the
  *  normal: patterns), 1 = wrap (around the body's upright axis, like a label), 2 = front (once, from the front: a print).

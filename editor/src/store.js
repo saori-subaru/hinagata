@@ -1,5 +1,5 @@
 // The recipe being edited (fully resolved options), its undo history, and the characters saved in this browser.
-import { DEFAULTS, SCHEMA, resolveOptions, diff, openRecipe, RECIPE_VERSION } from "../../src/index.js";
+import { DEFAULTS, SCHEMA, resolveOptions, diff, openRecipe, RECIPE_VERSION } from "hinagata/index.js";
 
 export const PATHS = Object.keys(SCHEMA);
 export const getPath = (o, path) => path.split(".").reduce((x, k) => x?.[k], o);

@@ -1,7 +1,7 @@
 // Hinagata Editor: wires the recipe (store.js), the 3D view (viewport.js) and the inspector (panel.js) to the engine.
 // A change the engine can apply at once goes through its method (schema `apply`); anything else rebuilds the avatar
 // when the gesture ends (the engine's cache makes a repeat build fast).
-import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS, RECIPE_VERSION, EXPRESSIONS } from "../../src/index.js";
+import { createAvatar, POSES, SCHEMA, checkOptions, faceSheet, readFaceSheet, sheetChanges, characterFile, CHARACTERS, RECIPE_VERSION, EXPRESSIONS } from "hinagata/index.js";
 import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, compact } from "./store.js";
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
@@ -13,6 +13,7 @@ import { createPaintTool } from "./paint.js";
 import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
 import { connectSync } from "./sync.js";
+import { createReference } from "./reference.js";
 import { t, setLang, getLang, translatePage, poseName, groupName } from "./i18n.js";
 
 const VERSION = "0.1";
@@ -38,7 +39,7 @@ const savePrefs = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(pr
 const lib = loadLibrary();
 const shared = new URLSearchParams(location.search).get("o"), SYNC = (({ sync, key }) => sync && key ? { port: +sync, key } : null)(Object.fromEntries(new URLSearchParams(location.search)));   // SYNC: live sync with a recipe file (sync.js)
 // ?o=: a character file ({ hinagata: 3, name, options }: the links made since 2026-10-06, of their version), or a bare recipe (links made before: the chibi defaults)
-if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } history.replaceState(null, "", SYNC ? location.pathname + `?sync=${SYNC.port}&key=${SYNC.key}` : location.pathname); }
+if (shared) { try { const s = recipeIn(JSON.parse(shared)); addChar(lib, s.name || t("shared"), s.recipe); } catch { /* a broken link opens the last character */ } { const keep = new URLSearchParams(location.search); keep.delete("o"); const q = keep.toString(); history.replaceState(null, "", location.pathname + (q ? "?" + q : "")); } }   // (the sync and the engine stay)
 if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
 let cur = lib.chars.find((c) => c.id === lib.current) ?? lib.chars[0]; lib.current = cur.id;
 const store = createStore(recipeOf(cur.recipe));
@@ -49,6 +50,8 @@ function persist() {
 
 // ── 3D view and building ──
 const vp = createViewport($("gl"), $("stage"));
+const ref = createReference({ vp, t, h, prefs, savePrefs, onChange: () => renderViewControls() });   // a reference picture over the view (reference.js)
+ref.load(cur.id);
 let building = false, again = false, ver = 0, refineT = 0, quick = false, refining = false;   // quick: the avatar shown is the quick build   // ver: counts the recipe's changes (a refined build made from an older one is dropped)
 let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
 const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
@@ -83,12 +86,13 @@ function showStats(av, ms = lastMs) {
 }
 
 // instant changes through the engine's own methods (schema `apply`)
-const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.dress.color": "dress", "outfit.cape.color": "cape", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.shoes.laceColor": "laces", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield", "outfit.weapon.sheathColor": "sheath", "outfit.extras.earColor": "ears", "outfit.extras.earInColor": "earsIn", "outfit.extras.tailColor": "tail", "outfit.extras.wingColor": "wings", "outfit.extras.haloColor": "halo", "outfit.suit.color": "suit", "outfit.suit.accent": "suitAccent" };
+const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.dress.color": "dress", "outfit.cape.color": "cape", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.shoes.laceColor": "laces", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield", "outfit.weapon.sheathColor": "sheath", "outfit.extras.earColor": "ears", "outfit.extras.earInColor": "earsIn", "outfit.extras.tailColor": "tail", "outfit.extras.wingColor": "wings", "outfit.extras.haloColor": "halo", "outfit.suit.color": "suit", "outfit.suit.accent": "suitAccent" };   // (the garment parts' colors: the schema's colorKey)
 let locksT = 0;
 function applyInstant(av, p, v) {
   const k = p.split("."), last = k.at(-1);
   switch (SCHEMA[p]?.apply) {
-    case "setColors": av.setColors({ [COLOR_KEY[p]]: v }); return true;
+    case "setColors": av.setColors({ [SCHEMA[p].colorKey ?? COLOR_KEY[p]]: v }); return true;
+    case "setBands": av.setBands({ [p]: v }); return true;   // the collar's line, the gloves' and boots' cuffs, striped socks
     case "setOutline": av.setOutline({ [last]: v }); return true;
     case "setShading": av.setShading({ [last]: v }); return true;
     case "setRim": av.setRim({ [last]: v }); return true;
@@ -181,6 +185,8 @@ if (SYNC) connectSync({ ...SYNC, store,
     try { return { png: vp.capture({ view: a.view, size: a.size, bg: BACKGROUNDS[prefs.bg]?.[0] ?? "#ebe5dc" }) }; }
     finally { if (a.pose) { av.play(POSES[was] ? was : "idle"); av.update(0, { instant: true }); } }
   } });
+function showEngine() { const u = window.HINAGATA_ENGINE; if (!u) return; const el = $("engineState"); el.hidden = false; el.textContent = t("engineLocal", new URL(u).host); el.title = `${t("engineTip")} (${u})`; }   // someone's own engine (index.html, ?engine=)
+showEngine();
 function showSync() { if (!syncShown) return; const { state, file } = syncShown, el = $("syncState"); el.hidden = false; el.textContent = state === "on" ? t("syncOn", file) : state === "off" ? t("syncOff", file) : t("syncErr"); el.dataset.state = state; }
 // the template on screen (as the test page shows it): look at it, save it (a phone saves by a long press), or go straight to loading a drawn one
 let tplUrl = null, tplInto = null, drawPut = true;   // drawPut: what is read also goes onto the expression being edited (false: a drawing redrawn from its own button)   // tplInto: the drawn expression a template is read into (null = ふつう, NEW = a new one)
@@ -243,6 +249,7 @@ const ICON = {
   clay: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle></svg>',
   wire: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="M4 12h16M12 4v16M4 4l16 16"></path></svg>',
   bones: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="7" cy="19" r="2"></circle><circle cx="17" cy="19" r="2"></circle><path d="M12 7v6l-5 6M12 13l5 6"></path></svg>',
+  ref: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 16l5-5 4 4 3-3 6 6"></path><circle cx="15.5" cy="8.5" r="1.5"></circle></svg>',
   floor: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="16" rx="9" ry="3.5"></ellipse></svg>',
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"></path></svg>',
   caret: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"></path></svg>',
@@ -253,7 +260,8 @@ function renderViewControls() {
   $("views").replaceChildren(...VIEW_NAMES.map((v) => h("button", { type: "button", "aria-pressed": String(v === curView), onclick: () => { curView = v; vp.view(v); renderViewControls(); } }, t(`v_${v}`))));
   const D = vp.displayState;
   $("display").replaceChildren(...["clay", "wire", "bones", "floor"].map((k) => h("button", { class: "ico", type: "button", "aria-pressed": String(D[k]), "aria-label": t(`d_${k}`), title: t(`d_${k}`), html: ICON[k],
-    onclick: () => { vp.display(k, !D[k]); if (k === "floor") { prefs.floor = !D[k]; savePrefs(); } renderViewControls(); } })));
+    onclick: () => { vp.display(k, !D[k]); if (k === "floor") { prefs.floor = !D[k]; savePrefs(); } renderViewControls(); } })),
+    h("button", { class: "ico", type: "button", "aria-pressed": String(ref.open || ref.shown), "aria-label": t("d_ref"), title: t("d_ref"), html: ICON.ref, onclick: () => ref.toggle() }));
   $("bg").replaceChildren(...Object.keys(BACKGROUNDS).map((k) => h("option", { value: k, selected: k === prefs.bg }, t(`bg_${k}`))));
   const M = vp.motion;
   $("poses").replaceChildren(
@@ -318,12 +326,12 @@ addEventListener("keydown", (e) => {
   else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); store.redo(); }
 });
 function renderLang() { for (const b of $("lang").children) b.setAttribute("aria-pressed", String(b.dataset.lang === getLang())); }
-$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); showSync(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
+$("lang").addEventListener("click", (e) => { const l = e.target.closest("button")?.dataset.lang; if (!l || l === getLang()) return; setLang(l); translatePage(); renderLang(); showSync(); showEngine(); renderViewControls(); panel.render(); renderLibrary(); persist(); if (vp.avatar) showStats(vp.avatar); });
 
 function switchTo(c) {
   store.commit(); persist();
   cur = c; lib.current = c.id; $("name").value = c.name;
-  store.replace(recipeOf(c.recipe)); syncUndo(); renderLibrary();
+  store.replace(recipeOf(c.recipe)); syncUndo(); renderLibrary(); ref.load(c.id);
 }
 const ago = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? t("justNow") : m < 60 ? t("minAgo", m) : m < 60 * 24 ? t("hAgo", Math.round(m / 60)) : new Date(ms).toLocaleDateString(getLang()); };
 function renderLibrary() {
@@ -345,7 +353,7 @@ $("libDel").addEventListener("click", () => {
   if (!confirm(t("confirmDelete", cur.name))) return;
   lib.chars = lib.chars.filter((c) => c.id !== cur.id);
   if (!lib.chars.length) addChar(lib, t("untitled"), recipeOf({}));
-  cur = lib.chars[0]; lib.current = cur.id; $("name").value = cur.name; store.replace(recipeOf(cur.recipe)); syncUndo(); renderLibrary();
+  cur = lib.chars[0]; lib.current = cur.id; $("name").value = cur.name; store.replace(recipeOf(cur.recipe)); syncUndo(); renderLibrary(); ref.load(cur.id);
 });
 
 // ── export ──

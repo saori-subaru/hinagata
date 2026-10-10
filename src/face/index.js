@@ -7,7 +7,7 @@ import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "image"];
+const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "image"];
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -52,7 +52,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   // the character's drawn expressions (face.drawn): their own eye / brow / mouth, placed like the ふつう ones ("eye@<id>" …)
   const DRAWN = (OPT.face.drawn ?? []).filter((d) => d && d.id != null), BLINKS = new Set([...BLINKS0, ...DRAWN.filter((d) => d.blink !== false).map((d) => DRAWN_PREFIX + d.id)]);
   for (const d of DRAWN) for (const k of ["eye", "eyeL", "brow", "mouth"]) PART_IMG[`${k}@${d.id}`] = { ...PART_IMG[k], src: d[k] ?? null };
-  for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
+  for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
   const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
   const imgOr = (keys, x, y) => { const k = keys.find((q) => PART_IMG[q]?.img); if (k) imgPart(k, x, y); return !!k; };   // the first of these pictures that is loaded
   const PARTS = {
@@ -163,6 +163,35 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       glare: (m) => { const { x, y } = EYE, rx = 0.03, ry = 0.041; fctx.save(); fctx.beginPath(); fctx.rect(0, py(y + 0.006), faceCanvas.width, faceCanvas.height); fctx.clip();
         ell(x, y, rx, ry, "#3a2632"); ell(x + 0.012, y - 0.016, 0.0045, 0.0045, "#ffffffd8"); fctx.restore();
         line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.1), py(y + 0.006)); fctx.lineTo(px(x + m * rx * 1.25), py(y + 0.008)); fctx.stroke(); },
+      // 半目 (2026-10-10, Saori: 島風's eyes "もっとジト目っぽくてハイライトが下のほうについてる"): the round eye's build with the upper lid
+      // low and nearly straight, rising a little to the outer corner, over the iris's top third; the iris dark under the lid and lighter
+      // toward the bottom, where the highlights are (a flat oval and a dot), a small pupil
+      lidded: () => {
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+        const dot = (x, y, rx, ry, fill, rot = 0) => { fctx.beginPath(); fctx.ellipse(...P(x, y), pu(rx), pu(ry), rot, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        const TOP = 0.012;   // the upper lid's height over the eye's middle (the round eye's top is at 0.042)
+        const open = () => { fctx.beginPath(); mv(-0.035, -0.004); qc(-0.012, TOP + 0.004, 0.044, TOP + 0.006); bz(0.046, -0.01, 0.026, -0.036, 0.0, -0.036); bz(-0.02, -0.036, -0.034, -0.02, -0.035, -0.004); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, TOP), ...P(0, -0.036)); g.addColorStop(0, "#bdb8c4"); g.addColorStop(0.4, "#f1eff2"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); open(); fctx.clip();
+        const ir = () => { fctx.beginPath(); fctx.ellipse(...P(0.003, -0.007), pu(0.026), pu(0.033), 0, 0, Math.PI * 2); };
+        ir(); { const g = fctx.createLinearGradient(...P(0, TOP), ...P(0, -0.04)); g.addColorStop(0, IR[0]); g.addColorStop(0.45, IR[0]); g.addColorStop(0.8, IR[1]); g.addColorStop(1, IR[2]); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); ir(); fctx.clip();
+        dot(0.003, -0.034, 0.018, 0.009, IR[2] + "a0");                                  // a lighter crescent at the bottom (dark eyes: only a little lighter)
+        dot(0.003, TOP + 0.004, 0.034, 0.016, IR[0] + "c0");                              // the lid's shadow over the top
+        fctx.restore();
+        dot(0.003, -0.006, 0.0075, 0.011, "#241a2278");                                   // the pupil, faint (the iris is dark at the top anyway)
+        line(0.0022, "#2b2533"); ir(); fctx.stroke();                                     // the iris's rim
+        dot(-0.007, -0.025, 0.0055, 0.0032, "#ffffffe8", 0.2);                            // highlights, small and low in the iris, toward the nose
+        dot(0.012, -0.03, 0.0022, 0.0022, "#ffffffb0");
+        fctx.restore();
+        line(0.0021, "#6a4c50"); fctx.beginPath(); mv(0.008, -0.036); qc(0.032, -0.032, 0.043, -0.01); fctx.stroke();   // the lower lid, toward the outer corner
+        // the upper lash along the low lid: thin at the inner corner, thick to the outer, a short flick down and out
+        fctx.beginPath(); mv(-0.037, -0.005); qc(-0.012, TOP + 0.01, 0.046, TOP + 0.012); qc(0.049, TOP + 0.006, 0.051, TOP - 0.004); qc(0.046, TOP - 0.002, 0.043, TOP + 0.001);
+        qc(-0.012, TOP - 0.006, -0.034, -0.003); fctx.closePath(); fctx.fillStyle = "#33242a"; fctx.fill();
+        line(0.0018, "#c98c80b0"); fctx.beginPath(); mv(-0.012, TOP + 0.013); qc(0.014, TOP + 0.018, 0.038, TOP + 0.017); fctx.stroke();   // the lid's crease, close over it
+        fctx.restore();
+      },
     },
     brows: {
       image: () => imgPart("brow", BROW.x, BROW.y),

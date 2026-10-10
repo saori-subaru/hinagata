@@ -13,6 +13,14 @@ function fail(reason) {   // a worker died or never loaded: stop using workers, 
   for (const w of workers || []) try { w.terminate(); } catch { /* already gone */ }
   workers = null;
 }
+// the worker's script. An engine served from another origin than the page's (the editor running someone's own engine from this machine,
+// tools/sync.mjs --engine) can't be a worker itself (a worker's script must be the page's origin): a small one of the page's own imports it
+let blobURL = null;
+function workerURL() {
+  const u = new URL("./worker.js", import.meta.url);
+  if (typeof location === "undefined" || u.origin === location.origin) return u;
+  return blobURL ??= URL.createObjectURL(new Blob([`import ${JSON.stringify(u.href)};`], { type: "text/javascript" }));
+}
 
 /** The pool (an array of workers), or null when workers aren't available. */
 export function buildPool() {
@@ -21,7 +29,7 @@ export function buildPool() {
   try {
     const n = Math.max(1, Math.min(4, (globalThis.navigator?.hardwareConcurrency || 2) - 1));
     workers = Array.from({ length: n }, () => {
-      const w = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+      const w = new Worker(workerURL(), { type: "module" });
       w.pending = 0;
       w.onmessage = ({ data }) => { const j = waiting.get(data.id); if (!j) return; waiting.delete(data.id); w.pending--; data.error ? j.ng(new Error(data.error)) : j.ok(data); };
       w.onerror = (e) => { e.preventDefault?.(); fail("build worker failed: " + (e.message || "could not load")); };

@@ -1,7 +1,7 @@
 // The 3D view: camera and view buttons, light and floor, display aids (clay, wireframe, bones), background, motion clock, PNG capture.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { clayMat } from "../../src/materials.js";
+import { clayMat } from "hinagata/materials.js";
 import { createDemos } from "./demos.js";
 
 const VIEWS = {   // [camera position, target]
@@ -38,7 +38,7 @@ export function createViewport(canvas, stage) {
   let tween = null;
   // a taller character (body.proportion; the default body since 2026-10-06): the views are written for the chibi; the whole-body views step
   // back with its height; the face view looks at the face wherever the head is and comes as much nearer as the head is smaller (it is
-  // written for the chibi's head, scale 0.9; the 5-head tall one's is 0.7)
+  // written for the chibi's head, scale 0.9; the tall one's is 0.64)
   function fitView(name) {
     let [p, t] = VIEWS[name] ?? VIEWS.free; const ST = avatar?.internals.ST, H = avatar?.internals.HT;
     if (name === "face" && H) { const py = avatar.options.body.head.pivotY ?? 0.845, k = H.sy / 0.9, ty = H.fromHead(0, py + (t[1] - py) / 0.9, 0)[1];
@@ -98,12 +98,14 @@ export function createViewport(canvas, stage) {
   // ── motion clock ──
   const M = { pose: "idle", playing: true, speed: 1 };
   let last = performance.now();
+  const hooks = [];   // called after each frame is drawn (overlays that follow the camera: reference.js)
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (tween) { const k = Math.min(1, (now - tween.s) / 380), e = 1 - (1 - k) ** 3; camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e); if (k >= 1) tween = null; }
     if (avatar) { const d = M.playing ? dt * M.speed : 0; if (!demos.step(avatar, d)) avatar.update(d); chair.visible = !!avatar.lastPose?.chair; }
     controls.update(); renderer.render(scene, camera);
+    for (const f of hooks) f();
   }
   requestAnimationFrame(frame);
 
@@ -129,5 +131,5 @@ export function createViewport(canvas, stage) {
     return url.slice(url.indexOf(",") + 1);
   }
 
-  return { view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  return { onFrame: (f) => hooks.push(f), stage, view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }

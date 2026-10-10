@@ -1,6 +1,6 @@
 # Hinagata
 
-A 3D character engine for the browser, built on three.js: anime-style characters, tall (the default, about 5 heads) or chibi.
+A 3D character engine for the browser, built on three.js: anime-style characters, tall (the default, about 4.5 heads), adult (about 6) or chibi.
 
 - A character is a **recipe**: a small options object (JSON), not a mesh file. The body, clothes, hair and face are built from code at runtime.
 - **Motions are code and fit the body**: walk (with the stride measured from the legs), jump, fall, climb with IK onto any surface the game describes.
@@ -19,10 +19,11 @@ avatar.update(dt);
 Build the game's world at real scale and size the characters to it; the world's scale comes from what the game is, not from the default
 character (a chibi game may scale its world to its chibis).
 
-**Character files and versions.** The editor exports `{ "hinagata": 3, "name": …, "options": { the recipe } }`. `"hinagata"` is the recipe
+**Character files and versions.** The editor exports `{ "hinagata": 4, "name": …, "options": { the recipe } }`. `"hinagata"` is the recipe
 version: the defaults the recipe is written against. Until 2026-10-06 the default body was the chibi; recipes stored without a version
 (bare recipe files, the editor's saved characters, `?o=` links) and version 1 files are read with those old defaults, so they don't change.
-Version 2 files (the first tall default, about 4 heads, that same day) keep that body; version 3 is today's (about 5 heads).
+Version 2 files (the first tall default, about 4 heads, that same day) keep that body; version 3 its head of 0.7 (about 4.2 heads, until
+2026-10-10); version 4 is today's (about 4.5 heads).
 A bare options object passed in code uses today's defaults (the tall body). One function reads them all: `openRecipe` (src/options.js).
 
 ## Live sync with an agent

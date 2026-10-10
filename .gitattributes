@@ -1,0 +1,11 @@
+# Line endings (2026-10-10): LF everywhere, in the repository and in working copies, whatever the machine's core.autocrlf. An agent's
+# edits (sed, perl, scripts) write LF; mixed with CRLF working copies they left files half and half.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.psd binary
+*.glb binary
+*.vrm binary
+*.ico binary

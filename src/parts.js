@@ -4,13 +4,20 @@
 //   kit:  { bodySdf, HT, hairKit, clothes } (from buildBody / buildHair / buildClothes)
 //   bodyAt: a fast lookup of the body (read back from the body's grid), or null to read the body itself
 
-import { skirtOf } from "./options.js";
+import { skirtOf, hairForms } from "./options.js";
+import { PARTS, partNamed } from "./garments/index.js";
 import { armReach } from "./body/index.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip", "weaponSheath", "weaponBelt"];   // in the hands: metal, grip / straps, the shield's face
 export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
-export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "suit", "cape", ...ARMOR, ...WEAPONS, ...EXTRAS];
+export const TRIMS = PARTS.map((p) => p.name);   // the garment parts (src/garments): a sailor collar and its scarf, gloves, hip strings, a headband (and its bow), and any part added there
+export const CLOTHES = ["shirt", "pants", "shoes", "soles", "laces", "socks", "suit", "cape", ...ARMOR, ...WEAPONS, ...EXTRAS, ...TRIMS];
 export const hairPartName = (pick) => "hair:" + JSON.stringify(pick);
+// only these bones, each side's own: a point at x >= 0 follows only the character's left ones. The shoes: on feet set close (the adult body
+// type's ankles 7 cm from the middle) a shoe's inner side took weight from the other foot, and stretched across to it when the legs parted
+// (2026-10-10, Saori: "大人体形で歩くと足同士がくっついています"). Not the socks: they lie on the skin, whose weights the other leg shares a little,
+// and sided they parted from it (the skin showed through in streaks)
+const sided = (re) => ({ L: new RegExp("(?=.*\\.L$)" + re.source), R: new RegExp("(?=.*\\.R$)" + re.source) });
 // a skirt or a cape is a shell under 2 cm thick: meshed with cells about as big (the game quality's), it came out ragged, holed, with its
 // inside's outline showing through in specks (2026-10-05, Saori: "ゲーム用の表示にするとスカートとかマントがジャギジャギ"). Their cells stop here
 const THIN = 0.0105;
@@ -42,10 +49,11 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const w = 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: [-w, CA.hem - 0.02, -d], hi: [w, CA.collar + 0.05, CA.wrap + 0.1], h: clothCell(clothH || partClothCell(H), CA.thick), only: /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }
-    case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: /^(foot|lowerLeg)/ }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
-    case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: /^foot/ }   // thin: their own fine grid
+    case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" || k === "heelBoots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: sided(/^(foot|lowerLeg)/) }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
+    case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: sided(/^foot/) }   // thin: their own fine grid
       : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
-    case "soles": return { sdf: C.soleSdf, lo: foot0, hi: [0.22, 0.03, 0.14], h: H * 0.6, only: /^foot/ };
+    case "soles": return OPT.outfit.shoes.kind === "heelBoots" ? { sdf: C.soleSdf, lo: [foot0[0], -0.1, foot0[2]], hi: [0.22, 0.04, 0.14], h: H * 0.6, only: sided(/^foot/) }   // heel boots: the heels (below the floor in the rest pose) are the soles'
+      : { sdf: C.soleSdf, lo: foot0, hi: [0.22, 0.03, 0.14], h: H * 0.6, only: sided(/^foot/) };
     // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
     case "armorChest": return C.armor.helmSdf ? { sdf: C.armor.chestSdf, lo: [-0.3, 0.38, -0.26], hi: [0.3, 0.82, 0.28], h: H * 0.8, only: /^(hips|spine|chest|upperChest)/ }
       : { sdf: C.armor.chestSdf, lo: [-0.26, 0.47, -0.22], hi: [0.26, 0.76, 0.26], h: H * 0.8, only: /^(spine|chest|upperChest)/ };
@@ -83,6 +91,10 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
     case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/ }; }
   }
+  // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
+  const GP = partNamed(name);
+  if (GP) { const st = C.garments[name]; if (!st) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+    return GP.spec(st, { OPT, H, B, ax, ay, kit, hairCap: () => hairKit.hairSdfOf(hairForms(OPT.hair)) }); }
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));
     return { sdf: HT.wrap(hairKit.hairSdfOf(pick)), lo: [-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], hi: [0.4, 1.5, 0.38], h: H * OPT.quality.hairCell, bone1: "head" };
@@ -94,7 +106,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
  *  soft: { bone, k(x, y, z) } — only the fraction k of the weight on other bones is kept, the rest goes to that bone (a skirt: mostly the hips) */
 export function skinOf(pos, weightsAt, BI, bone1, only, soft = null) {
   const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
-  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only);
+  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only?.L ? (pos[v * 3] >= 0 ? only.L : only.R) : only);   // (only: a RegExp, or { L, R }: sided)
     if (soft?.front && !bone1) { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], k = soft.k(x, y, z), f = soft.front(z), sL = Math.min(1, Math.max(0, 0.5 + x / 0.16));   // the skirt: the hips, and toward the hem the front on the skirt bones / the rest on the thighs, by side (the middle half and half)
       const W = [[soft.bone, 1 - k], ["skirt.L", k * f * sL], ["skirt.R", k * f * (1 - sL)], ["upperLeg.L", k * (1 - f) * sL], ["upperLeg.R", k * (1 - f) * (1 - sL)]].sort((a, b) => b[1] - a[1]).slice(0, 4), sum = W.reduce((a, w) => a + w[1], 0);
       W.forEach(([b, w], q) => { tmp.idx[q] = BI[b]; tmp.w[q] = w / sum; }); }

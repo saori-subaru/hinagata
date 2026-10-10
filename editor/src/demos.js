@@ -5,7 +5,7 @@
 // player.js / climbpose.js / main.js) plays it — the same steps, timings, paths and IK — with a ledge, a box, a wall or a leaf in the view.
 // The game's numbers are metres for its 0.86 m character; here they are scaled to this character (U: avatar units per game metre).
 import * as THREE from "three";
-import { measureBody, climbLimbs, crawlLimbs, holdPole, LIMBS, ik2 } from "../../src/index.js";
+import { measureBody, climbLimbs, crawlLimbs, holdPole, LIMBS, ik2 } from "hinagata/index.js";
 
 const SIDE = [1, 0.3, -0.12], BEHIND = [0.9, 0.4, -1.3], QUARTER = [1.15, 0.33, 2.75];   // camera directions (QUARTER: the free view; BEHIND: over the shoulder, at the wall)
 const ease = (x) => x * x * (3 - 2 * x), heavy = (x) => x * x * x * (x * (6 * x - 15) + 10), lerp = (a, b, k) => a + (b - a) * k;
