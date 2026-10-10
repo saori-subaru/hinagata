@@ -4,34 +4,29 @@
 // guides across the view: the character's head, chin, shoulders, hip joints, knees and ankles, each as a share of its height, and how many
 // heads tall it is. The picture is kept per character in this browser (IndexedDB), not in the recipe (it would make the file huge).
 import * as THREE from "three";
+import { measureCharacter } from "hinagata/index.js";
 
 const DB = "hinagata-editor-ref", STORE = "ref";
 let dbp = null;
 const db = () => dbp ??= new Promise((ok, ng) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(STORE); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); });
 const tx = async (mode, f) => { try { const d = await db(); return await new Promise((ok, ng) => { const q = f(d.transaction(STORE, mode).objectStore(STORE)); q.onsuccess = () => ok(q.result); q.onerror = () => ng(q.error); }); } catch { return null; } };   // (no IndexedDB: kept for this visit only)
 
-// the character's heights (m, in its object, as built): the top of its hair, the skull's top (the body's shape down the middle), the chin,
-// the joints. Each line rides on a bone (the head's lines on the head): heels lift the whole body (4 cm on 島風) and a pose moves it
+// the character's heights (m, in its object, as built): the top of its hair (its meshes), and the skull's top, the chin and the joints as
+// the engine measures them (measureCharacter: the same numbers as tools/measure.mjs and the sync helper's measure). Each line rides on a
+// bone (the head's lines on the head): heels lift the whole body (4 cm on 島風) and a pose moves it. The shares are of the height to the
+// skull's top (the hair's line a little over 1)
 function measure(av) {
-  const I = av.internals, f = I.bodySdf, J = I.J;
-  let top = 0;
+  const I = av.internals, f = I.bodySdf, m = measureCharacter(av.options), rest = (k) => m.at[k] - m.lift;
+  let top = rest("skull");
   for (const [k, x] of Object.entries(av.parts)) {
     if (!x.m.visible || x.sim || /^(acc|weapon|extra|headband|armorDeco)/.test(k)) continue;   // (what stands above the hair: a bow's loops, ears, a plume)
     const g = x.m.geometry; if (!g.attributes.position?.count) continue; g.computeBoundingBox(); top = Math.max(top, g.boundingBox.max.y);
   }
-  const solid = (y) => { for (let z = -0.25; z < 0.3; z += 0.004) if (f(0, y, z) < 0) return true; return false; };
-  let skull = J.head[1]; while (skull < 3 && solid(skull + 0.002)) skull += 0.002;
-  // the chin: near the bottom of the jaw in head space (body.sculpt.chin.y, carried onto the head as built), where the body's front at the
-  // middle falls back furthest (from the chin into the neck). Over the whole lower face that was the nose's step on a tall face; followed
-  // down from the jaw's height, it went on down the neck
-  const ch = av.options.body.sculpt.chin, cy = I.HT.fromHead(0, ch.y, 0.15)[1];
-  const front = (y) => { for (let z = 0.4; z > -0.2; z -= 0.002) if (f(0, y, z) < 0) return z; return -1; };
-  let chin = cy, drop = 0, prev = front(cy + 0.03);
-  for (let y = cy + 0.03; y > cy - 0.03; y -= 0.002) { const z = front(y - 0.002); if (prev - z > drop) { drop = prev - z; chin = y; } prev = z; }
-  top = Math.max(top, skull);
-  const lines = [["rg_top", top, 0, "head"], ["rg_skull", skull, 0, "head"], ["rg_chin", chin, front(chin), "head"], ["rg_shoulder", J["upperArm.L"][1], 0, "upperArm.L"], ["rg_hip", J["upperLeg.L"][1], 0, "upperLeg.L"], ["rg_knee", J["lowerLeg.L"][1], 0, "lowerLeg.L"], ["rg_ankle", J["foot.L"][1], 0, "foot.L"]];
-  const M = { lines, heads: top / Math.max(0.01, skull - chin) };
-  const now = live(av, M); M.top = now[0]; M.share = now.map((y) => y / now[0]);   // the shares as it stands when measured (in its shoes)
+  const front = (y) => { for (let z = 0.4; z > -0.2; z -= 0.002) if (f(0, y, z) < 0) return z; return 0; };   // (the chin's line is drawn at the chin's depth: seen from near and above, at the middle it stood low)
+  const lines = [["rg_top", top, 0, "head"], ["rg_skull", rest("skull"), 0, "head"], ["rg_chin", rest("chin"), front(rest("chin")), "head"], ["rg_shoulder", rest("shoulder"), 0, "upperArm.L"],
+    ["rg_hip", rest("hip"), 0, "upperLeg.L"], ["rg_knee", rest("knee"), 0, "lowerLeg.L"], ["rg_ankle", rest("ankle"), 0, "foot.L"]];
+  const M = { lines, heads: m.heads };
+  const now = live(av, M); M.share = now.map((y) => y / now[1]);   // the shares as it stands when measured (in its shoes)
   return M;
 }
 // each line's height now (m, in the avatar's object): its rest height moved as its bone has moved

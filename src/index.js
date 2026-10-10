@@ -36,6 +36,7 @@ export { CHARACTERS } from "./presets.js";   // ready-made characters (presets.j
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
+export { measureCharacter, fitProportions } from "./measure.js";   // proportions in real terms, and options found from proportions (measure.js; no three.js: Node too)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
 import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and crawling (motion/crawl.js)

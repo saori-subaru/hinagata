@@ -31,7 +31,8 @@
 //
 // MCP (--mcp; JSON-RPC over stdin / stdout, logs on stderr): tools for the agent: editor_link, get_recipe, update_recipe, check_recipe,
 // find_options (the options' schema: docs/options.schema.json next to this file in the repository, else the site's copy) and screenshot
-// (rendered by the connected editor). Claude Code: claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp
+// (rendered by the connected editor), and with the engine (inside the repository, or --engine) measure and fit_proportions (src/measure.js:
+// the proportions, base space ↔ on the character, the body from heads tall and shares). Claude Code: claude mcp add hinagata -- node /path/to/sync.mjs /path/to/character.json --mcp
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -127,6 +128,15 @@ http.createServer((req, res) => {
 
 if (MCP) mcp();
 
+// ── the engine's measure (src/measure.js: proportions; --engine's, or the repository's next to this file) ──
+let MEASURE = null;
+async function measurer() {
+  if (MEASURE) return MEASURE;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  for (const d of [ENGINE, path.join(here, "../src")].filter(Boolean)) { const p = path.join(d, "measure.js"); if (fs.existsSync(p)) return MEASURE = await import(pathToFileURL(p).href); }
+  throw new Error("measuring needs the engine: run this helper from the repository (tools/sync.mjs) or with --engine path/to/hinagata");
+}
+
 // ── the options' schema (for checking and finding options): next to this file in the repository, else the site's copy ──
 let SCHEMA = null;
 async function schema() {
@@ -169,6 +179,10 @@ function mcp() {
       inputSchema: { type: "object", properties: { query: { type: "string" }, limit: { type: "number", description: "default 30" } }, required: ["query"] } },
     { name: "screenshot", description: "A picture of the character as it is now, rendered by the connected editor (it must be open: editor_link). view: free | front | side | back | face; pose: idle (default), walk, run, sitChair, sitFloor, wave, …",
       inputSchema: { type: "object", properties: { view: { type: "string" }, pose: { type: "string" }, size: { type: "number", description: "pixels, default 640" } } } },
+    { name: "measure", description: "The character's proportions: height (m, to the top of the head, in its shoes), heads tall, and the chin, shoulders, hip joints, knees and ankles (m and shares of the height). to: a height on the character (a share of its height, or metres as \"0.62m\") as the options take heights (base space: the body before body.proportion stretches it), e.g. for a skirt's hem; at: an option's height (base space) on the character. Needs the engine (this helper inside the repository, or --engine).",
+      inputSchema: { type: "object", properties: { to: { type: "string" }, at: { type: "number" } } } },
+    { name: "fit_proportions", description: "The body options that come nearest the proportions asked (heads: heads tall; hip, knee, shoulder, chin: heights as shares of the height; height: m), turning body.head.scale, body.proportion.legs and torso (and body.adult.knee on the adult body). Returns { set } and what it measures before and after; apply set with update_recipe. Start a chibi from a chibi body type. Needs the engine.",
+      inputSchema: { type: "object", properties: { heads: { type: "number" }, hip: { type: "number" }, knee: { type: "number" }, shoulder: { type: "number" }, chin: { type: "number" }, height: { type: "number" } } } },
   ];
   const text = (t) => ({ content: [{ type: "text", text: t }] });
   async function call(name, a = {}) {
@@ -187,6 +201,14 @@ function mcp() {
       hits.sort((x, y) => (x.tier === "main" ? 0 : 1) - (y.tier === "main" ? 0 : 1) || (x.order ?? 1e9) - (y.order ?? 1e9));
       const line = (e) => `${e.path} (${e.type}${e.type === "number" ? ` ${e.min}..${e.max}` : ""}${e.options ? `: ${e.options.map((o) => o.value).join(" | ")}` : ""}${e.nullable ? ", null = auto" : ""}) default ${JSON.stringify(e.default)} — ${L(e.label)}${e.help ? `: ${L(e.help)}` : ""}${e.when ? ` [only when ${JSON.stringify(e.when)}]` : ""}`;
       return text(hits.length ? hits.slice(0, a.limit ?? 30).map(line).join("\n") + (hits.length > (a.limit ?? 30) ? `\n… ${hits.length - (a.limit ?? 30)} more` : "") : "nothing found");
+    }
+    if (name === "measure" || name === "fit_proportions") {
+      const M = await measurer(), f3 = (v) => +v.toFixed(3), brief = (m) => ({ height: f3(m.height), heads: +m.heads.toFixed(2), lift: f3(m.lift), at: Object.fromEntries(Object.entries(m.at).map(([k, v]) => [k, f3(v)])), share: Object.fromEntries(Object.entries(m.share).map(([k, v]) => [k, f3(v)])) });
+      if (name === "fit_proportions") { const r = M.fitProportions(recipe, a); return text(JSON.stringify({ set: r.set, before: brief(r.before), after: brief(r.after) }, null, 2)); }
+      const m = M.measureCharacter(recipe);
+      if (a.to != null) { const v = String(a.to).endsWith("m") ? parseFloat(a.to) : parseFloat(a.to) * m.height; return text(JSON.stringify({ onCharacter: f3(v), base: f3(m.base(v)) })); }
+      if (a.at != null) { const v = m.built(+a.at); return text(JSON.stringify({ base: +a.at, onCharacter: f3(v), share: f3(v / m.height) })); }
+      return text(JSON.stringify(brief(m), null, 2));
     }
     if (name === "screenshot") { const r = await ask("screenshot", { view: a.view ?? "free", pose: a.pose ?? null, size: a.size ?? 640 }); return { content: [{ type: "image", data: r.png, mimeType: "image/png" }] }; }
     throw new Error(`unknown tool ${name}`);

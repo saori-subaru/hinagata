@@ -9,8 +9,9 @@
 5. ~~同期ツールで手元のエンジンを配る（sync.mjs --engine、エディタの ?engine=）~~ 済み（localhost のエンジンだけ受け付ける）
 6. ~~llms.txt に「パーツの足し方」~~ 済み（"Missing a part? Add one"）
 7. ~~エディタに参考画像を重ねる機能~~ 済み（表示ボタンの「参考画像」。DESIGN.md "A reference picture in the editor"）
-8. 服の高さ・幅を実寸や身長比で指定できる道（いまは伸ばす前の体の座標で、大人の体の腰まわりは約4.6倍）
-9. 頭身や比率の数値から体型を始められる（脚の長さ・股・ひざの割合など）
+8. ~~服の高さ・幅を実寸や身長比で指定できる道~~ 済み（measureCharacter の built / base、tools/measure.mjs --to / --at、MCP の measure）
+9. ~~頭身や比率の数値から体型を始められる~~ 済み（fitProportions、tools/measure.mjs --fit、MCP の fit_proportions）
+（気づいたこと: 標準の体はこの測り方で 4.19 頭身。llms.txt と CLAUDE.md の「約5頭身」は脚 2・胴 1.3 だったころの数字。2e67611 でサオリの値 脚 1.76・胴 1.13 になった。書き直すかはサオリに聞く）
 （確認済み: 布のシミュレーション cloth.js は root の座標で動くので、縮めても髪のような崩れはない）
 
 
