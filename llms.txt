@@ -208,6 +208,42 @@ their turns are measured from the rest pose they had when follow was called (arm
 fine). `fit`: `{ height }` in the figure's units, or true (default) to match the leg length. `grip: { L, R }` closes the hands (0–1).
 A figure with one spine joint has its turn shared over the avatar's spine, chest and upper chest; collarbones rise with raised arms.
 
+## Missing a part? Add one
+
+First look for it: `find_options` (or docs/options.schema.json) by words, Japanese or English; `accessories` (small pieces on a bone:
+a button, a ribbon, a gem…) cover many details. What the character holds or what floats beside it (a pet, a turret, rigging) is the
+game's own three.js, put on a bone (`avatar.bones["hand.R"].add(…)`) or beside the avatar: not a part. A garment the engine lacks (a collar, gloves, a
+headband: 島風's were made this way) is a part, one file in your own copy of the engine:
+1. `git clone https://github.com/saori-subaru/hinagata`, add `src/garments/<name>.js` and one line in `src/garments/index.js`
+   (`import "./<name>.js";`). The part brings its options (with defaults), their names and ranges for the editor's panels, its color
+   (`avatar.setColors({ <name>: "#…" })`), putting it on and off (`setWorn`), and its place in the mesh cache:
+   ```js
+   import { definePart } from "./registry.js";
+   const L = (ja, en) => ({ ja, en });
+   definePart({ src: import.meta.url, name: "choker", path: "outfit.choker", section: L("チョーカー", "Choker"),
+     defaults: { on: false, color: "#202020", width: 0.012 },
+     schema: [["on", L("チョーカー", "Choker")], ["color", L("色", "Color"), { when: { ".on": true } }],
+              ["width", L("幅", "Width"), { when: { ".on": true }, min: 0.004, max: 0.03, step: 0.001, help: L("m", "m") }]],
+     build: ({ O, J, bodySdf }) => { const y = J.neck[1] + 0.03;   // built only while on: the shapes, once per build
+       return { sdf: (x, yy, z) => Math.max(bodySdf(x, yy, z) - 0.004, Math.abs(yy - y) - O.width / 2) }; },   // the body 4 mm out, cut to a band
+     spec: (st, { H }) => ({ sdf: st.sdf, lo: [-0.1, 0.7, -0.1], hi: [0.1, 0.95, 0.12], h: Math.min(H, 0.004), only: /^(neck|upperChest|head)/ }),
+   });
+   ```
+   Every field is described at the top of `src/garments/registry.js`; `src/garments/` has five real parts to copy from (sailor.js: a
+   collar over the shirt with a painted line; gloves.js; strings.js: a strap made directly as a mesh; headband.js: on the hair, in head space).
+2. The shape is a signed distance (m; negative inside) in base space: the body before `body.proportion` stretches it (y up, z forward,
+   the character's left at +x; the neck about 0.74, the shoulders 0.73, the hips 0.44 there). `build`'s ctx gives the joints `J`
+   (`J.neck`, `J["upperArm.L"]`, …), `bodySdf`, `shirtSdf(x, y, z, B, noBell, noHole)`, the body's pieces `P`, and `slope(y)`: how many
+   times a height is stretched there (it depends on the body: a band 1 cm tall in base space is slope(y) cm on the character).
+   A garment is easiest as what it lies on pushed out a few mm and cut to its region (a solid: only its outside shows).
+3. `spec`: the box it is meshed in (`lo`, `hi`, base space), the cell `h` (at most half its thinnest feature: thinner came out in dashes),
+   the bones it follows (`only`: a regexp of bone names; or `bone1` for one), `make` to build a mesh directly (a strap a few mm wide).
+   `thin: "cloth" | "keep"` keeps a small part from being thinned away at the "fine" / "lite" qualities.
+4. Check it: `node tools/schema.mjs` (the options' schema; then `check_recipe` knows them), `node tools/thin-check.mjs` (the thinned
+   builds keep their shape; exits 1 if not), and look at it in the editor: `node tools/sync.mjs character.json --engine .` (from the clone) gives
+   a link that opens the site's editor running your engine; your part has its section in the Outfit tab. Reload the editor after editing
+   the part. Keep the part generic (options); the character's own values go in its file.
+
 ## The editor
 
 https://hinagata.pages.dev (the editor) — the user's tool: sliders for every main option, dragging hair tufts and tails on the head,
