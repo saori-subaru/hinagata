@@ -268,20 +268,23 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
           // (in the bundle's half widths) and closing to a point at its ends. The locks between two slits (or a slit and the bundle's edge,
           // its outline kept) are squeezed into the room left between them, and one wider than that room narrows to fit it: a lock is near
           // as wide as the bundle, so only parting them left the slit covered
-          let ax = ax0, gw = 1; const tt = t / tEnd, GS = [];
+          let ax = ax0, gw = 1; const GS = [];
           // a slit's sixth value, twists (2026-10-11, Saori: "隙間は端のほうに … 太いメインのうねりに細いサブのうねりが巻き付いてるみたいなイメージ"):
           // the thin strand between the slit and the bundle's edge is wound round the main bundle that many times along the slit, a two-ply
           // rope: the slit closes between the turns into a row of eyes, and where it closes the strand crosses the main bundle's edge, in
           // front of it and behind it in turn. (Wound round its whole face it didn't show: a strand over the bundle, the same colour, has no line)
-          for (const [g00, g0, g1, go, g11 = g00, gn = 0] of T.gaps ?? []) { const u = (tt - g0) / Math.max(0.01, g1 - g0); if (!(u > 0 && u < 1)) continue;
-            const h = go * Math.sin(Math.PI * u) ** 0.6, e = gn ? Math.abs(Math.sin(Math.PI * gn * u)) ** 0.7 : 1, cross = gn ? (1 - e) * (Math.round(gn * u) % 2 ? 1 : -1) : 0;   // e: how open between the turns; cross: the strand over the edge (+ behind, - in front)
-            GS.push([Math.max(-0.9, Math.min(0.9, g00 + (g11 - g00) * u)), h * e, cross, h, gn]); }
+          for (const [g00, g0, g1, go, g11 = g00, gn = 0] of T.gaps ?? []) { const u = (t - g0) / Math.max(0.01, g1 - g0);   // (along the middle line, the same height for every lock: along each lock, its clump a little shorter, the slit sat higher in one clump than the next)
+            if (!(u > 0 && u < 1)) continue;
+            const gc = Math.max(-0.9, Math.min(0.9, g00 + (g11 - g00) * u)), h = Math.min(go, 0.8 * (1 - Math.abs(gc))) * Math.sin(Math.PI * u) ** 0.6, e = gn ? Math.abs(Math.sin(Math.PI * gn * u)) ** 0.7 : 1, cross = gn ? (1 - e) * (Math.round(gn * u) % 2 ? 1 : -1) : 0;   // e: how open between the turns; cross: the strand over the edge (+ behind, - in front)
+            GS.push([gc, h * e, cross, h, gn, sstep(0, 0.7, Math.sin(Math.PI * u))]); }
           let gz = 0;
-          if (GS.length) { GS.sort((x, y) => x[0] - y[0]); const B = [[-1, 0], ...GS, [1, 0]]; let k = B.findIndex((b) => b[0] > ax); k = k < 0 ? B.length - 1 : Math.max(1, k);
+          if (GS.length) { GS.sort((x, y) => x[0] - y[0]); const B = [[-1, 0, 0, 0, 0, 0], ...GS, [1, 0, 0, 0, 0, 0]], ax1 = ax; let k = B.findIndex((b) => b[0] > ax); k = k < 0 ? B.length - 1 : Math.max(1, k);
             const sl = k === 1 && B.length > 2 && B[1][4] ? -1 : k === B.length - 1 && B.length > 2 && B[k - 1][4] ? 1 : 0, S = sl ? B[sl > 0 ? k - 1 : k] : null;   // a wound strand: its side, its slit
             const [a0, h0] = B[k - 1], [a1, h1] = B[k], lo = a0 + (sl > 0 ? S[3] : h0), hi = a1 - (sl < 0 ? S[3] : h1); ax = lo + (ax - a0) / (a1 - a0) * Math.max(0, hi - lo);   // (between the slits' edges lo..hi; a wound strand as thin as with the slit full open)
             const hb = 0.5 * w * (prof0 ?? width)(q / (N - 1)) / Math.max(0.005, W); let La = ax - hb, Ra = ax + hb; if (h0 > 0 || sl > 0) La = Math.max(La, lo); if (h1 > 0 || sl < 0) Ra = Math.min(Ra, hi);   // (the lock's half width in the bundle's half widths)
-            if (Ra - La < 2 * hb) { ax = (La + Ra) / 2; gw = Math.max(0.15, (Ra - La) / (2 * hb)); }
+            if (Ra - La < 2 * hb) { ax = (La + Ra) / 2; gw = Math.max(0.08, (Ra - La) / (2 * hb)); }
+            // (all that only as the slit beside it opens: squeezed and narrowed at once where a slit began, a thin strand hung from the tie)
+            const bl = Math.max(B[k - 1][5], B[k][5]); ax = ax1 + (ax - ax1) * bl; gw = 1 - (1 - gw) * bl;
             if (sl) { ax -= sl * (S[3] - S[1]) * 1.6; gz = (D + 0.015) * S[2]; } }   // (in over the edge where the slit closes, and in front or behind)
           GW.push(gw); GF.push(Math.min(1, Math.max(0, ...GS.map((g) => g[1] * 4))));
           // tipCurl (m): over the last fifth each clump's tips curl, the clumps in turn inward and outward, and a little up (a lock's end turning over)
