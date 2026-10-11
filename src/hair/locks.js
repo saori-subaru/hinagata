@@ -158,9 +158,16 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       // forehead, the cheek, the jaw: it stays 2 mm over whatever it meets, so it follows the face)
       if (tp.fl) { const keepOut = (p) => { const hx = p[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1, floor = surfaceAlong(surf, [0, p[1], center[2]], [hx / h, 0, hz / h]) + 0.002 + 0.25 * w * thick; if (h < floor) { p[0] = hx / h * floor; p[2] = center[2] + hz / h * floor; } };
         const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
+      // arc (m, 2026-10-11, for ロゼ's bangs): the lock bows sideways toward the way it sweeps, most at its middle, so the strands curve
+      // like brushed hair instead of running straight down (a lock not swept bows by the clump's side: the clump fans into a curve)
+      if (B.arc) { const dir = Math.sign(tp.sw || f || 1), th = tp.a - tp.sw, side = [Math.cos(th), 0, -Math.sin(th)];
+        for (let q = 0; q < N; q++) { const t = q / (N - 1), e = B.arc * dir * Math.sin(Math.PI * Math.min(1, t * 1.1)) * sstep(0.15, 0.5, t); for (let m = 0; m < 3; m++) pts[q][m] += side[m] * e; } }
       for (let q = 0; q < N; q++) pts[q] = toRoot(...pts[q]);
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
+      // tipTaper (0..1): the lock narrows to a sharp point from this share of its length on (0.4: from 40 %), so a clump ends in points
+      // with gaps between them, not in a straight cut across the forehead
+      const TT = B.tipTaper, prof = TT != null ? (t) => (1 + 0.15 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - Math.max(0, (t - TT) / (1 - TT))), 1.3) : undefined;
+      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, ...(prof ? { prof } : {}), stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
         front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
@@ -226,7 +233,9 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
     // follow), so the tail moves as one solid bundle; fill: fat locks inside it close the gaps between the strands
     const BUNDLE = T.form === "bundle", lead = out.length, FILL = BUNDLE ? Math.max(0, Math.round(T.fill ?? 3)) : 0;
     const items = [...(BUNDLE ? [{ i: 0, r: 0, a: 0, lead: true }] : []), ...Array.from({ length: n }, (_, i) => ({ i, r: Math.sqrt((i + 0.5) / n), a: i * 2.39996 + 0.3 })),
-      ...Array.from({ length: FILL }, (_, k) => { const f = FILL > 1 ? 2 * k / (FILL - 1) - 1 : 0; return { i: n + k, r: 0.55 * Math.abs(f), a: f < 0 ? Math.PI : 0, fill: true }; })];
+      ...Array.from({ length: FILL }, (_, k) => { const f = FILL > 1 ? 2 * k / (FILL - 1) - 1 : 0; return { i: n + k, r: 0.55 * Math.abs(f), a: f < 0 ? Math.PI : 0, fill: true }; }),
+      // strays (2026-10-11, for ロゼ: "うねって後れ毛もあるツインテール"): a few thin locks at the bundle's edge, each swinging on its own with its own wave
+      ...Array.from({ length: Math.max(0, Math.round(T.strays ?? 0)) }, (_, k) => ({ i: n + FILL + k, r: 0.95, a: (k * 2.39996 + 1.1) % (2 * Math.PI), stray: true }))];
     for (const it of items) {
       const i = it.i, a = it.a, r = it.r, dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
       // across the sheet (splay / sheet): sx -1 the inner side .. 1 the outer; with clumps the locks gather toward their clump's middle (sc) at the tips
@@ -237,7 +246,12 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 + RISE : 0)),   // a cubic Bezier: out from the tie, over, and down
         root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 - RISE * 0.4 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) - (k === 1 ? len : 0))];
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
-      if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
+      if (T.wave && (NC > 0 || it.stray)) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], wb = [-wd[2], 0, wd[0]];   // with clumps: each clump waves with its own phase, out from the head
+        // and across it (back and forth), more toward the tips, so the clumps part and ripple instead of the whole bundle bending as one slab; a stray more still
+        const ci = it.stray ? 7 + i : Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)), ph = ci * 1.9 + 0.3 * (hash(i + 11) - 0.5), A = T.wave * (it.stray ? 1.6 : 1);
+        P.forEach((q, j) => { const t = j / (N - 1), g = sstep(0.12, 0.55, t) * (0.6 + 0.5 * t), e = A * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * g, e2 = A * 0.6 * Math.cos(2 * Math.PI * (T.waves ?? 1.5) * t * 0.8 + ph * 1.3) * g;
+          for (let k = 0; k < 3; k++) q[k] += wd[k] * e + wb[k] * e2; }); }
+      else if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
       if (SPR) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], SH = T.sheet ?? 0, SP = T.splay ?? 0;   // splay (m): the tips drift out from the head as the bundle falls, each lock by where it sits across the bundle, so
         // seen from the front the tail opens into a wide sheet, an A (2026-10-11, for 初音ミク's twin tails: "極力完璧に"); 0 = it hangs straight down.
@@ -260,7 +274,8 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       // bulge (×): each lock fuller toward the middle of its length (the tail swells below the shoulders, 2026-10-11, for ロゼ); tip (0..1):
       // the ends rounded instead of drawn to a needle (1 = blunt and round), so a tail ends in soft points, not a fringe of spikes
       if (T.bulge || T.tip) { const BG = T.bulge ?? 0, TP = T.tip ?? 0; spec.prof = (t) => (BG ? 0.35 + 0.65 * sstep(0, 0.35, t) : 1) * (1 + BG * Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 1.5) * ((1 - TP) * width(t) + TP * Math.sqrt(Math.max(0, 1 - t ** 8))); }   // (with a bulge, thin at the tie: wide from the start they ballooned beside the head)
-      if (BUNDLE && !it.lead) spec.follow = lead;
+      if (BUNDLE && !it.lead && !it.stray) spec.follow = lead;
+      if (it.stray) { spec.w = w * 0.35; spec.cohere = 0; spec.group = `stray${ai}_${i}`; }
       if (it.fill) { spec.w = w * 1.8; spec.thick = Math.min(0.9, T.thick * 2); spec.prof = (t) => Math.max(0.15, sstep(0.03, 0.3, t)) * width(Math.min(1, t * 1.12)); }   // fat, thin at the tie (it swelled there over the hair tie) and ending a little before the tips (inside the bundle)
       out.push(spec);
     }

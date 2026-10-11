@@ -206,7 +206,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const FK = OPT.body.proportion?.feet ?? 1;   // the feet's size (body.proportion.feet): the heels' own pieces grow with them
   const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
   const OVERKNEE = BOOTS && OPT.outfit.shoes.bootHeight > J["lowerLeg.L"][1] + 0.01;   // (2026-10-11, for ロゼ: boots over the knee were cut at it, made only of the calf's pieces: the thigh's too then)
-  const SHOE_PARTS = [...(OVERKNEE ? ["thigh", "thighF", "thighB", "thighIn", "thighOut", "kneeCap", "kneeBack"] : []), "shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
+  const SHOE_PARTS = [...(OVERKNEE ? ["thigh", "thighF", "thighB", "thighIn", "thighOut", "kneeCap", "kneeBack"] : []), "shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3", "instep"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
   // each foot's from its own side's pieces only: blended together, the two heel boots' cuffs met between the knees and stretched into a web
   // when the legs parted (2026-10-10, 島風 in the official picture's pose), and so did any shoes on feet set close (the adult type's,
   // ankles 7 cm from the middle: Saori, "大人体形で歩くと足同士がくっついています")
@@ -221,13 +221,15 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return C(a, a.map((v, i) => v + d[i] * (HP.heel - 0.005)), 0.011, 0.005, `foot.${s}`, 0.006); }) : [];   // from under the heel, slanted forward by the tilt: straight down once tilted
   // heels: a pointed toe (a flat cone forward and a little toward the big toe, smoothly joined), and no rubber sole: the shoe itself goes down
   // to the floor, all one color (2026-10-05, Saori: "ゴム部分がついてる、先も尖ってない")
-  const toePoints = PUMPS ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03 * FK], b = [f.cx - m * 0.01 * FK, 0.006, 0.128 * FK], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
+  // a pointed toe: the pumps' always, boots' with shoes.toe "pointed" (2026-10-11, for ロゼ's white boots)
+  const POINTED = PUMPS || (BOOTS && OPT.outfit.shoes.toe === "pointed");
+  const toePoints = POINTED ? ["L", "R"].map((s) => { const f = P[`foot.${s}`], m = Math.sign(f.cx), a = [f.cx, 0.016, 0.03 * FK], b = [f.cx - m * 0.01 * FK, 0.006, 0.128 * FK], L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), u = [0, 1, 2].map((i) => (b[i] - a[i]) / L), FY = 0.45;
     return (x, y, z) => { const p = [x - a[0], y - a[1], z - a[2]], t = Math.min(1, Math.max(0, (p[0] * u[0] + p[1] * u[1] + p[2] * u[2]) / L)), q = [0, 1, 2].map((i) => p[i] - u[i] * t * L), r = (0.028 * (1 - t) + 0.003) * FK;
       return (Math.hypot(q[0], q[2], q[1] / FY) - r) * FY; }; }) : [];
   // heels: thin leather close to the foot (0.6 cm, not a sneaker's 1.2), over a narrower foot (body/index.js) and a slimmer toe (2026-10-07)
   const SHOE_OFF = PUMPS ? 0.006 : SHOE.off, CUFF = BOOTS ? OPT.outfit.shoes.cuff ?? 0 : 0;
   const shoeTop = (x, y, z) => TOP - TILT * z - y;   // how far under the top (m, base): the cuff is painted by it
-  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
+  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 : 0.004) + (OPT.outfit.shoes.flare ?? (HBOOTS ? 0.006 : 0.008)) * sstep(TOP - 0.04, TOP, y) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
     let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
@@ -235,7 +237,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
   // heel boots: which of a point of the soles' part is the heel's (< 0) or the sole's, for the heel's own color (shoes.heelColor, index.js)
   const heelOf = HBOOTS ? (x, y, z) => { let h = 1; for (const q of heelSpikes) h = Math.min(h, dPrim(q, x, y, z)); return h - soleSdf0(x, HB ? HB(x, y, z) : y, z); } : null;
-  const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
+  const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = smin(d, dPrim(h, x, y, z), OPT.outfit.shoes.heelWidth > 0.026 ? 0.012 : 0.002); return d; } : soleSdf0;   // (a wide block heel blends into the sole: joined by a plain min it stood apart under the heel's curve, a step between them; 2026-10-11, ロゼ)   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
   const lacesSdf = KIND === "laced" ? (() => { const parts = [], surf = (x, z) => { let lo = 0.025, hi = 0.14; for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (shoeSdf(x, m, z) < 0) lo = m; else hi = m; } return lo; };
