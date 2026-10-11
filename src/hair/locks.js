@@ -273,17 +273,21 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
           // the thin strand between the slit and the bundle's edge is wound round the main bundle that many times along the slit, a two-ply
           // rope: the slit closes between the turns into a row of eyes, and where it closes the strand crosses the main bundle's edge, in
           // front of it and behind it in turn. (Wound round its whole face it didn't show: a strand over the bundle, the same colour, has no line)
-          for (const [g00, g0, g1, go, g11 = g00, gn = 0] of T.gaps ?? []) { const u = (t - g0) / Math.max(0.01, g1 - g0);   // (along the middle line, the same height for every lock: along each lock, its clump a little shorter, the slit sat higher in one clump than the next)
+          for (const [g00, g0, g1, go, g11 = g00, gn = 0, gs = 0] of T.gaps ?? []) { const u = (t - g0) / Math.max(0.01, g1 - g0);   // (along the middle line, the same height for every lock: along each lock, its clump a little shorter, the slit sat higher in one clump than the next)
             if (!(u > 0 && u < 1)) continue;
             const gc = Math.max(-0.9, Math.min(0.9, g00 + (g11 - g00) * u)), h = Math.min(go, 0.8 * (1 - Math.abs(gc))) * Math.sin(Math.PI * u) ** 0.6, e = gn ? Math.abs(Math.sin(Math.PI * gn * u)) ** 0.7 : 1, cross = gn ? (1 - e) * (Math.round(gn * u) % 2 ? 1 : -1) : 0;   // e: how open between the turns; cross: the strand over the edge (+ behind, - in front)
-            GS.push([gc, h * e, cross, h, gn, sstep(0, 0.7, Math.sin(Math.PI * u))]); }
+            GS.push([gc, h * e, cross, h, gn, sstep(0, 0.7, Math.sin(Math.PI * u)), gs]); }
           let gz = 0;
-          if (GS.length) { GS.sort((x, y) => x[0] - y[0]); const B = [[-1, 0, 0, 0, 0, 0], ...GS, [1, 0, 0, 0, 0, 0]], ax1 = ax; let k = B.findIndex((b) => b[0] > ax); k = k < 0 ? B.length - 1 : Math.max(1, k);
+          if (GS.length) { GS.sort((x, y) => x[0] - y[0]); const B = [[-1, 0, 0, 0, 0, 0, 0], ...GS, [1, 0, 0, 0, 0, 0, 0]], ax1 = ax; let k = B.findIndex((b) => b[0] > ax); k = k < 0 ? B.length - 1 : Math.max(1, k);
             const sl = k === 1 && B.length > 2 && B[1][4] ? -1 : k === B.length - 1 && B.length > 2 && B[k - 1][4] ? 1 : 0, S = sl ? B[sl > 0 ? k - 1 : k] : null;   // a wound strand: its side, its slit
             const [a0, h0] = B[k - 1], [a1, h1] = B[k], lo = a0 + (sl > 0 ? S[3] : h0), hi = a1 - (sl < 0 ? S[3] : h1); ax = lo + (ax - a0) / (a1 - a0) * Math.max(0, hi - lo);   // (between the slits' edges lo..hi; a wound strand as thin as with the slit full open)
             const hb = 0.5 * w * (prof0 ?? width)(q / (N - 1)) / Math.max(0.005, W); let La = ax - hb, Ra = ax + hb; if (h0 > 0 || sl > 0) La = Math.max(La, lo); if (h1 > 0 || sl < 0) Ra = Math.min(Ra, hi);   // (the lock's half width in the bundle's half widths)
             if (Ra - La < 2 * hb) { ax = (La + Ra) / 2; gw = Math.max(0.08, (Ra - La) / (2 * hb)); }
             // (all that only as the slit beside it opens: squeezed and narrowed at once where a slit began, a thin strand hung from the tie)
+            // a slit's seventh value, thin (2026-10-12, Saori: "外側の毛束をもっと細くしてください"): the strand between the slit and the bundle's
+            // edge as wide as that share of a lock, its outer edge kept (narrowed only to its room, it kept the outer half of a lock)
+            const se = k === 1 && B.length > 2 ? -1 : k === B.length - 1 && B.length > 2 ? 1 : 0, sT = se ? B[se > 0 ? k - 1 : k][6] : 0;
+            if (sT > 0 && gw > sT) { const o = ax + se * hb * gw; gw = sT; ax = o - se * hb * gw; }
             const bl = Math.max(B[k - 1][5], B[k][5]); ax = ax1 + (ax - ax1) * bl; gw = 1 - (1 - gw) * bl;
             if (sl) { ax -= sl * (S[3] - S[1]) * 1.6; gz = (D + 0.015) * S[2]; } }   // (in over the edge where the slit closes, and in front or behind)
           GW.push(gw); GF.push(Math.min(1, Math.max(0, ...GS.map((g) => g[1] * 4))));
