@@ -722,6 +722,9 @@ export const DEFAULTS = {
       "strays": 0,
       "splayPow": 1.6,
       "trail": 0,
+      "path": null,
+      "widths": null,
+      "depth": null,
       "tie": {
         "on": true,
         "color": "#c94a4a",
@@ -786,6 +789,7 @@ export const DEFAULTS = {
         "lockRootSpread": 0.45,
         "lockTaper": 0.08,
         "tipTaper": null,
+        "lockTipSpread": 0.45,
         "arc": 0,
         "width": 1,
         "flat": 0.42,

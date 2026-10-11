@@ -222,6 +222,11 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
  *      size (×: the bundle and each lock's width together, how thick the tail looks) }
  * anchors: [{ p, o }] the ties (root space, rest) and their outward directions / coll, ell: as for the other locks (colliders(), the head)
  */
+// along a list sampled evenly from 0 to 1 (linear between), or a number as it is
+const listAt = (L, t, d) => { if (L == null) return d; if (!Array.isArray(L)) return L; if (L.length === 1) return L[0]; const f = Math.min(1, Math.max(0, t)) * (L.length - 1), i = Math.min(L.length - 2, Math.floor(f)), u = f - i; return L[i] * (1 - u) + L[i + 1] * u; };
+// a Catmull-Rom curve through points (uniform), t 0..1 over all of them
+const curveAt = (Q, t) => { const n = Q.length - 1, f = Math.min(1, Math.max(0, t)) * n, i = Math.min(n - 1, Math.floor(f)), u = f - i, g = (k) => Q[Math.min(n, Math.max(0, k))], a = g(i - 1), b = g(i), c = g(i + 1), d = g(i + 2), u2 = u * u, u3 = u2 * u;
+  return [0, 1, 2].map((k) => 0.5 * (2 * b[k] + (c[k] - a[k]) * u + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * u2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * u3)); };
 export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
   const out = [], n = Math.max(1, Math.round(T.count ?? 9)), S = T.size ?? 1, VOL = T.volume * S, hash = (i) => { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); };
   // gather (0..1): the tips drawn together to the bundle's middle and the outer locks a little shorter, so the tail narrows to a point as one
@@ -245,7 +250,15 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       const RISE = T.rise ?? 0;   // rise (m): the tail goes up from the tie before it arcs over and falls (2026-10-11, 初音ミク's)
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 + RISE : 0)),   // a cubic Bezier: out from the tie, over, and down
         root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 - RISE * 0.4 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) - (k === 1 ? len : 0))];
-      const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
+      let P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
+      // path (2026-10-11, for ロゼ: "ツインテールを完全一致させてください"): the bundle's middle line given as points from the tie ([out, up, forward], m on the
+      // character; out mirrored for the other tail), its half width across (widths: a list along its length, out from the head) and half
+      // depth front to back (depth). Each lock sits at its place across the bundle (sx across, the other way through the depth); with clumps
+      // the tips gather to their clump's middle, and a clump's locks away from its middle end a little shorter, so each clump ends in a point
+      if (T.path?.length) { const sd = Math.sign(p[0]) || 1, Q = [[0, 0, 0], ...T.path.map(([a0, b0, c0]) => [a0 * sd, b0, c0])], sz = r * Math.sin(a);
+        const ci = NC > 0 ? Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)) : 0, tEnd = it.lead ? 1 : (NC > 0 ? 0.88 + 0.12 * hash(ci + 5 + ai * 3) : 1) * (1 - (NC > 0 ? 0.1 : 0.05) * Math.abs(sx - sc) * Math.max(1, NC) / 2);
+        P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1) * tEnd, c = curveAt(Q, t), g = NC > 0 ? sstep(0.7, 1, t / tEnd) * (T.gather ?? 0.8) : 0, ax = sx + (sc - sx) * g * 0.9, W = listAt(T.widths, t, 0.04), D = listAt(T.depth, t, 0.02);
+          P.push([p[0] + c[0] + sd * ax * W, p[1] + c[1], p[2] + c[2] + sz * D]); } }
       if (T.wave && (NC > 0 || it.stray)) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], wb = [-wd[2], 0, wd[0]];   // with clumps: each clump waves with its own phase, out from the head
         // and across it (back and forth), more toward the tips, so the clumps part and ripple instead of the whole bundle bending as one slab; a stray more still
         const ci = it.stray ? 7 + i : Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)), ph = ci * 1.9 + 0.3 * (hash(i + 11) - 0.5), A = T.wave * (it.stray ? 1.6 : 1);
@@ -253,7 +266,7 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
           for (let k = 0; k < 3; k++) q[k] += wd[k] * e + wb[k] * e2; }); }
       else if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
-      if (SPR) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], SH = T.sheet ?? 0, SP = T.splay ?? 0;   // splay (m): the tips drift out from the head as the bundle falls, each lock by where it sits across the bundle, so
+      if (SPR && !T.path?.length) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], SH = T.sheet ?? 0, SP = T.splay ?? 0;   // splay (m): the tips drift out from the head as the bundle falls, each lock by where it sits across the bundle, so
         // seen from the front the tail opens into a wide sheet, an A (2026-10-11, for 初音ミク's twin tails: "極力完璧に"); 0 = it hangs straight down.
         // The locks further out are longer (len above: the inner ones a third shorter), so the sheet narrows down its inner edge to a point at
         // its outer side, not a row of tips
@@ -266,7 +279,7 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
           const e = SP * (0.65 + 0.35 * s) * t ** (T.splayPow ?? 1.6) + SH * (0.5 + 0.5 * s) * sstep(0.12, 0.5, t) * (1 - 0.6 * sstep(0.7, 1, t)) - (T.curl ?? 0) * sstep(0.65, 1, t) ** 1.5 * (0.6 + 0.4 * s); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
       // trail (m, 2026-10-11, for ロゼ): the tail arcs back away from the back as it falls, most a little past its middle (seen from the side it
       // leaves the head behind the ear and swings out behind, not straight down the back)
-      if (T.trail) P.forEach((q, j) => { const t = j / (N - 1); q[2] -= T.trail * Math.sin(Math.PI * Math.min(1, t * 0.85)) * sstep(0, 0.3, t); });
+      if (T.trail && !T.path?.length) P.forEach((q, j) => { const t = j / (N - 1); q[2] -= T.trail * Math.sin(Math.PI * Math.min(1, t * 0.85)) * sstep(0, 0.3, t); });
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
       const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)
