@@ -132,7 +132,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, skirtPleat, heelOf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -469,22 +469,26 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
-  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
-  const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
+  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU(), pants2: bandU(), soles: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
+  const banded = (k, f, base = true, ch = "") => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3), U = BANDS[k + ch];   // ch: a second set on the part ("2")
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
-    g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
+    g.setAttribute("bandT" + ch, new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, U, ch); x.m.material = withBands(x.m.material, U, ch); return T; };
   for (const p of PARTS) if (p.bands && garments[p.name]) banded(p.name, p.bands.value(garments[p.name]));
   if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
   if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
+  if (SKO && !SKO.dress) banded("pants", skirtPleat, true, "2");   // and its folds' insides (pants.skirt.pleatColor, 2026-10-11): where across the pleats (clothes/index.js skirtPleat)
+  if (heelOf) banded("soles", heelOf);   // heel boots' heels in their own color (shoes.heelColor)
   let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
   banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
   function paintBands() {   // the bands' colors and places from the options (instant: setColors, setBands)
     const O = OPT.outfit, SH = O.shoes, SS = O.socks.stripes ?? {};
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
-    for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
+    for (const p of PARTS) if (p.bands) put(BANDS[p.name], garments[p.name] ? p.bands.ranges(partOptions(OPT, p), garments[p.name]) : []);   // the garment parts' (the collar's line, the gloves' cuff; the state: a length it measured)
     put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
-    { const SB = O.pants.skirt ?? {}; put(BANDS.pants, SB.bandColor ? [[-1, SB.bandWidth ?? 0.02, SB.bandColor]] : []); }
-    const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
+    { const SB = O.pants.skirt ?? {}; put(BANDS.pants, SB.bandColor ? [[-1, SB.bandWidth ?? 0.02, SB.bandColor]] : []); put(BANDS.pants2, SB.pleatColor ? [[1 - (SB.pleatShare ?? 0.5), 2, SB.pleatColor]] : []); }
+    put(BANDS.soles, SH.heelColor ? [[-1, 0, SH.heelColor]] : []);
+    const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a");
+    put(BANDS.socks, !SS.on && O.socks.bandColor ? [[socksTopY - (O.socks.bandWidth ?? 0.012), socksTopY + 1, O.socks.bandColor]] : []); }   // a band round the top (socks.bandColor, 2026-10-11): without stripes
   paintBands();
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
   const armorPart = (k) => { const x = skinned(meshPart(k), armorColor(k), k === "armorMail" ? 0.003 : 0.004); if (isMetal(k)) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, AO.color); } return x; };
@@ -533,7 +537,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie", "tailTieLine"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
@@ -580,14 +584,24 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
       out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9 });
-      if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
-        const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
-          g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026); return g; });
-        const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
-        g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
-        const nv = g.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
-        g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
-        out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
+      if (TL.tie?.on) {   // a hair tie on each bundle at its tie, on the head bone: a ring round it, or a clip (tie.shape "clip", 2026-10-11, for 初音ミク's
+        // ornaments: a block clamped over the bundle where it leaves the head, standing a little above it, with a stripe of tie.lineColor on its outer face and top)
+        const ts = TL.tie.size ?? 1, R = TL.volume * (TL.size ?? 1) * 0.5 + 0.008, CLIP = TL.tie.shape === "clip", lineGeos = [];
+        const geos = anchors.flatMap(({ p, o }) => {
+          if (!CLIP) { const g = new THREE.TorusGeometry(R, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
+            g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026); return [g]; }
+          const ol = Math.hypot(o[0], o[2]) || 1, out = new THREE.Vector3(o[0] / ol, 0, o[2] / ol), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3().crossVectors(up, out);   // the clip stands upright, its face outward
+          const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, up, out)), at = (g, s, u, d) => { g.applyQuaternion(q); g.translate(p[0] + out.x * d + side.x * s, p[1] + u, p[2] + out.z * d + side.z * s); return g; };
+          const W = (2 * R + 0.008) * ts, H = (3.2 * R + 0.016) * ts, D = 0.034 * ts, c = 0.004 * ts, DD = 0.045 + R * 0.3, UP = H * 0.3;   // across, up, along the bundle; c: the stripe's standing off; DD: how far out from the tie; UP: how far it rises over it
+          lineGeos.push(at(new THREE.BoxGeometry(W * 0.22, H * 0.92, D * 0.15), W * 0.18, UP, DD + D / 2 + c),   // the stripe down its outer face, toward the front
+            at(new THREE.BoxGeometry(W * 0.22, D * 0.15, D * 0.9), W * 0.18, UP + H * 0.5 + c, DD));                   // and over its top
+          return [at(new THREE.BoxGeometry(W, H, D), 0, UP, DD)]; });
+        const one = (list) => { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of list) { const o0 = Pm.length / 3, qq = q.index ? q : q; Pm.push(...qq.attributes.position.array); Nm.push(...qq.attributes.normal.array); for (const i of qq.index.array) Im.push(i + o0); }
+          g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
+          const nv = g.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
+          g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4)); return g; };
+        out.tailTie = skinned(one(geos), TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} };
+        if (CLIP && TL.tie.lineColor) { out.tailTieLine = skinned(one(lineGeos), TL.tie.lineColor, 0.002); out.tailTieLine.sim = { update() {}, rest() {} }; } }
     }
     if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
@@ -881,7 +895,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [k, v, key] of [["extraEars", ears, "earColor"], ["extraEarsIn", earsIn, "earInColor"], ["extraTail", tail, "tailColor"], ["extraWings", wings, "wingColor"]]) {
         if (v !== undefined) XO[key] = v; if (v !== undefined || hair) parts[k]?.m.material.color.set(XC[{ extraEars: "ears", extraEarsIn: "earsIn", extraTail: "tail", extraWings: "wings" }[k]]()); }
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
-      if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (!k.startsWith("tailTie")) parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { OPT.outfit[k].color = c; if (!(DR && (k === "pants" || k === "shirt"))) parts[k].m.material.color.set(c); }
@@ -995,7 +1009,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setTails(values) {
       const TL = OPT.hair.tail; for (const [k, v] of Object.entries(structuredClone(values))) { if (k === "tie" && v && typeof v === "object") Object.assign(TL.tie, v); else TL[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
-      for (const k of ["tails", "tailTie"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
+      for (const k of ["tails", "tailTie", "tailTieLine"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks(["tails"]))) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
     /** Where the tails are tied (avatar space, rest pose): [{ p, o }] (o: the way the bundle leaves the head), [] without tails. For an editor's handles. */

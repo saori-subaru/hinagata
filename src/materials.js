@@ -53,23 +53,24 @@ export function withGrad(m, U) {
  *  bandT is a value per vertex that runs smoothly over the part (a distance from an edge, a height) and is cut into bands in the fragment
  *  shader, so a band's edges stay crisp on the big triangles of a thinned mesh (a color per vertex would smear over them).
  *  U: { n (ranges used, 0..3), lo, hi (vec3: the ranges' ends), c0, c1, c2 (their colors; a later range over an earlier one),
- *       period (> 0: stripes instead: where (bandT - phase) / period's fraction is under duty, c0) } as uniforms ({ value }) */
-export function withBands(m, U) {
-  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+ *       period (> 0: stripes instead: where (bandT - phase) / period's fraction is under duty, c0) } as uniforms ({ value })
+ *  ch: a second set on the same part ("2": its own attribute bandT2 and uniforms; a skirt's pleats beside its waistband, 2026-10-11) */
+export function withBands(m, U, ch = "") {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey(), b = `b${ch}`, T = `bandT${ch}`, V = `vBandT${ch}`;
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    Object.assign(sh.uniforms, { bN: U.n, bLo: U.lo, bHi: U.hi, bC0: U.c0, bC1: U.c1, bC2: U.c2, bPeriod: U.period, bDuty: U.duty, bPhase: U.phase });
-    sh.vertexShader = "attribute float bandT;\nvarying float vBandT;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vBandT = bandT;");
-    sh.fragmentShader = `uniform float bN, bPeriod, bDuty, bPhase;
-uniform vec3 bLo, bHi, bC0, bC1, bC2;
-varying float vBandT;
-float bIn(float t, float lo, float hi) { float w = fwidth(t) * 0.7 + 1e-6; return smoothstep(lo - w, lo + w, t) * (1.0 - smoothstep(hi - w, hi + w, t)); }
+    Object.assign(sh.uniforms, { [`${b}N`]: U.n, [`${b}Lo`]: U.lo, [`${b}Hi`]: U.hi, [`${b}C0`]: U.c0, [`${b}C1`]: U.c1, [`${b}C2`]: U.c2, [`${b}Period`]: U.period, [`${b}Duty`]: U.duty, [`${b}Phase`]: U.phase });
+    sh.vertexShader = `attribute float ${T};\nvarying float ${V};\n` + sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>\n  ${V} = ${T};`);
+    sh.fragmentShader = `uniform float ${b}N, ${b}Period, ${b}Duty, ${b}Phase;
+uniform vec3 ${b}Lo, ${b}Hi, ${b}C0, ${b}C1, ${b}C2;
+varying float ${V};
+float ${b}In(float t, float lo, float hi) { float w = fwidth(t) * 0.7 + 1e-6; return smoothstep(lo - w, lo + w, t) * (1.0 - smoothstep(hi - w, hi + w, t)); }
 ` + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
-  if (bPeriod > 0.0) { float s = (vBandT - bPhase) / bPeriod, f = fract(s), w = fwidth(s) * 0.7 + 1e-6, d = f < bDuty ? min(f, bDuty - f) : -min(f - bDuty, 1.0 - f);
-    diffuseColor.rgb = mix(diffuseColor.rgb, bC0, smoothstep(-w, w, d)); }
-  else { if (bN > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC0, bIn(vBandT, bLo.x, bHi.x));
-    if (bN > 1.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC1, bIn(vBandT, bLo.y, bHi.y));
-    if (bN > 2.5) diffuseColor.rgb = mix(diffuseColor.rgb, bC2, bIn(vBandT, bLo.z, bHi.z)); }`); };
-  m.customProgramCacheKey = () => "bands|" + key;
+  if (${b}Period > 0.0) { float s = (${V} - ${b}Phase) / ${b}Period, f = fract(s), w = fwidth(s) * 0.7 + 1e-6, d = f < ${b}Duty ? min(f, ${b}Duty - f) : -min(f - ${b}Duty, 1.0 - f);
+    diffuseColor.rgb = mix(diffuseColor.rgb, ${b}C0, smoothstep(-w, w, d)); }
+  else { if (${b}N > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, ${b}C0, ${b}In(${V}, ${b}Lo.x, ${b}Hi.x));
+    if (${b}N > 1.5) diffuseColor.rgb = mix(diffuseColor.rgb, ${b}C1, ${b}In(${V}, ${b}Lo.y, ${b}Hi.y));
+    if (${b}N > 2.5) diffuseColor.rgb = mix(diffuseColor.rgb, ${b}C2, ${b}In(${V}, ${b}Lo.z, ${b}Hi.z)); }`); };
+  m.customProgramCacheKey = () => `bands${ch}|` + key;
   return m;
 }
 /** A picture on a garment, projected (the meshes have no UVs: they are remade from shapes on every change). From texP / texN, each vertex's

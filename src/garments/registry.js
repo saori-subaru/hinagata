@@ -18,7 +18,7 @@
 //   spec(state, { OPT, H, B, ax, ay, kit, none }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js)
 //   outline: 0.003, soft: true,     the outline's width (m at outline.width 1); shading by softened normals
 //   thin: null | "cloth" | "keep",  how the "fine" and "lite" builds thin it: as the body / as cloth (less) / not at all
-//   bands: { value: (state) => (x, y, z) => t, ranges: (O) => [[lo, hi, color], ...] }   (optional) colored bands painted by a value per vertex
+//   bands: { value: (state) => (x, y, z) => t, ranges: (O, state) => [[lo, hi, color], ...] }   (optional; at most 3 ranges) colored bands painted by a value per vertex
 //                                   (materials.js withBands; base positions): a collar's line, a cuff. Their options change instantly (setBands)
 // })
 export const PARTS = [];

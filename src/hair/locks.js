@@ -224,13 +224,18 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
     const ul = Math.hypot(o[2], o[0]) || 1, u = [o[2] / ul, 0, -o[0] / ul], v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];   // across the tie: u sideways (level), v
     for (let i = 0; i < n; i++) {
       const a = i * 2.39996 + 0.3, r = Math.sqrt((i + 0.5) / n), dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
-      const len = T.length * ((0.82 + 0.3 * hash(i)) * (1 - GA) + (1.02 - 0.2 * r * r) * GA), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
+      const len = T.length * ((0.82 + 0.3 * hash(i)) * (1 - GA) + (1.02 - 0.2 * r * r) * GA) * (T.splay ? 0.8 + 0.2 * r * Math.cos(a) : 1), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
       const root = p.map((x, k) => x + dir[k] * VOL * r * 0.45), tipIn = VOL * r * 0.45 * GA;   // tipIn: back toward the bundle's middle at the tip
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 : 0)),   // a cubic Bezier: out from the tie, over, and down
         root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) - (k === 1 ? len : 0))];
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
       if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
+      if (T.splay) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], s = r * Math.cos(a);   // splay (m): the tips drift out from the head as the bundle falls, each lock by where it sits across the bundle, so
+        // seen from the front the tail opens into a wide sheet, an A (2026-10-11, for 初音ミク's twin tails: "極力完璧に"); 0 = it hangs straight down.
+        // The locks further out are longer (len above: the inner ones a fifth shorter), so the sheet narrows down its inner edge to a point at
+        // its outer side, not a row of tips
+        P.forEach((q, j) => { const t = j / (N - 1), e = T.splay * (0.65 + 0.35 * s) * t ** 2; for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
       const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)

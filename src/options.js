@@ -574,7 +574,9 @@ export const DEFAULTS = {
         "hemDepth": 0.05,
         "curl": 0,
         "bandColor": null,
-        "bandWidth": 0.02
+        "bandWidth": 0.02,
+        "pleatColor": null,
+        "pleatShare": 0.5
       },
       "hem": 0.3,
       "offset": 0.011,
@@ -627,6 +629,8 @@ export const DEFAULTS = {
       "heelAngle": 24,
       "cuff": 0,
       "cuffColor": null,
+      "heelWidth": 0.021,
+      "heelColor": null,
       "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
@@ -640,6 +644,8 @@ export const DEFAULTS = {
       "on": true,
       "color": "#f7f3ea",
       "top": 0.15,
+      "bandColor": null,
+      "bandWidth": 0.012,
       "stripes": {
         "on": false,
         "color": "#d8403a",
@@ -700,10 +706,13 @@ export const DEFAULTS = {
       "size": 1,
       "wave": 0,
       "waves": 1.5,
+      "splay": 0,
       "tie": {
         "on": true,
         "color": "#c94a4a",
-        "size": 1
+        "size": 1,
+        "shape": "ring",
+        "lineColor": null
       }
     },
     "back": "short",

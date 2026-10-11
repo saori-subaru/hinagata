@@ -4,11 +4,11 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, band (a ring around the limb at that
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, buckle (a square frame), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor", "buckle"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -51,6 +51,10 @@ const SHAPES = {
     return merge(parts); },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
   button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
+  // a buckle (2026-10-11, for 初音ミク's belt): a square frame with rounded corners and a bar across its middle, 1 across
+  buckle: () => { const rr = (s, x0, y0, x1, y1, r) => { s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.quadraticCurveTo(x1, y0, x1, y0 + r); s.lineTo(x1, y1 - r); s.quadraticCurveTo(x1, y1, x1 - r, y1); s.lineTo(x0 + r, y1); s.quadraticCurveTo(x0, y1, x0, y1 - r); s.lineTo(x0, y0 + r); s.quadraticCurveTo(x0, y0, x0 + r, y0); };
+    const s = new THREE.Shape(); rr(s, -0.5, -0.42, 0.5, 0.42, 0.1); const h = new THREE.Path(); rr(h, -0.34, -0.27, 0.34, 0.27, 0.05); s.holes.push(h);
+    const g = flat(s, 0.08), bar = new THREE.BoxGeometry(0.1, 0.6, 0.06); bar.translate(-0.1, 0, 0.06); const m = merge([g, bar.toNonIndexed()]); m.computeVertexNormals(); return m; },
   // an anchor (2026-10-10, for 島風): the shank with a ring on top and the stock across under it, the arms curving up to the flukes; 1 tall,
   // flat (it lies on the surface)
   anchor: () => { const parts = [], d = 0.08;
