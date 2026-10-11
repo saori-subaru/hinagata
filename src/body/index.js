@@ -282,13 +282,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // mouth.underLip (2026-10-09, Saori, with a Genshin profile: "見本には口のへこみもあるよね"): a soft dip under the lower lip, between the mouth and
   // the chin's front (m, at the middle; 0 = none): the line from the nose comes down past the lips, goes in, and out again to the chin
   const UL = OPT.body.sculpt.mouth.underLip ?? 0, UY = MY - (OPT.body.sculpt.mouth.underLipY ?? 0.024);
-  // mouth.chin (m; 2026-10-12, Saori, on ロゼ's profile: "横から見た時に顎がなくて顎下が弛んで見えます"): below the under-lip dip the plane that
-  // takes the lower face back is moved forward by this much, so the chin stands out under the mouth and ends in a corner over the jaw's
-  // underside instead of the line running straight back from the nose into the neck. 0 = as before (the chibi faces' straight line; the
-  // chin forward was taken out of them on 2026-10-07). Its volume comes from the jaw and chinTip (the plane only stops cutting it away)
-  const CHIN = OPT.body.sculpt.mouth.chin ?? 0;
   const profile = PRF || UL ? (x, y) => -PRF * 0.006 * gs((y - DY) / 0.014) * gs(x / 0.06) - UL * gs((y - UY) / 0.011) * gs(x / 0.045) : () => 0;
-  CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + (CHIN ? CHIN * sstep(UY + 0.005, UY - 0.025, y) : 0) + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
+  CUT.mouth = plane((x, y, z) => (0.222 + profile(x, y) - OPT.body.sculpt.mouth.back - CHEEK_BACK * (1 - Math.exp(-x * x / CHEEK_W ** 2)) * (1 - sstep(0.88, 1.0, y)) + 0.9 * (y - 0.842) - 3.9 * (y - 0.842) ** 2 + LIP_CURVE * Math.max(0, y - 0.86) ** 3 + 10 * Math.max(0, y - MOUTH_FREE) ** 2 - NOSE_UNDER.dent * Math.exp(-(((y - NOSE_UNDER.dy) / (OPT.body.sculpt.nose.under.dentWidth ?? 0.014)) ** 2)) - z) / 1.15, 0.015);   // 鼻の下〜あご先は、なめらかに奥へ下がる斜めの面(鼻のところでは前へ逃がす)
   { const CR = OPT.body.sculpt.crown;   // flat top; tilt > 0 makes it rise toward the back (pivoting at z = pivotZ), so the line from the hairline runs on up to the back of the head
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく
   // flat back of the head: cut behind z = -backPlane.z, tilted so the plane leans forward at the top (0 = off)
