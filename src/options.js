@@ -724,6 +724,7 @@ export const DEFAULTS = {
       "trail": 0,
       "path": null,
       "tipCurl": 0,
+      "gaps": null,
       "widths": null,
       "depth": null,
       "tie": {

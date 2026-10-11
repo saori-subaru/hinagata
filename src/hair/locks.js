@@ -255,16 +255,34 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       // character; out mirrored for the other tail), its half width across (widths: a list along its length, out from the head) and half
       // depth front to back (depth). Each lock sits at its place across the bundle (sx across, the other way through the depth); with clumps
       // the tips gather to their clump's middle, and a clump's locks away from its middle end a little shorter, so each clump ends in a point
+      const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), BG = T.bulge ?? 0, TP = T.tip ?? 0, GW = [], GF = [];   // the lock's width; GW: its width's share along it where a gap narrows it, GF: how open a gap is there
+      // bulge (×): each lock fuller toward the middle of its length (the tail swells below the shoulders, 2026-10-11, for ロゼ); tip (0..1):
+      // the ends rounded instead of drawn to a needle (1 = blunt and round), so a tail ends in soft points, not a fringe of spikes
+      const prof0 = BG || TP ? (t) => (BG ? 0.35 + 0.65 * sstep(0, 0.35, t) : 1) * (1 + BG * Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 1.5) * ((1 - TP) * width(t) + TP * Math.sqrt(Math.max(0, 1 - t ** 8))) : null;   // (with a bulge, thin at the tie: wide from the start they ballooned beside the head)
       if (T.path?.length) { const sd = Math.sign(p[0]) || 1, Q = [[0, 0, 0], ...T.path.map(([a0, b0, c0]) => [a0 * sd, b0, c0])], sz = r * Math.sin(a);
         const ci = NC > 0 ? Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)) : 0, tEnd = it.lead ? 1 : (NC > 0 ? 0.88 + 0.12 * hash(ci + 5 + ai * 3) : 1) * (1 - (NC > 0 ? 0.1 : 0.05) * Math.abs(sx - sc) * Math.max(1, NC) / 2);
-        P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1) * tEnd, c = curveAt(Q, t), g = NC > 0 ? sstep(0.7, 1, t / tEnd) * (T.gather ?? 0.8) : 0, ax = sx + (sc - sx) * g * 0.9, W = listAt(T.widths, t, 0.04), D = listAt(T.depth, t, 0.02);
+        P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1) * tEnd, c = curveAt(Q, t), g = NC > 0 ? sstep(0.7, 1, t / tEnd) * (T.gather ?? 0.8) : 0, ax0 = sx + (sc - sx) * g * 0.9, W = listAt(T.widths, t, 0.04), D = listAt(T.depth, t, 0.02);
+          // gaps ([[across, from, to, open, across at the end], ...]; 2026-10-11, Saori, painting slits on ロゼ's tail: "遊び毛の隙間を足せませんか …
+          // 赤く塗った部分を空洞にするイメージ"): over from..to of the length (0 tie .. 1 tips) a slit opens through the tail at across (-1 the inner
+          // side .. 1 the outer; drifting to the fifth value by its end, a slit slanting across the bundle), open wide each side at its middle
+          // (in the bundle's half widths) and closing to a point at its ends. The locks between two slits (or a slit and the bundle's edge,
+          // its outline kept) are squeezed into the room left between them, and one wider than that room narrows to fit it: a lock is near
+          // as wide as the bundle, so only parting them left the slit covered
+          let ax = ax0, gw = 1; const tt = t / tEnd, GS = [];
+          for (const [g00, g0, g1, go, g11 = g00] of T.gaps ?? []) { const u = (tt - g0) / Math.max(0.01, g1 - g0); if (u > 0 && u < 1) GS.push([Math.max(-0.9, Math.min(0.9, g00 + (g11 - g00) * u)), go * Math.sin(Math.PI * u) ** 0.6]); }
+          if (GS.length) { GS.sort((x, y) => x[0] - y[0]); const B = [[-1, 0], ...GS, [1, 0]]; let k = B.findIndex((b) => b[0] > ax); k = k < 0 ? B.length - 1 : Math.max(1, k);
+            const [a0, h0] = B[k - 1], [a1, h1] = B[k], lo = a0 + h0, hi = a1 - h1; ax = lo + (ax - a0) / (a1 - a0) * Math.max(0, hi - lo);   // (between the slits' edges lo..hi)
+            const hb = 0.5 * w * (prof0 ?? width)(q / (N - 1)) / Math.max(0.005, W); let La = ax - hb, Ra = ax + hb; if (h0 > 0) La = Math.max(La, lo); if (h1 > 0) Ra = Math.min(Ra, hi);   // (the lock's half width in the bundle's half widths)
+            if (Ra - La < 2 * hb) { ax = (La + Ra) / 2; gw = Math.max(0.15, (Ra - La) / (2 * hb)); } }
+          GW.push(gw); GF.push(Math.min(1, Math.max(0, ...GS.map((g) => g[1] * 4))));
           // tipCurl (m): over the last fifth each clump's tips curl, the clumps in turn inward and outward, and a little up (a lock's end turning over)
           const TC = T.tipCurl ? T.tipCurl * sstep(0.78, 1, t / tEnd) ** 1.5 * (ci % 2 ? 1 : -1) : 0;
           P.push([p[0] + c[0] + sd * (ax * W + TC), p[1] + c[1] + Math.abs(TC) * 0.5, p[2] + c[2] + sz * D]); } }
       if (T.wave && (NC > 0 || it.stray)) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], wb = [-wd[2], 0, wd[0]];   // with clumps: each clump waves with its own phase, out from the head
-        // and across it (back and forth), more toward the tips, so the clumps part and ripple instead of the whole bundle bending as one slab; a stray more still
+        // and across it (back and forth), more toward the tips, so the clumps part and ripple instead of the whole bundle bending as one slab; a stray more still; where a gap is open
+        // the clumps wave less (waving each their own way they closed it)
         const ci = it.stray ? 7 + i : Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)), ph = ci * 1.9 + 0.3 * (hash(i + 11) - 0.5), A = T.wave * (it.stray ? 1.6 : 1);
-        P.forEach((q, j) => { const t = j / (N - 1), g = sstep(0.12, 0.55, t) * (0.6 + 0.5 * t), e = A * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * g, e2 = A * 0.6 * Math.cos(2 * Math.PI * (T.waves ?? 1.5) * t * 0.8 + ph * 1.3) * g;
+        P.forEach((q, j) => { const t = j / (N - 1), g = sstep(0.12, 0.55, t) * (0.6 + 0.5 * t) * (it.stray ? 1 : 1 - 0.85 * (GF[j] ?? 0)), e = A * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * g, e2 = A * 0.6 * Math.cos(2 * Math.PI * (T.waves ?? 1.5) * t * 0.8 + ph * 1.3) * g;
           for (let k = 0; k < 3; k++) q[k] += wd[k] * e + wb[k] * e2; }); }
       else if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
@@ -283,15 +301,14 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       // leaves the head behind the ear and swings out behind, not straight down the back)
       if (T.trail && !T.path?.length) P.forEach((q, j) => { const t = j / (N - 1); q[2] -= T.trail * Math.sin(Math.PI * Math.min(1, t * 0.85)) * sstep(0, 0.3, t); });
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
-      const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
+      const rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)
         if (ell) pushOutEllipsoid(P[q], ell.c, ell.r, rad(q)); for (const c of coll) pushOutSphere(P[q], c.c, c.r + rad(q));
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }
       let L = 0; for (let q = 1; q < N; q++) L += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
       const spec = { root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: BUNDLE ? 0 : 0.7 * GA };   // group: they swing together (createLocks)
-      // bulge (×): each lock fuller toward the middle of its length (the tail swells below the shoulders, 2026-10-11, for ロゼ); tip (0..1):
-      // the ends rounded instead of drawn to a needle (1 = blunt and round), so a tail ends in soft points, not a fringe of spikes
-      if (T.bulge || T.tip) { const BG = T.bulge ?? 0, TP = T.tip ?? 0; spec.prof = (t) => (BG ? 0.35 + 0.65 * sstep(0, 0.35, t) : 1) * (1 + BG * Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 1.5) * ((1 - TP) * width(t) + TP * Math.sqrt(Math.max(0, 1 - t ** 8))); }   // (with a bulge, thin at the tie: wide from the start they ballooned beside the head)
+      const narrow = GW.some((g) => g < 1) ? (t) => { const f = Math.min(1, Math.max(0, t)) * (N - 1), k = Math.min(N - 2, Math.floor(f)); return GW[k] + (GW[k + 1] - GW[k]) * (f - k); } : null;
+      if (prof0 || narrow) spec.prof = (t) => (prof0 ?? width)(t) * (narrow ? narrow(t) : 1);
       if (BUNDLE && !it.lead && !it.stray) spec.follow = lead;
       if (it.stray) { spec.w = w * 0.35; spec.cohere = 0; spec.group = `stray${ai}_${i}`; }
       if (it.fill) { spec.w = w * 1.8; spec.thick = Math.min(0.9, T.thick * 2); spec.prof = (t) => Math.max(0.15, sstep(0.03, 0.3, t)) * width(Math.min(1, t * 1.12)); }   // fat, thin at the tie (it swelled there over the hair tie) and ending a little before the tips (inside the bundle)
