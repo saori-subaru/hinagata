@@ -13810,8 +13810,8 @@
     "en": "Tails"
    },
    "help": {
-    "ja": "中心線で作った束に開ける切れ目 [[横の位置 -1内〜1外, 始まり, 終わり(0結び目〜1毛先), 開き], …]。毛束が左右に分かれて向こうが見える",
-    "en": "slits in a bundle made by a path: [[across -1 inner .. 1 outer, from, to (0 tie .. 1 tips), open], ...]; the locks part to either side and it shows through"
+    "ja": "中心線で作った束に開ける切れ目 [[横の位置 -1内〜1外, 始まり, 終わり(0結び目〜1毛先), 開き, 終わりでの横の位置, 巻き], …]。毛束が左右に寄って向こうが見える(外形はそのまま)。端の近くに開けて巻きを入れると、端の細い毛束が太い束に巻き付く(切れ目が目の列になり、閉じる所で前・後ろと交互に横切る)",
+    "en": "slits in a bundle made by a path: [[across -1 inner .. 1 outer, from, to (0 tie .. 1 tips), open, across at the end, twists], ...]; the locks squeeze aside and it shows through (the outline kept). Near the edge with twists, the thin strand at the edge winds round the thick bundle (the slit a row of eyes, the strand crossing in front and behind in turn where it closes)"
    }
   },
   "hair.tail.widths": {
