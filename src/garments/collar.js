@@ -3,7 +3,7 @@
 // as the sailor collar is. The tie: a knot at the throat between the collar's flaps and a blade hanging down the front, widening to a
 // pointed end, with a painted chevron. Heights given in m are as on the character (the stretch there is taken out). Base space.
 import { definePart } from "./registry.js";
-import { smin } from "../sdf/prim.js";
+import { smin, sstep } from "../sdf/prim.js";
 
 const L = (ja, en) => ({ ja, en }), smax = (a, b, k) => -smin(-a, -b, k), SEC = L("シャツの襟・ネクタイ", "Shirt collar and tie");
 const TH = 0.005;   // how far the flaps stand off the shirt
@@ -28,16 +28,22 @@ definePart({ src: import.meta.url,
     // under it (the tie's knot sits there); the points depth under that
     const NY = J.neck[1], NZ = J.neck[2], k = slope(NY), YT = NY + (SC.top ?? 0.07) / k, DEP = (SC.depth ?? 0.05) / k, BK = (SC.back ?? 0.03) / k;
     const PX = SC.spread ?? 0.05, W = SC.width ?? 0.055, YC = YT - 0.025 / k, PY = YC - DEP, YW = YT - 0.006 / k, ZS = NZ - 0.012;   // the points; YC: where the flaps meet in the middle; YW: their outer top beside the neck
-    const l1 = (u) => YC + (PY - YC) * u / PX, l2 = (u) => PY + (YW - PY) * (u - PX) / Math.max(0.005, W - PX);   // the flaps' lower edges: in from the point, out from it
-    const n1 = Math.hypot(1, (YC - PY) / PX * k), n2 = Math.hypot(1, (YW - PY) / Math.max(0.005, W - PX) * k);
+    // the flaps' edges: the lower one in from the point to where they meet; the outer one from the point up to the neck's side (W): out
+    // past the point (W > PX) or back in toward the neck (W < PX: the points spread out the furthest, as a shirt collar's do). Distances as built
+    const l1 = (u) => YC + (PY - YC) * u / PX, n1 = Math.hypot(1, (YC - PY) / PX * k);
+    const ex = W - PX, ey = (YW - PY) * k, el = Math.hypot(ex, ey) || 1, inner = (W - PX) * (YT - PY) * k - ey * (0 - PX) > 0 ? 1 : -1;   // which side of the outer edge the collar is on (the middle's top)
+    const outer = (u, y) => -inner * (ex * (y - PY) * k - ey * (u - PX)) / el;   // > 0 outside it
     const region = (x, y, z) => { const u = Math.abs(x), r = Math.hypot(x, z - NZ); if (z < ZS) return Math.max(r - W, (NY - BK - y) * k);   // (round the neck only: cut by height alone it lay over the shoulders' tops)
-      return smax(Math.max((l1(u) - y) * k / n1, (l2(u) - y) * k / n2), u - W, 0.003); };   // < 0 on the collar
+      return smax(Math.max((l1(u) - y) * k / n1, outer(u, y)), u - Math.max(W, PX), 0.003); };   // < 0 on the collar
     // the flaps lie on the shirt 5 mm out, and above the shirt's neckline on the neck 2.1 cm out (over the stand)
     const NR = -bodySdf(0, NY + 0.01, NZ) + 0.025;   // round the neck only (the neck's radius there, and room): not under the chin
-    const flaps = (x, y, z, B) => Math.max(Math.min(shirtSdf(x, y, z, B, true, true) - TH, Math.max(B(x, y, z) - 0.021, Math.hypot(x, z - NZ) - NR)), region(x, y, z), y - YT - 0.004);
-    // the stand: round the neck, from inside the shirt up to YT (higher at the back), 1.6 cm off the body below (over the shirt, which stands
-    // 1.4 cm off it) and closer up the neck
-    const stand = (x, y, z, B) => Math.max(B(x, y, z) - 0.016 + 0.008 * Math.min(1, Math.max(0, (y - NY) / Math.max(0.01, YT - NY))), (y - (YT + 0.012 / k * (1 - Math.max(0, Math.min(1, (z - NZ + 0.02) / 0.05))))) * k, NY - 0.05 - y, Math.hypot(x, z - NZ) - NR);
+    // the collar's top: YT round the neck (a little higher at the back); in front it opens down in a V to where the flaps meet, at the
+    // throat (the stand shows round the neck's sides, the tie's knot in the V)
+    const topAt = (x, z) => z < ZS ? YT + 0.012 / k : Math.min(YT, YC + (YT - YC) * Math.abs(x) / W);
+    const flaps = (x, y, z, B) => Math.max(Math.min(shirtSdf(x, y, z, B, true, true) - TH, Math.max(B(x, y, z) - 0.021, Math.hypot(x, z - NZ) - NR)), region(x, y, z), (y - topAt(x, z) - 0.002) * k);
+    // the stand: round the neck, from inside the shirt up to YT (higher at the back): under the neck's base 1.2 cm off the body, inside the
+    // shirt (1.4 cm: out over it, the stand lay over the chest's top as a white bib), 1.6 cm over it, closer up the neck
+    const stand = (x, y, z, B) => Math.max(B(x, y, z) - 0.012 - 0.004 * sstep(NY - 0.005, NY + 0.01, y) + 0.008 * Math.min(1, Math.max(0, (y - NY) / Math.max(0.01, YT - NY))), (y - topAt(x, z)) * k, NY - 0.05 - y, Math.hypot(x, z - NZ) - NR);
     return { sdf: (x, y, z, B = bodySdf) => smin(flaps(x, y, z, B), stand(x, y, z, B), 0.003), lo: [-W - 0.05, PY - 0.03, -0.16], hi: [W + 0.05, YT + 0.04, 0.2] };
   },
   spec: (st, { H, B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: Math.min(H, 0.004), only: /^(chest|upperChest|neck)/ }),

@@ -590,11 +590,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const geos = anchors.flatMap(({ p, o }) => {
           if (!CLIP) { const g = new THREE.TorusGeometry(R, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
             g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026); return [g]; }
-          const ol = Math.hypot(o[0], o[2]) || 1, out = new THREE.Vector3(o[0] / ol, 0, o[2] / ol), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3().crossVectors(up, out);   // the clip stands upright, its face outward
-          const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, up, out)), at = (g, s, u, d) => { g.applyQuaternion(q); g.translate(p[0] + out.x * d + side.x * s, p[1] + u, p[2] + out.z * d + side.z * s); return g; };
-          const W = (2 * R + 0.008) * ts, H = (3.2 * R + 0.016) * ts, D = 0.034 * ts, c = 0.004 * ts, DD = 0.045 + R * 0.3, UP = H * 0.3;   // across, up, along the bundle; c: the stripe's standing off; DD: how far out from the tie; UP: how far it rises over it
-          lineGeos.push(at(new THREE.BoxGeometry(W * 0.22, H * 0.92, D * 0.15), W * 0.18, UP, DD + D / 2 + c),   // the stripe down its outer face, toward the front
-            at(new THREE.BoxGeometry(W * 0.22, D * 0.15, D * 0.9), W * 0.18, UP + H * 0.5 + c, DD));                   // and over its top
+          // the clip leans out from the head by tie.tilt (degrees), its stripe down the face toward the front and over its top
+          const ol = Math.hypot(o[0], o[2]) || 1, out0 = new THREE.Vector3(o[0] / ol, 0, o[2] / ol), side = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), out0), tl = (TL.tie.tilt ?? 20) * Math.PI / 180;
+          const up = new THREE.Vector3(0, Math.cos(tl), 0).addScaledVector(out0, Math.sin(tl)), out = new THREE.Vector3(0, -Math.sin(tl), 0).addScaledVector(out0, Math.cos(tl));
+          const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(side, up, out)), at = (g, s, u, d) => { g.applyQuaternion(q); g.translate(p[0] + out.x * d + side.x * s + up.x * u, p[1] + out.y * d + up.y * u, p[2] + out.z * d + side.z * s + up.z * u); return g; };
+          const W = (2 * R + 0.008) * ts, H = (3.6 * R + 0.02) * ts, D = 0.034 * ts, c = 0.003 * ts, DD = 0.012 + R * 0.3, UP = H * 0.18, fr = side.z >= 0 ? 1 : -1;   // across, up, along the bundle; c: the stripe's standing off; DD: how far out from the tie; UP: how far it rises over it; fr: which side faces the front
+          lineGeos.push(at(new THREE.BoxGeometry(c * 2, H * 0.9, D * 0.4), fr * (W / 2 + c * 0.5), UP, DD + D * 0.15),   // the stripe down its face toward the front
+            at(new THREE.BoxGeometry(W * 0.9, c * 2, D * 0.4), 0, UP + H / 2 + c * 0.5, DD + D * 0.15));             // and over its top
           return [at(new THREE.BoxGeometry(W, H, D), 0, UP, DD)]; });
         const one = (list) => { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of list) { const o0 = Pm.length / 3, qq = q.index ? q : q; Pm.push(...qq.attributes.position.array); Nm.push(...qq.attributes.normal.array); for (const i of qq.index.array) Im.push(i + o0); }
           g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
@@ -766,7 +768,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, get halo() { return halo; }, cloth, capeCloth,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { TEX, GRAD, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { TEX, GRAD, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, clothes: kit.clothes, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },

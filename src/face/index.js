@@ -7,7 +7,7 @@ import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "image"];
+const BLINKS0 = ["round", "almond", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "image"];
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -85,6 +85,36 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0028, "#c98c80"); fctx.beginPath(); mv(-0.016, 0.046); qc(0.012, 0.056, 0.036, 0.04); fctx.stroke();
         // ハイライト
         ell(cx - 0.012, cy + 0.014, 0.0085, 0.0085, "#ffffff"); ell(cx + 0.012, cy - 0.018, 0.0035, 0.0035, "#ffffffe0"); ell(cx - 0.004, cy + 0.002, 0.0022, 0.0022, "#ffffffd0");
+        fctx.restore();
+      },
+      // 切れ長 (2026-10-11, for 初音ミク V6: "目を優先して"): the round eye's parts, wider than tall: a long almond opening whose upper lid
+      // covers the iris's top, the iris dark in its upper half with a darker ring round the pupil, a heavy black upper lash running past the
+      // outer corner and flicking out, a thin lower lash on the outer half, one small highlight
+      almond: () => {
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        const open = () => { fctx.beginPath(); mv(-0.038, 0.002); bz(-0.03, 0.03, 0.016, 0.038, 0.047, 0.012); bz(0.046, -0.014, 0.024, -0.033, -0.002, -0.033); bz(-0.022, -0.033, -0.036, -0.018, -0.038, 0.002); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.035), ...P(0, -0.03)); g.addColorStop(0, "#c4c1cc"); g.addColorStop(0.4, "#f2f0f2"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); open(); fctx.clip();
+        const ir = () => { fctx.beginPath(); fctx.ellipse(...P(0.001, -0.002), pu(0.029), pu(0.034), 0, 0, Math.PI * 2); };
+        ir(); { const g = fctx.createLinearGradient(...P(0, 0.032), ...P(0, -0.036)); g.addColorStop(0, IR[0]); g.addColorStop(0.5, IR[0]); g.addColorStop(0.78, IR[2]); g.addColorStop(1, IR[3]); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); ir(); fctx.clip();
+        ell(cx + 0.001, cy + 0.03, 0.034, 0.024, "#10161cb0");                                   // the lid's shadow over the iris's top
+        fctx.restore();
+        line(0.0022, IR[0]); fctx.beginPath(); fctx.ellipse(...P(0.001, -0.004), pu(0.017), pu(0.02), 0, 0, Math.PI * 2); fctx.stroke();   // the ring round the pupil
+        ell(cx + 0.001, cy - 0.004, 0.0085, 0.011, "#141018");                                   // pupil
+        line(0.0024, "#1c2a30"); ir(); fctx.stroke();                                            // the iris's edge
+        fctx.restore();
+        // lower lash: thin, on the outer half, a little flick at the corner
+        line(0.0024, "#3a2830"); fctx.beginPath(); mv(0.004, -0.0335); qc(0.032, -0.03, 0.045, -0.008); fctx.stroke();
+        // upper lash: heavy and black along the lid, thickest toward the outer corner, running past it and flicking out and down
+        fctx.beginPath(); mv(-0.041, 0.002); bz(-0.033, 0.038, 0.016, 0.05, 0.05, 0.02); qc(0.06, 0.012, 0.066, -0.008); qc(0.054, -0.002, 0.045, 0.004);
+        bz(0.016, 0.026, -0.028, 0.02, -0.037, -0.004); fctx.closePath(); fctx.fillStyle = "#1c171d"; fctx.fill();
+        line(0.0024, "#1c171d"); fctx.beginPath(); mv(0.035, 0.03); qc(0.044, 0.038, 0.05, 0.04); fctx.stroke();   // a lash over the outer corner
+        // the double lid's line
+        line(0.0024, "#c08a80"); fctx.beginPath(); mv(-0.012, 0.047); qc(0.016, 0.055, 0.04, 0.036); fctx.stroke();
+        // highlight: one small, high toward the inner side, and a dot
+        ell(cx - 0.011, cy + 0.011, 0.0065, 0.0075, "#ffffff"); ell(cx + 0.012, cy - 0.016, 0.0028, 0.0028, "#ffffffc0");
         fctx.restore();
       },
       // キラキラ目 (2026-10-07, for a 超絶美少女): the round eye's build, dressed up — an almond eye lifted at the outer corner, a bigger iris

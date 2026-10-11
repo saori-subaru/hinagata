@@ -84,7 +84,8 @@ export const DEFAULTS = {
     },
     "adult": {
       "on": false,
-      "knee": 0.53
+      "knee": 0.53,
+      "legs": { "thigh": [0.06, 0.032], "shin": [0.03, 0.017], "front": 0.04, "back": 0.04, "calf": 0.046, "out": 0.02 }
     },
     "joints": {
       "hipY": 0.44,
@@ -576,7 +577,8 @@ export const DEFAULTS = {
         "bandColor": null,
         "bandWidth": 0.02,
         "pleatColor": null,
-        "pleatShare": 0.5
+        "pleatShare": 0.5,
+        "even": false
       },
       "hem": 0.3,
       "offset": 0.011,
@@ -707,12 +709,17 @@ export const DEFAULTS = {
       "wave": 0,
       "waves": 1.5,
       "splay": 0,
+      "curl": 0,
+      "sheet": 0,
+      "clumps": 0,
+      "rise": 0,
       "tie": {
         "on": true,
         "color": "#c94a4a",
         "size": 1,
         "shape": "ring",
-        "lineColor": null
+        "lineColor": null,
+        "tilt": 20
       }
     },
     "back": "short",

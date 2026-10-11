@@ -99,6 +99,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the bottom, the hips and the thighs at their smallest (2026-10-07, Saori: "ワンピースでお尻の膨らみのシルエットが出てしまう")
   const SK = skirtOf(OPT) ?? { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018 }, TO = OPT.body.torso;   // a dress's skirt is the same (skirtOf, options.js)
   const SK_Y0 = SK.top ?? PANTS_TOP, SK_TILT = SK.tilt ?? PANTS_TILT;   // a dress's skirt starts higher (skirtOf)
+  // skirt.even (2026-10-11, for 初音ミク): the flare by the drop as on the character, not in base space. On a long torso the base heights
+  // under the waist are stretched far more than those over the thighs, so a skirt flaring evenly in base space stood straight down from the
+  // waist and flared near the hem, a bell; even, it is a straight A on any body (its hem as wide as before: the drop is scaled to the same total)
+  const EVEN = !!SK.even && !!skirtOf(OPT), EVST = EVEN ? makeStretch(OPT, J) : null, EVK = EVEN ? (EVST.fwd(SK_Y0) - EVST.fwd(SK.hem)) / Math.max(0.01, SK_Y0 - SK.hem) : 1;
+  const EVK0 = EVEN ? Math.max(1, EVST.slope(SK_Y0 - 0.03) / EVK) : 1;   // how much longer a base height is on the character just under the top than on average
+  const dropOf = EVEN ? (y) => Math.max(0, (EVST.fwd(SK_Y0) - EVST.fwd(Math.min(y, SK_Y0))) / EVK) : (y) => Math.max(0, SK_Y0 - y);
   let SK_AX = 0.158 * (TO.hips ?? 1) + 0.022, SK_AZ = 0.128, SK_ZC = -0.012;
   // a dress's skirt starts under the chest: its top ellipse is measured off the body there (just over the shirt), so it neither stands off
   // the back as a ledge (the hips' ellipse is wider than the chest) nor lets the belly push out under it (it is centered on the body, not on the hips)
@@ -123,7 +129,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // adult body: the flare eases in under the top (EZ: the drop's first EZ m flare little), so the skirt comes out of the waist in a curve,
   // not a corner (2026-10-09, Saori, circling where the dress's front went straight down and then bent out)
   const EZ = OPT.fit ? 0.05 : 0, ease = (d) => EZ ? d - EZ * (1 - Math.exp(-d / EZ)) : d;
-  const coneR = (s, c, y) => { const drop = ease(Math.max(0, SK_Y0 - y)), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, old = 1 / Math.hypot(s / ax, c / az);   // the cone's radius that way (s, c: sin, cos around the center)
+  const coneR = (s, c, y) => { const drop = ease(dropOf(y)), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, old = 1 / Math.hypot(s / ax, c / az);   // the cone's radius that way (s, c: sin, cos around the center)
     return Math.min(old, TOPR(s, c) + SK.flare * drop * Math.hypot(s, 0.8 * c)); };
   // DRAPE: the skirt's radius per angle and height (a grid from the top to the hem): at least the cone's; under the furthest the hips reach
   // (skirtMask, 1.5 cm out) straight down, and above it on the line from the top's edge to it (cloth hangs from the top over the bulge, not into its curve)
@@ -136,11 +142,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + (0.008 + (M - 0.008) * sstep(0, 0.06, j * DY)) : 0); }   // (just under the top only a little out: it hugs the hips there and flares on below, so a strong waist doesn't leave a shelf where the band at the top lets go, 2026-10-07)
       // (AL: the steepest line from the top's edge over the hips, from 4 cm down, its slope at most the skirt's flare: lines from just under the
       // top flared out wildly)
-      let ka = NY, sa = 0; if (AL) for (let k = 4; k < NY; k++) if (need[k] && (need[k] - top) / (k * DY) > sa) { sa = (need[k] - top) / (k * DY); ka = k; }
+      const dj = (j) => EVEN ? dropOf(SK_Y0 - j * DY) : j * DY;   // (even: the drop as on the character)
+      let ka = NY, sa = 0; if (AL) for (let k = 4; k < NY; k++) if (need[k] && (need[k] - top) / dj(k) > sa) { sa = (need[k] - top) / dj(k); ka = k; }
       sa = Math.min(sa, SK.flare);
       for (let j = 0; j < NY; j++) { let r = coneR(s, c, SK_Y0 - j * DY);
-        for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * j / k); }   // k above j: hangs straight under it; k below: the line from the top
-        if (AL && j > ka) r = Math.max(r, top + sa * ease(j * DY));   // AL: past the steepest point the line from the top goes on
+        for (let k = 0; k < NY; k++) { if (!need[k]) continue; r = Math.max(r, k <= j ? need[k] : top + (need[k] - top) * dj(j) / dj(k)); }   // k above j: hangs straight under it; k below: the line from the top
+        if (AL && j > ka) r = Math.max(r, top + sa * ease(dj(j)));   // AL: past the steepest point the line from the top goes on
         R[a * NY + j] = r; } }
     // adult body: the cloth bridges hollows round the body (the valley between the buttocks, behind the waist): each radius at least the
     // chord between two points up to 40° either side (where it crosses this direction), so the skirt lies over the bottom as one round, not
@@ -156,7 +163,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // over a shirt whose hem is inside the skirt: its top goes over the shirt itself (7 mm out), as the pants' waistband does (a dress stood 2 cm
   // out from the body there, the shirt 1.4 cm: a step under the chest). A dress's 3 mm, and over the last 2 cm it sinks under its own top, so
   // the skirt comes out from under it (its rim over the top caught the light as a line all round, 2026-10-07)
-  const SK_BAND = HEM < SK_Y0 - 0.03 ? 0.06 : 0;
+  const SK_BAND = HEM < SK_Y0 - 0.03 ? 0.06 / EVK0 : 0;   // (even: 6 cm on the character)
   // the hem's shape (skirtOf: hemShape, hemCount, hemDepth, curl; 2026-10-07, Saori): zigzag / scallop cut the hem's edge up between points
   // or round lobes around it; tiers stack the skirt in steps, each tier flaring out over the top of the next; curl flares the last part out
   // and up (> 0) or draws it in (< 0)
@@ -166,7 +173,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const shapeOut = (y) => { const t = Math.min(1, Math.max(0, (SK_Y0 - y) / SPAN)); let e = CURL * 0.12 * sstep(0.55, 1, t) ** 2;
     return e; };
   const skirtSdf = (x, y, z, B = bodySdf) => {
-    const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
+    const drop = dropOf(y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
@@ -182,7 +189,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return d; };
   // where a point is across the pleats (2026-10-11, for 初音ミク's skirt, its folds' insides in another color): 0 on a fold's outer crease, 1 deepest in it,
   // less toward the top (so the color opens out toward the hem, as a pleat's inside shows more where the skirt flares)
-  const skirtPleat = SKIRT ? (x, y, z) => { const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, th = Math.atan2(x / ax, (z - SK_ZC) / az);
+  const skirtPleat = SKIRT ? (x, y, z) => { const drop = dropOf(y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, th = Math.atan2(x / ax, (z - SK_ZC) / az);
     return Math.abs(Math.sin(th * SK.pleats / 2)) - 0.35 * (1 - Math.min(1, drop / Math.max(0.05, SK_Y0 - SK.hem))); } : null;
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
@@ -260,7 +267,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const off = 0.026, ax0 = out(1, 0) + off, az0 = out(0, -1) + off, k = 0.02;   // off: over the shirt and its sleeves
     // over a skirt (or a dress's): at least as wide as the skirt at every height (it goes on flaring below the hem), else the skirt showed through its sides
     // (above the skirt's top it narrows at 45°: a step there showed as a crack across the cape)
-    const sk = SKIRT ? (y) => { const d = SK_Y0 - y, m = 0.02 + SK.pleatDepth; return [SK_AX + (d > 0 ? SK.flare * d : d) + m, SK_AZ + (d > 0 ? SK.flare * 0.8 * d : d) + m + Math.abs(SK_ZC)]; } : null;
+    const sk = SKIRT ? (y) => { const d = y < SK_Y0 ? dropOf(y) : SK_Y0 - y, m = 0.02 + SK.pleatDepth; return [SK_AX + (d > 0 ? SK.flare * d : d) + m, SK_AZ + (d > 0 ? SK.flare * 0.8 * d : d) + m + Math.abs(SK_ZC)]; } : null;
     const smax = (a, b, k = 0.02) => -smin(-a, -b, k);
     return (x, y, z, B = bodySdf) => {
       const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax0_ = ax0 + CA.flare * 0.6 * drop, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
