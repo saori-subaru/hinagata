@@ -258,7 +258,9 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       if (T.path?.length) { const sd = Math.sign(p[0]) || 1, Q = [[0, 0, 0], ...T.path.map(([a0, b0, c0]) => [a0 * sd, b0, c0])], sz = r * Math.sin(a);
         const ci = NC > 0 ? Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)) : 0, tEnd = it.lead ? 1 : (NC > 0 ? 0.88 + 0.12 * hash(ci + 5 + ai * 3) : 1) * (1 - (NC > 0 ? 0.1 : 0.05) * Math.abs(sx - sc) * Math.max(1, NC) / 2);
         P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1) * tEnd, c = curveAt(Q, t), g = NC > 0 ? sstep(0.7, 1, t / tEnd) * (T.gather ?? 0.8) : 0, ax = sx + (sc - sx) * g * 0.9, W = listAt(T.widths, t, 0.04), D = listAt(T.depth, t, 0.02);
-          P.push([p[0] + c[0] + sd * ax * W, p[1] + c[1], p[2] + c[2] + sz * D]); } }
+          // tipCurl (m): over the last fifth each clump's tips curl, the clumps in turn inward and outward, and a little up (a lock's end turning over)
+          const TC = T.tipCurl ? T.tipCurl * sstep(0.78, 1, t / tEnd) ** 1.5 * (ci % 2 ? 1 : -1) : 0;
+          P.push([p[0] + c[0] + sd * (ax * W + TC), p[1] + c[1] + Math.abs(TC) * 0.5, p[2] + c[2] + sz * D]); } }
       if (T.wave && (NC > 0 || it.stray)) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], wb = [-wd[2], 0, wd[0]];   // with clumps: each clump waves with its own phase, out from the head
         // and across it (back and forth), more toward the tips, so the clumps part and ripple instead of the whole bundle bending as one slab; a stray more still
         const ci = it.stray ? 7 + i : Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)), ph = ci * 1.9 + 0.3 * (hash(i + 11) - 0.5), A = T.wave * (it.stray ? 1.6 : 1);

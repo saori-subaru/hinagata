@@ -723,6 +723,7 @@ export const DEFAULTS = {
       "splayPow": 1.6,
       "trail": 0,
       "path": null,
+      "tipCurl": 0,
       "widths": null,
       "depth": null,
       "tie": {
