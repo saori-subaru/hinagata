@@ -188,6 +188,8 @@ const MAIN = [
   ["hair.sculpt.long.stiff", L("硬さ", "Stiffness"), { when: { "hair.back": "long" }, min: 0.3, max: 4, step: 0.1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("小さいほどよく揺れる", "lower swings more") }],
   ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.side", L("結ぶ側", "Side"), { when: { "hair.tail.kind": "side" }, options: opts({ L: ["左", "Left"], R: ["右", "Right"] }), section: L("結び髪", "Tails") }],
+  ["hair.tail.form", L("束の作り", "Bundle made of"), { options: opts({ locks: ["毛束", "Locks"], bundle: ["かたまり", "One bundle"] }), section: L("結び髪", "Tails"), help: L("かたまり: 真ん中の一本だけが揺れ、ほかの毛束はそれについて動く。走っても束がばらけない", "one bundle: only the middle lock swings and the others follow it, so the bundle never comes apart, even running") }],
+  ["hair.tail.fill", L("束の中身", "Bundle fill"), { when: { "hair.tail.form": "bundle" }, min: 0, max: 5, step: 1, section: L("結び髪", "Tails"), help: L("束の内側に入れる太い毛束の数(すき間を埋める)", "fat locks inside the bundle that close the gaps between the strands") }],
   ["hair.tail.length", L("長さ", "Length"), { min: 0.1, max: 2.2, step: 0.01, section: L("結び髪", "Tails") }],
   ["hair.tail.size", L("太さ", "Thickness"), { min: 0.5, max: 3, step: 0.05, section: L("結び髪", "Tails"), help: L("束ごと太く・細く(倍)。髪ゴムも合わせて変わる", "the whole bundle thicker or thinner (×); the tie follows") }],
   ["hair.tail.lift", L("はね上がり", "Lift"), { min: 0, max: 0.12, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から外へ張り出してから落ちるまで(m)", "how far it stands out from the tie before falling (m)") }],

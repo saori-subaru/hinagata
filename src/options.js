@@ -713,6 +713,8 @@ export const DEFAULTS = {
       "sheet": 0,
       "clumps": 0,
       "rise": 0,
+      "form": "locks",
+      "fill": 3,
       "tie": {
         "on": true,
         "color": "#c94a4a",

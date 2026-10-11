@@ -222,8 +222,13 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
   const GA = T.gather ?? 0.8;
   anchors.forEach(({ p, o }, ai) => {
     const ul = Math.hypot(o[2], o[0]) || 1, u = [o[2] / ul, 0, -o[0] / ul], v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];   // across the tie: u sideways (level), v
-    for (let i = 0; i < n; i++) {
-      const a = i * 2.39996 + 0.3, r = Math.sqrt((i + 0.5) / n), dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
+    // form "bundle" (2026-10-11): one lock down the bundle's middle is simulated (the leader, also drawn), the others follow it (createLocks:
+    // follow), so the tail moves as one solid bundle; fill: fat locks inside it close the gaps between the strands
+    const BUNDLE = T.form === "bundle", lead = out.length, FILL = BUNDLE ? Math.max(0, Math.round(T.fill ?? 3)) : 0;
+    const items = [...(BUNDLE ? [{ i: 0, r: 0, a: 0, lead: true }] : []), ...Array.from({ length: n }, (_, i) => ({ i, r: Math.sqrt((i + 0.5) / n), a: i * 2.39996 + 0.3 })),
+      ...Array.from({ length: FILL }, (_, k) => { const f = FILL > 1 ? 2 * k / (FILL - 1) - 1 : 0; return { i: n + k, r: 0.55 * Math.abs(f), a: f < 0 ? Math.PI : 0, fill: true }; })];
+    for (const it of items) {
+      const i = it.i, a = it.a, r = it.r, dir = [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a));   // spread over the bundle's cross-section (golden angle)
       // across the sheet (splay / sheet): sx -1 the inner side .. 1 the outer; with clumps the locks gather toward their clump's middle (sc) at the tips
       const sx = r * Math.cos(a), NC = Math.round(T.clumps ?? 0), sc = NC > 0 ? -1 + (2 * Math.min(NC - 1, Math.floor((sx + 1) / 2 * NC)) + 1) / NC : sx, SPR = T.splay || T.sheet;
       const len = T.length * ((0.82 + 0.3 * hash(i)) * (1 - GA) + (1.02 - 0.2 * r * r) * GA) * (!SPR ? 1 : NC > 0 ? 0.9 + 0.1 * sc - 0.05 * Math.abs(sx - sc) * NC : 0.66 + 0.34 * sx), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
@@ -251,7 +256,10 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
         if (ell) pushOutEllipsoid(P[q], ell.c, ell.r, rad(q)); for (const c of coll) pushOutSphere(P[q], c.c, c.r + rad(q));
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }
       let L = 0; for (let q = 1; q < N; q++) L += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
-      out.push({ root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: 0.7 * GA });   // group: they swing together (createLocks)
+      const spec = { root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: BUNDLE ? 0 : 0.7 * GA };   // group: they swing together (createLocks)
+      if (BUNDLE && !it.lead) spec.follow = lead;
+      if (it.fill) { spec.w = w * 1.8; spec.thick = Math.min(0.9, T.thick * 2); spec.prof = (t) => Math.max(0.15, sstep(0.03, 0.3, t)) * width(Math.min(1, t * 1.12)); }   // fat, thin at the tie (it swelled there over the hair tie) and ending a little before the tips (inside the bundle)
+      out.push(spec);
     }
   });
   return out;
@@ -333,6 +341,10 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   // move there, and they share the flutter's phase (each lock alone fluttered and swung apart, the tips spreading)
   const GL = new Map(); specs.forEach((s, l) => { if (s.group != null && s.cohere > 0) { if (!GL.has(s.group)) GL.set(s.group, []); GL.get(s.group).push(l); } });
   const BUNDLES = [...GL.values()].filter((ls) => ls.length > 1).map((ls) => ({ ls, c: specs[ls[0]].cohere })), PH = specs.map((s, l) => s.group != null ? [...GL.keys()].indexOf(s.group) : l);
+  // followers (spec.follow: a leader lock's index; 2026-10-11, Saori: "今一応毛先をまとめる機能はありますが走ったら結局ばらけます"): not simulated;
+  // each point keeps its rest offset from the leader's point at its share of the length, turned as the leader's line has turned there. A tail
+  // made this way moves as one solid bundle: it bends and swings, but its cross-section never comes apart
+  const FOL = specs.map((s) => s.follow ?? -1), LEAD = FOL.some((f) => f >= 0);
   let FN = null, FD = null;   // floor: per point, the plane's normal (rest space) and its offset
   if (floor) { FN = new Float32Array(NP * 3); FD = new Float32Array(NP); const I = new THREE.Matrix4();
     for (let i = 0; i < NP; i++) { const x = R[i * 3], y = R[i * 3 + 1], z = R[i * 3 + 2], o = outward(x, y, z, I), l = Math.hypot(...o) || 1;
@@ -385,7 +397,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     // gravity the head's turn has taken away acts here: world down less the rest's down turned with the head. Upright that is nothing (no sag
     // off the rest shape: before, the locks sank a few cm and left the head); a head bent forward or lying down lets the hair fall
     const g = 9.8 * h * h * fk, gx = GR[0] * g, gy = GR[1] * g, gz = GR[2] * g;
-    for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
+    for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { if (FOL[l] >= 0) break; const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
       for (let q = 0; q < 3; q++) { const raw = X[j + q] - P[j + q], tv = (T[j + q] - TP[j + q]) / sub; let v = raw * keep;
         if (keep) v = q === 1 ? tv + (v - tv) * VDAMP : tv + (raw - tv) * keep;   // its swing is kept against the head's motion, not the world's: moving fast, the world's drag
@@ -398,7 +410,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (const { ls, c } of BUNDLES) for (let i = 2; i < N; i++) { const m = [0, 0, 0];
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) m[q] += (X[j + q] - T[j + q]) / ls.length; }
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] + m[q] - X[j + q]) * c; } }
-    for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) {
+    for (let it = 0; it < 4; it++) for (let l = 0; l < NL; l++) { if (FOL[l] >= 0) continue;
       for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = (d - SEG[l * N + i] * SC) / d;
         if (i === 2) { X[b] -= dx * f; X[b + 1] -= dy * f; X[b + 2] -= dz * f; }   // the one before rides on the head: only this one moves
         else { X[a] += dx * f * 0.5; X[a + 1] += dy * f * 0.5; X[a + 2] += dz * f * 0.5; X[b] -= dx * f * 0.5; X[b + 1] -= dy * f * 0.5; X[b + 2] -= dz * f * 0.5; } }
@@ -407,8 +419,22 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     // then each link exactly its length, from the root out (follow the leader): four rounds left a long chain a few % longer when the head
     // went up or down fast, and the hair stretched and sprang back on a jump (2026-10-07, Saori: "ジャンプなどで上下に動いた時の髪がバネのように
     // 伸び縮みする"). The move goes into the point's last position too, so it adds no speed of its own (no jitter, no extra swing)
-    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] * SC / d;
+    for (let l = 0; l < NL; l++) for (let i = 2; i < N; i++) { if (FOL[l] >= 0) break; const a = (l * N + i - 1) * 3, b = a + 3, dx = X[b] - X[a], dy = X[b + 1] - X[a + 1], dz = X[b + 2] - X[a + 2], d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1, f = 1 - SEG[l * N + i] * SC / d;
       const cx = -dx * f, cy = -dy * f, cz = -dz * f; X[b] += cx; X[b + 1] += cy; X[b + 2] += cz; P[b] += cx; P[b + 1] += cy; P[b + 2] += cz; }
+    if (LEAD) follow();
+  }
+  // the followers onto their leaders: the rest offset turned by the shortest turn from the leader's rest direction there to its direction now
+  function follow() {
+    for (let l = 0; l < NL; l++) { const f = FOL[l]; if (f < 0) continue;
+      for (let i = 0; i < N; i++) { const pl = (f * N + i) * 3, pa = (f * N + Math.max(0, i - 1)) * 3, pb = (f * N + Math.min(N - 1, i + 1)) * 3, j = (l * N + i) * 3;
+        let ax = T[pb] - T[pa], ay = T[pb + 1] - T[pa + 1], az = T[pb + 2] - T[pa + 2], bx = X[pb] - X[pa], by = X[pb + 1] - X[pa + 1], bz = X[pb + 2] - X[pa + 2];
+        const al = Math.hypot(ax, ay, az) || 1, bl = Math.hypot(bx, by, bz) || 1; ax /= al; ay /= al; az /= al; bx /= bl; by /= bl; bz /= bl;
+        const ox = T[j] - T[pl], oy = T[j + 1] - T[pl + 1], oz = T[j + 2] - T[pl + 2], c = ax * bx + ay * by + az * bz;
+        let rx = ox, ry = oy, rz = oz;
+        if (c > -0.95) { const vx = ay * bz - az * by, vy = az * bx - ax * bz, vz = ax * by - ay * bx, vo = (vx * ox + vy * oy + vz * oz) / (1 + c);   // Rodrigues, the shortest turn a → b
+          rx = ox * c + (vy * oz - vz * oy) + vx * vo; ry = oy * c + (vz * ox - vx * oz) + vy * vo; rz = oz * c + (vx * oy - vy * ox) + vz * vo; }
+        X[j] = X[pl] + rx; X[j + 1] = X[pl + 1] + ry; X[j + 2] = X[pl + 2] + rz; P[j] = X[j]; P[j + 1] = X[j + 1]; P[j + 2] = X[j + 2]; }
+      for (let i = 2; i < N; i++) collide(l * N + i); }
   }
   // the mesh from the chain: rings along a Catmull-Rom curve through the points, each a flat lens across the lock, facing out
   const C = new Float32Array(ringsPer * 3), Dd = new Float32Array(ringsPer * 3);
