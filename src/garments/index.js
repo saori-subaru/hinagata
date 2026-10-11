@@ -5,4 +5,5 @@ import "./strings.js";
 import "./headband.js";
 import "./sleeves.js";
 import "./collar.js";
+import "./jacket.js";
 export * from "./registry.js";

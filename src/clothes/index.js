@@ -99,12 +99,14 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the bottom, the hips and the thighs at their smallest (2026-10-07, Saori: "ワンピースでお尻の膨らみのシルエットが出てしまう")
   const SK = skirtOf(OPT) ?? { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018 }, TO = OPT.body.torso;   // a dress's skirt is the same (skirtOf, options.js)
   const SK_Y0 = SK.top ?? PANTS_TOP, SK_TILT = SK.tilt ?? PANTS_TILT;   // a dress's skirt starts higher (skirtOf)
-  // skirt.even (2026-10-11, for 初音ミク): the flare by the drop as on the character, not in base space. On a long torso the base heights
-  // under the waist are stretched far more than those over the thighs, so a skirt flaring evenly in base space stood straight down from the
-  // waist and flared near the hem, a bell; even, it is a straight A on any body (its hem as wide as before: the drop is scaled to the same total)
-  const EVEN = !!SK.even && !!skirtOf(OPT), EVST = EVEN ? makeStretch(OPT, J) : null, EVK = EVEN ? (EVST.fwd(SK_Y0) - EVST.fwd(SK.hem)) / Math.max(0.01, SK_Y0 - SK.hem) : 1;
-  const EVK0 = EVEN ? Math.max(1, EVST.slope(SK_Y0 - 0.03) / EVK) : 1;   // how much longer a base height is on the character just under the top than on average
-  const dropOf = EVEN ? (y) => Math.max(0, (EVST.fwd(SK_Y0) - EVST.fwd(Math.min(y, SK_Y0))) / EVK) : (y) => Math.max(0, SK_Y0 - y);
+  // skirt.even (2026-10-11): the flare by the drop as built, in m on the character, not in base space. On a long torso the base heights
+  // under the waist are stretched far more than those over the thighs (on the adult body several times: a short skirt is 2–3 cm long in base
+  // space), so a skirt flaring evenly in base space hung straight down from the waist and flared near the hem, a bell, or hardly flared at all;
+  // even, it is a straight A on any body, flare m wider per m it hangs as seen
+  const EVEN = !!SK.even && !!skirtOf(OPT), EVST = EVEN ? makeStretch(OPT, J) : null;
+  const EVK0 = EVEN ? Math.max(1, EVST.slope(SK_Y0 - 0.005)) : 1;   // how many times a base height is stretched just under the top
+  const U = 1 / EVK0, SKF = EVEN ? (y) => SK.flare * EVST.slope(Math.min(y, SK_Y0)) : () => SK.flare;   // U: base lengths standing for lengths as seen (a rounding, a fade), even; SKF: the widening per base m there
+  const dropOf = EVEN ? (y) => Math.max(0, EVST.fwd(SK_Y0) - EVST.fwd(Math.min(y, SK_Y0))) : (y) => Math.max(0, SK_Y0 - y);
   let SK_AX = 0.158 * (TO.hips ?? 1) + 0.022, SK_AZ = 0.128, SK_ZC = -0.012;
   // a dress's skirt starts under the chest: its top ellipse is measured off the body there (just over the shirt), so it neither stands off
   // the back as a ledge (the hips' ellipse is wider than the chest) nor lets the belly push out under it (it is centered on the body, not on the hips)
@@ -137,7 +139,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // furthest: the skirt no longer shows the bottom's or the thighs' shape under it (2026-10-09, Saori: "後ろから見たときにお尻が浮き出てる",
   // "普通のスカートをはくと太ももがつきでる")
   const AL = !!OPT.fit;
-  const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
+  const DRAPE = SKIRT ? (() => { const NA = 48, DY = 0.01 * U, NY = Math.max(2, Math.ceil((SK_Y0 - SK.hem) / DY) + 1), R = new Float32Array(NA * NY), M = 0.015;
     for (let a = 0; a < NA; a++) { const f = a / NA * Math.PI * 2, s = Math.sin(f), c = Math.cos(f), top = coneR(s, c, SK_Y0), need = [];
       for (let j = 0; j < NY; j++) { const y = SK_Y0 - j * DY; let t = 0; if (skirtMask(0, y, SK_ZC) < 0) { while (t < 0.4 && skirtMask(s * t, y, SK_ZC + c * t) < 0) t += 0.002; } need.push(t > 0 ? t + (0.008 + (M - 0.008) * sstep(0, 0.06, j * DY)) : 0); }   // (just under the top only a little out: it hugs the hips there and flares on below, so a strong waist doesn't leave a shelf where the band at the top lets go, 2026-10-07)
       // (AL: the steepest line from the top's edge over the hips, from 4 cm down, its slope at most the skirt's flare: lines from just under the
@@ -174,14 +176,14 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return e; };
   const skirtSdf = (x, y, z, B = bodySdf) => {
     const drop = dropOf(y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
-    const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
+    const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02 * U, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
-    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
+    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SKF(y);   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
-    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008), y - top);
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y) / U, 0.008), y - top) / (EVEN ? Math.hypot(1, SKF(y)) : 1);   // (even: steep in y on a stretched body; made a distance again, the surface where it was)
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
@@ -203,7 +205,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const KIND = OPT.outfit.shoes.kind ?? "sneaker", HBOOTS = KIND === "heelBoots", BOOTS = KIND === "boots" || HBOOTS, HEELS = KIND === "heels" || HBOOTS, PUMPS = KIND === "heels";
   const FK = OPT.body.proportion?.feet ?? 1;   // the feet's size (body.proportion.feet): the heels' own pieces grow with them
   const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
-  const SHOE_PARTS = ["shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
+  const OVERKNEE = BOOTS && OPT.outfit.shoes.bootHeight > J["lowerLeg.L"][1] + 0.01;   // (2026-10-11, for ロゼ: boots over the knee were cut at it, made only of the calf's pieces: the thigh's too then)
+  const SHOE_PARTS = [...(OVERKNEE ? ["thigh", "thighF", "thighB", "thighIn", "thighOut", "kneeCap", "kneeBack"] : []), "shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
   // each foot's from its own side's pieces only: blended together, the two heel boots' cuffs met between the knees and stretched into a web
   // when the legs parted (2026-10-10, 島風 in the official picture's pose), and so did any shoes on feet set close (the adult type's,
   // ankles 7 cm from the middle: Saori, "大人体形で歩くと足同士がくっついています")

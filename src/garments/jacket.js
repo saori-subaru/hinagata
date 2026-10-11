@@ -1,0 +1,52 @@
+// A jacket worn open over the shirt (outfit.jacket; 2026-10-11, for ロゼ, an original character fitted to a reference sheet): the shirt pushed
+// out over the torso, cropped at hem, open down the front (a V from the neck to v, then a straight gap of open on each side down to the
+// hem: the shirt under it shows), long sleeves of its own round the arms ending cuff before the wrist (the shirt's cuff shows). Piping, a
+// painted band, along the front edges, the hem and the cuffs. Base space, as the clothes are; hem and v as heights on the body before it
+// is stretched (tools/measure.mjs --to gives them).
+import { definePart } from "./registry.js";
+import { smin, blend } from "../sdf/prim.js";
+
+const L = (ja, en) => ({ ja, en }), SEC = L("ジャケット", "Jacket"), smax = (a, b, k) => -smin(-a, -b, k);
+
+definePart({ src: import.meta.url,
+  name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004, thin: "cloth",
+  defaults: { on: false, color: "#f4f2ee", hem: 0.6, v: 0.64, open: 0.035, neckOpen: 0.06, cuff: 0.05, piping: null, pipingWidth: 0.006 },
+  schema: [
+    ["on", L("ジャケット", "Jacket"), { help: L("シャツの上に前を開けて着る。着たときだけ作る", "worn open over the shirt; built only when worn") }],
+    ["color", L("ジャケットの色", "Jacket color"), { when: { ".on": true } }],
+    ["hem", L("丈", "Hem"), { when: { ".on": true }, min: 0.4, max: 0.7, step: 0.002, help: L("すその高さ(伸ばす前の体で。肩は 0.73、股関節は 0.44)", "the hem's height, on the body before it is stretched (the shoulders at 0.73, the hip joints at 0.44)") }],
+    ["v", L("えりのVの深さ", "V's point"), { when: { ".on": true }, min: 0.5, max: 0.74, step: 0.002, help: L("前の開きがV字から縦の合わせになる高さ(伸ばす前の体で)", "where the front's opening turns from a V into a straight gap (on the body before it is stretched)") }],
+    ["open", L("前の開き", "Front gap"), { when: { ".on": true }, min: 0, max: 0.1, step: 0.001, help: L("Vより下で、真ん中から合わせ目までの幅(m)", "below the V, from the middle to each front edge (m)") }],
+    ["neckOpen", L("首元の開き", "Gap at the neck"), { when: { ".on": true }, min: 0.02, max: 0.12, step: 0.001, help: L("首の付け根で真ん中から前の縁まで(m)", "at the neck's base, from the middle to each front edge (m)") }],
+    ["cuff", L("袖口の位置", "Cuff"), { when: { ".on": true }, min: -0.05, max: 0.15, step: 0.002, help: L("手首から袖口までの長さ(m)。マイナスで手首より先", "from the wrist back to the cuff (m); below 0 past the wrist") }],
+    ["piping", L("パイピングの色", "Piping color"), { when: { ".on": true }, nullable: true, type: "color", help: L("null = なし(前の縁・すそ・袖口の細い線)", "null = none (a thin line along the front edges, the hem and the cuffs)") }],
+    ["pipingWidth", L("パイピングの太さ", "Piping width"), { when: { ".on": true }, min: 0.002, max: 0.03, step: 0.001, help: L("m", "m") }],
+  ],
+  build({ O, P, J, shirtSdf, bodySdf, slope }) {
+    const NY = J.neck[1], VY = Math.min(O.v ?? 0.64, NY - 0.02), OW = O.open ?? 0.035, NO = O.neckOpen ?? 0.06, HEM = O.hem ?? 0.6, CUFF = O.cuff ?? 0.05;
+    const kH = slope(HEM), kV = slope(VY);
+    // the sleeves: the arm's own pieces 2.2 cm out (over the shirt's sleeve, 1.4 cm out), ending CUFF before the wrist
+    const arms = ["L", "R"].map((s) => {
+      const f = blend(Object.keys(P).filter((k) => k.endsWith(`.${s}`) && /^(upperArm|foreArm|foreBulge|shoulder)\./.test(k)).map((k) => P[k]));
+      const E = J[`lowerArm.${s}`], W = J[`hand.${s}`], d0 = W.map((v, i) => v - E[i]), Lf = Math.hypot(...d0), d = d0.map((v) => v / Lf);
+      const past = (x, y, z) => (x - E[0]) * d[0] + (y - E[1]) * d[1] + (z - E[2]) * d[2] - (Lf - CUFF);   // > 0 past the cuff
+      return { f, past };
+    });
+    const armOf = (x) => arms[x >= 0 ? 0 : 1];
+    // the front's opening: half its width by the height (a V above VY, a straight gap below it), in front of the body's middle plane only
+    const openAt = (y) => y >= VY ? OW + (NO - OW) * Math.min(1, (y - VY) / Math.max(0.01, NY - VY)) : OW;
+    const gap = (x, y, z) => z > 0.01 ? openAt(y) - Math.abs(x) : -1;   // > 0 in the opening
+    const torso = (x, y, z, B) => shirtSdf(x, y, z, B, true, true) - 0.007;
+    const sleeve = (x, y, z) => { const A = armOf(x); return Math.max(A.f(x, y, z) - 0.022, A.past(x, y, z)); };
+    // the hem and the neckline cut the torso only (the sleeves hang below the hem: cut with it they ended at the elbow)
+    const sdf = (x, y, z, B = bodySdf) => { const d = smin(Math.max(torso(x, y, z, B), HEM - y, y - (NY + 0.012)), sleeve(x, y, z), 0.012);   // (the hem as a base-space distance: times the stretch, the meshing overshot it 5 cm down)
+      return smax(d, gap(x, y, z) * (y < VY ? 1 : 0.8), 0.003); };
+    // the piping: how far in from the nearest edge (the front edge, the hem, a cuff), m as built
+    // (a point on a sleeve: from its cuff only; on the torso: from the hem and the front edges)
+    const edge = (x, y, z) => { const A = armOf(x); if (sleeve(x, y, z) < Math.max(torso(x, y, z, bodySdf), (HEM - y) * kH) - 0.002) return -A.past(x, y, z);
+      let e = (y - HEM) * kH; if (z > 0.01 && Math.abs(x) < 0.12) e = Math.min(e, Math.abs(x) - openAt(y)); return e; };
+    return { sdf, edge, NY, HEM };
+  },
+  spec: (st, { H, B, ax, ay }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: [-0.5 - ax, Math.min(st.HEM - 0.05, 0.22) - ay, -0.22], hi: [0.5 + ax, st.NY + 0.05, 0.24], h: Math.min(H, 0.006), only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm)/ }),
+  bands: { keys: ["piping", "pipingWidth"], value: (st) => (x, y, z) => st.edge(x, y, z), ranges: (O) => O.piping ? [[-1, O.pipingWidth ?? 0.006, O.piping]] : [] },
+});

@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 387,
+   "order": 396,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -9565,8 +9565,8 @@
     "en": "Pants"
    },
    "help": {
-    "ja": "広がりを体の上の高さで測る: 胴が長い体でも腰から裾までまっすぐのA字(オフ: 伸ばす前の体で測る。長い胴では腰で筒になり裾で広がる)",
-    "en": "the flare by the drop as on the character: a straight A from the waist on any body (off: in the body before it is stretched; on a long torso it hangs straight from the waist and flares near the hem)"
+    "ja": "広がりを体の上の長さで測る(垂れた1mあたり広がり m 広がる): 胴が長い体・大人の体でも腰から裾までまっすぐのA字(オフ: 伸ばす前の体で測る。大人の体ではほとんど広がらない)",
+    "en": "the flare by the drop as on the character (flare m wider per m it hangs): a straight A from the waist on any body, the adult one too (off: in the body before it is stretched; on the adult body it hardly flares)"
    },
    "when": {
     "outfit.pants.kind": "skirt"
@@ -10116,7 +10116,7 @@
      }
     }
    ],
-   "order": 371,
+   "order": 380,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10134,7 +10134,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 372,
+   "order": 381,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10157,7 +10157,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 373,
+   "order": 382,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10205,7 +10205,7 @@
      }
     }
    ],
-   "order": 374,
+   "order": 383,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10223,7 +10223,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 375,
+   "order": 384,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10249,7 +10249,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 376,
+   "order": 385,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10267,7 +10267,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 377,
+   "order": 386,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10285,7 +10285,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 378,
+   "order": 387,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10326,7 +10326,7 @@
      }
     }
    ],
-   "order": 379,
+   "order": 388,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10344,7 +10344,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 380,
+   "order": 389,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10370,7 +10370,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 381,
+   "order": 390,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10688,7 +10688,7 @@
      }
     }
    ],
-   "order": 366,
+   "order": 375,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10706,7 +10706,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 368,
+   "order": 377,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10730,7 +10730,7 @@
    "min": 0.12,
    "max": 0.3,
    "step": 0.005,
-   "order": 369,
+   "order": 378,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10761,7 +10761,7 @@
    "min": 8,
    "max": 45,
    "step": 1,
-   "order": 370,
+   "order": 379,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10792,7 +10792,7 @@
    "min": 0,
    "max": 0.08,
    "step": 0.002,
-   "order": 383,
+   "order": 392,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10820,7 +10820,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 384,
+   "order": 393,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -10852,7 +10852,7 @@
    "min": 0.012,
    "max": 0.06,
    "step": 0.001,
-   "order": 385,
+   "order": 394,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10877,7 +10877,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 386,
+   "order": 395,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -10903,7 +10903,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 365,
+   "order": 374,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10921,7 +10921,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 367,
+   "order": 376,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10939,7 +10939,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 382,
+   "order": 391,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12194,6 +12194,244 @@
    },
    "when": {
     "outfit.armSleeves.on": true
+   }
+  },
+  "outfit.jacket.on": {
+   "path": "outfit.jacket.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "order": 365,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "シャツの上に前を開けて着る。着たときだけ作る",
+    "en": "worn open over the shirt; built only when worn"
+   }
+  },
+  "outfit.jacket.color": {
+   "path": "outfit.jacket.color",
+   "type": "color",
+   "default": "#f4f2ee",
+   "label": {
+    "ja": "ジャケットの色",
+    "en": "Jacket color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setColors",
+   "order": 366,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   },
+   "colorKey": "jacket"
+  },
+  "outfit.jacket.hem": {
+   "path": "outfit.jacket.hem",
+   "type": "number",
+   "default": 0.6,
+   "label": {
+    "ja": "丈",
+    "en": "Hem"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.4,
+   "max": 0.7,
+   "step": 0.002,
+   "order": 367,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "すその高さ(伸ばす前の体で。肩は 0.73、股関節は 0.44)",
+    "en": "the hem's height, on the body before it is stretched (the shoulders at 0.73, the hip joints at 0.44)"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.v": {
+   "path": "outfit.jacket.v",
+   "type": "number",
+   "default": 0.64,
+   "label": {
+    "ja": "えりのVの深さ",
+    "en": "V's point"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.5,
+   "max": 0.74,
+   "step": 0.002,
+   "order": 368,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "前の開きがV字から縦の合わせになる高さ(伸ばす前の体で)",
+    "en": "where the front's opening turns from a V into a straight gap (on the body before it is stretched)"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.open": {
+   "path": "outfit.jacket.open",
+   "type": "number",
+   "default": 0.035,
+   "label": {
+    "ja": "前の開き",
+    "en": "Front gap"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.1,
+   "step": 0.001,
+   "order": 369,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "Vより下で、真ん中から合わせ目までの幅(m)",
+    "en": "below the V, from the middle to each front edge (m)"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.neckOpen": {
+   "path": "outfit.jacket.neckOpen",
+   "type": "number",
+   "default": 0.06,
+   "label": {
+    "ja": "首元の開き",
+    "en": "Gap at the neck"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.02,
+   "max": 0.12,
+   "step": 0.001,
+   "order": 370,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "首の付け根で真ん中から前の縁まで(m)",
+    "en": "at the neck's base, from the middle to each front edge (m)"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.cuff": {
+   "path": "outfit.jacket.cuff",
+   "type": "number",
+   "default": 0.05,
+   "label": {
+    "ja": "袖口の位置",
+    "en": "Cuff"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": -0.05,
+   "max": 0.15,
+   "step": 0.002,
+   "order": 371,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "手首から袖口までの長さ(m)。マイナスで手首より先",
+    "en": "from the wrist back to the cuff (m); below 0 past the wrist"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.piping": {
+   "path": "outfit.jacket.piping",
+   "type": "color",
+   "default": null,
+   "label": {
+    "ja": "パイピングの色",
+    "en": "Piping color"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setBands",
+   "order": 372,
+   "nullable": true,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "null = なし(前の縁・すそ・袖口の細い線)",
+    "en": "null = none (a thin line along the front edges, the hem and the cuffs)"
+   },
+   "when": {
+    "outfit.jacket.on": true
+   }
+  },
+  "outfit.jacket.pipingWidth": {
+   "path": "outfit.jacket.pipingWidth",
+   "type": "number",
+   "default": 0.006,
+   "label": {
+    "ja": "パイピングの太さ",
+    "en": "Piping width"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "instant",
+   "apply": "setBands",
+   "min": 0.002,
+   "max": 0.03,
+   "step": 0.001,
+   "order": 373,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "m",
+    "en": "m"
+   },
+   "when": {
+    "outfit.jacket.on": true
    }
   },
   "hair.paint.strands.on": {
