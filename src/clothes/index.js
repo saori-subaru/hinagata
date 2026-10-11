@@ -179,11 +179,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02 * U, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
-    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SKF(y);   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
+    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // (as seen: on a stretched body the cloth is no flatter, and SKF made the shell several cm thick, its inner side's outline showing through at the hem)   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
-    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y) / U, 0.008), y - top) / (EVEN ? Math.hypot(1, SKF(y)) : 1);   // (even: steep in y on a stretched body; made a distance again, the surface where it was)
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008 * U), y - top) / (EVEN ? Math.hypot(1, SKF(y)) : 1);   // (even: steep in y on a stretched body; made a distance again, the surface where it was)
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
@@ -192,7 +192,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // where a point is across the pleats (2026-10-11, for 初音ミク's skirt, its folds' insides in another color): 0 on a fold's outer crease, 1 deepest in it,
   // less toward the top (so the color opens out toward the hem, as a pleat's inside shows more where the skirt flares)
   const skirtPleat = SKIRT ? (x, y, z) => { const drop = dropOf(y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, th = Math.atan2(x / ax, (z - SK_ZC) / az);
-    return Math.abs(Math.sin(th * SK.pleats / 2)) - 0.35 * (1 - Math.min(1, drop / Math.max(0.05, SK_Y0 - SK.hem))); } : null;
+    return Math.abs(Math.sin(th * SK.pleats / 2)) - 0.12 * (1 - Math.min(1, drop / Math.max(0.05, SK_Y0 - SK.hem))); } : null;
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し

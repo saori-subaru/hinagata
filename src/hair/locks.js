@@ -257,6 +257,9 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }
       let L = 0; for (let q = 1; q < N; q++) L += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
       const spec = { root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: BUNDLE ? 0 : 0.7 * GA };   // group: they swing together (createLocks)
+      // bulge (×): each lock fuller toward the middle of its length (the tail swells below the shoulders, 2026-10-11, for ロゼ); tip (0..1):
+      // the ends rounded instead of drawn to a needle (1 = blunt and round), so a tail ends in soft points, not a fringe of spikes
+      if (T.bulge || T.tip) { const BG = T.bulge ?? 0, TP = T.tip ?? 0; spec.prof = (t) => (1 + BG * Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 1.5) * ((1 - TP) * width(t) + TP * Math.sqrt(Math.max(0, 1 - t ** 8))); }
       if (BUNDLE && !it.lead) spec.follow = lead;
       if (it.fill) { spec.w = w * 1.8; spec.thick = Math.min(0.9, T.thick * 2); spec.prof = (t) => Math.max(0.15, sstep(0.03, 0.3, t)) * width(Math.min(1, t * 1.12)); }   // fat, thin at the tie (it swelled there over the hair tie) and ending a little before the tips (inside the bundle)
       out.push(spec);

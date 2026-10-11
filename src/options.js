@@ -715,6 +715,8 @@ export const DEFAULTS = {
       "rise": 0,
       "form": "locks",
       "fill": 3,
+      "bulge": 0,
+      "tip": 0,
       "tie": {
         "on": true,
         "color": "#c94a4a",

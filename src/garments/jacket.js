@@ -10,7 +10,7 @@ const L = (ja, en) => ({ ja, en }), SEC = L("ジャケット", "Jacket"), smax =
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004, thin: "cloth",
-  defaults: { on: false, color: "#f4f2ee", hem: 0.6, v: 0.64, open: 0.035, neckOpen: 0.06, cuff: 0.05, piping: null, pipingWidth: 0.006 },
+  defaults: { on: false, color: "#f4f2ee", hem: 0.6, v: 0.64, open: 0.035, neckOpen: 0.06, cuff: 0.05, lapel: 0, piping: null, pipingWidth: 0.006 },
   schema: [
     ["on", L("ジャケット", "Jacket"), { help: L("シャツの上に前を開けて着る。着たときだけ作る", "worn open over the shirt; built only when worn") }],
     ["color", L("ジャケットの色", "Jacket color"), { when: { ".on": true } }],
@@ -19,6 +19,7 @@ definePart({ src: import.meta.url,
     ["open", L("前の開き", "Front gap"), { when: { ".on": true }, min: 0, max: 0.1, step: 0.001, help: L("Vより下で、真ん中から合わせ目までの幅(m)", "below the V, from the middle to each front edge (m)") }],
     ["neckOpen", L("首元の開き", "Gap at the neck"), { when: { ".on": true }, min: 0.02, max: 0.12, step: 0.001, help: L("首の付け根で真ん中から前の縁まで(m)", "at the neck's base, from the middle to each front edge (m)") }],
     ["cuff", L("袖口の位置", "Cuff"), { when: { ".on": true }, min: -0.05, max: 0.15, step: 0.002, help: L("手首から袖口までの長さ(m)。マイナスで手首より先", "from the wrist back to the cuff (m); below 0 past the wrist") }],
+    ["lapel", L("襟(ラペル)の幅", "Lapel width"), { when: { ".on": true }, min: 0, max: 0.08, step: 0.001, help: L("前の縁から折り返した襟の幅(m)。0 = なし。Vの上の部分に、首の横で切れ込みがつく", "how wide the turned-back collar is from the front edge (m); 0 = none. Along the V, with a notch beside the neck") }],
     ["piping", L("パイピングの色", "Piping color"), { when: { ".on": true }, nullable: true, type: "color", help: L("null = なし(前の縁・すそ・袖口の細い線)", "null = none (a thin line along the front edges, the hem and the cuffs)") }],
     ["pipingWidth", L("パイピングの太さ", "Piping width"), { when: { ".on": true }, min: 0.002, max: 0.03, step: 0.001, help: L("m", "m") }],
   ],
@@ -39,12 +40,16 @@ definePart({ src: import.meta.url,
     const torso = (x, y, z, B) => shirtSdf(x, y, z, B, true, true) - 0.007;
     const sleeve = (x, y, z) => { const A = armOf(x); return Math.max(A.f(x, y, z) - 0.022, A.past(x, y, z)); };
     // the hem and the neckline cut the torso only (the sleeves hang below the hem: cut with it they ended at the elbow)
-    const sdf = (x, y, z, B = bodySdf) => { const d = smin(Math.max(torso(x, y, z, B), HEM - y, y - (NY + 0.012)), sleeve(x, y, z), 0.012);   // (the hem as a base-space distance: times the stretch, the meshing overshot it 5 cm down)
+    const LW = O.lapel ?? 0, H0 = Math.max(VY - 0.01, NY - 0.6 * (NY - HEM)), H1 = NY + 0.01;   // (the lapels over the upper 60 % of the front, above the V's point)
+    const lapW = (y) => { const t = (y - H0) / (H1 - H0); if (t < 0 || t > 1) return 0; const w = LW * Math.min(1, t / 0.3) * (1 - 0.55 * Math.max(0, (t - 0.3) / 0.7)); const n = Math.abs(t - 0.68); return n < 0.06 ? w * (0.35 + 0.65 * n / 0.06) : w; };   // (the notch)
+    const lapel = LW > 0 ? (x, y, z, B) => { const u = Math.abs(x), o = openAt(y), w = lapW(y); return Math.max(torso(x, y, z, B) - 0.005, u - (o + w), o - 0.002 - u, H0 - y, y - H1, 0.01 - z); } : null;
+    const sdf = (x, y, z, B = bodySdf) => { if (lapel) { const l = lapel(x, y, z, B); if (l < 0.02) return Math.min(l, sdf0(x, y, z, B)); } return sdf0(x, y, z, B); };
+    const sdf0 = (x, y, z, B = bodySdf) => { const d = smin(Math.max(torso(x, y, z, B), HEM - y, y - (NY + (z < -0.01 ? 0.035 : 0.012)))   /* (higher at the back: the shirt showed over it as a dark collar) */, sleeve(x, y, z), 0.012);   // (the hem as a base-space distance: times the stretch, the meshing overshot it 5 cm down)
       return smax(d, gap(x, y, z) * (y < VY ? 1 : 0.8), 0.003); };
     // the piping: how far in from the nearest edge (the front edge, the hem, a cuff), m as built
     // (a point on a sleeve: from its cuff only; on the torso: from the hem and the front edges)
     const edge = (x, y, z) => { const A = armOf(x); if (sleeve(x, y, z) < Math.max(torso(x, y, z, bodySdf), (HEM - y) * kH) - 0.002) return -A.past(x, y, z);
-      let e = (y - HEM) * kH; if (z > 0.01 && Math.abs(x) < 0.12) e = Math.min(e, Math.abs(x) - openAt(y)); return e; };
+      let e = (y - HEM) * kH; if (z > 0.01 && Math.abs(x) < 0.12) { const u = Math.abs(x), o = openAt(y), w = LW > 0 ? lapW(y) : 0; e = Math.min(e, u - o, w > 0.004 ? Math.abs(o + w - u) : 1); } return e; };
     return { sdf, edge, NY, HEM };
   },
   spec: (st, { H, B, ax, ay }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: [-0.5 - ax, Math.min(st.HEM - 0.05, 0.22) - ay, -0.22], hi: [0.5 + ax, st.NY + 0.05, 0.24], h: Math.min(H, 0.006), only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm)/ }),
