@@ -263,7 +263,10 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
         // tips); clumps: the tips gather into this many clumps across the sheet, each to its own point (0: each lock its own tip), the clumps
         // nearly as long as each other (len above), the locks in a clump a little shorter away from its middle
         P.forEach((q, j) => { const t = j / (N - 1), s = NC > 0 ? sx + (sc - sx) * 0.9 * sstep(0.55, 1, t) : sx;
-          const e = SP * (0.65 + 0.35 * s) * t ** 1.6 + SH * (0.5 + 0.5 * s) * sstep(0.12, 0.5, t) * (1 - 0.6 * sstep(0.7, 1, t)) - (T.curl ?? 0) * sstep(0.65, 1, t) ** 1.5 * (0.6 + 0.4 * s); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
+          const e = SP * (0.65 + 0.35 * s) * t ** (T.splayPow ?? 1.6) + SH * (0.5 + 0.5 * s) * sstep(0.12, 0.5, t) * (1 - 0.6 * sstep(0.7, 1, t)) - (T.curl ?? 0) * sstep(0.65, 1, t) ** 1.5 * (0.6 + 0.4 * s); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
+      // trail (m, 2026-10-11, for ロゼ): the tail arcs back away from the back as it falls, most a little past its middle (seen from the side it
+      // leaves the head behind the ear and swings out behind, not straight down the back)
+      if (T.trail) P.forEach((q, j) => { const t = j / (N - 1); q[2] -= T.trail * Math.sin(Math.PI * Math.min(1, t * 0.85)) * sstep(0, 0.3, t); });
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
       const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)

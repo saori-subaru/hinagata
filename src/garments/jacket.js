@@ -50,7 +50,7 @@ definePart({ src: import.meta.url,
       return smax(d, gap(x, y, z) * (y < VY ? 1 : 0.8), 0.003); };
     // the piping: how far in from the nearest edge (the front edge, the hem, a cuff), m as built
     // (a point on a sleeve: from its cuff only; on the torso: from the hem and the front edges)
-    const edge = (x, y, z) => { const A = armOf(x); if (Math.abs(sleeve(x, y, z)) < Math.abs(Math.max(torso(x, y, z, bodySdf), HEM - y)) - 0.001) return 10 - A.past(x, y, z);   // (on whichever surface is nearer: a sleeve beside the hem took the hem's piping)
+    const edge = (x, y, z) => { const A = armOf(x); if (A.f(x, y, z) < 0.04 || Math.abs(sleeve(x, y, z)) < Math.abs(Math.max(torso(x, y, z, bodySdf), HEM - y)) - 0.001) return 10 - A.past(x, y, z);   /* (near the arm: the jacket's body is the shirt pushed out, its long sleeves too, and the hem's piping ran round the arm) */   // (on whichever surface is nearer: a sleeve beside the hem took the hem's piping)
       let e = (y - HEM) * kH; if (z > 0.01 && Math.abs(x) < 0.12) { const u = Math.abs(x), o = openAt(y), w = LW > 0 ? lapW(y) : 0; e = Math.min(e, u - o, w > 0.004 ? Math.abs(o + w - u) : 1); } return e; };
     return { sdf, edge, NY, HEM };
   },

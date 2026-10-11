@@ -720,6 +720,8 @@ export const DEFAULTS = {
       "bulge": 0,
       "tip": 0,
       "strays": 0,
+      "splayPow": 1.6,
+      "trail": 0,
       "tie": {
         "on": true,
         "color": "#c94a4a",

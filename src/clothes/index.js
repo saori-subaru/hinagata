@@ -180,7 +180,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // (as seen: on a stretched body the cloth is no flatter, and SKF made the shell several cm thick, its inner side's outline showing through at the hem)   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
-    const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
+    const tk = SK.thick * Math.hypot(1, slope) * (EVEN ? Math.hypot(1, SKF(y)) : 1),   /* (even: the distance is divided by that below; the cloth kept its thickness, else its inner side's outline showed through in rows, 2026-10-11) */ shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
     if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008 * U), y - top) / (EVEN ? Math.hypot(1, SKF(y)) : 1);   // (even: steep in y on a stretched body; made a distance again, the surface where it was)
