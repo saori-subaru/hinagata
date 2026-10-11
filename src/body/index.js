@@ -136,7 +136,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // neck.follow: the neck gets thinner with a smaller head (and thicker with a bigger one), relative to the default head size (2026-10-05, Saori:
   // "頭を小さくすると首が太く見える"); 0 = the same width whatever the head
   const NW = NK.width * Math.pow(OPT.body.head.scale / HEAD_SCALE0, NK.follow ?? 0);
-  P.neck = C([0, 0.725, -0.032], [0, 0.845 + LIFT, 0.006], 0.057 * NW, 0.056 * NW * (OPT.body.adult?.on ? (OPT.body.adult.neckTop ?? 1.25) : 1), "neck", 0.04);   // (adult.neckTop: the top end thicker, so the neck doesn't narrow up to the head, a △ from the front or back; the shoulders' slope stays: 2026-10-09, Saori: "顔側の付け根をほんの少し太く")   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+  P.neck = C([0, 0.725, -0.032], [0, 0.845 + LIFT, 0.006 - (NK.upright ?? 0)], 0.057 * NW, 0.056 * NW * (OPT.body.adult?.on ? (OPT.body.adult.neckTop ?? 1.25) : 1), "neck", NK.k ?? 0.04);   // (adult.neckTop: the top end thicker, so the neck doesn't narrow up to the head, a △ from the front or back; the shoulders' slope stays: 2026-10-09, Saori: "顔側の付け根をほんの少し太く")   // 首: 太さの変わらない柱を、上が前へ来るように少し倒す
+  // neck.upright (m; 2026-10-12, Saori, on ロゼ's profile: "横から見た時に顎がなくて顎下が弛んで見えます"): the neck's top this much further
+  // back, so it rises straight up behind the jaw instead of leaning forward into it; neck.k: how softly it runs into the head (0.04: the jaw's
+  // underside, the chin to the neck, filled in as one slope, with no corner)
   // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
   { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }

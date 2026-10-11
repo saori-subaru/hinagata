@@ -112,6 +112,8 @@ export const DEFAULTS = {
         "width": 0.85,
         "length": 0,
         "follow": 1,
+        "upright": 0,
+        "k": 0.04,
         "nape": {
           "on": true,
           "y0": 0.82,
