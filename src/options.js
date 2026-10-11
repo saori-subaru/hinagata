@@ -867,6 +867,7 @@ export const DEFAULTS = {
         "k": 0.06
       },
       "shortBack": 0.86,
+      "napeV": 1,
       "shell": 0.036,
       "lockShell": 0.016,
       "ahogeSize": 1.15,

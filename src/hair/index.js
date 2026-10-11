@@ -86,6 +86,9 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   Object.defineProperty(BANGS, "blunt", { value: BANGS.hime, enumerable: false });   // the old helmet-shaped "blunt" was replaced by hime
   // 後ろ髪ブロック: 頭をひとまわり大きく包む一枚。すそは横=耳の前、後ろ=えりあし。すそに大きめの毛先を刻む
   const NAPE = OPT.hair.sculpt.nape;
+  // napeV (2026-10-12, Saori, on ロゼ from behind: "首とか生え際が変"): the short hair's hem at the back drops toward the middle as (-cos)^napeV,
+  // so above 1 it stays up behind the ears and falls only near the middle, a V down the nape instead of a U across it (1 = as before)
+  const NAPE_V = OPT.hair.sculpt.napeV ?? 1;
   const BACKS = { "short": { r: [0.282, 0.292, 0.29], side: 0.965, back: OPT.hair.sculpt.shortBack, top: 1.215, arch: 0.3, tips: 0.024, flare: 0, nape: true }, "bob": { r: [0.3, 0.3, 0.305], side: 0.885, back: 0.86, top: 1.215, arch: 0.3, tips: 0.03, flare: 0.03, coverEars: true },
     "flip": { r: [0.3, 0.3, 0.305], side: 0.9, back: 0.875, top: 1.215, arch: 0.3, tips: 0.04, teeth: 7, sharp: 2, flare: 0.01, flick: 0.06, flickH: 0.07, flickLift: 0.075, coverEars: true },   // 外はね: a bob whose ends flip out and up
     "long": { r: [0.282, 0.292, 0.29], side: 0.965, back: 0.9, top: 1.215, arch: 0.3, tips: 0, flare: 0, long: OPT.hair.sculpt.long, nape: true } };
@@ -126,7 +129,7 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
       const th = Math.atan2(x, z), c = Math.cos(th);
       const s2 = Math.sin(th) ** 2, arch = CORNER ? (CORNER.drop ?? o.top - o.side) * sstep(CORNER.a0, CORNER.a1, Math.abs(th) / deg) : o.arch * (SQ ? (1 - SQ) * s2 + SQ * s2 ** 3 : s2);   // corner: the hairline turns down between these angles (degrees from the front), so it reaches the ear without receding at the temples   // square: the hairline stays level across the forehead and turns down at the corners
       const pk = PEAK.depth && c > 0 ? PEAK.depth * Math.max(0, 1 - Math.abs(th) / (PEAK.width * Math.PI / 180)) ** 2 : 0;   // widow's peak: the middle of the hairline dips down in a small V
-      let hem = c < 0 ? o.side + (o.side - o.back) * c : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
+      let hem = c < 0 ? o.side - (o.side - o.back) * (o.nape ? (-c) ** NAPE_V : -c) : -smin(-o.side, -(o.top - arch - pk), 0.05);   // 額の生え際: 上向きの弧(真ん中がいちばん高く、横へなだらかに下りる)
       if (c < 0.35) hem -= o.tips * Math.pow(Math.abs(Math.cos(th * (o.teeth ?? 6))), o.sharp ?? 6) * sstep(-0.15, -0.45, c);          // すその毛先(30度ごと)
       const flare = o.flare * sstep(1.05, o.side, y);                                                          // ボブはすそが少し外へ広がる
       const ear = earDist(x, y, z) - EAR_GAP.gap;   // 耳のまわりは髪をよける(耳に髪がはみ出さないように)
