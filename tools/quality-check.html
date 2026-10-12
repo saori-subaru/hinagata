@@ -103,9 +103,10 @@ function slivers(av, box) {
     const w = S, h = Math.round(S * 1.6), edge = new Uint8Array(w * h);
     for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) { const i = y * w + x, z0 = Z[i * 4]; if (Math.abs(z0 - Z[(i + 1) * 4]) > 3 || Math.abs(z0 - Z[(i + w) * 4]) > 3 || Math.abs(z0 - Z[(i - 1) * 4]) > 3 || Math.abs(z0 - Z[(i - w) * 4]) > 3) edge[i] = 1; }
     const near = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (edge[y * w + x]) for (let dy = -SLIVER_PX; dy <= SLIVER_PX; dy++) for (let dx = -SLIVER_PX; dx <= SLIVER_PX; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h) near[Y * w + X] = 1; }
+    // a sliver: darker with the outline than without, relatively (on dark socks the outline's black is only a little darker)
     const g = withC.getContext("2d"), img = g.getImageData(0, 0, w, h); let n = 0;
     for (let i = 0; i < w * h; i++) { const la = A[i * 4] + A[i * 4 + 1] + A[i * 4 + 2], lb = B[i * 4] + B[i * 4 + 1] + B[i * 4 + 2], onFig = Z[i * 4] > 0;
-      if (onFig && !near[i] && la < 240 && lb - la > 150) { n++; img.data.set([255, 0, 0, 255], i * 4); } }
+      if (onFig && !near[i] && la < 240 && lb - la > 45 && la < lb * 0.6) { n++; img.data.set([255, 0, 0, 255], i * 4); } }
     g.putImageData(img, 0, 0); out.push({ pic: withC, n }); }
   scene.remove(av.object); return out;
 }

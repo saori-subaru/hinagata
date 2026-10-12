@@ -348,7 +348,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const palm = at(w, [D, 0.03], [N, 0.002]);
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
-    const FR = AD ? 0.55 : 1, FL = AD ? 1.45 : 1, FS = AD ? 0.7 : 1;
+    // (FR at least what the mesh's cells can make: at the game's 13.6 mm a 0.55 finger came apart into black-edged shards, 2026-10-12;
+    // OPT.meshCell, set by createAvatar)
+    const FR = AD ? Math.min(1, Math.max(0.55, 0.55 * (OPT.meshCell ?? 0.0068) / 0.0068)) : 1, FL = AD ? 1.45 : 1, FS = AD ? 0.7 : 1;
     P[`palm.${s}`] = E(palm, [0.034 * HK, (AD ? 0.036 : 0.05) * HK, (AD ? 0.012 : 0.019) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {

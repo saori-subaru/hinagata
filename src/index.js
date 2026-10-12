@@ -116,6 +116,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the fine quality's skirt and cape: built at the cells the coarser grid gives cloth and not thinned (thinned, the cloth's uneven triangles drew
   // broken lines over a seated lap; 2026-10-05). The same cost to simulate as before.
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
+  OPT.meshCell = H;   // the cell the parts are meshed at: what can be made fine enough (the adult hands' fingers, body/index.js)
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
   const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
@@ -182,6 +183,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // follow their vertices: meshoptimizer keeps a subset of the vertices). Cloth (a skirt, a cape) is thinned less: its inner side rides on
   // the outer side's nearest points, and from big triangles the inside showed through in holes (2026-10-05, the lite quality)
   const THIN_ERROR = 0.01;   // 1% of the mesh's size (meshoptimizer's target_error)
+  // parts lying close on the body (socks 2.5 mm off it, a full suit) are held to a fifth of that: 1% of a leg's length let the body come up
+  // through the socks in streaks at "lite" (2026-10-12)
+  const TIGHT = new Set(["socks", "suit"]);
   function simplified(rec, name) {
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
@@ -190,8 +194,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
     let lock = null;
-    if (name === "body") { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
-      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1; }
+    // the hands too (2026-10-12: at "lite" the fingers came apart into black-edged shards; a hand is small, a few hundred triangles)
+    if (name === "body") { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06, HANDB = new Set(["L", "R"].flatMap((s) => ["hand", "fingers", "fingerTips", "thumb"].map((b) => BI[`${b}.${s}`])));
+      for (let v = 0; v < lock.length; v++) { if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1;
+        else if (si) { let hw = 0; for (let q = 0; q < 4; q++) if (HANDB.has(si[v * 4 + q])) hw += sw[v * 4 + q]; if (hw > 0.3) lock[v] = 1; } } }
     // the share is of what may be thinned: the face's triangles come on top of it. Counted over the whole mesh (until 2026-10-06), the face
     // kept as built took the share away from the rest: a chibi's face is a fifth of its body, and at 0.15 the rest went to nearly nothing
     // (the forest's chibi paper-thin from the side, spikes from the shoulders to the thighs, shins gone; tools/thin-check.mjs).
@@ -203,7 +209,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (let v = 0; v < lock.length; v++) if (Math.abs(pos[v * 3 + 1] - SK.top) < 0.035) lock[v] = 1; } }
     let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
     const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
-    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);
+    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, TIGHT.has(name) ? THIN_ERROR * 0.2 : THIN_ERROR, []);
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
     for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }
