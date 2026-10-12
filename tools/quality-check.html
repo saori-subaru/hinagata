@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hinagata — quality check</title>
+<style>body { margin: 0; padding: 12px; background: #f0ece4; font: 13px sans-serif; } pre { white-space: pre-wrap; } img { max-width: 100%; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<p id="state">building…</p>
+<img id="sheet">
+<pre id="out"></pre>
+<script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
+<script type="module">
+// The quality check (2026-10-12, Saori: "手とかブーツとかスカートの後ろの方とか軽量表示にしたらぼこぼこになるけど、全部チェックとかできるの？").
+// Two things a person shouldn't have to hunt for by eye, measured for the presets and two plain bodies at "game", "fine" and "lite":
+//  1. bumps: every vertex of each part, at rest, is measured against the same part built unthinned at 4.5 mm cells (the reference); the
+//     distance to its surface, in mm. Pictured as a heat map (white: under 1.5 mm, red: BUMP mm and over) from the front, side and back.
+//  2. black slivers: the outline (each part drawn again, pushed out, black, back faces) standing out of the surface. The figure is drawn in an
+//     A-pose with the outline and without it; dark pixels that the outline added away from any depth edge (where an outline belongs) are
+//     slivers. Pictured in red over the figure.
+// A sheet of it all, the numbers under each, and a table. Run it with `node tools/thin-check.mjs --page quality-check` (headless Chrome), or
+// open this page (?only=case, ?runs=game,lite). It reports; it doesn't fail (the thresholds are to be learnt from what it finds).
+import * as THREE from "three";
+import { createAvatar, BODY_TYPES, CHARACTERS } from "../src/index.js";
+
+const BUMP = 4, FACET = 25, SLIVER_PX = 2;   // FACET: a triangle turned more than this (degrees) from the reference surface under it: a facet that shows   // mm off the reference counted as a bump / the depth edge's half width (px) where outlines belong
+const CASES = [
+  { name: "lumina2", label: "ルミナ v2", recipe: () => CHARACTERS.lumina2.file.options },
+  { name: "lumina", label: "ルミナ", recipe: () => CHARACTERS.lumina.file.options },
+  { name: "sylvie", label: "シルヴィ", recipe: () => CHARACTERS.sylvie.file.options },
+  { name: "astel", label: "アステル", recipe: () => CHARACTERS.astel.file.options },
+  { name: "tall", label: "標準の体", recipe: () => ({}) },
+  { name: "chibi", label: "ちび", recipe: () => ({ body: structuredClone(BODY_TYPES.standard.body) }) },
+];
+const RUNS = [["game", { quality: "game" }], ["fine", { quality: "fine" }], ["lite", { quality: "lite" }]];
+const REF = { cell: 0.0045, simplify: 1 };
+const Q = new URLSearchParams(location.search), only = Q.get("only")?.split(","), runsAsked = Q.get("runs")?.split(",");
+const state = (s) => { document.getElementById("state").textContent = s; };
+
+// ── distances: a part's vertices to the reference part's triangles (a spatial hash of the triangles, cells of H m) ──
+const H = 0.02;
+function triHash(geo) {
+  const P = geo.attributes.position.array, I = geo.index.array, map = new Map(), key = (i, j, k) => i + "," + j + "," + k;
+  for (let t = 0; t < I.length; t += 3) { let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+    for (let q = 0; q < 3; q++) for (let d = 0; d < 3; d++) { const v = P[I[t + q] * 3 + d]; lo[d] = Math.min(lo[d], v); hi[d] = Math.max(hi[d], v); }
+    for (let i = Math.floor(lo[0] / H); i <= Math.floor(hi[0] / H); i++) for (let j = Math.floor(lo[1] / H); j <= Math.floor(hi[1] / H); j++) for (let k = Math.floor(lo[2] / H); k <= Math.floor(hi[2] / H); k++) {
+      const kk = key(i, j, k); let L = map.get(kk); if (!L) map.set(kk, L = []); L.push(t); } }
+  return { P, I, map, key };
+}
+const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), p = new THREE.Vector3(), q = new THREE.Vector3(), tri = new THREE.Triangle();
+let bestT = -1;   // the nearest triangle of the last nearest()
+function nearest(hash, x, y, z, reach = 2) {   // the distance (m) to the nearest triangle within reach cells, else reach * H
+  const { P, I, map, key } = hash, ci = Math.floor(x / H), cj = Math.floor(y / H), ck = Math.floor(z / H); let best = reach * H, seen = new Set(); p.set(x, y, z); bestT = -1;
+  for (let i = ci - reach; i <= ci + reach; i++) for (let j = cj - reach; j <= cj + reach; j++) for (let k = ck - reach; k <= ck + reach; k++) {
+    const L = map.get(key(i, j, k)); if (!L) continue;
+    for (const t of L) { if (seen.has(t)) continue; seen.add(t); a.fromArray(P, I[t] * 3); b.fromArray(P, I[t + 1] * 3); c.fromArray(P, I[t + 2] * 3); tri.set(a, b, c); tri.closestPointToPoint(p, q); const d = q.distanceTo(p); if (d < best) { best = d; bestT = t; } } }
+  return best;
+}
+const restAll = (av) => { av.cloth?.rest(); av.capeCloth?.rest(); };
+const meshParts = (av) => Object.entries(av.parts).filter(([k, x]) => x?.m?.visible && x.m.geometry?.index && x.m.geometry.index.count && !/^acc/.test(k));
+function bumps(test, ref) {
+  const hashes = Object.fromEntries(meshParts(ref).map(([k, x]) => [k, triHash(x.m.geometry)])), parts = {}, colors = {};
+  for (const [k, x] of meshParts(test)) { const h = hashes[k]; if (!h) continue; const P = x.m.geometry.attributes.position.array, n = P.length / 3, D = new Float32Array(n);
+    let over = 0, max = 0, sum = 0, at = null; for (let v = 0; v < n; v++) { const d = nearest(h, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]) * 1000; D[v] = d; sum += d; if (d >= BUMP) over++; if (d > max) { max = d; at = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]]; } }
+    // facets: each triangle's normal against the reference's surface at its middle
+    const I = x.m.geometry.index.array, F = new Float32Array(n), na = new THREE.Vector3(), nb = new THREE.Vector3(); let facets = 0;
+    for (let t = 0; t < I.length; t += 3) { a.fromArray(P, I[t] * 3); b.fromArray(P, I[t + 1] * 3); c.fromArray(P, I[t + 2] * 3); tri.set(a, b, c); if (tri.getArea() < 1e-8) continue; tri.getNormal(na);
+      const m = a.clone().add(b).add(c).divideScalar(3); nearest(h, m.x, m.y, m.z); if (bestT < 0) continue;
+      a.fromArray(h.P, h.I[bestT] * 3); b.fromArray(h.P, h.I[bestT + 1] * 3); c.fromArray(h.P, h.I[bestT + 2] * 3); tri.set(a, b, c); tri.getNormal(nb);
+      const ang = Math.acos(Math.min(1, Math.abs(na.dot(nb)))) * 180 / Math.PI; if (ang > FACET) facets++; for (let q2 = 0; q2 < 3; q2++) F[I[t + q2]] = Math.max(F[I[t + q2]], ang); }
+    const sorted = Float32Array.from(D).sort(); parts[k] = { verts: n, over, facets, p95: +sorted[Math.floor(n * 0.95)].toFixed(1), max: +max.toFixed(1), mean: +(sum / n).toFixed(2), at: at?.map((v) => +v.toFixed(3)) }; colors[k] = { D, F }; }
+  return { parts, colors };
+}
+
+// ── pictures ──
+const S = 240, renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true }); renderer.setSize(S, S * 1.6); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(), BG = new THREE.Color("#e6e2da");
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+const VIEWS = [["正面", [0, 4]], ["横", [4, 0]], ["後ろ", [0, -4]]];
+function camFor(box, [x, z]) { const h = box.max.y - box.min.y, cy = (box.max.y + box.min.y) / 2, half = h * 0.53, cam = new THREE.OrthographicCamera(-half / 1.6, half / 1.6, half, -half, 3.2, 4.8); cam.position.set(x, cy, z); cam.lookAt(0, cy, 0); return cam; }
+const grab = () => { const c = document.createElement("canvas"); c.width = S; c.height = S * 1.6; c.getContext("2d").drawImage(renderer.domElement, 0, 0); return c; };
+const pixels = (c) => c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+// the heat map: each part's rest mesh, colored by its distance
+function heat(test, colors, box) {
+  const g = new THREE.Group();
+  for (const [k, x] of meshParts(test)) { const D = colors[k]; if (!D) continue; const geo = new THREE.BufferGeometry(); geo.setAttribute("position", x.m.geometry.attributes.position); geo.setIndex(x.m.geometry.index);
+    const { D: Dd, F } = D, col = new Float32Array(Dd.length * 3);   // red: off the reference; blue: a facet turned from it
+    for (let v = 0; v < Dd.length; v++) { const t = Math.min(1, Math.max(0, (Dd[v] - 1.5) / (BUMP - 1.5))), f = Math.min(1, Math.max(0, (F[v] - 12) / (FACET - 12))); col[v * 3] = 1 - 0.75 * f; col[v * 3 + 1] = (1 - 0.8 * t) * (1 - 0.55 * f); col[v * 3 + 2] = 1 - 0.85 * t; }
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3)); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }))); }
+  scene.background = BG; scene.add(g); const out = VIEWS.map(([, v]) => { renderer.render(scene, camFor(box, v)); return grab(); }); scene.remove(g); return out;
+}
+// slivers: with the outline, without it, and the depth (for the edges where outlines belong)
+function slivers(av, box) {
+  const outl = Object.values(av.parts).map((x) => x?.o).filter(Boolean), was = outl.map((o) => o.visible), depthMat = new THREE.MeshDepthMaterial();
+  scene.background = BG; scene.add(av.object); const out = [];
+  for (const [, v] of VIEWS) { const cam = camFor(box, v);
+    outl.forEach((o, i) => { o.visible = was[i]; }); renderer.render(scene, cam); const withC = grab(), A = pixels(withC);
+    outl.forEach((o) => { o.visible = false; }); renderer.render(scene, cam); const B = pixels(grab());
+    scene.overrideMaterial = depthMat; scene.background = new THREE.Color(0); renderer.render(scene, cam); const Z = pixels(grab()); scene.overrideMaterial = null; scene.background = BG;
+    outl.forEach((o, i) => { o.visible = was[i]; });
+    const w = S, h = Math.round(S * 1.6), edge = new Uint8Array(w * h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) { const i = y * w + x, z0 = Z[i * 4]; if (Math.abs(z0 - Z[(i + 1) * 4]) > 3 || Math.abs(z0 - Z[(i + w) * 4]) > 3 || Math.abs(z0 - Z[(i - 1) * 4]) > 3 || Math.abs(z0 - Z[(i - w) * 4]) > 3) edge[i] = 1; }
+    const near = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (edge[y * w + x]) for (let dy = -SLIVER_PX; dy <= SLIVER_PX; dy++) for (let dx = -SLIVER_PX; dx <= SLIVER_PX; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h) near[Y * w + X] = 1; }
+    const g = withC.getContext("2d"), img = g.getImageData(0, 0, w, h); let n = 0;
+    for (let i = 0; i < w * h; i++) { const la = A[i * 4] + A[i * 4 + 1] + A[i * 4 + 2], lb = B[i * 4] + B[i * 4 + 1] + B[i * 4 + 2], onFig = Z[i * 4] > 0;
+      if (onFig && !near[i] && la < 240 && lb - la > 150) { n++; img.data.set([255, 0, 0, 255], i * 4); } }
+    g.putImageData(img, 0, 0); out.push({ pic: withC, n }); }
+  scene.remove(av.object); return out;
+}
+const pose = (av, name) => { av.play(name, { blend: 0 }); for (let i = 0; i < 40; i++) av.update(1 / 30); };
+
+const results = [], rows = [];
+try {
+  for (const C of CASES) {
+    if (only && !only.includes(C.name)) continue;
+    state(`reference ${C.name}`);
+    const ref = await createAvatar(structuredClone(C.recipe()), { ...REF, cache: false, cull: false }); ref.update(0, { instant: true }); restAll(ref);
+    let box = null;
+    for (const [run, settings] of RUNS.filter(([k]) => !runsAsked || runsAsked.includes(k))) {
+      state(`${C.name} ${run}`);
+      const t0 = performance.now(), m = await createAvatar(structuredClone(C.recipe()), { ...settings, cache: false, cull: false }); m.update(0, { instant: true }); restAll(m);
+      const ms = Math.round(performance.now() - t0), { parts, colors } = bumps(m, ref);
+      box ??= new THREE.Box3().setFromObject(m.object);
+      const heats = heat(m, colors, box); m.dispose?.();
+      const v = await createAvatar(structuredClone(C.recipe()), { ...settings, cache: false }); pose(v, "aPose"); const sl = slivers(v, box); v.dispose?.();
+      const worst = Object.entries(parts).sort((x, y) => (y[1].over + y[1].facets) - (x[1].over + x[1].facets)).filter(([, x]) => x.over + x.facets).slice(0, 4).map(([k, x]) => `${k} ずれ${x.over}・角${x.facets}`);
+      const r = { case: C.name, run, ms, bumps: Object.values(parts).reduce((s, x) => s + x.over, 0), facets: Object.values(parts).reduce((s, x) => s + x.facets, 0), slivers: sl.map((x) => x.n), worst, parts };
+      results.push(r); rows.push({ label: `${C.label} — ${run}`, pics: [...heats, ...sl.map((x) => x.pic)], r });
+    }
+    ref.dispose?.();
+  }
+} catch (e) { state("error: " + e.message); window.RESULT = { ok: false, error: e.stack || e.message }; throw e; }
+
+// the sheet: per row the heat map (front, side, back) and the slivers (front, side, back), the numbers under it
+const PH = Math.round(S * 1.6), RW = S * 6 + 20, sheet = document.createElement("canvas"); sheet.width = RW + 16; sheet.height = rows.length * (PH + 56) + 8;
+const g = sheet.getContext("2d"); g.fillStyle = "#f0ece4"; g.fillRect(0, 0, sheet.width, sheet.height); g.font = "15px sans-serif";
+rows.forEach((row, i) => { const y = 8 + i * (PH + 56); g.fillStyle = "#333"; g.fillText(`${row.label}   左3枚: でこぼこ（赤 = 基準から${BUMP}mm以上ずれ、青 = 面が${FACET}°以上かたむいた角）  右3枚: 黒い破片（赤）`, 8, y + 16);
+  row.pics.forEach((c, j) => g.drawImage(c, 8 + j * S + (j >= 3 ? 20 : 0), y + 22));
+  g.fillStyle = row.r.bumps || row.r.facets || row.r.slivers.some((n) => n) ? "#b02020" : "#2a6a2a";
+  g.fillText(`ずれ ${row.r.bumps}点・角 ${row.r.facets}面  ${row.r.worst.join(" / ")}   破片 ${row.r.slivers.join(" / ")}px`, 8, y + PH + 42); });
+const png = sheet.toDataURL("image/png"); document.getElementById("sheet").src = png;
+const table = results.map((r) => `${r.case.padEnd(8)} ${r.run.padEnd(5)} bumps ${String(r.bumps).padStart(6)}  facets ${String(r.facets).padStart(6)}  slivers ${r.slivers.map((n) => String(n).padStart(4)).join(" ")}  ${r.worst.join(" / ")}  ${r.ms} ms`).join("\n");
+document.getElementById("out").textContent = table; state("done");
+window.RESULT = { ok: true, results, table, png, sheetName: "quality-check" };
+</script>
+</body>
+</html>

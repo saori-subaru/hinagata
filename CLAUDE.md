@@ -8,3 +8,4 @@
 - **エンジン（src/）を変えたら `node tools/thin-check.mjs` を回す**（間引きの崩れの見張り。高頭身・2頭身・版の無いレシピ・細い体を fine / lite / 0.15 で組み、
   前後の厚みを間引かない体と比べる。失敗なら終了コード1。正面と横の絵は thin-check-out/thin-check.png）。落ちたまま main に入れない。
   2026-10-06、原生林の2頭身が 0.15 で紙のように薄く潰れたのを、使う側が見つけるまで誰も気づかなかったため。
+- **見た目の崩れは `node tools/thin-check.mjs --page quality-check` で見る**（プリセットと標準の体を game / fine / lite で組み、間引かない 4.5 mm の基準とくらべた ずれ・角・黒い破片の絵 thin-check-out/quality-check.png）。直す前と後で回して、悪化していないか確かめる。

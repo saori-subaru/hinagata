@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The thinning check, in one command (2026-10-06): run it after changing the engine (above all the thinning, the cells, the body's shape).
 //
-//   node tools/thin-check.mjs [--out dir] [--only case] [--runs full,s0.15] [--chrome path] [--keep]
+//   node tools/thin-check.mjs [--out dir] [--only case] [--runs full,s0.15] [--chrome path] [--keep] [--page quality-check]
+//   (--page: another check page in tools/ run the same way: quality-check, the bumps and black slivers of the presets; it reports, never fails)
 //
 // Serves the repository on 127.0.0.1, opens tools/thin-check.html in headless Chrome (or Edge) and waits for it: the bodies built unthinned
 // and thinned ("game", "lite", simplify 0.15), cut across to measure their depth front to back. Writes thin-check.png (front and side
@@ -15,7 +16,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2), opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : d; }, flag = (k) => { const i = args.indexOf(k); return i >= 0 ? !!args.splice(i, 1) : false; };
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), OUT = path.resolve(opt("--out", "thin-check-out")), ONLY = opt("--only", ""), RUNS = opt("--runs", ""), KEEP = flag("--keep");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), OUT = path.resolve(opt("--out", "thin-check-out")), ONLY = opt("--only", ""), RUNS = opt("--runs", ""), KEEP = flag("--keep"), PAGE_NAME = opt("--page", "thin-check");
 const CHROMES = [opt("--chrome", ""), process.env.CHROME,
   "C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"].filter(Boolean);
@@ -30,7 +31,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": TYPES[path.extname(p)] || "application/octet-stream" }); fs.createReadStream(p).pipe(res);
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const PAGE = `http://127.0.0.1:${server.address().port}/tools/thin-check.html?${ONLY ? `only=${encodeURIComponent(ONLY)}` : ""}${RUNS ? `&runs=${encodeURIComponent(RUNS)}` : ""}`;
+const PAGE = `http://127.0.0.1:${server.address().port}/tools/${PAGE_NAME}.html?${ONLY ? `only=${encodeURIComponent(ONLY)}` : ""}${RUNS ? `&runs=${encodeURIComponent(RUNS)}` : ""}`;
 
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "hinagata-thin-"));
 const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check",
@@ -52,7 +53,7 @@ await send("Runtime.enable", {}, sessionId);
 await send("Page.navigate", { url: PAGE }, sessionId);
 console.log(`building (${PAGE}) …`);
 const T0 = Date.now(); let R = null, last = "";
-while (Date.now() - T0 < 15 * 60e3) {
+while (Date.now() - T0 < 40 * 60e3) {
   await new Promise((r) => setTimeout(r, 1000));
   const v = await send("Runtime.evaluate", { expression: "window.RESULT ? JSON.stringify(window.RESULT) : (document.getElementById('state')?.textContent || '')", returnByValue: true }, sessionId).catch(() => null);
   const s = v?.result?.value ?? ""; if (s.startsWith("{")) { R = JSON.parse(s); break; }
@@ -62,9 +63,11 @@ if (!R) { console.error("timed out"); done(2); }
 else if (R.error) { console.error("the page failed: " + R.error); done(2); }
 else {
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, "thin-check.png"), Buffer.from(R.png.split(",")[1], "base64"));
-  const { png, ...rest } = R; fs.writeFileSync(path.join(OUT, "thin-check.json"), JSON.stringify(rest, null, 2) + "\n");
+  const NAME = R.sheetName ?? "thin-check";
+  fs.writeFileSync(path.join(OUT, NAME + ".png"), Buffer.from(R.png.split(",")[1], "base64"));
+  const { png, ...rest } = R; fs.writeFileSync(path.join(OUT, NAME + ".json"), JSON.stringify(rest, null, 2) + "\n");
   console.log(R.table);
-  console.log(`\n${R.ok ? "ok" : "FAILED"}: every thinned cut keeps ${Math.round(R.min * 100)}–${Math.round(R.max * 100)}% of the unthinned depth and width${R.ok ? "" : " — not so above"}.  ${path.join(OUT, "thin-check.png")}`);
+  if (R.min == null) console.log(`\n${path.join(OUT, NAME + ".png")}`);
+  else console.log(`\n${R.ok ? "ok" : "FAILED"}: every thinned cut keeps ${Math.round(R.min * 100)}–${Math.round(R.max * 100)}% of the unthinned depth and width${R.ok ? "" : " — not so above"}.  ${path.join(OUT, NAME + ".png")}`);
   if (KEEP) console.log("(--keep: Chrome left running; Ctrl+C to stop)"); else done(R.ok ? 0 : 1);
 }
