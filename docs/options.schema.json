@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 425,
+   "order": 430,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -10166,7 +10166,7 @@
      }
     }
    ],
-   "order": 407,
+   "order": 412,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10184,7 +10184,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 408,
+   "order": 413,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10207,7 +10207,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 409,
+   "order": 414,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10255,7 +10255,7 @@
      }
     }
    ],
-   "order": 410,
+   "order": 415,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10273,7 +10273,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 411,
+   "order": 416,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10299,7 +10299,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 412,
+   "order": 417,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10317,7 +10317,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 413,
+   "order": 418,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10335,7 +10335,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 414,
+   "order": 419,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10376,7 +10376,7 @@
      }
     }
    ],
-   "order": 415,
+   "order": 420,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10394,7 +10394,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 416,
+   "order": 421,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -10420,7 +10420,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 417,
+   "order": 422,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -10738,7 +10738,7 @@
      }
     }
    ],
-   "order": 402,
+   "order": 407,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10756,7 +10756,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 404,
+   "order": 409,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10780,7 +10780,7 @@
    "min": 0.12,
    "max": 0.45,
    "step": 0.005,
-   "order": 405,
+   "order": 410,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10811,7 +10811,7 @@
    "min": 8,
    "max": 45,
    "step": 1,
-   "order": 406,
+   "order": 411,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10842,7 +10842,7 @@
    "min": 0,
    "max": 0.08,
    "step": 0.002,
-   "order": 419,
+   "order": 424,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10870,7 +10870,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 420,
+   "order": 425,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -10902,7 +10902,7 @@
    "min": 0.012,
    "max": 0.06,
    "step": 0.001,
-   "order": 423,
+   "order": 428,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -10927,7 +10927,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 424,
+   "order": 429,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -10956,7 +10956,7 @@
    "min": 0,
    "max": 0.02,
    "step": 0.001,
-   "order": 421,
+   "order": 426,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -11001,7 +11001,7 @@
      }
     }
    ],
-   "order": 422,
+   "order": 427,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11025,7 +11025,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 401,
+   "order": 406,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11043,7 +11043,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 403,
+   "order": 408,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11061,7 +11061,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 418,
+   "order": 423,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12882,6 +12882,142 @@
    },
    "when": {
     "outfit.baggy.on": true
+   }
+  },
+  "outfit.baggy.stack": {
+   "path": "outfit.baggy.stack",
+   "type": "number",
+   "default": 0.008,
+   "label": {
+    "ja": "すその布だまり",
+    "en": "Stacked hem"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.03,
+   "step": 0.001,
+   "order": 401,
+   "section": {
+    "ja": "ダボっとしたズボン",
+    "en": "Baggy trousers"
+   },
+   "help": {
+    "ja": "しぼったすその上に重なる横向きのたるみの深さ(m)",
+    "en": "how deep the rolls of cloth bunched over the gathered hem are (m)"
+   },
+   "when": {
+    "outfit.baggy.on": true
+   }
+  },
+  "outfit.baggy.pocket": {
+   "path": "outfit.baggy.pocket",
+   "type": "boolean",
+   "default": true,
+   "label": {
+    "ja": "カーゴポケット",
+    "en": "Cargo pockets"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "order": 402,
+   "section": {
+    "ja": "ダボっとしたズボン",
+    "en": "Baggy trousers"
+   },
+   "when": {
+    "outfit.baggy.on": true
+   }
+  },
+  "outfit.baggy.pocketAt": {
+   "path": "outfit.baggy.pocketAt",
+   "type": "number",
+   "default": 0.45,
+   "label": {
+    "ja": "ポケットの高さ",
+    "en": "Pocket height"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.15,
+   "max": 0.8,
+   "step": 0.01,
+   "order": 403,
+   "section": {
+    "ja": "ダボっとしたズボン",
+    "en": "Baggy trousers"
+   },
+   "help": {
+    "ja": "股関節(0)から足首(1)までのどこか",
+    "en": "where between the hip joint (0) and the ankle (1)"
+   },
+   "when": {
+    "outfit.baggy.on": true,
+    "outfit.baggy.pocket": true
+   }
+  },
+  "outfit.baggy.pocketSize": {
+   "path": "outfit.baggy.pocketSize",
+   "type": "list",
+   "default": [
+    0.045,
+    0.035
+   ],
+   "label": {
+    "ja": "ポケットの大きさ",
+    "en": "Pocket size"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "order": 404,
+   "section": {
+    "ja": "ダボっとしたズボン",
+    "en": "Baggy trousers"
+   },
+   "help": {
+    "ja": "[幅, 高さ] の半分(m)",
+    "en": "[width, height], halves (m)"
+   },
+   "when": {
+    "outfit.baggy.on": true,
+    "outfit.baggy.pocket": true
+   }
+  },
+  "outfit.baggy.pocketTurn": {
+   "path": "outfit.baggy.pocketTurn",
+   "type": "number",
+   "default": 20,
+   "label": {
+    "ja": "ポケットの向き",
+    "en": "Pocket turn"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": -60,
+   "max": 60,
+   "step": 1,
+   "order": 405,
+   "section": {
+    "ja": "ダボっとしたズボン",
+    "en": "Baggy trousers"
+   },
+   "help": {
+    "ja": "真横から前へ回す角度(度)",
+    "en": "turned from straight out toward the front (degrees)"
+   },
+   "when": {
+    "outfit.baggy.on": true,
+    "outfit.baggy.pocket": true
    }
   },
   "hair.paint.strands.on": {
