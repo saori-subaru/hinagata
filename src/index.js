@@ -18,6 +18,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
+import { shapeGeometry } from "./hair/shape.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
@@ -525,7 +526,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
-  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails", "shapes"], HAIR_BACK = ["hair", "locks", "tails", "shapes"];
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
@@ -537,7 +538,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie", "tailTieLine"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie", "tailTieLine", "shapes"];   // shapes: hair as set shapes (options.hair.shapes, hair/shape.js)   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
@@ -548,6 +549,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
+    // hair as set shapes (options.hair.shapes, hair/shape.js): one solid each, carried by the head
+    if (which.includes("shapes") && (OPT.hair.shapes ?? []).length) { const geos = (OPT.hair.shapes ?? []).flatMap((S) => (S.mirror ? [1, -1] : [1]).map((side) => shapeGeometry(S, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), side }))).filter(Boolean);
+      if (geos.length) { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
+        g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
+        const nv = Pm.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
+        g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
+        out.shapes = skinned(g, OPT.colors.hair, 0.003); out.shapes.sim = { update() {}, rest() {} }; } }
     if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];

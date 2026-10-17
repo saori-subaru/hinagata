@@ -12942,6 +12942,21 @@
     "en": "hair"
    }
   },
+  "hair.shapes": {
+   "path": "hair.shapes",
+   "type": "json",
+   "default": [],
+   "label": {
+    "en": "shapes"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setHair",
+   "section": {
+    "en": "hair"
+   }
+  },
   "hair.gradient.on": {
    "path": "hair.gradient.on",
    "type": "boolean",

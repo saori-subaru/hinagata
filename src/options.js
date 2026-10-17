@@ -687,6 +687,7 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "shapes": [],
     "gradient": {
       "on": false,
       "color": "#7cc47f",
