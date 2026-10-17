@@ -6,4 +6,5 @@ import "./headband.js";
 import "./sleeves.js";
 import "./collar.js";
 import "./jacket.js";
+import "./baggy.js";
 export * from "./registry.js";
