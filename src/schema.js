@@ -403,6 +403,7 @@ function place(path) {
   if (/^(hair|outfit\.\w+)\.gradient\./.test(path)) return { group: p[0] === "hair" ? "hair" : "outfit", cost: "instant", apply: "setGradient" };   // gradients: avatar.setGradient
   if (path.startsWith("hair.tail.")) return { group: "hair", cost: "hair", apply: "setTails" };   // tails: avatar.setTails rebuilds only them
   if (top === "accessories") return { group: "outfit", cost: "instant", apply: "setAccessories" };   // accessories: avatar.setAccessories
+  if (path.startsWith("hair.shapeInner.")) return { group: "hair", cost: "hair", apply: "setHair" };   // the shapes' inner faces in another colour
   if (path === "hair.shapes") return { group: "hair", cost: "hair", apply: "setHair" };   // hair as set shapes (hair/shape.js)
   if (path === "hair.drawn") return { group: "hair", cost: "hair", apply: "setDrawn" };   // locks drawn by hand: avatar.setDrawnHair
   if (/^hair\.sculpt\.(shortLocks|long|bobLocks|flipLocks)\.(lie\.)?edits$/.test(path)) return { group: "hair", cost: "hair", apply: "setLocks" };   // the back locks' own changes (editor/src/backs.js)   // locks drawn by hand: avatar.setDrawnHair   // the nendo bangs: avatar.setBangs (bangs made of locks rebuild only themselves)

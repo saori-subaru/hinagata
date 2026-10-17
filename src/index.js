@@ -18,7 +18,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { shapeGeometry, tubeGeometry, blendedTubes } from "./hair/shape.js";
+import { shapeGeometry, tubeGeometry, blendedTubes, innerT } from "./hair/shape.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
@@ -550,13 +550,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
     // hair as set shapes (options.hair.shapes, hair/shape.js): one solid each, carried by the head
-    if (which.includes("shapes") && (OPT.hair.shapes ?? []).length) { const SH = OPT.hair.shapes ?? [], toRootH = (x, y, z) => HTr.fromHead(x, y, z), BL = SH.filter((S) => S.pts && S.blend), geos = [...SH.filter((S) => !BL.includes(S)).flatMap((S) => (S.mirror ? [1, -1] : [1]).map((side) => (S.pts ? tubeGeometry : shapeGeometry)(S, { toRoot: toRootH, side }))),
+    if (which.includes("shapes") && (OPT.hair.shapes ?? []).length) { const SH = OPT.hair.shapes ?? [], toRootH = (x, y, z) => HTr.fromHead(x, y, z), BL = SH.filter((S) => S.pts && S.blend), geos = [...SH.filter((S) => !BL.includes(S)).flatMap((S) => (S.mirror ? [1, -1] : [1]).map((side) => { const g = (S.pts ? tubeGeometry : shapeGeometry)(S, { toRoot: toRootH, side }); if (g) innerT(g, S, toRootH, side); return g; })),
       ...[1, -1].map((side) => { const L = BL.filter((S) => side > 0 || S.mirror); return L.length ? blendedTubes(L, { toRoot: toRootH, side }) : null; })].filter(Boolean);   // (tubes with blend: melted into one surface per side)
-      if (geos.length) { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
-        g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
+      if (geos.length) { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = [], Gm = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); Gm.push(...q.attributes.gradT.array); for (const i of q.index.array) Im.push(i + o0); }
+        g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setAttribute("gradT", new THREE.Float32BufferAttribute(Gm, 1)); g.setIndex(Im);
         const nv = Pm.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
         g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
-        out.shapes = skinned(g, OPT.colors.hair, 0.003); out.shapes.sim = { update() {}, rest() {} }; } }
+        out.shapes = skinned(g, OPT.colors.hair, 0.003); out.shapes.sim = { update() {}, rest() {} };
+        const SI = OPT.hair.shapeInner; if (SI?.on) { const U = gradU({ on: true, color: SI.color, start: SI.start ?? 0.2, soft: SI.soft ?? 0.15 }); out.shapes.wrap = (m) => withGrad(m, U); out.shapes.m.material = out.shapes.wrap(out.shapes.m.material); } } }   // shapeInner: the faces turned inward in another colour
     if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];

@@ -84,14 +84,21 @@ export function blendedTubes(list, { toRoot, side = 1, h = 0.007 }) {
       seg.push({ c, T, W, D, w, d }); const r = Math.max(w, d) + K; for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], c[k] - r); hi[k] = Math.max(hi[k], c[k] + r); } }
     const b0 = [0, 1, 2].map((k) => Math.min(...seg.map((s) => s.c[k] - Math.max(s.w, s.d))) - K), b1 = [0, 1, 2].map((k) => Math.max(...seg.map((s) => s.c[k] + Math.max(s.w, s.d))) + K);
     tubes.push({ seg, b0, b1 }); }
-  const one = (tb, x, y, z) => { let best = Infinity; const S = tb.seg;
+  const one = (tb, x, y, z) => { let best = Infinity, bs = 0.01; const S = tb.seg;
     for (let i = 0; i < S.length - 1; i++) { const A = S[i], B = S[i + 1], ex = B.c[0] - A.c[0], ey = B.c[1] - A.c[1], ez = B.c[2] - A.c[2], L2 = ex * ex + ey * ey + ez * ez || 1;
       const u = Math.max(0, Math.min(1, ((x - A.c[0]) * ex + (y - A.c[1]) * ey + (z - A.c[2]) * ez) / L2)), cx = A.c[0] + ex * u, cy = A.c[1] + ey * u, cz = A.c[2] + ez * u, rx = x - cx, ry = y - cy, rz = z - cz;
       const W = u < 0.5 ? A.W : B.W, D = u < 0.5 ? A.D : B.D, w = A.w + (B.w - A.w) * u, d = A.d + (B.d - A.d) * u, s = Math.min(w, d);
       const L = Math.sqrt(L2), q = Math.hypot((rx * ex + ry * ey + rz * ez) / L / s, (rx * W[0] + ry * W[1] + rz * W[2]) / w, (rx * D[0] + ry * D[1] + rz * D[2]) / d);   // (along the line too: past the ends, round caps)
-      const dist = (q - 1) * s; if (dist < best) best = dist; }
-    return best; };
-  const sdf = (x, y, z) => { let v = 0.1; for (const tb of tubes) { if (x < tb.b0[0] - K || x > tb.b1[0] + K || y < tb.b0[1] - K || y > tb.b1[1] + K || z < tb.b0[2] - K || z > tb.b1[2] + K) { v = Math.min(v, 0.05); continue; } v = smin(v, one(tb, x, y, z), K); } return v; };
+      const dist = (q - 1) * s; if (dist < best) { best = dist; bs = s; } }
+    ONE_S = bs; return best; };
+  let ONE_S = 0.01;
+  // the blend no wider than about twice the thinner of the two there: thin tips stay thin (a fixed blend swelled them into blunt ends)
+  const sdf = (x, y, z) => { let v = 0.1, vs = 1; for (const tb of tubes) { if (x < tb.b0[0] - K || x > tb.b1[0] + K || y < tb.b0[1] - K || y > tb.b1[1] + K || z < tb.b0[2] - K || z > tb.b1[2] + K) { v = Math.min(v, 0.05); continue; } const d = one(tb, x, y, z), k = Math.max(0.002, Math.min(K, 2.2 * Math.min(vs, ONE_S))); v = smin(v, d, k); if (d < v + k) vs = Math.min(vs, ONE_S); } return v; };
   const res = surfaceNets(sdf, lo.map((v) => v - h * 2), hi.map((v) => v + h * 2), h);
-  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(res.pos, 3)); g.setIndex(res.idx); g.computeVertexNormals(); return g;
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(res.pos, 3)); g.setIndex(res.idx); g.computeVertexNormals();
+  innerT(g, list[0], toRoot, side); return g;
 }
+// inner (2026-10-17, Saori: "ふさの内側（おもて面）だけ色を変える"): gradT 1 on the faces turned toward innerDir (head space; default toward the
+// middle and the front), 0 elsewhere, for the shapes' own gradient colour (hair.shapeInner)
+export function innerT(g, S, toRoot, side) { const n = g.attributes.normal, T = new Float32Array(n.count), D0 = S.innerDir ?? [-1, 0, 0.6], a = toRoot(0, 1.2, 0), b = toRoot(side * D0[0], 1.2 + D0[1], D0[2]), dl = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1, D = [(b[0] - a[0]) / dl, (b[1] - a[1]) / dl, (b[2] - a[2]) / dl];
+  for (let i = 0; i < n.count; i++) T[i] = n.getX(i) * D[0] + n.getY(i) * D[1] + n.getZ(i) * D[2]; g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); }
