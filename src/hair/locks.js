@@ -194,9 +194,17 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
- * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side) }.
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side),
+ * blade ([root, widest, tip]: a leaf's outline along it, as wide as root (share) at the root, widest at widest (share of the length), then
+ * narrowing to a sharp point, the larger tip the sooner; null = the usual lock), hook (m: the tip bends across), fold (× half width: a ridge
+ * down its middle), curl (m: the whole lock bends across, more toward the tip), under (true: all in the hair gradient's colour, a lock
+ * of the under layer showing between the others, hair.gradient on), grad (0..1: how far the gradient reaches into it; 0 = none) }. (blade / hook / fold: 2026-10-17, Saori, with an anime
+ * figure's hair as the reference: "アニメ的に形の固まった髪を作れるようにしたい")
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
+// a blade's outline along a lock (see drawnLocks): from r0 at the root it swells to 1 at wa, then narrows to a point (the larger tp, the
+// sooner it narrows: a long sharp point; 1, a round leaf's)
+export const bladeProf = ([r0 = 0.4, wa = 0.35, tp = 1] = []) => (t) => t < wa ? r0 + (1 - r0) * Math.sin(Math.PI / 2 * t / wa) : Math.pow(Math.max(0, Math.cos(Math.PI / 2 * (t - wa) / (1 - wa))), tp);
 export function drawnLocks(list, { toRoot, N = 16 }) {
   const out = [];
   for (const d of list ?? []) {
@@ -209,7 +217,9 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1 });
+      const spec = { root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: (d.curl ?? 0) * m, rise: true, stiff: d.stiff ?? 1, hook: (d.hook ?? 0) * m, fold: d.fold ?? 0, under: !!d.under, grad: d.grad ?? 1 };
+      if (d.blade) spec.prof = bladeProf(d.blade);
+      out.push(spec);
     }
   }
   return out;
@@ -425,7 +435,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
-  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RG.length) / (ringsPer - 1) * (specs[Math.floor(v / VPL)].grad ?? 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
+  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) { const sp = specs[Math.floor(v / VPL)]; gt[v] = sp.under ? 1 : Math.floor((v % VPL) / RG.length) / (ringsPer - 1) * (sp.grad ?? 1); } g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out; under: all of it in the gradient's colour (an under layer of another colour)
   if (uvAt) { const U = new Float32Array(NV * 2);   // per ring: the point along the rest chain at its share of the lock (the mesh isn't made yet: it comes with the first update)
     for (let l = 0; l < NL; l++) for (let r = 0; r < ringsPer; r++) { const f = r / (ringsPer - 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i, a = specs[l].pts[i], b = specs[l].pts[i + 1];
       const uv = uvAt(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
@@ -524,13 +534,16 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
         const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t;   // half width / half thickness; curl: the tip bends a little sideways; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
-        for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
-          const x = cx + ax * (u * hw + cu) + ox * w * ht * bulge, y = cy + ay * (u * hw + cu) + oy * w * ht * bulge, z = cz + az * (u * hw + cu) + oz * w * ht * bulge;
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.hook ? s.hook * sstep(0.5, 1, t) ** 2 : 0), FO = s.fold ? s.fold * hw : 0;   // hook (m): the tip bends across over its last half (a blade's end turning); FO: the fold's height here (see below)   // half width / half thickness; curl: the tip bends a little sideways; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
+        for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6, fu = FO * (1 - Math.abs(u));   // the outer face rounder than the inner
+          // fold (× half width; 2026-10-17, Saori: "アニメ的に形の固まった髪"): the lock folded along its middle into a shallow roof (a ridge out,
+          // both faces), so in toon shading its two sides take different tones, a crease down the lock as cel-drawn hair has
+          const x = cx + ax * (u * hw + cu) + ox * (w * ht * bulge + fu), y = cy + ay * (u * hw + cu) + oy * (w * ht * bulge + fu), z = cz + az * (u * hw + cu) + oz * (w * ht * bulge + fu);
           toRest(pos, v, x, y, z, false);
-          let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w; const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
+          const fs = s.fold && u ? Math.sign(u) * s.fold * Math.sign(w || 1) : 0;   // (the fold tilts each face's normal out to its own side)
+          let nx = ax * (u / Math.max(hw, 1e-4) * ht + fs) + ox * w, ny = ay * (u / Math.max(hw, 1e-4) * ht + fs) + oy * w, nz = az * (u / Math.max(hw, 1e-4) * ht + fs) + oz * w; const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
           toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
-          const io = s.layer ? 0.1 : 0.6, sx = ox * io + nx / nl * OWN, sy = oy * io + ny / nl * OWN, sz = oz * io + nz / nl * OWN, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
+          const io = s.layer ? 0.1 : 0.6, OW = OWN + (s.fold ? 0.8 * s.fold : 0), sx = ox * io + nx / nl * OW, sy = oy * io + ny / nl * OW, sz = oz * io + nz / nl * OW, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks
           toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } } }
     for (const a of ["position", "normal", "shadeN"]) g.attributes[a].needsUpdate = true;
     g.computeBoundingSphere();
