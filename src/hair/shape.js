@@ -43,3 +43,27 @@ export function shapeGeometry(S, { toRoot, side = 1, maxL = 0.014 }) {
   for (const [a, b, c] of T) { const fr = side > 0 ? [a, b, c] : [a, c, b]; idx.push(...fr, ...[fr[0], fr[2], fr[1]].map((v) => v + NV)); }   // front face toward +z, back face away
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
+
+// a Catmull-Rom curve through points (uniform), t 0..1 over all of them
+const curveAt = (Q, t) => { const n = Q.length - 1, f = Math.min(1, Math.max(0, t)) * n, i = Math.min(n - 1, Math.floor(f)), u = f - i, g = (k) => Q[Math.min(n, Math.max(0, k))], a = g(i - 1), b = g(i), c = g(i + 1), d = g(i + 2), u2 = u * u, u3 = u2 * u;
+  return [0, 1, 2].map((k) => 0.5 * (2 * b[k] + (c[k] - a[k]) * u + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * u2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * u3)); };
+const listAt = (L, t) => { if (!Array.isArray(L)) return L; if (L.length === 1) return L[0]; const f = Math.min(1, Math.max(0, t)) * (L.length - 1), i = Math.min(L.length - 2, Math.floor(f)), u = f - i; return L[i] * (1 - u) + L[i + 1] * u; };
+/**
+ * A tube (a shape with pts; 2026-10-17, Saori, on a twin tail: "後ろから見た時のような綺麗なひとまとまり感"): a solid swept along a smooth middle
+ * line (pts, head space, root to tip), its cross-section an ellipse: w its half width across (out to her side), d its half depth (front to
+ * back), each a number or a list along its length (ending small: the tip comes to a soft round point). A tail is a trunk and a few tubes
+ * starting inside it, each its own clump curving away to its own tip. face ([x, y, z] head space, default the front): which way its depth runs
+ */
+export function tubeGeometry(S, { toRoot, side = 1, rings = 48, around = 16 }) {
+  const Q = (S.pts ?? []).map(([x, y, z]) => toRoot(side * x, y, z)); if (Q.length < 2) return null;
+  const F0 = S.face ? (() => { const a = toRoot(0, 1.2, 0), b = toRoot(side * S.face[0], 1.2 + S.face[1], S.face[2]); return [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; })() : [0, 0, 1];
+  const pos = [], idx = [], C = [], nrm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  for (let r = 0; r <= rings; r++) { const t = r / rings, c = curveAt(Q, t), c2 = curveAt(Q, Math.min(1, t + 0.01)), c1 = curveAt(Q, Math.max(0, t - 0.01)), T = nrm([c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]]);
+    const dot = F0[0] * T[0] + F0[1] * T[1] + F0[2] * T[2], D = nrm([F0[0] - T[0] * dot, F0[1] - T[1] * dot, F0[2] - T[2] * dot]), W = nrm(cross(T, D)), w = listAt(S.w ?? 0.03, t), d = listAt(S.d ?? 0.02, t);
+    C.push(c); for (let k = 0; k < around; k++) { const a = 2 * Math.PI * k / around, cw = Math.cos(a) * w, sd = Math.sin(a) * d; pos.push(c[0] + W[0] * cw * side + D[0] * sd, c[1] + W[1] * cw * side + D[1] * sd, c[2] + W[2] * cw * side + D[2] * sd); } }
+  const flip = side < 0, tri = (a, b, c) => flip ? idx.push(a, c, b) : idx.push(a, b, c);
+  for (let r = 0; r < rings; r++) for (let k = 0; k < around; k++) { const a = r * around + k, b = r * around + (k + 1) % around, c = a + around, e = b + around; tri(a, c, b); tri(b, c, e); }
+  const s0 = pos.length / 3; pos.push(...C[0]); const s1 = pos.length / 3; pos.push(...C[rings]);   // caps: the root (inside the trunk) and the tip
+  for (let k = 0; k < around; k++) { tri(s0, k, (k + 1) % around); tri(s1, rings * around + (k + 1) % around, rings * around + k); }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+}
