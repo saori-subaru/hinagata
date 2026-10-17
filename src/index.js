@@ -18,7 +18,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
 import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { shapeGeometry, tubeGeometry } from "./hair/shape.js";
+import { shapeGeometry, tubeGeometry, blendedTubes } from "./hair/shape.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
@@ -550,7 +550,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
     // hair as set shapes (options.hair.shapes, hair/shape.js): one solid each, carried by the head
-    if (which.includes("shapes") && (OPT.hair.shapes ?? []).length) { const geos = (OPT.hair.shapes ?? []).flatMap((S) => (S.mirror ? [1, -1] : [1]).map((side) => (S.pts ? tubeGeometry : shapeGeometry)(S, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), side }))).filter(Boolean);
+    if (which.includes("shapes") && (OPT.hair.shapes ?? []).length) { const SH = OPT.hair.shapes ?? [], toRootH = (x, y, z) => HTr.fromHead(x, y, z), BL = SH.filter((S) => S.pts && S.blend), geos = [...SH.filter((S) => !BL.includes(S)).flatMap((S) => (S.mirror ? [1, -1] : [1]).map((side) => (S.pts ? tubeGeometry : shapeGeometry)(S, { toRoot: toRootH, side }))),
+      ...[1, -1].map((side) => { const L = BL.filter((S) => side > 0 || S.mirror); return L.length ? blendedTubes(L, { toRoot: toRootH, side }) : null; })].filter(Boolean);   // (tubes with blend: melted into one surface per side)
       if (geos.length) { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
         g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
         const nv = Pm.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }

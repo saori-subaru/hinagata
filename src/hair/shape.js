@@ -67,3 +67,31 @@ export function tubeGeometry(S, { toRoot, side = 1, rings = 48, around = 16 }) {
   for (let k = 0; k < around; k++) { tri(s0, k, (k + 1) % around); tri(s1, rings * around + (k + 1) % around, rings * around + k); }
   const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
 }
+
+/**
+ * Tubes melted into one surface (shapes with pts and blend, m; 2026-10-17, Saori, on clumps laid side by side: "くっつけかたが荒い"): each
+ * tube a distance field (its middle line sampled, the nearest point's frame, the offset measured in the ellipse's half widths), joined by a
+ * smooth minimum over blend, then meshed (surface nets) on h cells, so the clumps grow out of the trunk and each other with no seams.
+ */
+import { surfaceNets } from "../sdf/mesh.js";
+import { smin } from "../sdf/prim.js";
+export function blendedTubes(list, { toRoot, side = 1, h = 0.007 }) {
+  const K = Math.max(...list.map((S) => S.blend ?? 0.02)), tubes = [], lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  const nrm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  for (const S of list) { const Q = S.pts.map(([x, y, z]) => toRoot(side * x, y, z)), M = 40, F0 = [0, 0, 1], seg = [];
+    for (let i = 0; i <= M; i++) { const t = i / M, c = curveAt(Q, t), c2 = curveAt(Q, Math.min(1, t + 0.01)), c1 = curveAt(Q, Math.max(0, t - 0.01)), T = nrm([c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]]);
+      const dt = F0[0] * T[0] + F0[1] * T[1] + F0[2] * T[2], D = nrm([F0[0] - T[0] * dt, F0[1] - T[1] * dt, F0[2] - T[2] * dt]), W = nrm(cross(T, D)), w = Math.max(0.002, listAt(S.w ?? 0.03, t)), d = Math.max(0.002, listAt(S.d ?? 0.02, t));
+      seg.push({ c, T, W, D, w, d }); const r = Math.max(w, d) + K; for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], c[k] - r); hi[k] = Math.max(hi[k], c[k] + r); } }
+    const b0 = [0, 1, 2].map((k) => Math.min(...seg.map((s) => s.c[k] - Math.max(s.w, s.d))) - K), b1 = [0, 1, 2].map((k) => Math.max(...seg.map((s) => s.c[k] + Math.max(s.w, s.d))) + K);
+    tubes.push({ seg, b0, b1 }); }
+  const one = (tb, x, y, z) => { let best = Infinity; const S = tb.seg;
+    for (let i = 0; i < S.length - 1; i++) { const A = S[i], B = S[i + 1], ex = B.c[0] - A.c[0], ey = B.c[1] - A.c[1], ez = B.c[2] - A.c[2], L2 = ex * ex + ey * ey + ez * ez || 1;
+      const u = Math.max(0, Math.min(1, ((x - A.c[0]) * ex + (y - A.c[1]) * ey + (z - A.c[2]) * ez) / L2)), cx = A.c[0] + ex * u, cy = A.c[1] + ey * u, cz = A.c[2] + ez * u, rx = x - cx, ry = y - cy, rz = z - cz;
+      const W = u < 0.5 ? A.W : B.W, D = u < 0.5 ? A.D : B.D, w = A.w + (B.w - A.w) * u, d = A.d + (B.d - A.d) * u, s = Math.min(w, d);
+      const L = Math.sqrt(L2), q = Math.hypot((rx * ex + ry * ey + rz * ez) / L / s, (rx * W[0] + ry * W[1] + rz * W[2]) / w, (rx * D[0] + ry * D[1] + rz * D[2]) / d);   // (along the line too: past the ends, round caps)
+      const dist = (q - 1) * s; if (dist < best) best = dist; }
+    return best; };
+  const sdf = (x, y, z) => { let v = 0.1; for (const tb of tubes) { if (x < tb.b0[0] - K || x > tb.b1[0] + K || y < tb.b0[1] - K || y > tb.b1[1] + K || z < tb.b0[2] - K || z > tb.b1[2] + K) { v = Math.min(v, 0.05); continue; } v = smin(v, one(tb, x, y, z), K); } return v; };
+  const res = surfaceNets(sdf, lo.map((v) => v - h * 2), hi.map((v) => v + h * 2), h);
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(res.pos, 3)); g.setIndex(res.idx); g.computeVertexNormals(); return g;
+}
