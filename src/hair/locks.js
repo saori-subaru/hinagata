@@ -14,7 +14,8 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
-const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
+// quality "lite": 2 rings per link instead of 3 (the locks were a quarter of a light avatar's vertices). The cross-section stays: as a
+// diamond (4 points) each lock had a ridge down its middle, its shade and outline a line there, and the bangs read as twice as many locks
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
 // the head's speed up or down (smoothed) pushes the locks out from the head's middle line while it falls (the air from below spreads them,
@@ -309,7 +310,7 @@ export function colliders(J, BI, sdf) {
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
 export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
-  const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
+  const RG = RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
   specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * (s.prof ?? width)(t) + 0.003;

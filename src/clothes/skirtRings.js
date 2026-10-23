@@ -3,8 +3,10 @@
 // shell with a band each. A meshed grid spends ten times the triangles on the same pleats. Returns { pos, nor, idx } (base proportions).
 import { projectVerts } from "../sdf/mesh.js";
 
-export function buildSkirtRings(sdf, { pleats, y0, tilt, zc, ax, az, flare, hemAt }, { per = 2, rows = 6 } = {}) {
-  const NP = Math.max(8, Math.round(pleats)) * per;
+export function buildSkirtRings(sdf, { pleats, y0, tilt, zc, ax, az, flare, hemAt, hemPoints = 0 }, { per = 2, rows = 6 } = {}) {
+  // the columns: on the pleats' crests and troughs (the pleats go round the ellipse's own angle); with a zigzag or scalloped hem, on
+  // its points and notches instead (they go round the true angle) and six to a point at least: on the pleats there, the scallops came out pointed
+  const HP = Math.round(hemPoints), NP = HP ? HP * 2 * Math.max(3, Math.round(Math.max(8, pleats) * per / HP / 2)) : Math.max(8, Math.round(pleats)) * per;
   // along a ray: where it enters the shell and where it leaves it (from r0 on; null where it never enters)
   const through = (o, d, r0) => {
     const at = (t) => sdf(o[0] + d[0] * t, o[1], o[2] + d[2] * t), cross = (a, b, inside) => { for (let i = 0; i < 22; i++) { const m = (a + b) / 2; if ((at(m) < 0) === inside) b = m; else a = m; } return (a + b) / 2; };
@@ -17,11 +19,11 @@ export function buildSkirtRings(sdf, { pleats, y0, tilt, zc, ax, az, flare, hemA
   };
   const O = [], I = [];
   for (let k = 0; k < NP; k++) {
-    const th = k / NP * Math.PI * 2, s = Math.sin(th), c = Math.cos(th), col = [[], []];
-    const yTop = y0 - tilt * (zc + az * c) - 0.004, yHem = hemAt(ax * s, az * c) + 0.004;
+    const th = k / NP * Math.PI * 2, s = Math.sin(th), c = Math.cos(th), col = [[], []];   // (the ellipse's angle, or with hemPoints the true one)
+    const yTop = y0 - tilt * (zc + az * c) - 0.004, yHem = (HP ? hemAt(s, c) : hemAt(ax * s, az * c)) + 0.004;
     for (let i = 0; i <= rows; i++) {
       const y = yTop + (yHem - yTop) * i / rows, drop = Math.max(0, y0 - y), a = ax + flare * drop, b = az + flare * 0.8 * drop;
-      const dl = Math.hypot(a * s, b * c), d = [a * s / dl, 0, b * c / dl], r = Math.max(0, dl - 0.08), o = [0, y, zc];
+      const dl = HP ? 1 / Math.hypot(s / a, c / b) : Math.hypot(a * s, b * c), d = HP ? [s, 0, c] : [a * s / dl, 0, b * c / dl], r = Math.max(0, dl - 0.08), o = [0, y, zc];
       const h = through(o, d, r) ?? through(o, d, 0) ?? [dl, dl + 0.01];
       col[0].push([o[0] + d[0] * h[1], y, o[2] + d[2] * h[1]]); col[1].push([o[0] + d[0] * h[0], y, o[2] + d[2] * h[0]]);
     }

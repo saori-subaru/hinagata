@@ -182,7 +182,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       d = Math.min(d, Math.max(shell(o), y - Math.min(top, yTop), yBot - y)); }
     return d; };
   // the skirt as rings (topology "cage", skirtRings.js); not the tiers (a shell each)
-  const skirtRings = SKIRT && HS !== "tiers" ? (B) => buildSkirtRings((x, y, z) => skirtSdf(x, y, z, B), { pleats: SK.pleats, y0: SK_Y0, tilt: SK_TILT, zc: SK_ZC, ax: SK_AX, az: SK_AZ, flare: SK.flare, hemAt }) : null;
+  const skirtRings = SKIRT && HS !== "tiers" ? (B) => buildSkirtRings((x, y, z) => skirtSdf(x, y, z, B), { pleats: SK.pleats, y0: SK_Y0, tilt: SK_TILT, zc: SK_ZC, ax: SK_AX, az: SK_AZ, flare: SK.flare, hemAt, hemPoints: HS === "zigzag" || HS === "scallop" ? HN : 0 }) : null;
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し

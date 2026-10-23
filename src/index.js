@@ -79,7 +79,7 @@ function shapeOnly(OPT) {
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
-export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, topology = "grid", debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, topology = "grid", skirt: skirtMode = null, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -105,6 +105,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const quality = qualityAsked ?? (OPT.body.adult?.on && !cell ? "fine" : "game");
   // topology "cage": the body box-modelled from the joints and pulled onto its distance (body/cage.js), not meshed on the grid and thinned
   const CAGE = topology === "cage";
+  // skirt "rings": the skirt laid out in rings (clothes/skirtRings.js) and not meshed on the grid; the cage's skirt too
+  const SKIRT_RINGS = CAGE || skirtMode === "rings";
   const LITE = quality === "lite", FINE = quality === "fine" && !cell;
   let H = cell || { game: 0.0136, fine: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
   let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.07 : 1);
@@ -124,7 +126,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, topology) : null;
+  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, topology, skirtMode) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
   // armor that isn't worn is not built now (2026-10-05: the tennis game waited for a suit of armor nobody wore, as long as for the clothes):
   // it is built when it is put on (setWorn), here on the main thread. settings.spare builds it anyway (the editor: everything ready to put
@@ -296,7 +298,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
     const hairN = hairPartName(hairPick), jh = need(hairN) ? run(hairN) : null;   // the hair doesn't need the body: start it together with the body
     if (need("body") && !CAGE) await run("body");
-    await Promise.all([jh, ...CLOTHES.filter((n) => need(n) && !LATER.has(n) && !(CAGE && n === "pants" && skirtRings)).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
+    await Promise.all([jh, ...CLOTHES.filter((n) => need(n) && !LATER.has(n) && !(SKIRT_RINGS && n === "pants" && skirtRings)).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
   }
   lap("workers");
   // hair paint (anime style, not lighting): thin darker strands flowing from the crown, and a bright band (angel ring) around the top.
@@ -409,7 +411,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       const ears = EARS.map((e) => { const sdf = K.ears[e.m > 0 ? "L" : "R"], c = HT.fromHead(...e.c), ax = (d) => u3(HT.fromHead(...e.c.map((v, i) => v + d[i] * 0.01)).map((v, i) => v - c[i]));
         return sdf && { sdf, c, axes: [ax(e.eu), ax(e.ev), ax(e.ew)], r: [0.062, 0.067, 0.019].map((v) => v * e.ES) }; }).filter(Boolean);
       return buildCage({ J, HANDS, P, sdf: K.noEars, ears }); };   // (lite: less of the face's fine detail: a nose tip, the lips)
-    if (name === "pants" && CAGE && skirtRings) s.make = () => skirtRings(bodyAt);
+    if (name === "pants" && SKIRT_RINGS && skirtRings) s.make = () => skirtRings(bodyAt);
     const g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
