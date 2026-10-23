@@ -12,7 +12,7 @@ const lerp = (a, b, t) => add(a, mul(sub(b, a), t)), mean = (ps) => mul(ps.reduc
 const perp = (d, t) => unit(sub(d, mul(t, dot(d, t))));   // d with its part along t taken out
 const capA = (p) => [p.ax, p.ay, p.az], capB = (p) => [p.ax + p.bx, p.ay + p.by, p.az + p.bz];   // a capsule part's ends (sdf/prim.js C)
 
-export function buildCage({ J, HANDS, P: PARTS, sdf, level = 1, relax = 4, tol = 0.0004, budget = 600 }) {
+export function buildCage({ J, HANDS, P: PARTS, sdf, ears = [], level = 1, relax = 4 }) {
   // the surface along a ray from inside: the first point where the distance turns positive, no further than max
   const hit = (o, d, max = 0.4) => {
     let t = 0, prev = 0;
@@ -102,10 +102,12 @@ export function buildCage({ J, HANDS, P: PARTS, sdf, level = 1, relax = 4, tol =
 
   // neck and head. The neck's top ring sits just under the skull and the next one just outside it on the skull's underside, so the corner
   // where the neck meets the skull stays sharp (one ring each side of it); the head a globe of rings of 16 cast from its middle at
-  // latitudes (cast level, the rings missed the back of the skull that hangs over the neck), capped by a 4 × 4 grid
+  // latitudes (cast level, the rings missed the back of the skull that hangs over the neck), capped by a 4 × 4 grid. From the neck up the
+  // rings are twice as dense at the front as at the side and sparser at the back (HD): the nose and the lips need the points
+  // (split into more triangles there afterwards, the outline came through between the slivers in lines round the nose)
   const top = hit([0, J.head[1] + 0.05, 0], [0, 1, 0], 0.6), front = hit([0, J.head[1] + 0.12, 0], [0, 0, 1]), back = hit([0, J.head[1] + 0.12, 0], [0, 0, -1]);
-  const hc = [0, (J.head[1] + top[1]) / 2, (front[2] + back[2]) / 2];
-  const N0 = cast([0, J.neck[1] + 0.01, J.neck[2]], DH, 0.2), N0b = cast([0, J.neck[1] + 0.022, J.neck[2]], DH, 0.2), N1o = [0, J.head[1] - 0.012, (J.neck[2] + hc[2]) / 2], N1 = cast(N1o, DH, 0.07);
+  const hc = [0, (J.head[1] + top[1]) / 2, (front[2] + back[2]) / 2], HA = ANG.map((u) => u - 0.5 * Math.sin(u)), HD = HA.map((a) => [Math.sin(a), 0, Math.cos(a)]);
+  const N0 = cast([0, J.neck[1] + 0.01, J.neck[2]], DH, 0.2), N0b = cast([0, J.neck[1] + 0.022, J.neck[2]], HD, 0.2), N1o = [0, J.head[1] - 0.012, (J.neck[2] + hc[2]) / 2], N1 = cast(N1o, HD, 0.07);
   const into = (o, d, max) => { let t = 0; for (; t < max; t += 0.001) { const p = add(o, mul(d, t)); if (sdf(p[0], p[1], p[2]) < 0) break; } return add(o, mul(d, Math.min(t, max))); };   // from outside: the first point in
   const Nc = N1.map((i) => vtx(into(add(V[i], mul(unit([V[i][0] - N1o[0], 0, V[i][2] - N1o[2]]), 0.003)), [0, 1, 0], 0.09)));   // up from just outside the neck: the skull's underside
   // and one more ring on the neck just under each point of Nc (the corner as tight as the cells: with the next ring a cell lower, the
@@ -113,7 +115,7 @@ export function buildCage({ J, HANDS, P: PARTS, sdf, level = 1, relax = 4, tol =
   const N2 = Nc.map((i, k) => { const y = V[i][1] - 0.003, o = [N1o[0], y, N1o[2]]; return vtx(hit(o, unit([V[N1[k]][0] - N1o[0], 0, V[N1[k]][2] - N1o[2]]), 0.07)); });
   bridge(R[7], N0); bridge(N0, N0b); bridge(N0b, N1); bridge(N1, N2); bridge(N2, Nc);
   let prev = Nc;
-  for (const lat of [-40, -20, 0, 20, 40, 60]) { const q = lat * Math.PI / 180, r = cast(hc, ANG.map((a) => [Math.cos(q) * Math.sin(a), Math.sin(q), Math.cos(q) * Math.cos(a)]), 0.4); bridge(prev, r); prev = r; }
+  for (const lat of [-40, -28, -16, -6, 4, 14, 26, 42, 60]) { const q = lat * Math.PI / 180, r = cast(hc, HA.map((a) => [Math.cos(q) * Math.sin(a), Math.sin(q), Math.cos(q) * Math.cos(a)]), 0.4); bridge(prev, r); prev = r; }
   capGrid(prev, hc, 0.4);
 
   // Catmull-Clark, then every quad wound to face out (the distance's gradient at its middle: the tubes were bridged in whatever order
@@ -133,47 +135,41 @@ export function buildCage({ J, HANDS, P: PARTS, sdf, level = 1, relax = 4, tol =
   }
   const nor = new Float64Array(pos.length); projectVerts(sdf, pos, nor, 2);
   const nb = neighbours(P.length, Q);
+  const yH = J.head[1] - 0.03;   // (over it the head: barely relaxed, else its rings even out round it and the face loses its points)
   for (let it = 0; it < relax; it++) {
     const np = Float64Array.from(pos);
-    for (let v = 0; v < P.length; v++) { const L = nb[v]; let c = [0, 0, 0]; for (const u of L) c = add(c, [pos[u * 3], pos[u * 3 + 1], pos[u * 3 + 2]]); c = mul(c, 1 / L.length);
+    for (let v = 0; v < P.length; v++) { const w = pos[v * 3 + 1] > yH ? 0.1 : 0.5; const L = nb[v]; let c = [0, 0, 0]; for (const u of L) c = add(c, [pos[u * 3], pos[u * 3 + 1], pos[u * 3 + 2]]); c = mul(c, 1 / L.length);
       const n = [nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]], d = sub(c, [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]]), tg = sub(d, mul(n, dot(d, n)));
-      np[v * 3] += tg[0] * 0.5; np[v * 3 + 1] += tg[1] * 0.5; np[v * 3 + 2] += tg[2] * 0.5; }
+      np[v * 3] += tg[0] * w; np[v * 3 + 1] += tg[1] * w; np[v * 3 + 2] += tg[2] * w; }
     pos.set(np); projectVerts(sdf, pos, nor, 2);
   }
   // triangles: each quad split along its shorter diagonal, wound to face along the surface's normal
   const idx = [], at = (i) => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]], nv = (i) => [nor[i * 3], nor[i * 3 + 1], nor[i * 3 + 2]];
   const tri = (x, y, z) => { if (dot(cross(sub(at(y), at(x)), sub(at(z), at(x))), add(add(nv(x), nv(y)), nv(z))) >= 0) idx.push(x, y, z); else idx.push(x, z, y); };
   for (const [a, b, c, d] of Q) if (len(sub(at(a), at(c))) <= len(sub(at(b), at(d)))) { tri(a, b, c); tri(a, c, d); } else { tri(a, b, d); tri(b, c, d); }
-  // only on the face and round the ears (the same face the grid keeps unthinned, index.js simplified): elsewhere the cells are fine,
-  // and split anywhere the curvature alone passed tol and the whole body doubled
-  const hy = J.head[1] - 0.06, ear = Math.abs(J.head[0]) + 0.12, where = (m) => m[1] > hy && ((m[2] > 0.02 && Math.abs(m[0]) < 0.22) || Math.abs(m[0]) > ear * 0.7);
-  return refine(sdf, Array.from(pos), Array.from(nor), idx, { tol, budget, where });
+  const body = { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx) };
+  return ears.length ? merge([body, ...ears.map(earShell)]) : body;
 }
 
-// detail the cage's cells are too coarse for (a nose, the lips, an ear, between the fingers): an edge whose middle is further than tol from
-// the surface is split there, the new point pulled onto the surface; both triangles on the edge split with it, so no T-junction is made.
-// The worst edges first, a few passes, at most `budget` new points
-function refine(sdf, pos, nor, idx, { tol, budget, where }) {
-  let added = 0;
-  for (let pass = 0; pass < 8 && added < budget; pass++) {
-    const E = new Map(), key = (a, b) => a < b ? a * 1e7 + b : b * 1e7 + a;
-    for (let t = 0; t < idx.length / 3; t++) for (let k = 0; k < 3; k++) { const a = idx[t * 3 + k], b = idx[t * 3 + (k + 1) % 3], q = key(a, b); if (!E.has(q)) E.set(q, { a, b, t: [] }); E.get(q).t.push(t); }
-    const bad = [];
-    for (const e of E.values()) { if (e.t.length !== 2) continue; const m = [0, 1, 2].map((i) => (pos[e.a * 3 + i] + pos[e.b * 3 + i]) / 2); if (!where(m)) continue; const d = Math.abs(sdf(m[0], m[1], m[2])); if (d > tol) bad.push([d, e, m]); }
-    if (!bad.length) break;
-    bad.sort((x, y) => y[0] - x[0]);
-    const touched = new Set(), out = [];
-    for (const [, e, m] of bad) {
-      if (added >= budget || e.t.some((t) => touched.has(t))) continue;
-      const v = pos.length / 3, p = Float64Array.from(m), n = new Float64Array(3); projectVerts(sdf, p, n, 2); pos.push(...p); nor.push(...n); added++;
-      for (const t of e.t) { touched.add(t); const T = [idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]], k = [0, 1, 2].find((i) => key(T[i], T[(i + 1) % 3]) === key(e.a, e.b));
-        const x = T[k], y = T[(k + 1) % 3], z = T[(k + 2) % 3]; out.push([t, [x, v, z], [v, y, z]]); }
-    }
-    const keep = []; for (let t = 0; t < idx.length / 3; t++) if (!touched.has(t)) keep.push(idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]);
-    for (const [, A, B] of out) keep.push(...A, ...B);
-    idx = keep;
-  }
+// an ear: a shell of its own pushed into the head (sdf: the ear alone), a cube of 2 × 2 faces cast from the ear's middle along its frame
+// (u out and back, v up, w its face), smoothed once and pulled onto the ear
+function earShell({ sdf, c, axes: [u, v, w], r }) {
+  const hit = (o, d, max) => { let t = 0, prev = 0; for (let i = 0; i < 300 && t < max; i++) { const p = add(o, mul(d, t)); if (sdf(p[0], p[1], p[2]) > 0) break; prev = t; t += 0.0008; }
+    let a = prev, b = Math.min(t, max); for (let i = 0; i < 20; i++) { const m = (a + b) / 2, p = add(o, mul(d, m)); if (sdf(p[0], p[1], p[2]) > 0) b = m; else a = m; } return add(o, mul(d, (a + b) / 2)); };
+  const key = new Map(), V = [], F = [], pt = (q) => { const k = q.join(); if (!key.has(k)) { const d = unit(add(add(mul(u, q[0] * r[0]), mul(v, q[1] * r[1])), mul(w, q[2] * r[2]))); key.set(k, V.push(hit(c, d, 0.15)) - 1); } return key.get(k); };
+  for (let a = 0; a < 3; a++) for (const sg of [-1, 1]) { const b = (a + 1) % 3, e = (a + 2) % 3;
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { const g = (ii, jj) => { const q = [0, 0, 0]; q[a] = sg; q[b] = ii - 1; q[e] = jj - 1; return pt(q); }; F.push([g(i, j), g(i + 1, j), g(i + 1, j + 1), g(i, j + 1)]); } }
+  let { P, Q } = catmullClark(V, F);
+  Q = Q.map((f) => { const m = mean(f.map((i) => P[i])), g = grad4(sdf, m[0], m[1], m[2]); return dot(cross(sub(P[f[2]], P[f[0]]), sub(P[f[3]], P[f[1]])), g) < 0 ? [f[3], f[2], f[1], f[0]] : f; });
+  const pos = new Float64Array(P.length * 3); P.forEach((p, i) => pos.set(p, i * 3)); const nor = new Float64Array(pos.length); projectVerts(sdf, pos, nor, 2);
+  const idx = []; for (const [a, b, cc, d] of Q) idx.push(a, b, cc, a, cc, d);
   return { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx) };
+}
+
+function merge(list) {
+  const n = list.reduce((s, m) => s + m.pos.length, 0), pos = new Float32Array(n), nor = new Float32Array(n), idx = []; let o = 0;
+  for (const m of list) { pos.set(m.pos, o); nor.set(m.nor, o); for (const i of m.idx) idx.push(i + o / 3); o += m.pos.length; }
+  return { pos, nor, idx: Uint32Array.from(idx) };
 }
 
 // Catmull-Clark over faces of any size (out: quads); a closed mesh (every edge on two faces)

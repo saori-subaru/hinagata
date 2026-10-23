@@ -134,7 +134,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
 
   lap("cache");
   // shapes
-  const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT, cageKit } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, skirtRings, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
@@ -405,7 +405,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
   const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt });
-    if (name === "body" && CAGE) s.make = () => buildCage({ J, HANDS, P, sdf: bodySdf, budget: LITE ? 150 : 600 });   // (lite: less of the face's fine detail: a nose tip, the lips)
+    if (name === "body" && CAGE) s.make = () => { const K = cageKit(), u3 = (a) => { const l = Math.hypot(...a) || 1; return a.map((v) => v / l); };
+      const ears = EARS.map((e) => { const sdf = K.ears[e.m > 0 ? "L" : "R"], c = HT.fromHead(...e.c), ax = (d) => u3(HT.fromHead(...e.c.map((v, i) => v + d[i] * 0.01)).map((v, i) => v - c[i]));
+        return sdf && { sdf, c, axes: [ax(e.eu), ax(e.ev), ax(e.ew)], r: [0.062, 0.067, 0.019].map((v) => v * e.ES) }; }).filter(Boolean);
+      return buildCage({ J, HANDS, P, sdf: K.noEars, ears }); };   // (lite: less of the face's fine detail: a nose tip, the lips)
     if (name === "pants" && CAGE && skirtRings) s.make = () => skirtRings(bodyAt);
     const g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
@@ -682,7 +685,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
   let faceLayer = null;
   function buildFaceLayer() {
-    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
+    const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, CAGE);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);

@@ -556,7 +556,17 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
   const bodySdfSlow = bent(blend(BODY_LIST)), bodySdf = slow ? bodySdfSlow : bent(blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : bent(blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  // for the cage (body/cage.js), made only when asked: the body without its ears, and each ear on its own (body space). The cage casts the
+  // head without them and gives each ear a shell of its own; cast with them, the head's rings smeared the ears into bumps
+  const cageKit = () => {
+    const HEAD_NE = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts, BRIDGE, P.nose], 0.022);
+    if (!HT.identity) { const c = HT.fromHead(HEAD_NE.bx0, HEAD_NE.by0, HEAD_NE.bz0); HEAD_NE.f = HT.wrap(HEAD_NE.f); [HEAD_NE.bx0, HEAD_NE.by0, HEAD_NE.bz0] = c; HEAD_NE.br *= HT.max; }
+    const noEars = bent(blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_NE : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));
+    const ear = (s) => { const list = [...Object.entries(P), ...Object.entries(CUT)].filter(([k]) => isEar(k) && k.endsWith(`.${s}`)).map(([, v]) => v);
+      return list.length ? HT.wrap(G(list, 0.01).f) : null; };
+    return { noEars, ears: { L: ear("L"), R: ear("R") } };
+  };
+  return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT, cageKit };
 }
 
 /**
