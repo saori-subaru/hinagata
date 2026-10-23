@@ -37,6 +37,7 @@ const RUNS = [   // [name, settings]; the first is the reference
   ["fine", { quality: "fine" }],
   ["lite", { quality: "lite" }],
   ["s0.15", { simplify: 0.15 }],
+  ["cage", { topology: "cage", simplify: 0.15 }],   // the body from the cage (body/cage.js), the rest thinned as the forest's
 ];
 const Q = new URLSearchParams(location.search), only = Q.get("only"), runsAsked = Q.get("runs")?.split(",");   // ?only=case, ?runs=full,s0.15 (an older engine without "fine" / "lite")
 

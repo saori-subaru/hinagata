@@ -8,7 +8,7 @@ import { PARTS } from "./garments/index.js";
 
 const DB = "hinagata-mesh", MESH = "mesh", META = "meta", KEEP = 12;
 // modules whose code changes the generated geometry or its skin weights
-const SOURCES = ["index.js", "options.js", "parts.js", "build.js", "worker.js", "weights.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "clothes/index.js", "clothes/armor.js", "clothes/plate.js", "clothes/weapons.js", "clothes/extras.js", "hair/index.js", "rig.js", "garments/registry.js", "garments/index.js"];
+const SOURCES = ["index.js", "options.js", "parts.js", "build.js", "worker.js", "weights.js", "sdf/prim.js", "sdf/mesh.js", "body/index.js", "body/types.js", "body/cage.js", "clothes/index.js", "clothes/armor.js", "clothes/plate.js", "clothes/weapons.js", "clothes/extras.js", "hair/index.js", "rig.js", "garments/registry.js", "garments/index.js"];
 // and every garment part's module (src/garments: definePart's src, import.meta.url), or its functions' text when it didn't say where it is
 
 function fnv(s, h) { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }

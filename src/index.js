@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
+import { buildCage } from "./body/cage.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
@@ -78,7 +79,7 @@ function shapeOnly(OPT) {
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
-export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, topology = "grid", debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -102,6 +103,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // at 4.5 mm both are sharp. The face is kept as built (more triangles there), the rest thinned harder: about as many in all (Sylvie, all
   // built: 11.3 万 against fine's 12.4 万 and high's 28.3 万), about 2.5x as long to build as "game" (the editor shows a quick build first)
   const quality = qualityAsked ?? (OPT.body.adult?.on && !cell ? "fine" : "game");
+  // topology "cage": the body box-modelled from the joints and pulled onto its distance (body/cage.js), not meshed on the grid and thinned
+  const CAGE = topology === "cage";
   const LITE = quality === "lite", FINE = quality === "fine" && !cell;
   let H = cell || { game: 0.0136, fine: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
   let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.07 : 1);
@@ -121,7 +124,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
+  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, topology) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
   // armor that isn't worn is not built now (2026-10-05: the tennis game waited for a suit of armor nobody wore, as long as for the clothes):
   // it is built when it is put on (setWorn), here on the main thread. settings.spare builds it anyway (the editor: everything ready to put
@@ -292,7 +295,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
     const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
     const hairN = hairPartName(hairPick), jh = need(hairN) ? run(hairN) : null;   // the hair doesn't need the body: start it together with the body
-    if (need("body")) await run("body");
+    if (need("body") && !CAGE) await run("body");
     await Promise.all([jh, ...CLOTHES.filter((n) => need(n) && !LATER.has(n)).map((n) => run(n, pre.body?.grid ?? null, n === "shirt" ? undefined : 1))]);   // small garments in one piece each
   }
   lap("workers");
@@ -401,7 +404,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
-  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make);
+  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, kit, bodyAt });
+    if (name === "body" && CAGE) s.make = () => buildCage({ J, HANDS, P, sdf: bodySdf });
+    const g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
