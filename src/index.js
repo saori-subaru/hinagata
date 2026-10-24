@@ -116,7 +116,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
   // it is built when it is put on (setWorn), here on the main thread. settings.spare builds it anyway (the editor: everything ready to put
   // on at once). What the cache has comes anyway (it costs nothing)
   const LATER = new Set(!spare && !OPT.outfit.armor.on ? ARMOR.filter((k) => !hit?.[k]) : []);
-  let building = true;
+  let building = true, pendingCloth = null;   // pendingCloth: the cloth step avatar.deferCloth held back (stepCloth)
 
   lap("cache");
   // shapes
@@ -625,6 +625,9 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
     /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose.
      *  camera: the camera the scene is drawn with: the hair and cloth are simulated less when the character is small on the screen
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself. */
+    /** The cloth (the skirt, the cape) step of the last update, run now: set avatar.deferCloth = true before update() and call this after the limbs
+     *  were moved by hand (climbing IK: the cloth is simulated against the thighs as they are drawn, not as the pose put them). Without it the cloth never moves. */
+    stepCloth() { if (!pendingCloth) return; const { sdt, instant, seat } = pendingCloth; pendingCloth = null; cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); },
     update(dt, { t, instant = false, pose, camera, detail } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
@@ -640,7 +643,7 @@ export async function createAvatar(options = {}, { quality = "game", cell = 0, s
       // than the whole game: a dress, a cape and long hair took 25 ms a frame). Small on the screen, the sway isn't seen at a lower rate
       detailNow = detail ?? (camera ? detailFor(camera) : "full"); const every = { full: 1, half: 2, low: 4, off: 0 }[detailNow] ?? 1;
       simDt += dt; simN++; const sim = every > 0 && (instant || simN >= every), sdt = instant ? dt : simDt; if (sim || !every) { simDt = 0; simN = 0; }
-      if (sim) { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
+      if (sim) { const seat = lastPose.seat != null ? { y: lastPose.seat, front: lastPose.seatFront ?? Infinity } : null; if (avatar.deferCloth) pendingCloth = { sdt, instant, seat }; else { cloth?.update(sdt, instant, seat); capeCloth?.update(sdt, instant, null); } }   // the cape hangs behind the chair's seat (lifted onto it, it stood out sideways)
       // the wind the hair meets: the avatar's own motion through the air (its locks swing against the head, so the stream comes from here),
       // and a pose that goes somewhere (run, walk: lastPose.air, units / s) played in place streams it too. Softly capped at about a run's
       // (in the avatar's own size): a tennis player's 7 m/s laid the hair out in a straight line (2026-10-05, Saori)
