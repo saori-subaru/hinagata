@@ -1,9 +1,10 @@
 // The skirt as rings (settings.skirt "rings"): columns round the skirt's axis on its pleats' crests and troughs, rows from the top to
 // the hem; along each, a ray from the axis enters the cloth (its inner side) and leaves it (its outer side). The top and the hem close the
-// shell with a band each. A meshed grid spends ten times the triangles on the same pleats. Returns { pos, nor, idx } (base proportions).
+// shell with a band each. Not coarser than 3 columns per pleat and 10 rows: the cloth (cloth.js) moves its points one by one, and with
+// fewer the thigh raised in climbing cut a bite out of the skirt's side (the triangles between the points pushed aside stretched over it). A meshed grid spends ten times the triangles on the same pleats. Returns { pos, nor, idx } (base proportions).
 import { projectVerts } from "../sdf/mesh.js";
 
-export function buildSkirtRings(sdf, { pleats, y0, tilt, zc, ax, az, flare, hemAt, hemPoints = 0 }, { per = 2, rows = 6 } = {}) {
+export function buildSkirtRings(sdf, { pleats, y0, tilt, zc, ax, az, flare, hemAt, hemPoints = 0 }, { per = 3, rows = 10 } = {}) {
   // the columns: on the pleats' crests and troughs (the pleats go round the ellipse's own angle); with a zigzag or scalloped hem, on
   // its points and notches instead (they go round the true angle) and six to a point at least: on the pleats there, the scallops came out pointed
   const HP = Math.round(hemPoints), NP = HP ? HP * 2 * Math.max(3, Math.round(Math.max(8, pleats) * per / HP / 2)) : Math.max(8, Math.round(pleats)) * per;
