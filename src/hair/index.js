@@ -31,10 +31,11 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   }
   const AY = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) - 1.39;   // the ahoge sits on the top of the head
   // ahoge: one curled strand standing up from the top of the hair, arching forward (size: hair.sculpt.ahogeSize)
-  const ahogeOn = (shell) => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shell || 0.02);   // standing on hair this thick
+  // minR: the thinnest the strand may get, in head space (m). Its tip thinner than the mesh's cells dropped out, cut off where they fell (hairSdfOf)
+  const ahogeOn = (shell, minR = 0) => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shell || 0.02);   // standing on hair this thick
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D);   // direction it curls: 0 = forward, 90 = toward the character's left
     const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), segs = [];
-    for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); segs.push(strandSeg(pts[i], pts[i + 1], (0.014 * (1 - t0 * 0.55)) * S, (0.014 * (1 - t1 * 0.55)) * S, 0.6)); }
+    for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); const r0 = Math.max(minR, 0.014 * (1 - t0 * 0.55) * S), r1 = Math.max(minR, 0.014 * (1 - t1 * 0.55) * S); segs.push(strandSeg(pts[i], pts[i + 1], r0, r1, Math.min(1, Math.max(0.6, minR / Math.min(r0, r1))))); }
     return G(segs, 0.006); };
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
@@ -154,8 +155,8 @@ export function buildHair(OPT, { P, CUT = {}, PLANES = [], faceWarp = () => 1, b
   // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
   const backAsLocks = (pick) => ((pick.back === "short" || pick.back === "hang") && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
-  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
+  const hairSdfOf = (pick, cell = 0) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
     let o = BACKS[pick.back]; if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
-    return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
+    return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh, cell * 0.75)] : [])]); };   // pick: { bangs, back, ahoge }; cell: the mesh's cell in head space (the ahoge stays 1.5 cells thick)
   return { BANGS, BACKS, hairSdfOf, bangsAsLocks };
 }
