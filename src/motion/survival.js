@@ -4,7 +4,7 @@
 //   ground: balance, balanceWalk (arms out on something narrow) / slide (down a steep slope on the feet) / stumble (one trip, caught) /
 //           roll (a forward roll, also to take a fall) / hang, shimmy (hanging from an edge by the hands, moving sideways)
 //   water:  drink (kneeling, scooping water to the mouth) / dive (swimming under water, a frog kick) / breaststroke (one stroke at the surface, the body level: the arms pull back to the hips, the legs flutter, then a glide)
-//   hands:  pickUp / carry, carryWalk (a log in both arms) / throw / push / chop (an axe, two hands) / eat / fireDrill (a hand drill) /
+//   hands:  pickUp / carry, carryWalk (a log in both arms) / throw / push / chop (an axe, one hand, a sideways swing) / eat / fireDrill (a hand drill) /
 //           sleep (on the side, curled) / stab (a spear, two hands, thrust forward and down) / knockdown (knocked onto the back by a charge, then up again)
 // One-shot moves (stumble, roll, throw, pickUp) loop over their length (*.T s here as ONE_SHOT): the game plays from t = 0 and stops after one.
 import { POSES } from "./index.js";
@@ -154,12 +154,13 @@ Object.assign(POSES, {
     return { b: { hips: [0.35, s * 0.06, 0], spine: [0.15, 0, 0], head: [-0.45, 0, 0],
       "upperLeg.L": [-0.35 * s - 0.2, 0, 0.05], "upperLeg.R": [0.35 * s - 0.2, 0, -0.05], "lowerLeg.L": [kL, 0, 0], "lowerLeg.R": [kR, 0, 0], "foot.L": [0.3 - kL * 0.3, 0, 0], "foot.R": [0.3 - kR * 0.3, 0, 0],
       ...both({ "shoulder.L": [0, -0.25, 0], "upperArm.L": [-1.45, 0, -0.55], "lowerArm.L": [-0.45, 0, 0], "hand.L": [-0.9, 0, 0] }) }, y: -0.04, grip: { L: 0, R: 0 } }; },
-  // chopping with an axe held in both hands: raise it over the right shoulder, swing it down hard in front, knees giving on the strike
-  chop: (t) => { const u = (t / 1.3) % 1, up = ss(0, 0.45, u) * (1 - ss(0.55, 0.68, u)), hit = ss(0.55, 0.68, u) * (1 - ss(0.8, 1, u));
-    const hi = { "upperArm.L": [-2.3, 0.3, -0.5], "lowerArm.L": [-0.6, 0, -0.5] }, lo = { "upperArm.L": [-1.0, 0.2, -0.55], "lowerArm.L": [-0.1, 0, -0.45] }, rest = { "upperArm.L": [-0.7, 0.2, -0.55], "lowerArm.L": [-0.4, 0, -0.45] };
-    const arm = (k) => mix(mix(rest[k], hi[k], up), lo[k], hit);
-    return { b: { ...legs(0.15 + 0.25 * hit, 0.14), spine: [0.1 - 0.15 * up + 0.5 * hit, -0.25 * up, 0], head: [-0.1 + 0.15 * up - 0.25 * hit, 0.2 * up, 0],
-      ...both({ "upperArm.L": arm("upperArm.L"), "lowerArm.L": arm("lowerArm.L") }) }, y: -drop(0.15 + 0.25 * hit), grip: { L: 1, R: 1 }, sharp: true }; },
+  // chopping a dead tree with a stone axe in the right hand: wind back out to the right (body turned), swing across at waist height to the left (body turns through), the left arm balancing
+  chop: (t) => { const u = (t / 1.3) % 1, w = ss(0, 0.45, u) * (1 - ss(0.55, 0.68, u)), hit = ss(0.55, 0.68, u) * (1 - ss(0.8, 1, u));
+    const R = (k, rest, back, strike) => mix(mix(rest[k], back[k], w), strike[k], hit);
+    const rr = { ua: [-0.5, 0, 0.35], la: [-0.6, 0, 0.1] }, rb = { ua: [0.2, -0.4, -1.3], la: [-1.2, 0, 0.3] }, rs = { ua: [-1.4, -0.2, 0.3], la: [-0.15, 0, 0.1] };
+    const lr = { ua: [-0.5, 0, -0.5], la: [-0.5, 0, -0.1] }, lb = { ua: [-0.7, 0.2, -0.95], la: [-0.6, 0, -0.1] }, ls = { ua: [-0.15, -0.2, -0.45], la: [-0.4, 0, -0.1] };
+    return { b: { ...legs(0.12 + 0.12 * hit, 0.14), spine: [0.1 + 0.2 * hit, 0.5 * w - 0.5 * hit, 0], head: [-0.1, -0.35 * w + 0.35 * hit, 0],
+      "hand.R": [1.1 * hit, 0, 0], "upperArm.R": R("ua", rr, rb, rs), "lowerArm.R": R("la", rr, rb, rs), "upperArm.L": R("ua", lr, lb, ls), "lowerArm.L": R("la", lr, lb, ls) }, y: -drop(0.12 + 0.12 * hit), grip: { L: 0.3, R: 1 }, sharp: true }; },
   // eating: holding food in the left hand by the chest, the right hand bringing bites up to the mouth, chewing (small nods)
   eat: (t) => { const u = (t / 2.4) % 1, bite = ss(0, 0.2, u) * (1 - ss(0.4, 0.6, u)), chew = sin(t * 9) * 0.03 * (1 - bite);
     return { b: { ...armL(lerpArm(DOWN, CHIN, 0.55)), ...armR(lerpArm(lerpArm(DOWN, CHIN, 0.5), CHIN, bite)), head: [0.08 - 0.08 * bite + chew, 0, 0], spine: [0.05, 0, 0] }, y: 0, grip: { L: 0.7, R: 0.7 } }; },
