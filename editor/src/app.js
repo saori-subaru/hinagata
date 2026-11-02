@@ -9,6 +9,7 @@ import { createBangTool } from "./bangs.js";
 import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
 import { createTieTool } from "./ties.js";
+import { createPoseTool } from "./pose.js";
 import { createPaintTool } from "./paint.js";
 import { createAccessoryTool } from "./accessories.js";
 import { createFacePainter } from "./facepaint.js";
@@ -52,7 +53,7 @@ const vp = createViewport($("gl"), $("stage"));
 let building = false, again = false, ver = 0, refineT = 0, quick = false, refining = false;   // quick: the avatar shown is the quick build   // ver: counts the recipe's changes (a refined build made from an older one is dropped)
 let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
 const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
-const show = (av, ms) => { av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, ms); };
+const show = (av, ms) => { av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); pose.attach(av); showStats(av, ms); };
 // "fine": a quick "game" build right away, then the fine one 0.8 s after the last change, in the background; it is shown only if nothing
 // changed meanwhile (else it waits for the next rest). A recipe built fine before comes from the cache at once
 async function rebuild() {
@@ -130,6 +131,7 @@ const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   /
 const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
 const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
 const ties = createTieTool({ vp, store, onChange: () => panel.render() });
+const pose = createPoseTool({ vp, onChange: () => renderViewControls() });   // posing the joints by hand (pose.js)
 const paint = createPaintTool({ vp, store, onChange: () => panel.render() });
 const acc = createAccessoryTool({ vp, store, onChange: () => panel.render() });   // putting accessories on the character (accessories.js)   // painting on the character (paint.js)   // moving the tails' ties on the head (ties.js)   // moving the back hair's locks one by one (backs.js)
 // my parts (2026-10-06, Saori: "画風統一するならみんな同じの使いそう"): drawn eyes, brows and mouths saved in this browser, to use on any
@@ -261,8 +263,10 @@ function renderViewControls() {
     h("div", { class: "quick" }, QUICK.filter((k) => POSES[k]).map((k) => h("button", { type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))),   // (a narrow screen scrolls these; play and "more" stay)
     h("button", { class: "more", type: "button", "aria-haspopup": "true", "aria-expanded": String(motionOpen), "aria-pressed": String(!QUICK.includes(M.pose)), title: t("pickMotion"),
       onclick: () => { motionOpen = !motionOpen; renderViewControls(); } }, QUICK.includes(M.pose) ? t("moreMotions") : poseName(M.pose), h("span", { html: ICON.caret })),
+    h("button", { class: "more", type: "button", "aria-pressed": String(pose.on), title: t("poseHelp"), onclick: () => pose.toggle() }, t("poseTool")),
     h("select", { "aria-label": t("speed"), title: t("speed"), onchange: (e) => { M.speed = +e.target.value; } }, [0.25, 0.5, 1, 1.5].map((s) => h("option", { value: s, selected: s === M.speed }, `${s}×`))));
   const L = $("motionList"); L.hidden = !motionOpen;
+  posePanel();
   fitAboveBar();
   if (motionOpen) L.replaceChildren(...motionGroups().map(([g, ks]) => h("section", {}, h("h3", {}, groupName(g)),
     h("div", { class: "chips" }, ks.map((k) => h("button", { class: "chip", type: "button", "aria-pressed": String(k === M.pose), onclick: () => pickMotion(k) }, poseName(k)))))));
@@ -295,8 +299,21 @@ let motionOpen = false;
 // the list and the numbers at the bottom left sit just above the bar (on a wide screen the bar takes two rows)
 function fitAboveBar() { const b = $("poses").offsetHeight + 22; $("motionList").style.bottom = `${b}px`; $("stats").parentElement.style.bottom = `${b + 4}px`; }
 addEventListener("resize", fitAboveBar);
+// the pose tool's box (top left, out of the motion list's way): undo, back to the motion, the pose as a file
+function posePanel() {
+  let P = $("posePanel"); if (!P) { P = h("div", { id: "posePanel", class: "motionList posePanel" }); $("motionList").after(P); }
+  P.hidden = !pose.on; if (!pose.on) return;
+  const file = h("input", { type: "file", accept: ".json,application/json", hidden: true, onchange: async (e) => { const f = e.target.files[0]; if (!f) return; try { pose.importJSON(await f.text()); } catch (err) { alert(err.message); } e.target.value = ""; } });
+  P.replaceChildren(h("h3", {}, t("poseTool")), h("div", { class: "help" }, t("poseHelp")),
+    h("div", { class: "chips" },
+      h("button", { class: "chip", type: "button", onclick: () => pose.undo() }, t("poseUndo")),
+      h("button", { class: "chip", type: "button", onclick: () => pose.reset() }, t("poseReset")),
+      h("button", { class: "chip", type: "button", onclick: () => download(`${fileName(cur.name)}-pose.json`, new Blob([pose.exportJSON()], { type: "application/json" })) }, t("poseSave")),
+      h("button", { class: "chip", type: "button", onclick: () => file.click() }, t("poseLoad")), file));
+}
 function pickMotion(k) {
   const M = vp.motion, wasDemo = vp.demos.has(M.pose); M.pose = k;   // (the list stays open: picking one after another)
+  if (pose.on) { if (!vp.demos.has(k)) pose.from(k); renderViewControls(); return; }   // posing: the picked motion is where the joints start from
   if (vp.demos.has(k)) vp.demo(k); else { vp.demo(null); vp.avatar?.play(k); if (wasDemo) vp.view(curView); }   // back from a demo: the camera too
   renderViewControls();
 }

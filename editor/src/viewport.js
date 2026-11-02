@@ -56,6 +56,8 @@ export function createViewport(canvas, stage) {
 
   // ── the avatar and display aids ──
   let avatar = null, helper = null;
+  const aids = new Set();   // tools' handles on the view (pose.js's dots and gizmo): left out of the pictures
+  const hideAids = () => { const was = [...aids].map((o) => [o, o.visible]); aids.forEach((o) => { o.visible = false; }); return () => was.forEach(([o, v]) => { o.visible = v; }); };
   const D = { clay: false, wire: false, bones: false, floor: true };
   const meshes = () => avatar ? Object.values(avatar.parts) : [];
   /** put the avatar's own materials back (call before the engine changes materials, then apply()) */
@@ -111,23 +113,23 @@ export function createViewport(canvas, stage) {
   function snapshot() {
     const pr = renderer.getPixelRatio(), r = stage.getBoundingClientRect(), k = Math.min(2 * pr, 4096 / Math.max(r.width, r.height));
     const fv = floor.visible, hv = helper?.visible, cv = chair.visible;
-    floor.visible = false; if (helper) helper.visible = false;
+    floor.visible = false; if (helper) helper.visible = false; const showAids = hideAids();
     renderer.setPixelRatio(k); size(); renderer.setClearColor(0x000000, 0); renderer.render(scene, camera);
-    return new Promise((ok) => canvas.toBlob((b) => { floor.visible = fv; if (helper) helper.visible = hv; chair.visible = cv; renderer.setPixelRatio(pr); size(); ok(b); }, "image/png"));
+    return new Promise((ok) => canvas.toBlob((b) => { floor.visible = fv; if (helper) helper.visible = hv; chair.visible = cv; showAids(); renderer.setPixelRatio(pr); size(); ok(b); }, "image/png"));
   }
 
   /** A square picture from one of the views (for an agent, through the sync helper's MCP tools): base64 PNG on a solid background.
    *  The user's camera and the canvas are put back right after. */
   function capture({ view: name = "free", size: px = 640, bg = "#ebe5dc" } = {}) {
     const [p, t] = fitView(VIEWS[name] ? name : "free");
-    const cp = camera.position.clone(), pr = renderer.getPixelRatio(), hv = helper?.visible; if (helper) helper.visible = false;
+    const cp = camera.position.clone(), pr = renderer.getPixelRatio(), hv = helper?.visible; if (helper) helper.visible = false; const showAids = hideAids();
     px = Math.max(128, Math.min(2048, Math.round(px)));
     camera.position.set(...p); camera.lookAt(...t); camera.aspect = 1; camera.fov = 32; camera.updateProjectionMatrix();
     renderer.setPixelRatio(1); renderer.setSize(px, px, false); renderer.setClearColor(bg, 1); renderer.render(scene, camera);
     const url = canvas.toDataURL("image/png");
-    renderer.setClearColor(0x000000, 0); renderer.setPixelRatio(pr); if (helper) helper.visible = hv; camera.position.copy(cp); size(); controls.update(); renderer.render(scene, camera);
+    renderer.setClearColor(0x000000, 0); renderer.setPixelRatio(pr); if (helper) helper.visible = hv; showAids(); camera.position.copy(cp); size(); controls.update(); renderer.render(scene, camera);
     return url.slice(url.indexOf(",") + 1);
   }
 
-  return { view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
+  return { view, display, background, setAvatar, demo, demos, lift, apply, snapshot, capture, motion: M, aids, camera, controls, canvas, scene, get avatar() { return avatar; }, get displayState() { return { ...D }; } };
 }
