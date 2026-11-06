@@ -5,4 +5,5 @@ import "./strings.js";
 import "./headband.js";
 import "./suit.js";
 import "./randoseru.js";
+import "./uniform.js";
 export * from "./registry.js";
