@@ -4,4 +4,5 @@ import "./gloves.js";
 import "./strings.js";
 import "./headband.js";
 import "./suit.js";
+import "./randoseru.js";
 export * from "./registry.js";
