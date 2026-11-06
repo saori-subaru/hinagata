@@ -55,7 +55,7 @@ definePart({ src: import.meta.url,
   build({ O, J, shirtSdf, bodySdf }) {
     const a = [J["upperArm.L"][0] - 0.04, J["upperArm.L"][1] + 0.03], b = [-0.12, J["upperLeg.L"][1] + 0.02], dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy), W = O.width ?? 0.06;
     const strip = (x, y) => Math.abs((x - a[0]) * dy - (y - a[1]) * dx) / n - W;   // the distance from the line (front and back alike)
-    return { sdf: (x, y, z, B = bodySdf) => Math.max(shirtSdf(x, y, z, B, true, true) - 0.006, strip(x, y), b[1] - 0.03 - y, Math.abs(x) - 0.2) };   // (not out along a sleeve)
+    return { sdf: (x, y, z, B = bodySdf) => Math.max(shirtSdf(x, y, z, B, true, true) - 0.006, strip(x, y), b[1] - 0.03 - y, Math.abs(x) - 0.15) };   // (not out along a sleeve)
   },
   spec: (st, { H, B, ax }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: [-0.3 - ax, 0.38, -0.25], hi: [0.3 + ax, 0.86, 0.3], h: Math.min(H, 0.008), only: /^(hips|spine|chest|upperChest|shoulder)/ }),
 });

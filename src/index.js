@@ -32,6 +32,7 @@ export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABE
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
+export { CROWD } from "./crowd.js";   // the town's people: body types dressed as passers-by (crowd.js): createAvatar(CROWD.police)
 export { CHARACTERS } from "./presets.js";   // ready-made characters (presets.js): createAvatar(CHARACTERS.sylvie.file)
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
