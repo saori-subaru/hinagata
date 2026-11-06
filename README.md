@@ -1,6 +1,6 @@
 # Hinagata
 
-A 3D character engine for the browser, built on three.js: anime-style characters, tall (the default, about 4.5 heads), adult (about 6) or chibi.
+A 3D character engine for the browser, built on three.js: anime-style characters, tall (the default, about 4.5 heads: a child beside the adults), adult (about 7: women, men, middle-aged, elderly, a sumo wrestler) or chibi.
 
 - A character is a **recipe**: a small options object (JSON), not a mesh file. The body, clothes, hair and face are built from code at runtime.
 - **Motions are code and fit the body**: walk (with the stride measured from the legs), jump, fall, climb with IK onto any surface the game describes.
@@ -52,6 +52,11 @@ kept as built, and thinning stops before the shape would change by more than 1% 
 asked for; the body doesn't go thin). After changing the engine, run the thinning check: `node tools/thin-check.mjs` (headless Chrome; builds
 a tall, a chibi, a version-less recipe and a slim body at "fine", "lite" and 0.15, measures their depth front to back against the unthinned
 build, writes front and side pictures to `thin-check-out/`, exits 1 when one went thin or spiky).
+
+**A crowd.** `CROWD` (src/crowd.js) holds dressed passers-by: `createAvatar(CROWD.salaryman)`, police, postman, stationStaff,
+kappogi, monk, elder, sumo, schoolboy (a randoseru and a school cap), schoolgirl and more. Build many with `{ quality: "lite" }` (an adult's
+default is "fine": about 10 s each the first time). `quality.headCell` / `bodyCell` in the recipe are not the mesh's density: they are the
+cells that speed up reading the body's shape; the density is the second argument's `quality`, `cell` or `simplify`.
 
 Design notes, API and decisions: [`DESIGN.md`](DESIGN.md).
 

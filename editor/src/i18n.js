@@ -146,7 +146,8 @@ const GROUP = {
   water: ["Water", "水"], hands: ["With the hands", "手を使う"], fight: ["Fight", "戦う"], state: ["How the body is", "体の様子"], other: ["Other", "その他"],
 };
 export const groupName = (k) => (GROUP[k] ?? [k, k])[lang === "ja" ? 1 : 0];
-const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"] };
+const BODY_TYPE = { standard: ["Standard", "標準"], toddler: ["Toddler", "幼児"], girl: ["Girl", "女の子"], sturdy: ["Sturdy", "がっしり"],
+  man: ["Man", "男性"], middle: ["Middle-aged", "中年"], elder: ["Elderly", "老人"], sumo: ["Sumo", "相撲取り"] };
 
 let lang = "en";
 try { const l = localStorage.getItem("hinagata.editor.lang"); if (l === "en" || l === "ja") lang = l; } catch {}

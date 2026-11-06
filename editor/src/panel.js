@@ -120,8 +120,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const r = store.recipe;
     if (tab === "body") {
       // every value a type sets (torso, limbs, proportions, head size), as paths
-      const leaves = (o, pre, out = {}) => { for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object") leaves(v, `${pre}.${k}`, out); else out[`${pre}.${k}`] = v; } return out; };
-      const on = (b) => Object.entries(leaves(b.body, "body")).every(([p, v]) => store.get(p) === v);
+      const leaves = (o, pre, out = {}) => { for (const [k, v] of Object.entries(o)) { if (v && typeof v === "object" && !Array.isArray(v)) leaves(v, `${pre}.${k}`, out); else out[`${pre}.${k}`] = v; } return out; };   // (an array is one value: body.adult.legs.thigh)
+      const on = (b) => Object.entries(leaves(b.body, "body")).every(([p, v]) => JSON.stringify(store.get(p)) === JSON.stringify(v));
       const kind = (k) => k.match(/(Tall|Adult)$/)?.[1] ?? "";   // the chibi, the tall and the adult (about 6 heads) rows
       const row = (suffix, label) => h("div", { class: "chips" }, h("span", { class: "cost" }, t(label)), Object.entries(BODY_TYPES).filter(([k]) => kind(k) === suffix).map(([k, b]) =>
         h("button", { class: "chip", type: "button", "aria-pressed": String(on(b)), onclick: () => set(leaves(b.body, "body")) }, bodyTypeName(k.replace(/(Tall|Adult)$/, "")))));
