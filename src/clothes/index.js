@@ -7,7 +7,7 @@ import { buildPlate } from "./plate.js";
 import { buildWeapons } from "./weapons.js";
 import { buildExtras } from "./extras.js";
 import { buildGarments } from "../garments/index.js";
-import { armReach, heelBend, makeStretch } from "../body/index.js";
+import { armReach, heelBend, makeStretch, bellyFront } from "../body/index.js";
 
 /** High heels (shoes.kind "heels"): the foot tilted toes-down by theta (shoes.heelAngle) about the ankle; lift: how far the body rises so the
  *  ball of the foot stays on the floor; heel: how high the heel's back is then (the heel's length) */
@@ -35,7 +35,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // long arms (body.proportion.arms) reach below the shirt's hem in the base body: the hem cuts only the torso, not a long sleeve beside it
   const HEM_X = OPT.body.proportion?.arms != null ? (LEN === "crop" ? 0.19 : 0.24) + 0.115 * ((OPT.body.proportion.shoulders ?? 1) - 1) : Infinity;
   const armParts = LONG ? ["sleeve", "upperArm", "foreArm"] : SLEEVE === "short" ? ["sleeve"] : [];
-  const shirtCore = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", ...armParts, ...(LEN === "out" ? ["butt"] : [])), [-0.4 - AR.x, 0.4 - AR.y, -0.25], [0.4 + AR.x, 0.95, 0.27]);   // (AR: longer arms reach further)   // out: over the bottom too (else the pants show through at the back)
+  const shirtCore = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", ...armParts, ...(LEN === "out" ? ["butt"] : [])), [-0.4 - AR.x, 0.4 - AR.y, -0.25], [0.4 + AR.x, 0.95, 0.27 + bellyFront(OPT)]);   // (AR: longer arms reach further)   // out: over the bottom too (else the pants show through at the back)
   const arm = (s) => { const a = P[`upperArm.${s}`], f = P[`foreArm.${s}`], L = Math.hypot(a.bx, a.by), Lf = Math.hypot(f.bx, f.by, f.bz);   // armhole and cuff: planes across the arm
     const gx = f.bx / Lf, gy = f.by / Lf, gz = f.bz / Lf, dx = gx * gy, dy = gy * gy - 1, dz = gz * gy, dl = Math.hypot(dx, dy, dz) || 1;   // d: straight down, across the forearm
     return { ax: a.ax, ay: a.ay, az: a.az, ux: a.bx / L, uy: a.by / L, fx: f.ax, fy: f.ay, fz: f.az, gx, gy, gz, dx: dx / dl, dy: dy / dl, dz: dz / dl, Lf, side: Math.sign(a.ax) }; };
@@ -89,7 +89,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const PUFF = OPT.outfit.pants.puff ?? 0, BELLB = OPT.outfit.pants.bell ?? 0, LSPAN = Math.max(0.05, 0.4 - PANTS_HEM);
   const legGrow = (x, y) => { if (!PUFF && !BELLB) return 0; const t = (0.4 - y) / LSPAN; if (t <= 0) return 0;
     return sstep(0.02, 0.07, Math.abs(x)) * (PUFF * 0.045 * Math.sin(Math.PI * Math.min(1, t) * 0.92) + BELLB * 0.07 * sstep(0.55, 1, t)); };
+  // the arms, where the cloth would wrap them: a hand or a wrist by the hips in the A-pose the meshes are built in (the adult's long arms,
+  // a sumo's) was taken into the pants' offset body, a flap of cloth baked on at the hips. Cloth goes only where the hips and legs are nearer
+  const ARMS_D = blendFast(Object.keys(P).filter((k) => /^(upperArm|foreArm|foreBulge|palm|thumb|finger)/.test(k)).map((k) => P[k]), [-0.6, -0.1, -0.3], [0.6, 0.7, 0.4]);
+  const armClear = (x, y, z) => Math.abs(x) < 0.1 ? -1 : 0.5 * (pantsMask(x, y, z) - ARMS_D(x, y, z));
   const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024 - legGrow(x, y);
+    d = Math.max(d, armClear(x, y, z));
     if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y) * (1 - sstep(0.17, 0.21, Math.abs(x))); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }   // (the torso only: not round a long sleeve hanging beside it)
     return Math.max(d, y - top, PANTS_HEM - y); };
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).

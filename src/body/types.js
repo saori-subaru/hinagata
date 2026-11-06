@@ -31,15 +31,44 @@ const NO_TALL = new Set(["toddler"]);   // a tall toddler is a contradiction (20
 // (src/presets.js: made 2026-10-08/09 beside a Genshin character's picture and Saori's VRoid body): a small, narrower head, long torso and legs,
 // the hip joints, knees and ankles in (legs that close), slim limbs, a narrower neck. Only the body: her face (eyes, chin, nose, mouth), hair
 // and clothes stay hers. Measured 7.42 heads by measureCharacter (chin to crown without hair; "about 6" by eye). Only the girl has one so far.
+// body.adult's pieces at their defaults (DEFAULTS.body.adult): every adult type sets them all, so switching types never keeps another's
+const AB = { chest: { w: 0.094, d: 0.072, z: 0.014, y: -0.25, tilt: 0.25 }, waist: { w: 0.074, d: 0.056, z: 0.03, y: -0.5 }, hips: { w: 0.126, d: 0.068, z: 0.01, y: 0.1 },
+  butt: { w: 0.062, d: 0.05, z: -0.04, x: 0.055, y: -0.06 }, legs: { thigh: [0.06, 0.032], shin: [0.03, 0.017], front: 0.04, back: 0.04, calf: 0.046, out: 0.02 } };
+const ad = (o = {}) => ({ on: true, knee: 0.53, ...Object.fromEntries(Object.entries(AB).map(([k, v]) => [k, { ...v, ...(o[k] ?? {}) }])) });
+const STRAIGHT = { back: 0, knees: 0, lookUp: 0.8 };
 const ADULT = {
-  girl: { adult: { on: true, knee: 0.53 }, joints: { hipY: 0.52, hipX: 0.07, kneeX: 0.072, footX: 0.07 },
+  girl: { adult: ad(), posture: STRAIGHT, joints: { hipY: 0.52, hipX: 0.07, kneeX: 0.072, footX: 0.07 },
     proportion: { legs: 2.2, torso: 2.0, chest: 0, arms: 1.4, hands: 1.05, feet: 1.08, shoulders: 0.827 }, head: { scale: 0.48, width: 0.92 },
     torso: { chest: 0.63, belly: 0.6, waist: 0.06, hips: 0.56, bust: 0.75, butt: 0.672, back: 0.392 },
     thickness: { upperArm: 0.62, forearm: 0.58, thigh: 0.434, thighTop: 0.546, calf: 0.42 },
     sculpt: { neck: { width: 0.612 }, bustX: 0.038, thigh: { topDrop: 0.06 }, legShape: 1.5 } },
 };
+// the grown men (manAdult and the ones made from it): the adult body without a bust, a wider ribcage over a waist that hardly narrows, narrow
+// hips, straight legs; the hips' and thighs' tops under the pelvis (thighTop and hipX: wider, the shorts' mask missed them in holes at the sides)
+const MAN = { adult: ad({ chest: { w: 0.118, d: 0.082 }, waist: { w: 0.1, d: 0.064 }, hips: { w: 0.122, d: 0.066 }, butt: { w: 0.05, d: 0.04 }, legs: { thigh: [0.064, 0.036], shin: [0.033, 0.019], calf: 0.05 } }),
+  posture: STRAIGHT, joints: { hipY: 0.52, hipX: 0.075, kneeX: 0.09, footX: 0.095 },
+  proportion: { legs: 2.15, torso: 2.0, chest: 0, arms: 1.4, hands: 1.15, feet: 1.15, shoulders: 1 }, head: { scale: 0.47, width: 0.95 },
+  torso: { chest: 0.63, belly: 0.6, waist: 0.06, hips: 0.56, bust: 0, butt: 0.672, back: 0.392 },
+  thickness: { upperArm: 0.78, forearm: 0.74, thigh: 0.5, thighTop: 0.55, calf: 0.5 },
+  sculpt: { neck: { width: 0.8 }, bustX: null, thigh: { topDrop: 0.04 }, legShape: 0.3 } };
+const man = (o) => ({ ...MAN, ...o, adult: ad({ ...Object.fromEntries(Object.keys(AB).map((k) => [k, { ...MAN.adult[k], ...(o.adult?.[k] ?? {}) }])) }),
+  proportion: { ...MAN.proportion, ...o.proportion }, head: { ...MAN.head, ...o.head }, joints: { ...MAN.joints, ...o.joints }, sculpt: { ...MAN.sculpt, ...o.sculpt } });
+const MEN = {
+  manAdult: MAN,
+  // middle-aged: a round belly out in front (the waist piece forward and deep), everything a little thicker
+  middleAdult: man({ proportion: { legs: 2.05 }, thickness: { upperArm: 0.84, forearm: 0.78, thigh: 0.55, thighTop: 0.6, calf: 0.55 }, sculpt: { neck: { width: 0.92 } },
+    adult: { chest: { w: 0.128, d: 0.092 }, waist: { w: 0.13, d: 0.1, z: 0.05 }, hips: { w: 0.13, d: 0.078 }, butt: { w: 0.055, d: 0.045 }, legs: { thigh: [0.07, 0.04], shin: [0.035, 0.02], calf: 0.052, out: 0.025 } } }),
+  // old: shorter and thinner, the head a little bigger, stooped at the back with the knees bent (body.posture: no mesh of its own)
+  elderAdult: man({ proportion: { legs: 1.95, torso: 1.9, shoulders: 0.94 }, head: { scale: 0.5 }, thickness: { upperArm: 0.7, forearm: 0.66, thigh: 0.48, thighTop: 0.52, calf: 0.46 },
+    posture: { back: 0.5, knees: 0.12, lookUp: 0.8 },
+    adult: { chest: { w: 0.108, d: 0.078 }, waist: { w: 0.1, d: 0.07, z: 0.035 }, hips: { w: 0.116, d: 0.064 }, butt: { w: 0.042, d: 0.034 }, legs: { thigh: [0.056, 0.032], shin: [0.03, 0.017], calf: 0.042 } } }),
+  // a sumo wrestler: shorter legs set wide, a huge belly low and forward, broad shoulders (the arms hang outside the belly), thick limbs
+  sumoAdult: man({ proportion: { legs: 1.85, shoulders: 1.5, arms: 1.35, hands: 1.25, feet: 1.25 }, head: { scale: 0.5, width: 1 }, joints: { hipX: 0.12, kneeX: 0.13, footX: 0.13 },
+    thickness: { upperArm: 1.35, forearm: 1.15, thigh: 1.1, thighTop: 1.1, calf: 1 }, sculpt: { neck: { width: 1.4 }, legShape: 0 },
+    adult: { chest: { w: 0.14, d: 0.12 }, waist: { w: 0.14, d: 0.17, z: 0.08, y: -0.62 }, hips: { w: 0.15, d: 0.11 }, butt: { w: 0.08, d: 0.07 }, legs: { thigh: [0.09, 0.058], shin: [0.05, 0.032], front: 0.065, back: 0.065, calf: 0.068, out: 0.035 } } }),
+};
 // what the adult type sets, at the defaults: the chibi and tall types set it too, so choosing one after the adult takes it all back
-const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 0 } };
+const PLAIN = { adult: { ...ad(), on: false }, posture: STRAIGHT, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 0 } };
 const plain = (b) => ({ ...PLAIN, ...b, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
 export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
-  ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));
+  ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]).concat(Object.entries(MEN).map(([k, b]) => [k, { body: b }])));

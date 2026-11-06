@@ -40,6 +40,8 @@ export function armReach(OPT) {
  * { pantsTop, pantsHem, shirtHem, dressWaist, dressHem, skirtHem, socksTop } (base heights; a value left out keeps its own), or null. (The cape not yet.)
  * The user's options are left as they are (avatar.options): these go to OPT.fit.
  */
+/** how far an adult belly's front (body.adult.waist, m) stands past what the cloth boxes were made for (0.22 m ahead of the middle) */
+export const bellyFront = (OPT) => { const W = OPT.body.adult?.on ? OPT.body.adult.waist ?? {} : null; return W ? Math.max(0, (W.z ?? 0.03) + (W.d ?? 0.056) + 0.07 - 0.22) : 0; };
 export function adultFit(OPT) {
   const AD = OPT.body.adult; if (!AD?.on) return null;
   const HIP_Y = OPT.body.joints.hipY ?? 0.4, A = armJoints(OPT)["upperArm.L"][1];
