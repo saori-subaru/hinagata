@@ -34,4 +34,6 @@ export const CROWD = {
   schoolgirl: { body: body("girlTall"), hair: { back: "bob", ahoge: false, backForm: "block", bangsForm: "block" },
     outfit: { shirt: { color: "#f4f4f0" }, pants: { kind: "skirt", color: "#2f3a5a" }, randoseru: { on: true } } },
 };
-for (const r of Object.values(CROWD)) if (r.outfit) for (const k of Object.keys(r.outfit)) if (r.outfit[k] === undefined) delete r.outfit[k];
+// a crew neck: the shirt's default neckline is a wide boat neck, open to the shoulders
+const CREW = { y: 0.79, bowl: 6, front: 0.2 };
+for (const r of Object.values(CROWD)) { for (const k of Object.keys(r.outfit)) if (r.outfit[k] === undefined) delete r.outfit[k]; if (r.outfit.shirt) r.outfit.shirt.collar ??= { ...CREW }; }

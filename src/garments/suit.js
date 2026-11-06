@@ -50,7 +50,8 @@ definePart({ src: import.meta.url,
       d = smax(d, op, 0.004);
       d = smax(d, cuff, 0.006);
       const hem = y < HEM + 0.02 && ARM(x, y, z) < TORSO(x, y, z) ? -1 : HEM - y;   // the hem across the torso only: the adult's long arms hang below it
-      return Math.max(d, hem, y - (V.NY + 0.03 - 0.25 * Math.max(0, z - ZS))); };   // the collar round the back of the neck, lower toward the front
+      const nz = z - J.neck[2], top = V.NY + 0.03 + 6 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS);   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
+      return Math.max(d, hem, y - top); };   // the collar round the back of the neck, lower toward the front
     return { sdf, HEM };
   },
   spec: (st, { H, ax, ay, OPT }) => ({ sdf: st.sdf, lo: [-0.42 - ax, Math.min(st.HEM, 0.35 - ay) - 0.02, -0.22], hi: [0.42 + ax, 0.86, 0.3 + bellyOf(OPT)], h: H * (OPT.quality.shirtCell ?? 0.75), only: /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ }),
@@ -77,7 +78,7 @@ definePart({ src: import.meta.url,
       return (s >= 0) === (t >= 0) && (t >= 0) === (w >= 0) ? -dd : dd; };
     const ZS = J.neck[2] - 0.01, flaps = (x, y, z, B) => Math.max(shirtSdf(x, y, z, B, true, true) - TH - 0.002, z > ZS + 0.02 ? tri(Math.abs(x), y) : 1);
     // the band round the neck: a shell 6–10 mm off the neck, from the shirt's neckline up in front, from the neck's root behind (lower, it lay over the shoulders)
-    const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.025 - 0.25 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.085);
+    const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.025 - 0.25 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.06);   // (the neck's own width: wider, it lay over the shoulders above the jacket)
     return { sdf: (x, y, z, B = bodySdf) => Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)), lo: [-0.11, yN - LEN - 0.02, -0.12], hi: [0.11, J.neck[1] + 0.06, 0.2] };
   },
   spec: (st, { H, B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: Math.min(H * 0.6, 0.004), only: /^(chest|upperChest|neck)/ }),
