@@ -7,15 +7,15 @@ const body = (t) => structuredClone(BODY_TYPES[t].body);
 const MAN_HAIR = { back: "short", bangs: "side", nape: "lie", ahoge: false, backForm: "block", bangsForm: "block" };
 const MAN_FACE = { eyeSize: 0.9, parts: { eyes: "lidded" } };
 const KID_HAIR = { ahoge: false, backForm: "block", bangsForm: "block" };
-const dark = { shoes: { color: "#1c1a1a" }, socks: { color: "#1c1a1a" } };
+const dark = { shoes: { color: "#1c1a1a", soleColor: "#0e0d0d", sole: 0.012, rim: 0.003 }, socks: { color: "#1c1a1a" } };
 const suit = (c, tie) => ({ shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", shirtCollar: { on: true, color: "#f4f4f0" }, tie: { on: true, color: tie } },
-  jacket: { on: true, color: c }, pants: { length: "long", color: c }, ...dark });
+  jacket: { on: true, color: c }, pants: { length: "long", color: c, bell: 0.3 }, ...dark });
 
 export const CROWD = {
   salaryman: { body: body("manAdult"), hair: MAN_HAIR, face: MAN_FACE, outfit: suit("#2f3442", "#7a2a36") },
   manager: { body: body("middleAdult"), hair: MAN_HAIR, face: MAN_FACE, outfit: suit("#3b3a40", "#2c4a6e") },
   officeLady: { body: body("girlAdult"), hair: { back: "bob", ahoge: false, backForm: "block", bangsForm: "block" },
-    outfit: { ...suit("#2f3442", "#2f3442"), tie: undefined, shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", shirtCollar: { on: true, color: "#f4f4f0" } }, pants: { kind: "skirt", color: "#2f3442" } } },
+    outfit: { ...suit("#2f3442", "#2f3442"), jacket: { on: true, color: "#2f3442", pad: 0.25, lapel: 0.03, buttons: 1 }, shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", shirtCollar: { on: true, color: "#f4f4f0" } }, pants: { kind: "skirt", color: "#2f3442" } } },
   elder: { body: body("elderAdult"), hair: MAN_HAIR, face: MAN_FACE, colors: { hair: "#c9c6c0" },
     outfit: { shirt: { color: "#b9a88a", sleeve: "long", length: "out" }, pants: { length: "long", color: "#5b5348" }, ...dark } },
   sumo: { body: body("sumoAdult"), hair: MAN_HAIR, face: MAN_FACE, colors: { hair: "#1a1716" },

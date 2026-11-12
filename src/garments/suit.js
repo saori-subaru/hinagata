@@ -2,7 +2,7 @@
 // (sailor.js): each a shape over the shirt or the body, cut to its region. Base space (before body.proportion stretches the body), heights
 // from the joints (J), so they sit the same on the chibi and the adult bodies.
 import { definePart } from "./registry.js";
-import { smin, sstep, blendFast } from "../sdf/prim.js";
+import { smin, sstep, blendFast, dPrim, C, E } from "../sdf/prim.js";
 
 const L = (ja, en) => ({ ja, en }), smax = (a, b, k) => -smin(-a, -b, k), SEC = L("スーツ", "Suit");
 const TH = 0.004;   // how far the collar points and the tie stand off the shirt
@@ -20,43 +20,115 @@ function vShape(O, J, slope) {
   return { VY, NY, NW, open: (u, y) => (a * (y - VY) - u) / n };   // > 0 inside the opening
 }
 
+// the jacket's shapes, shared by its parts (the jacket, its trim, its buttons): made once per body (P) and options
+const SHAPES = new WeakMap();
+const BOX = [[-0.75, 0.2, -0.3], [0.75, 0.95, 0.45]];
+function jacketShape({ O, P, J, slope }) {
+  const hit = SHAPES.get(P); if (hit && hit.O === O) return hit.S;
+  const pick = (...n) => n.flatMap((k) => [P[k]?.cloth ?? P[k] ?? null, P[`${k}.L`] ?? null, P[`${k}.R`] ?? null]).filter(Boolean);
+  const core = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "butt", "neck", "trap", "shoulder", "sleeve", "upperArm", "foreArm", "foreBulge"), ...BOX);
+  const ARM = blendFast(pick("sleeve", "upperArm", "foreArm", "foreBulge"), ...BOX), TORSO = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "butt"), [-0.4, 0.2, -0.3], [0.4, 0.95, 0.45]);
+  const LEGS = blendFast(pick("thigh", "thighF", "thighB", "thighOut", "thighIn", "leghole"), [-0.4, 0.1, -0.3], [0.4, 0.7, 0.45]);
+  const V = vShape(O, J, slope), yH = J["upperLeg.L"][1], HEM = yH - (O.hem ?? 0.075), CW = O.cutaway ?? 0.6, OFF = O.offset ?? 0.024, PAD = O.pad ?? 0.6, FLARE = O.flare ?? 0.08;
+  const ZS = J.neck[2] - 0.01, YC = yH + 0.03, YW = yH + 0.45 * (J["upperArm.L"][1] - yH);   // YC: from here down the skirt hangs straight (the hips' section carried down), not in under the pelvis
+  // each side: the wrist's plane, a pad that carries the shoulder line out level to the arm (the body's own slopes away from the neck: a
+  // sweatshirt's shoulders), and the forearm's sleeve as a tube that hardly narrows to the cuff. The arms are the body's parts (J's are the chibi's)
+  const side = (s) => { const m = s === "L" ? 1 : -1, ua = P[`upperArm.${s}`], f = P[`foreArm.${s}`], n = Math.hypot(f.bx, f.by, f.bz), sx = Math.abs(ua.ax), sy = slope(ua.ay);
+    const topAt = (u) => { let y = 0.95; while (y > ua.ay && core(m * u, y, ua.az) - OFF > 0) y -= 0.002; return y; }, r = 0.016;
+    const y0 = topAt(sx * 0.45), y1 = topAt(sx + 0.012), yE = y1 + (y0 - 0.03 / sy - y1) * PAD;
+    const pad = PAD > 0 && yE > y1 ? C([m * sx * 0.45, y0 - r, ua.az], [m * (sx + 0.004), yE - r, ua.az], r, r, null, 0.02) : null;
+    const el = [f.ax, f.ay, f.az], wr = [f.ax + f.bx, f.ay + f.by, f.az + f.bz], re = f.ra + OFF;
+    return { h: wr, g: [f.bx / n, f.by / n, f.bz / n], pad, tube: C(el, wr, re, Math.max(f.rb + OFF + 0.003, re * 0.8), null, 0.02) }; };
+  const SL = side("L"), SR = side("R");
+  // the jacket whole: before the opening, the cuffs, the hem and the neck are cut
+  const solid = (x, y, z) => { const A = x > 0 ? SL : SR; let d = core(x, y, z) - OFF;
+    if (A.pad) d = smin(d, dPrim(A.pad, x, y, z), 0.025);
+    d = smin(d, dPrim(A.tube, x, y, z), 0.012);
+    if (y < YC) d += (Math.min(d, smin(TORSO(x, YC, z) - OFF - FLARE * (YC - y), LEGS(x, y, z) - OFF - 0.004, 0.06)) - d) * sstep(YC, YC - 0.04, y);   // (over the thighs' tops too: wider than the pelvis on a man, they came out through the skirt's sides)
+    // a slit between the sleeve and the torso from the waist down: built with the wrists by the hips, the sleeve and the skirt met in one
+    // surface and it stretched into a web when the arm rose
+    if (y < YW) { const tb = y < YC ? Math.min(TORSO(x, YC, z), LEGS(x, y, z)) : TORSO(x, y, z); d = Math.max(d, 0.008 * sstep(YW, YW - 0.03, y) - Math.abs(tb - ARM(x, y, z)) / 2); }
+    return d; };
+  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.03 + 6 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
+  const sdf = (x, y, z) => {
+    const u = Math.abs(x), A = x > 0 ? SL : SR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
+    const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
+    let d = smax(solid(x, y, z), op, 0.004);
+    if (Math.hypot(x - A.h[0], y - A.h[1], z - A.h[2]) < 0.1) d = smax(d, cuff, 0.006);   // (only near the wrist: the plane went on through the skirt beside the hand)
+    const hem = y < HEM + 0.02 && ARM(x, y, z) < TORSO(x, Math.max(y, YC), z) ? -1 : HEM - y;   // the hem across the torso only: the adult's long arms hang below it
+    return Math.max(d, hem, y - top(x, z)); };
+  // the skirt follows the hips alone: built with the wrists beside it (the A-pose), its sides took the forearms' weights and rose with the arms as fins
+  const bones = (x, y, z) => y < YC && ARM(x, y, z) > Math.min(TORSO(x, YC, z), LEGS(x, y, z)) ? SKIRT_BONES : JBONES;
+  const S = { sdf, solid, top, bones, V, HEM, ZS, yH, yS: J["upperArm.L"][1] };
+  SHAPES.set(P, { O, S }); return S;
+}
+// a polygon's signed distance in (u, y) (inside < 0)
+const poly = (pts) => (u, y) => { let d = Infinity, inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [ax, ay] = pts[j], [bx, by] = pts[i], ex = bx - ax, ey = by - ay, t = Math.max(0, Math.min(1, ((u - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey)));
+    d = Math.min(d, Math.hypot(u - ax - t * ex, y - ay - t * ey)); if ((ay > y) !== (by > y) && u < ax + (y - ay) / (by - ay) * ex) inside = !inside; }
+  return inside ? -d : d; };
+const bellyOf = (OPT) => { const W = OPT.body.adult?.on ? OPT.body.adult.waist ?? {} : null; return W ? Math.max(0, (W.z ?? 0.03) + (W.d ?? 0.056) + 0.07 - 0.22) : 0; };
+const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/, SKIRT_BONES = /^(hips|spine)/, TRIM_BONES = /^(hips|spine|chest|upperChest|shoulder|neck)/;
+
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004, thin: "cloth",
-  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.028, hem: 0.05, cutaway: 0.6, offset: 0.024 },
+  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
     ["color", L("上着の色", "Jacket color"), { when: { ".on": true } }],
     ["v", L("前のVの深さ", "V's point"), { when: { ".on": true }, min: 0.2, max: 0.8, step: 0.01, help: L("ボタンの高さ。脚の付け根(0)から肩(1)までの割合", "the button's height, from the hip joint (0) to the shoulder (1)") }],
     ["neck", L("首元のVの幅", "V's width at the neck"), { when: { ".on": true }, min: 0.02, max: 0.1, step: 0.001, help: L("m", "m") }],
-    ["lapel", L("襟(ラペル)の幅", "Lapel width"), { when: { ".on": true }, min: 0, max: 0.06, step: 0.001, help: L("Vのふちに沿って折り返した襟の幅(m)。0 = なし", "the turned-back collar along the V's edges (m); 0 = none") }],
-    ["hem", L("すその高さ", "Hem"), { when: { ".on": true }, min: -0.04, max: 0.12, step: 0.002, help: L("脚の付け根からどれだけ下か(伸ばす前の体で m)", "how far below the hip joint (m, on the body before it is stretched)") }],
+    ["lapel", L("襟(ラペル)の幅", "Lapel width"), { when: { ".on": true }, min: 0, max: 0.06, step: 0.001, help: L("Vのふちから折り返した襟のいちばん広い所(m)。0 = 襟なし", "the turned-back collar at its widest, from the V's edge (m); 0 = none") }],
+    ["hem", L("すその高さ", "Hem"), { when: { ".on": true }, min: -0.04, max: 0.14, step: 0.002, help: L("脚の付け根からどれだけ下か(伸ばす前の体で m)", "how far below the hip joint (m, on the body before it is stretched)") }],
+    ["flare", L("すその広がり", "Skirt flare"), { when: { ".on": true }, min: 0, max: 0.4, step: 0.01, help: L("腰から下がどれだけ外へ広がるか(傾き)", "how far it stands out below the hips (a slope)") }],
     ["cutaway", L("すその前の開き", "Front cutaway"), { when: { ".on": true }, min: 0, max: 1.5, step: 0.05, help: L("ボタンの下で前がすそへ向かって開く傾き。0 = まっすぐ閉じる", "how the fronts part below the button toward the hem; 0 = closed straight down") }],
+    ["pad", L("肩パッド", "Shoulder pads"), { when: { ".on": true }, min: 0, max: 1.4, step: 0.05, help: L("肩の線を首から腕まで水平に近づける。0 = 体のなで肩のまま", "carries the shoulder line out level from the neck to the arm; 0 = the body's own slope") }],
     ["offset", L("上着の厚み", "Jacket thickness"), { when: { ".on": true }, min: 0.016, max: 0.04, step: 0.001, help: L("体からの浮き(m)。シャツ(1.4cm)とズボンより外に", "how far it stands off the body (m); outside the shirt (1.4 cm) and the pants") }],
+    ["pockets", L("ポケットのふた", "Pocket flaps"), { when: { ".on": true }, type: "boolean" }],
+    ["buttons", L("ボタンの数", "Buttons"), { when: { ".on": true }, min: 0, max: 3, step: 1 }],
+    ["buttonColor", L("ボタンの色", "Button color"), { when: { ".on": true }, cost: "instant", apply: "setColors", colorKey: "jacketButtons" }],
   ],
-  // the torso and the arms (not the hands or the legs: the hem bridges the bottom), pushed out by offset; the neck cut a little above the
-  // shirt's at the back, the sleeves cut 2 cm before the wrists (the shirt's cuff shows), the V open in front with the lapels raised along it
-  build(ctx) {
-    const { O, P, J, slope } = ctx, pick = (...n) => n.flatMap((k) => [P[k]?.cloth ?? P[k] ?? null, P[`${k}.L`] ?? null, P[`${k}.R`] ?? null]).filter(Boolean);
-    const core = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "butt", "neck", "trap", "shoulder", "sleeve", "upperArm", "foreArm", "foreBulge"), [-0.75, 0.2, -0.3], [0.75, 0.95, 0.45]);
-    const ARM = blendFast(pick("sleeve", "upperArm", "foreArm", "foreBulge"), [-0.75, 0.2, -0.3], [0.75, 0.95, 0.45]), TORSO = blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "butt"), [-0.4, 0.2, -0.3], [0.4, 0.95, 0.45]);
-    const V = vShape(O, J, slope), HEM = J["upperLeg.L"][1] - (O.hem ?? 0.05), LW = O.lapel ?? 0.028, CW = O.cutaway ?? 0.6, OFF = O.offset ?? 0.024;
-    const arm = (s) => { const f = P[`foreArm.${s}`], n = Math.hypot(f.bx, f.by, f.bz); return { h: [f.ax + f.bx, f.ay + f.by, f.az + f.bz], g: [f.bx / n, f.by / n, f.bz / n] }; }, AL = arm("L"), AR = arm("R");   // the forearm as the body made it (the arms' own length: J is the chibi's)
-    const ZS = J.neck[2] - 0.01;
-    const sdf = (x, y, z) => {
-      const u = Math.abs(x), A = x > 0 ? AL : AR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
-      const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
-      const lap = LW && z > ZS && y > V.VY - 0.01 ? sstep(LW, LW * 0.6, -V.open(u, y)) * sstep(V.VY - 0.01, V.VY + 0.02, y) * 0.004 : 0;   // the lapels stand 4 mm proud
-      let d = core(x, y, z) - OFF - lap;
-      d = smax(d, op, 0.004);
-      d = smax(d, cuff, 0.006);
-      const hem = y < HEM + 0.02 && ARM(x, y, z) < TORSO(x, y, z) ? -1 : HEM - y;   // the hem across the torso only: the adult's long arms hang below it
-      const nz = z - J.neck[2], top = V.NY + 0.03 + 6 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS);   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
-      return Math.max(d, hem, y - top); };   // the collar round the back of the neck, lower toward the front
-    return { sdf, HEM };
-  },
-  spec: (st, { H, ax, ay, OPT }) => ({ sdf: st.sdf, lo: [-0.42 - ax, Math.min(st.HEM, 0.35 - ay) - 0.02, -0.22], hi: [0.42 + ax, 0.86, 0.3 + bellyOf(OPT)], h: H * (OPT.quality.shirtCell ?? 0.75), only: /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ }),
+  // the torso and the arms (not the hands or the legs), pushed out by offset, squared at the shoulders, hanging straight from the hips to the
+  // hem; the neck cut as a bowl, the sleeves 2 cm short of the wrists (the shirt's cuff shows), the V open in front
+  build(ctx) { const S = jacketShape(ctx); return { sdf: S.sdf, HEM: S.HEM, bones: S.bones }; },
+  spec: (st, { H, ax, ay, OPT }) => ({ sdf: st.sdf, lo: [-0.42 - ax, Math.min(st.HEM, 0.35 - ay) - 0.02, -0.22], hi: [0.42 + ax, 0.9, 0.3 + bellyOf(OPT)], h: H * (OPT.quality.shirtCell ?? 0.75) * 1.2, only: st.bones }),
 });
-const bellyOf = (OPT) => { const W = OPT.body.adult?.on ? OPT.body.adult.waist ?? {} : null; return W ? Math.max(0, (W.z ?? 0.03) + (W.d ?? 0.056) + 0.07 - 0.22) : 0; };
+
+// the jacket's trim, a mesh of its own 5 mm proud of it (its outline draws the edges: raised on the jacket itself they did not show): the
+// lapels along the V with a notch, the collar above them and round the back of the neck, the pockets' flaps
+definePart({ src: import.meta.url,
+  name: "jacketTrim", path: "outfit.jacket", group: "jacket", colorOf: "jacket", section: SEC, outline: 0.003, thin: "keep",
+  built: (O) => !!O?.on && ((O.lapel ?? 0.036) > 0 || O.pockets !== false),
+  build(ctx) {
+    const { O, slope } = ctx, S = jacketShape(ctx), { V, ZS } = S, LW = O.lapel ?? 0.036, VH = V.NY - V.VY, uV = (y) => V.NW * (y - V.VY) / VH, sy = slope(V.VY);
+    const yG = V.VY + 0.66 * VH, g = 0.02 / sy, IN = 0.005;   // the gorge (where the collar meets the lapel); IN: over the opening's edge
+    const lapel = LW ? poly([[-IN, V.VY - 0.03 / sy], [uV(yG) + LW, yG - 0.012 / sy], [uV(yG) + LW * 0.45, yG + g], [uV(yG + g) - IN, yG + g]]) : null;
+    const collar = LW ? poly([[uV(yG + g) - IN, yG + g], [uV(yG) + LW * 0.45, yG + g], [uV(yG) + LW * 0.95, yG + g * 1.25], [V.NW + 0.024, V.NY + 0.02], [V.NW - IN, V.NY + 0.02]]) : null;
+    const yF = V.VY - 0.085 / sy, fh = 0.032 / sy, flap = O.pockets !== false ? (u, y) => Math.max(Math.abs(u - 0.082) - 0.028, Math.abs(y - yF + fh / 2) - fh / 2) : null;   // the flaps at the lower button's height
+    const RW = 0.024 / sy;
+    const sdf = (x, y, z) => { const dj = S.solid(x, y, z); if (dj > 0.02) return dj;
+      const u = Math.abs(x), front = z > ZS + 0.015;
+      let s = front ? Math.min(lapel ? lapel(u, y) : 1, collar ? collar(u, y) : 1, flap ? flap(u, y) : 1) : 1;
+      if (LW && z < ZS - 0.015) { const t = S.top(x, z); s = Math.min(s, Math.max(t - RW - y, y - t - 0.004)); }   // the collar's stand round the sides and the back
+      return Math.max(dj - 0.005, -dj - 0.006, s); };
+    return { sdf, lo: [-0.2, Math.min(yF - fh, V.VY) - 0.03, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
+  },
+  spec: (st, { H, OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: Math.min(H * 0.8, 0.0055), only: TRIM_BONES }),
+});
+
+definePart({ src: import.meta.url,
+  name: "jacketButtons", path: "outfit.jacket", group: "jacket", colorIn: "buttonColor", section: SEC, outline: 0.002, thin: "keep",
+  built: (O) => !!O?.on && (O.buttons ?? 2) > 0,
+  // discs on the jacket's front from just under the V's point down (round after the body's stretch: flattened by the slope here)
+  build(ctx) {
+    const { O, slope } = ctx, S = jacketShape(ctx), sy = slope(S.V.VY), N = O.buttons ?? 2, B = [];
+    for (let i = 0; i < N; i++) { const y = S.V.VY - (0.02 + i * 0.062) / sy; if (y < S.HEM + 0.075) break; let lo = 0, hi = 0.5; for (let k = 0; k < 24; k++) { const m = (lo + hi) / 2; if (S.solid(0, y, m) < 0) lo = m; else hi = m; }
+      B.push(E([0, y, lo + 0.002], [0.0085, 0.0085 / sy, 0.0045], null, 0.01)); }
+    if (!B.length) return null;
+    return { sdf: (x, y, z) => { let d = 1; for (const q of B) d = Math.min(d, dPrim(q, x, y, z)); return d; }, lo: [-0.02, B.at(-1).cy - 0.02, B[0].cz - 0.05], hi: [0.02, B[0].cy + 0.02, Math.max(...B.map((q) => q.cz)) + 0.02] };
+  },
+  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.002, only: /^(hips|spine|chest)/ }),
+});
 
 definePart({ src: import.meta.url,
   name: "shirtCollar", path: "outfit.shirt.shirtCollar", group: "shirt", section: SEC, outline: 0.003, thin: "cloth",

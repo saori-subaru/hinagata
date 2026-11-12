@@ -466,7 +466,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); parts.suit.wrap = (m) => withGrad(m, SUIT); parts.suit.m.material = parts.suit.wrap(parts.suit.m.material); }
   // the garment parts (src/garments; 2026-10-10, for 島風: a sailor collar and its scarf, gloves, hip strings, a headband, and any part added
   // there). Built only when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
-  for (const p of PARTS) parts[p.name] = skinned(meshPart(p.name), partOptions(OPT, p).color ?? p.defaults?.color ?? "#888888", p.outline, p.soft ? p.name : null);
+  for (const p of PARTS) parts[p.name] = skinned(meshPart(p.name), partOptions(OPT, p)[p.colorIn ?? "color"] ?? p.defaults?.color ?? "#888888", p.outline, p.soft ? p.name : null);
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
@@ -704,7 +704,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (let i = 0; i < I.length; i += 3) if (!((coverBits[I[i]] & sig) && (coverBits[I[i + 1]] & sig) && (coverBits[I[i + 2]] & sig))) out.push(I[i], I[i + 1], I[i + 2]);
       coverIdx.set(sig, new THREE.BufferAttribute(new Uint32Array(out), 1)); }
     bodyGeo.setIndex(sig ? coverIdx.get(sig) : fullIdx);
+    if (underIdx) { const on = parts.jacket.m.visible; if (on !== underOn) { underOn = on; shirtGeo.setIndex(on ? underIdx : shirtIdx); } }
   }
+  // the shirt under a jacket: its triangles well inside the jacket are left out while the jacket shows (the arms swinging, it came out white at the armpits)
+  const shirtGeo = parts.shirt.m.geometry, shirtIdx = shirtGeo.index; let underIdx = null, underOn = false;
+  if (cull && garments.jacket && shirtIdx) { const Pa = basePos(shirtGeo), f = garments.jacket.sdf, I = shirtIdx.array, deep = new Uint8Array(Pa.length / 3), out = [];
+    for (let v = 0; v < deep.length; v++) deep[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -COVER_DEPTH ? 1 : 0;
+    for (let i = 0; i < I.length; i += 3) if (!(deep[I[i]] && deep[I[i + 1]] && deep[I[i + 2]])) out.push(I[i], I[i + 1], I[i + 2]);
+    underIdx = new THREE.BufferAttribute(new I.constructor(out), 1); }
 
   lap("cover");
   // motion
@@ -874,7 +881,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       stripes, cuff, ...more } = {}) {
       // the garment parts; the bands painted on parts (a band's color null follows the part's: cuff; the parts' bands: setBands)
       const O = OPT.outfit;
-      for (const p of PARTS) { const c = more[p.name]; if (c) { partOptions(OPT, p).color = c; parts[p.name].m.material.color.set(c); } }
+      for (const p of PARTS) { const c = more[p.colorOf ?? p.name]; if (c) { partOptions(OPT, p)[p.colorIn ?? "color"] = c; parts[p.name].m.material.color.set(c); } }
       if (stripes) O.socks.stripes.color = stripes;
       if (cuff !== undefined) O.shoes.cuffColor = cuff;
       if (suit) { OPT.outfit.suit.color = suit; parts.suit.m.material.color.set(suit); }
