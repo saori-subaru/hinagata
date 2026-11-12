@@ -709,7 +709,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // under a jacket: the shirt's triangles well inside it are left out while the jacket shows (the arms swinging, it came out white at the
   // armpits), and the trim's own back, buried in the jacket (half its triangles); the shirt collar's sides and back, buried in the shirt
   const under = [];
-  if (cull) for (const [k, by, f, depth] of [["shirt", "jacket", garments.jacket?.sdf, 0.003], ["jacketTrim", "jacket", garments.jacket?.sdf, 0.003], ["shirtCollar", "shirt", garments.shirtCollar && fast.shirt, 0.004]]) { const geo = parts[k]?.m.geometry, full = geo?.index; if (!f || !full?.count) continue;
+  if (cull) for (const [k, by, f, depth] of [["shirt", "jacket", garments.jacket?.sdf, 0.003], ["jacketTrim", "jacket", garments.jacket?.sdf, 0.003], ["jacketPockets", "jacket", garments.jacket?.sdf, 0.003], ["shirtCollar", "shirt", garments.shirtCollar && fast.shirt, 0.004]]) { const geo = parts[k]?.m.geometry, full = geo?.index; if (!f || !full?.count) continue;
     const Pa = basePos(geo), I = full.array, deep = new Uint8Array(Pa.length / 3), out = [];
     for (let v = 0; v < deep.length; v++) deep[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -depth ? 1 : 0;
     for (let i = 0; i < I.length; i += 3) if (!(deep[I[i]] && deep[I[i + 1]] && deep[I[i + 2]])) out.push(I[i], I[i + 1], I[i + 2]);

@@ -17,7 +17,7 @@ const necklineAt = (front, u, y0) => { let y = y0; while (y > y0 - 0.15 && front
 function vShape(O, J, slope) {
   const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], VY = yH + (O.v ?? 0.42) * (yS - yH), NY = J.neck[1] - 0.01, NW = O.neck ?? 0.036;
   const a = NW / Math.max(0.03, NY - VY), n = Math.hypot(1, a / slope(VY));
-  return { VY, NY, NW, open: (u, y) => (a * (y - VY) - u) / n };   // > 0 inside the opening
+  return { VY, NY, NW, a, open: (u, y) => (a * (y - VY) - u) / n };   // > 0 inside the opening
 }
 
 // the jacket's shapes, shared by its parts (the jacket, its trim, its buttons): made once per body (P) and options
@@ -59,7 +59,14 @@ function jacketShape({ O, P, J, slope }) {
     return Math.max(d, hem, y - top(x, z)); };
   // the skirt follows the hips alone: built with the wrists beside it (the A-pose), its sides took the forearms' weights and rose with the arms as fins
   const bones = (x, y, z) => y < YC && ARM(x, y, z) > Math.min(TORSO(x, YC, z), LEGS(x, y, z)) ? SKIRT_BONES : JBONES;
-  const S = { sdf, solid, top, bones, V, HEM, ZS, yH, yS: J["upperArm.L"][1] };
+  // the fronts' overlap: the upper front's edge runs on from its lapel's fold across the middle and down to the hem, 1.8 cm past the
+  // buttons. > 0 on the upper front; the line is painted where it is just over 0. Linear in x, so it stays straight on a thinned mesh's big
+  // triangles; at the sides and the back it jumps far from 0 in one cell (a line too thin to see).
+  const LM = O.overlap === "right" ? -1 : 1, lap = (x, y, z) => z > ZS ? LM * x + Math.min(0.018, 2.5 * V.a * (V.VY - y)) : Math.abs(x) + 0.05;
+  // the base height `m` metres (after the stretch) below y: an adult's torso is stretched in a narrow band at the waist (4.7x there, 1x
+  // above), so buttons and pockets set by base heights came out far apart and tall
+  const down = (y, m) => { for (let left = m; left > 0 && y > 0.2; y -= 0.0005) left -= 0.0005 * slope(y); return y; };
+  const S = { sdf, solid, top, bones, lap, down, V, HEM, ZS, yH, yS: J["upperArm.L"][1] };
   SHAPES.set(P, { O, S }); return S;
 }
 // a polygon's signed distance in (u, y) (inside < 0)
@@ -73,7 +80,7 @@ const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/,
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004,   // (thinned as the body: a solid, not a sheet with an inner side)
-  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.036, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
+  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.036, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, overlap: "left", line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
     ["color", L("上着の色", "Jacket color"), { when: { ".on": true } }],
@@ -85,23 +92,25 @@ definePart({ src: import.meta.url,
     ["cutaway", L("すその前の開き", "Front cutaway"), { when: { ".on": true }, min: 0, max: 1.5, step: 0.05, help: L("ボタンの下で前がすそへ向かって開く傾き。0 = まっすぐ閉じる", "how the fronts part below the button toward the hem; 0 = closed straight down") }],
     ["pad", L("肩パッド", "Shoulder pads"), { when: { ".on": true }, min: 0, max: 1.4, step: 0.05, help: L("肩の線を首から腕まで水平に近づける。0 = 体のなで肩のまま", "carries the shoulder line out level from the neck to the arm; 0 = the body's own slope") }],
     ["offset", L("上着の厚み", "Jacket thickness"), { when: { ".on": true }, min: 0.016, max: 0.04, step: 0.001, help: L("体からの浮き(m)。シャツ(1.4cm)とズボンより外に", "how far it stands off the body (m); outside the shirt (1.4 cm) and the pants") }],
+    ["overlap", L("合わせ", "Fronts overlap"), { when: { ".on": true }, options: [{ value: "left", label: L("左前(男)", "Left over right (men's)") }, { value: "right", label: L("右前(女)", "Right over left (women's)") }], help: L("どちらの前身頃が上か(着ている人から見て)", "which front lies on top (the wearer's side)") }],
     ["collar", L("上襟の幅", "Collar width"), { when: { ".on": true }, min: 0.015, max: 0.05, step: 0.001, help: L("首のまわりの襟の幅(m)", "the collar round the neck (m)") }],
-    ["line", L("襟の縁の線", "Trim edge line"), { when: { ".on": true }, type: "boolean", cost: "instant", apply: "setBands", help: L("襟とポケットの縁に濃い線", "a darker line along the lapels', collar's and flaps' edges") }],
+    ["line", L("縁の線", "Edge lines"), { when: { ".on": true }, type: "boolean", cost: "instant", apply: "setBands", help: L("襟・ポケット・前の合わせの縁に濃い線", "a darker line along the lapels', collar's and flaps' edges and the fronts' overlap") }],
     ["pockets", L("ポケットのふた", "Pocket flaps"), { when: { ".on": true }, type: "boolean" }],
     ["buttons", L("ボタンの数", "Buttons"), { when: { ".on": true }, min: 0, max: 3, step: 1 }],
     ["buttonColor", L("ボタンの色", "Button color"), { when: { ".on": true }, cost: "instant", apply: "setColors", colorKey: "jacketButtons" }],
   ],
   // the torso and the arms (not the hands or the legs), pushed out by offset, squared at the shoulders, hanging straight from the hips to the
   // hem; the neck cut as a bowl, the sleeves 2 cm short of the wrists (the shirt's cuff shows), the V open in front
-  build(ctx) { const S = jacketShape(ctx); return { sdf: S.sdf, HEM: S.HEM, bones: S.bones }; },
+  build(ctx) { const S = jacketShape(ctx); return { sdf: S.sdf, HEM: S.HEM, bones: S.bones, lap: S.lap }; },
+  bands: { keys: ["line"], value: (st) => st.lap, ranges: (O) => O.line === false ? [] : [[0, 0.004, shade(O.color ?? "#2f3442", 0.5)]] },
   spec: (st, { H, ax, ay, OPT }) => ({ sdf: st.sdf, lo: [-0.42 - ax, Math.min(st.HEM, 0.35 - ay) - 0.02, -0.22], hi: [0.42 + ax, 0.9, 0.3 + bellyOf(OPT)], h: H * (OPT.quality.shirtCell ?? 0.75) * 1.2, only: st.bones }),
 });
 
 // the jacket's trim, a mesh of its own 5 mm proud of it (its outline draws the edges: raised on the jacket itself they did not show): the
-// lapels along the V with a notch, the collar above them and round the back of the neck, the pockets' flaps
+// lapels along the V with a notch, the collar above them and round the back of the neck
 definePart({ src: import.meta.url,
   name: "jacketTrim", path: "outfit.jacket", group: "jacket", colorOf: "jacket", section: SEC, outline: 0.003, thin: "keep",   // (thinned, the lapels' edges came out ragged)
-  built: (O) => !!O?.on && ((O.lapel ?? 0.036) > 0 || O.pockets !== false),
+  built: (O) => !!O?.on && (O.lapel ?? 0.036) > 0,
   build(ctx) {
     const { O, slope } = ctx, S = jacketShape(ctx), { V, ZS } = S, LW = O.lapel ?? 0.036, VH = V.NY - V.VY, uV = (y) => V.NW * (y - V.VY) / VH, sy = slope(V.VY);
     const yG = V.VY + 0.66 * VH, g = 0.02 / sy, IN = 0.005;   // the gorge (where the collar meets the lapel); IN: over the opening's edge
@@ -110,17 +119,32 @@ definePart({ src: import.meta.url,
     // one piece; `inFrom` is how far in from that edge (m after the stretch). (Standing 12 mm above the rim it rose in points at the shoulders.)
     const CWD = O.collar ?? 0.032, inFrom = (x, y, z) => { const t = (S.top(x, z) - y) * sy; return z > ZS && y > V.VY ? Math.min(-V.open(Math.abs(x), y), t) : t; };
     const collar = LW ? (x, y, z, front) => front && y < yG + g * 0.6 ? 1 : (() => { const e = inFrom(x, y, z); return Math.max(e - CWD, -e - IN); })() : null;
-    const yF = V.VY - 0.085 / sy, fh = 0.032 / sy, flap = O.pockets !== false ? (u, y) => Math.max(Math.abs(u - 0.082) - 0.028, Math.abs(y - yF + fh / 2) - fh / 2) : null;   // the flaps at the lower button's height
     // the shapes' edge at a point (inside < 0): the mesh is cut by it, and the line along the edges is painted by it
     const edge = (x, y, z) => { const u = Math.abs(x), front = z > ZS + 0.015;
-      return Math.min(front && lapel ? lapel(u, y) : 1, collar ? collar(x, y, z, front) : 1, front && flap ? flap(u, y) : 1); };
+      return Math.min(front && lapel ? lapel(u, y) : 1, collar ? collar(x, y, z, front) : 1); };
     const sdf = (x, y, z) => { const dj = S.solid(x, y, z); if (dj > 0.02) return dj;
       return Math.max(dj - 0.008, -dj - 0.014, edge(x, y, z)); };   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
-    return { sdf, edge, lo: [-0.2, Math.min(yF - fh, V.VY) - 0.03, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
+    return { sdf, edge, lo: [-0.2, V.VY - 0.06, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
   },
   // a darker line along the edges: the trim is the jacket's color on the jacket, and the outline draws only the silhouette
   bands: { keys: ["line"], value: (st) => st.edge, ranges: (O) => O.line === false ? [] : [[-0.0035, 0.05, shade(O.color ?? "#2f3442", 0.5)]] },
   spec: (st, { H, OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: 0.0065, only: TRIM_BONES }),
+});
+
+// the pockets' flaps (9 by 4.5 cm after the stretch, at the lower button's height): a part of their own with fine cells. They lie in the
+// waist's band, stretched 4.7x: at the trim's cells a flap was a cell and a half tall and came out ragged and all line.
+definePart({ src: import.meta.url,
+  name: "jacketPockets", path: "outfit.jacket", group: "jacket", colorOf: "jacket", section: SEC, outline: 0.003, thin: "keep",
+  built: (O) => !!O?.on && O.pockets !== false,
+  build(ctx) {
+    const { slope } = ctx, S = jacketShape(ctx), yT = S.down(S.V.VY, 0.13), yB = S.down(yT, 0.045), mid = (yT + yB) / 2, half = (yT - yB) / 2;
+    const edge = (x, y, z) => z > S.ZS + 0.015 ? Math.max(Math.abs(Math.abs(x) - 0.08) - 0.045, (Math.abs(y - mid) - half) * slope(y)) : 1;   // (m after the stretch)
+    // sewn in along the top: there the flap comes out of the jacket with no step, and the line runs along the sides and the bottom only
+    const line = (x, y, z) => z > S.ZS + 0.015 ? Math.max(Math.abs(Math.abs(x) - 0.08) - 0.045, (yB - y) * slope(y)) : 1;
+    return { edge: line, sdf: (x, y, z) => { const dj = S.solid(x, y, z); return dj > 0.02 ? dj : Math.max(dj - 0.001 - 0.005 * sstep(yT, mid, y), -dj - 0.008, edge(x, y, z)); }, lo: [-0.14, yB - 0.01, -0.05], hi: [0.14, yT + 0.01, 0.3] };
+  },
+  spec: (st, { OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: 0.0045, only: SKIRT_BONES }),
+  bands: { keys: ["line"], value: (st) => st.edge, ranges: (O) => O.line === false ? [] : [[-0.004, 0.05, shade(O.color ?? "#2f3442", 0.5)]] },
 });
 
 definePart({ src: import.meta.url,
@@ -128,13 +152,13 @@ definePart({ src: import.meta.url,
   built: (O) => !!O?.on && (O.buttons ?? 2) > 0,
   // discs on the jacket's front from just under the V's point down (round after the body's stretch: flattened by the slope here)
   build(ctx) {
-    const { O, slope } = ctx, S = jacketShape(ctx), sy = slope(S.V.VY), N = O.buttons ?? 2, B = [];
-    for (let i = 0; i < N; i++) { const y = S.V.VY - (0.02 + i * 0.062) / sy; if (y < S.HEM + 0.075) break; let lo = 0, hi = 0.5; for (let k = 0; k < 24; k++) { const m = (lo + hi) / 2; if (S.solid(0, y, m) < 0) lo = m; else hi = m; }
+    const { O, slope } = ctx, S = jacketShape(ctx), N = O.buttons ?? 2, B = [];
+    for (let i = 0; i < N; i++) { const y = S.down(S.V.VY, 0.02 + i * 0.1), sy = slope(y); if (y < S.HEM + 0.075) break; let lo = 0, hi = 0.5; for (let k = 0; k < 24; k++) { const m = (lo + hi) / 2; if (S.solid(0, y, m) < 0) lo = m; else hi = m; }
       B.push(E([0, y, lo + 0.002], [0.0085, 0.0085 / sy, 0.0045], null, 0.01)); }
     if (!B.length) return null;
     return { sdf: (x, y, z) => { let d = 1; for (const q of B) d = Math.min(d, dPrim(q, x, y, z)); return d; }, lo: [-0.02, B.at(-1).cy - 0.02, B[0].cz - 0.05], hi: [0.02, B[0].cy + 0.02, Math.max(...B.map((q) => q.cz)) + 0.02] };
   },
-  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.003, only: /^(hips|spine|chest)/ }),
+  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.002, only: /^(hips|spine|chest)/ }),
 });
 
 definePart({ src: import.meta.url,

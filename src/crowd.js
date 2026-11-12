@@ -17,7 +17,7 @@ export const CROWD = {
   salaryman: { body: body("manAdult"), hair: MAN_HAIR, face: MAN_FACE, outfit: suit("#2f3442", "#7a2a36") },
   manager: { body: body("middleAdult"), hair: MAN_HAIR, face: MAN_FACE, outfit: suit("#3b3a40", "#2c4a6e") },
   officeLady: { body: body("girlAdult"), hair: { back: "bob", ahoge: false, backForm: "block", bangsForm: "block" },
-    outfit: { ...suit("#2f3442", "#2f3442"), jacket: { on: true, color: "#2f3442", pad: 0.25, lapel: 0.03, buttons: 1 }, shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", collar: { ...DRESS }, shirtCollar: { on: true, color: "#f4f4f0" } }, pants: { kind: "skirt", color: "#2f3442" } } },
+    outfit: { ...suit("#2f3442", "#2f3442"), jacket: { on: true, color: "#2f3442", pad: 0.25, lapel: 0.03, buttons: 1, overlap: "right" }, shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", collar: { ...DRESS }, shirtCollar: { on: true, color: "#f4f4f0" } }, pants: { kind: "skirt", color: "#2f3442" } } },
   elder: { body: body("elderAdult"), hair: MAN_HAIR, face: MAN_FACE, colors: { hair: "#c9c6c0" },
     outfit: { shirt: { color: "#b9a88a", sleeve: "long", length: "out" }, pants: { length: "long", color: "#5b5348" }, ...dark } },
   sumo: { body: body("sumoAdult"), hair: MAN_HAIR, face: MAN_FACE, colors: { hair: "#1a1716" },
