@@ -1,6 +1,6 @@
 // The town's people: recipes for a crowd (passers-by, shop customers), each a body type (body/types.js) dressed. createAvatar(CROWD.police).
 // Plain options of today's version (a bare options object: the current defaults), so merge your own over a copy to vary them
-// (colors, hair). Build a crowd at { quality: "lite" } (a salaryman 1.5 万 triangles; an adult's default "fine" 4.4 万). The hair is the solid form ("block"): the locks' physics costs more, and a cap fits over the block only.
+// (colors, hair). Build a crowd at { quality: "lite" } (a salaryman 1.7 万 triangles; an adult's default "fine" 4.6 万). The hair is the solid form ("block"): the locks' physics costs more, and a cap fits over the block only.
 import { BODY_TYPES } from "./body/types.js";
 
 const body = (t) => structuredClone(BODY_TYPES[t].body);

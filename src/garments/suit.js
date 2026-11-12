@@ -67,12 +67,13 @@ const poly = (pts) => (u, y) => { let d = Infinity, inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [ax, ay] = pts[j], [bx, by] = pts[i], ex = bx - ax, ey = by - ay, t = Math.max(0, Math.min(1, ((u - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey)));
     d = Math.min(d, Math.hypot(u - ax - t * ex, y - ay - t * ey)); if ((ay > y) !== (by > y) && u < ax + (y - ay) / (by - ay) * ex) inside = !inside; }
   return inside ? -d : d; };
+const shade = (hex, k) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, "0")).join("");
 const bellyOf = (OPT) => { const W = OPT.body.adult?.on ? OPT.body.adult.waist ?? {} : null; return W ? Math.max(0, (W.z ?? 0.03) + (W.d ?? 0.056) + 0.07 - 0.22) : 0; };
 const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/, SKIRT_BONES = /^(hips|spine)/, TRIM_BONES = /^(hips|spine|chest|upperChest|shoulder|neck)/;
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004,   // (thinned as the body: a solid, not a sheet with an inner side)
-  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, pockets: true, buttons: 2, buttonColor: "#15171d" },
+  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
     ["color", L("上着の色", "Jacket color"), { when: { ".on": true } }],
@@ -84,6 +85,8 @@ definePart({ src: import.meta.url,
     ["cutaway", L("すその前の開き", "Front cutaway"), { when: { ".on": true }, min: 0, max: 1.5, step: 0.05, help: L("ボタンの下で前がすそへ向かって開く傾き。0 = まっすぐ閉じる", "how the fronts part below the button toward the hem; 0 = closed straight down") }],
     ["pad", L("肩パッド", "Shoulder pads"), { when: { ".on": true }, min: 0, max: 1.4, step: 0.05, help: L("肩の線を首から腕まで水平に近づける。0 = 体のなで肩のまま", "carries the shoulder line out level from the neck to the arm; 0 = the body's own slope") }],
     ["offset", L("上着の厚み", "Jacket thickness"), { when: { ".on": true }, min: 0.016, max: 0.04, step: 0.001, help: L("体からの浮き(m)。シャツ(1.4cm)とズボンより外に", "how far it stands off the body (m); outside the shirt (1.4 cm) and the pants") }],
+    ["collar", L("上襟の幅", "Collar width"), { when: { ".on": true }, min: 0.015, max: 0.05, step: 0.001, help: L("首のまわりの襟の幅(m)", "the collar round the neck (m)") }],
+    ["line", L("襟の縁の線", "Trim edge line"), { when: { ".on": true }, type: "boolean", cost: "instant", apply: "setBands", help: L("襟とポケットの縁に濃い線", "a darker line along the lapels', collar's and flaps' edges") }],
     ["pockets", L("ポケットのふた", "Pocket flaps"), { when: { ".on": true }, type: "boolean" }],
     ["buttons", L("ボタンの数", "Buttons"), { when: { ".on": true }, min: 0, max: 3, step: 1 }],
     ["buttonColor", L("ボタンの色", "Button color"), { when: { ".on": true }, cost: "instant", apply: "setColors", colorKey: "jacketButtons" }],
@@ -103,16 +106,20 @@ definePart({ src: import.meta.url,
     const { O, slope } = ctx, S = jacketShape(ctx), { V, ZS } = S, LW = O.lapel ?? 0.036, VH = V.NY - V.VY, uV = (y) => V.NW * (y - V.VY) / VH, sy = slope(V.VY);
     const yG = V.VY + 0.66 * VH, g = 0.02 / sy, IN = 0.005;   // the gorge (where the collar meets the lapel); IN: over the opening's edge
     const lapel = LW ? poly([[-IN, V.VY - 0.03 / sy], [uV(yG) + LW, yG - 0.012 / sy], [uV(yG) + LW * 0.45, yG + g], [uV(yG + g) - IN, yG + g]]) : null;
-    const collar = LW ? poly([[uV(yG + g) - IN, yG + g], [uV(yG) + LW * 0.45, yG + g], [uV(yG) + LW * 0.95, yG + g * 1.25], [V.NW + 0.024, V.NY + 0.02], [V.NW - IN, V.NY + 0.02]]) : null;
+    // the upper collar: a band along the neck's edge (the V above the gorge, then the bowl's rim over the shoulders and round the back), in
+    // one piece; `inFrom` is how far in from that edge (m after the stretch). (Standing 12 mm above the rim it rose in points at the shoulders.)
+    const CWD = O.collar ?? 0.032, inFrom = (x, y, z) => { const t = (S.top(x, z) - y) * sy; return z > ZS && y > V.VY ? Math.min(-V.open(Math.abs(x), y), t) : t; };
+    const collar = LW ? (x, y, z, front) => front && y < yG + g * 0.6 ? 1 : (() => { const e = inFrom(x, y, z); return Math.max(e - CWD, -e - IN); })() : null;
     const yF = V.VY - 0.085 / sy, fh = 0.032 / sy, flap = O.pockets !== false ? (u, y) => Math.max(Math.abs(u - 0.082) - 0.028, Math.abs(y - yF + fh / 2) - fh / 2) : null;   // the flaps at the lower button's height
-    const RW = 0.024 / sy;
+    // the shapes' edge at a point (inside < 0): the mesh is cut by it, and the line along the edges is painted by it
+    const edge = (x, y, z) => { const u = Math.abs(x), front = z > ZS + 0.015;
+      return Math.min(front && lapel ? lapel(u, y) : 1, collar ? collar(x, y, z, front) : 1, front && flap ? flap(u, y) : 1); };
     const sdf = (x, y, z) => { const dj = S.solid(x, y, z); if (dj > 0.02) return dj;
-      const u = Math.abs(x), front = z > ZS + 0.015;
-      let s = front ? Math.min(lapel ? lapel(u, y) : 1, collar ? collar(u, y) : 1, flap ? flap(u, y) : 1) : 1;
-      if (LW && z < ZS - 0.015) { const t = S.top(x, z); s = Math.min(s, Math.max(t - RW - y, y - t - 0.004)); }   // the collar's stand round the sides and the back
-      return Math.max(dj - 0.008, -dj - 0.014, s); };   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
-    return { sdf, lo: [-0.2, Math.min(yF - fh, V.VY) - 0.03, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
+      return Math.max(dj - 0.008, -dj - 0.014, edge(x, y, z)); };   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
+    return { sdf, edge, lo: [-0.2, Math.min(yF - fh, V.VY) - 0.03, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
   },
+  // a darker line along the edges: the trim is the jacket's color on the jacket, and the outline draws only the silhouette
+  bands: { keys: ["line"], value: (st) => st.edge, ranges: (O) => O.line === false ? [] : [[-0.0035, 0.05, shade(O.color ?? "#2f3442", 0.5)]] },
   spec: (st, { H, OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: 0.0065, only: TRIM_BONES }),
 });
 
