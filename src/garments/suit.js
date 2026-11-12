@@ -71,7 +71,7 @@ const bellyOf = (OPT) => { const W = OPT.body.adult?.on ? OPT.body.adult.waist ?
 const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/, SKIRT_BONES = /^(hips|spine)/, TRIM_BONES = /^(hips|spine|chest|upperChest|shoulder|neck)/;
 
 definePart({ src: import.meta.url,
-  name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004, thin: "cloth",
+  name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004,   // (thinned as the body: a solid, not a sheet with an inner side)
   defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
@@ -97,7 +97,7 @@ definePart({ src: import.meta.url,
 // the jacket's trim, a mesh of its own 5 mm proud of it (its outline draws the edges: raised on the jacket itself they did not show): the
 // lapels along the V with a notch, the collar above them and round the back of the neck, the pockets' flaps
 definePart({ src: import.meta.url,
-  name: "jacketTrim", path: "outfit.jacket", group: "jacket", colorOf: "jacket", section: SEC, outline: 0.003, thin: "keep",
+  name: "jacketTrim", path: "outfit.jacket", group: "jacket", colorOf: "jacket", section: SEC, outline: 0.003, thin: "keep",   // (thinned, the lapels' edges came out ragged)
   built: (O) => !!O?.on && ((O.lapel ?? 0.036) > 0 || O.pockets !== false),
   build(ctx) {
     const { O, slope } = ctx, S = jacketShape(ctx), { V, ZS } = S, LW = O.lapel ?? 0.036, VH = V.NY - V.VY, uV = (y) => V.NW * (y - V.VY) / VH, sy = slope(V.VY);
@@ -110,10 +110,10 @@ definePart({ src: import.meta.url,
       const u = Math.abs(x), front = z > ZS + 0.015;
       let s = front ? Math.min(lapel ? lapel(u, y) : 1, collar ? collar(u, y) : 1, flap ? flap(u, y) : 1) : 1;
       if (LW && z < ZS - 0.015) { const t = S.top(x, z); s = Math.min(s, Math.max(t - RW - y, y - t - 0.004)); }   // the collar's stand round the sides and the back
-      return Math.max(dj - 0.005, -dj - 0.006, s); };
+      return Math.max(dj - 0.008, -dj - 0.014, s); };   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
     return { sdf, lo: [-0.2, Math.min(yF - fh, V.VY) - 0.03, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
   },
-  spec: (st, { H, OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: Math.min(H * 0.8, 0.0055), only: TRIM_BONES }),
+  spec: (st, { H, OPT }) => ({ sdf: st.sdf, lo: st.lo, hi: [st.hi[0], st.hi[1], st.hi[2] + bellyOf(OPT)], h: 0.0065, only: TRIM_BONES }),
 });
 
 definePart({ src: import.meta.url,
@@ -127,7 +127,7 @@ definePart({ src: import.meta.url,
     if (!B.length) return null;
     return { sdf: (x, y, z) => { let d = 1; for (const q of B) d = Math.min(d, dPrim(q, x, y, z)); return d; }, lo: [-0.02, B.at(-1).cy - 0.02, B[0].cz - 0.05], hi: [0.02, B[0].cy + 0.02, Math.max(...B.map((q) => q.cz)) + 0.02] };
   },
-  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.002, only: /^(hips|spine|chest)/ }),
+  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.003, only: /^(hips|spine|chest)/ }),
 });
 
 definePart({ src: import.meta.url,
@@ -153,7 +153,7 @@ definePart({ src: import.meta.url,
     const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.025 - 0.25 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.06);   // (the neck's own width: wider, it lay over the shoulders above the jacket)
     return { sdf: (x, y, z, B = bodySdf) => Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)), lo: [-0.11, yN - LEN - 0.02, -0.12], hi: [0.11, J.neck[1] + 0.06, 0.2] };
   },
-  spec: (st, { H, B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: Math.min(H * 0.6, 0.004), only: /^(chest|upperChest|neck)/ }),
+  spec: (st, { B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: 0.005, only: /^(chest|upperChest|neck)/ }),
 });
 
 definePart({ src: import.meta.url,
@@ -175,9 +175,9 @@ definePart({ src: import.meta.url,
     const kz = zAt[0];
     const blade = (x, y, z) => { const t = Math.min(1, Math.max(0, (KY - y) / (KY - Y1))), hw = W * (0.55 + 0.45 * t), i = Math.min(NY - 1, Math.floor(t * NY)), f = t * NY - i, cz = zAt[i] * (1 - f) + zAt[i + 1] * f;
       const tip = (Y1 + 1.0 * Math.abs(x)) - y;   // the end cut to a point
-      return smax(Math.max(Math.abs(x) - hw, Math.abs(z - cz) - 0.003), Math.max(y - KY, tip), 0.002); };
+      return smax(Math.max(Math.abs(x) - hw, Math.abs(z - cz) - 0.004), Math.max(y - KY, tip), 0.002); };
     const knot = (x, y, z) => { const q = [x / 0.016, (y - KY) / 0.014, (z - kz) / 0.01]; return (Math.hypot(...q) - 1) * 0.01; };
     return { sdf: (x, y, z) => smin(blade(x, y, z), knot(x, y, z), 0.004), lo: [-0.06, Y1 - 0.02, kz - 0.06], hi: [0.06, KY + 0.03, Math.max(...zAt) + 0.03] };
   },
-  spec: (st, { H }) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: Math.min(H * 0.6, 0.0035), only: /^(spine|chest|upperChest|neck)/ }),
+  spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.005, only: /^(spine|chest|upperChest|neck)/ }),
 });

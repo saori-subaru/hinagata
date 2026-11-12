@@ -704,14 +704,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (let i = 0; i < I.length; i += 3) if (!((coverBits[I[i]] & sig) && (coverBits[I[i + 1]] & sig) && (coverBits[I[i + 2]] & sig))) out.push(I[i], I[i + 1], I[i + 2]);
       coverIdx.set(sig, new THREE.BufferAttribute(new Uint32Array(out), 1)); }
     bodyGeo.setIndex(sig ? coverIdx.get(sig) : fullIdx);
-    if (underIdx) { const on = parts.jacket.m.visible; if (on !== underOn) { underOn = on; shirtGeo.setIndex(on ? underIdx : shirtIdx); } }
+    for (const u of under) { const on = parts[u.by].m.visible; if (on !== u.on) { u.on = on; u.geo.setIndex(on ? u.cut : u.full); } }
   }
-  // the shirt under a jacket: its triangles well inside the jacket are left out while the jacket shows (the arms swinging, it came out white at the armpits)
-  const shirtGeo = parts.shirt.m.geometry, shirtIdx = shirtGeo.index; let underIdx = null, underOn = false;
-  if (cull && garments.jacket && shirtIdx) { const Pa = basePos(shirtGeo), f = garments.jacket.sdf, I = shirtIdx.array, deep = new Uint8Array(Pa.length / 3), out = [];
-    for (let v = 0; v < deep.length; v++) deep[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -COVER_DEPTH ? 1 : 0;
+  // under a jacket: the shirt's triangles well inside it are left out while the jacket shows (the arms swinging, it came out white at the
+  // armpits), and the trim's own back, buried in the jacket (half its triangles); the shirt collar's sides and back, buried in the shirt
+  const under = [];
+  if (cull) for (const [k, by, f, depth] of [["shirt", "jacket", garments.jacket?.sdf, COVER_DEPTH], ["jacketTrim", "jacket", garments.jacket?.sdf, 0.003], ["shirtCollar", "shirt", garments.shirtCollar && fast.shirt, 0.004]]) { const geo = parts[k]?.m.geometry, full = geo?.index; if (!f || !full?.count) continue;
+    const Pa = basePos(geo), I = full.array, deep = new Uint8Array(Pa.length / 3), out = [];
+    for (let v = 0; v < deep.length; v++) deep[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]) < -depth ? 1 : 0;
     for (let i = 0; i < I.length; i += 3) if (!(deep[I[i]] && deep[I[i + 1]] && deep[I[i + 2]])) out.push(I[i], I[i + 1], I[i + 2]);
-    underIdx = new THREE.BufferAttribute(new I.constructor(out), 1); }
+    under.push({ geo, full, by, on: false, cut: new THREE.BufferAttribute(new I.constructor(out), 1) }); }
 
   lap("cover");
   // motion

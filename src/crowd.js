@@ -1,13 +1,13 @@
 // The town's people: recipes for a crowd (passers-by, shop customers), each a body type (body/types.js) dressed. createAvatar(CROWD.police).
 // Plain options of today's version (a bare options object: the current defaults), so merge your own over a copy to vary them
-// (colors, hair). The hair is the solid form ("block"): the locks' physics costs more, and a cap fits over the block only.
+// (colors, hair). Build a crowd at { quality: "lite" } (a salaryman 1.5 万 triangles; an adult's default "fine" 4.4 万). The hair is the solid form ("block"): the locks' physics costs more, and a cap fits over the block only.
 import { BODY_TYPES } from "./body/types.js";
 
 const body = (t) => structuredClone(BODY_TYPES[t].body);
 const MAN_HAIR = { back: "short", bangs: "side", nape: "lie", ahoge: false, backForm: "block", bangsForm: "block" };
 const MAN_FACE = { eyeSize: 0.9, parts: { eyes: "lidded" } };
 const KID_HAIR = { ahoge: false, backForm: "block", bangsForm: "block" };
-const dark = { shoes: { color: "#1c1a1a", soleColor: "#0e0d0d", sole: 0.012, rim: 0.003 }, socks: { color: "#1c1a1a" } };
+const dark = { shoes: { color: "#1c1a1a", soleColor: "#0e0d0d" }, socks: { color: "#1c1a1a" } };
 const suit = (c, tie) => ({ shirt: { color: "#f4f4f0", sleeve: "long", length: "tuck", shirtCollar: { on: true, color: "#f4f4f0" }, tie: { on: true, color: tie } },
   jacket: { on: true, color: c }, pants: { length: "long", color: c, bell: 0.3 }, ...dark });
 
