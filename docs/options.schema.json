@@ -12097,7 +12097,7 @@
   "outfit.jacket.neck": {
    "path": "outfit.jacket.neck",
    "type": "number",
-   "default": 0.05,
+   "default": 0.036,
    "label": {
     "ja": "首元のVの幅",
     "en": "V's width at the neck"

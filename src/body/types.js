@@ -45,23 +45,23 @@ const ADULT = {
 };
 // the grown men (manAdult and the ones made from it): the adult body without a bust, a wider ribcage over a waist that hardly narrows, narrow
 // hips, straight legs; the hips' and thighs' tops under the pelvis (thighTop and hipX: wider, the shorts' mask missed them in holes at the sides)
-const MAN = { adult: ad({ chest: { w: 0.14, d: 0.09 }, waist: { w: 0.108, d: 0.068 }, hips: { w: 0.122, d: 0.066 }, butt: { w: 0.05, d: 0.04 }, legs: { thigh: [0.07, 0.04], shin: [0.036, 0.021], calf: 0.054 } }),
+const MAN = { adult: ad({ chest: { w: 0.124, d: 0.084 }, waist: { w: 0.1, d: 0.064 }, hips: { w: 0.122, d: 0.066 }, butt: { w: 0.05, d: 0.04 }, legs: { thigh: [0.064, 0.036], shin: [0.033, 0.019], calf: 0.05 } }),
   posture: STRAIGHT, joints: { hipY: 0.52, hipX: 0.075, kneeX: 0.09, footX: 0.095 },
-  proportion: { legs: 2.15, torso: 2.0, chest: 0, arms: 1.4, hands: 1.15, feet: 1.15, shoulders: 1.22 }, head: { scale: 0.45, width: 0.95 },
+  proportion: { legs: 2.15, torso: 2.0, chest: 0, arms: 1.4, hands: 1.15, feet: 1.15, shoulders: 1.06 }, head: { scale: 0.46, width: 0.95 },
   torso: { chest: 0.63, belly: 0.6, waist: 0.06, hips: 0.56, bust: 0, butt: 0.672, back: 0.392 },
-  thickness: { upperArm: 0.98, forearm: 0.88, thigh: 0.56, thighTop: 0.55, calf: 0.56 },
-  sculpt: { neck: { width: 0.95 }, shoulders: { drop: 0.02 }, bustX: null, thigh: { topDrop: 0.04 }, legShape: 0.3 } };
+  thickness: { upperArm: 0.8, forearm: 0.75, thigh: 0.5, thighTop: 0.55, calf: 0.5 },
+  sculpt: { neck: { width: 0.84 }, shoulders: { drop: 0.014 }, bustX: null, thigh: { topDrop: 0.04 }, legShape: 0.3 } };
 const man = (o) => ({ ...MAN, ...o, adult: ad({ ...Object.fromEntries(Object.keys(AB).map((k) => [k, { ...MAN.adult[k], ...(o.adult?.[k] ?? {}) }])) }),
   proportion: { ...MAN.proportion, ...o.proportion }, head: { ...MAN.head, ...o.head }, joints: { ...MAN.joints, ...o.joints }, sculpt: { ...MAN.sculpt, ...o.sculpt } });
 const MEN = {
   manAdult: MAN,
   // middle-aged: a round belly out in front (the waist piece forward and deep), everything a little thicker
-  middleAdult: man({ proportion: { legs: 2.05 }, thickness: { upperArm: 1.02, forearm: 0.9, thigh: 0.6, thighTop: 0.6, calf: 0.58 }, sculpt: { neck: { width: 1.02 } },
-    adult: { chest: { w: 0.144, d: 0.096 }, waist: { w: 0.134, d: 0.1, z: 0.05 }, hips: { w: 0.13, d: 0.078 }, butt: { w: 0.055, d: 0.045 }, legs: { thigh: [0.07, 0.04], shin: [0.035, 0.02], calf: 0.052, out: 0.025 } } }),
+  middleAdult: man({ proportion: { legs: 2.05 }, thickness: { upperArm: 0.84, forearm: 0.78, thigh: 0.55, thighTop: 0.6, calf: 0.55 }, sculpt: { neck: { width: 0.92 } },
+    adult: { chest: { w: 0.13, d: 0.092 }, waist: { w: 0.13, d: 0.1, z: 0.05 }, hips: { w: 0.13, d: 0.078 }, butt: { w: 0.055, d: 0.045 }, legs: { thigh: [0.07, 0.04], shin: [0.035, 0.02], calf: 0.052, out: 0.025 } } }),
   // old: shorter and thinner, the head a little bigger, stooped at the back with the knees bent (body.posture: no mesh of its own)
-  elderAdult: man({ proportion: { legs: 1.95, torso: 1.9, shoulders: 1.12 }, head: { scale: 0.48 }, thickness: { upperArm: 0.7, forearm: 0.66, thigh: 0.48, thighTop: 0.52, calf: 0.46 },
+  elderAdult: man({ proportion: { legs: 1.95, torso: 1.9, shoulders: 1 }, head: { scale: 0.49 }, thickness: { upperArm: 0.7, forearm: 0.66, thigh: 0.48, thighTop: 0.52, calf: 0.46 },
     posture: { back: 0.5, knees: 0.12, lookUp: 0.8 },
-    adult: { chest: { w: 0.12, d: 0.08 }, waist: { w: 0.1, d: 0.07, z: 0.035 }, hips: { w: 0.116, d: 0.064 }, butt: { w: 0.042, d: 0.034 }, legs: { thigh: [0.056, 0.032], shin: [0.03, 0.017], calf: 0.042 } } }),
+    adult: { chest: { w: 0.11, d: 0.078 }, waist: { w: 0.1, d: 0.07, z: 0.035 }, hips: { w: 0.116, d: 0.064 }, butt: { w: 0.042, d: 0.034 }, legs: { thigh: [0.056, 0.032], shin: [0.03, 0.017], calf: 0.042 } } }),
   // a sumo wrestler: shorter legs set wide, a huge belly low and forward, broad shoulders (the arms hang outside the belly), thick limbs
   sumoAdult: man({ proportion: { legs: 1.85, shoulders: 1.5, arms: 1.35, hands: 1.25, feet: 1.25 }, head: { scale: 0.5, width: 1 }, joints: { hipX: 0.12, kneeX: 0.13, footX: 0.13 },
     thickness: { upperArm: 1.35, forearm: 1.15, thigh: 1.1, thighTop: 1.1, calf: 1 }, sculpt: { neck: { width: 1.4 }, legShape: 0 },

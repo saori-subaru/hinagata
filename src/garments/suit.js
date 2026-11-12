@@ -15,13 +15,13 @@ const necklineAt = (front, u, y0) => { let y = y0; while (y > y0 - 0.15 && front
 
 // the opening's V: from the neck (half width `neck` there) to the button (y = VY), |x| below this is open in front
 function vShape(O, J, slope) {
-  const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], VY = yH + (O.v ?? 0.42) * (yS - yH), NY = J.neck[1] - 0.01, NW = O.neck ?? 0.05;
+  const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], VY = yH + (O.v ?? 0.42) * (yS - yH), NY = J.neck[1] - 0.01, NW = O.neck ?? 0.036;
   const a = NW / Math.max(0.03, NY - VY), n = Math.hypot(1, a / slope(VY));
   return { VY, NY, NW, open: (u, y) => (a * (y - VY) - u) / n };   // > 0 inside the opening
 }
 
 // the jacket's shapes, shared by its parts (the jacket, its trim, its buttons): made once per body (P) and options
-const SHAPES = new WeakMap();
+const SHAPES = new WeakMap(), ARM_IN = 0.007;
 const BOX = [[-0.75, 0.2, -0.3], [0.75, 0.95, 0.45]];
 function jacketShape({ O, P, J, slope }) {
   const hit = SHAPES.get(P); if (hit && hit.O === O) return hit.S;
@@ -37,11 +37,11 @@ function jacketShape({ O, P, J, slope }) {
     const topAt = (u) => { let y = 0.95; while (y > ua.ay && core(m * u, y, ua.az) - OFF > 0) y -= 0.002; return y; }, r = 0.016;
     const y0 = topAt(sx * 0.45), y1 = topAt(sx + 0.012), yE = y1 + (y0 - 0.03 / sy - y1) * PAD;
     const pad = PAD > 0 && yE > y1 ? C([m * sx * 0.45, y0 - r, ua.az], [m * (sx + 0.004), yE - r, ua.az], r, r, null, 0.02) : null;
-    const el = [f.ax, f.ay, f.az], wr = [f.ax + f.bx, f.ay + f.by, f.az + f.bz], re = f.ra + OFF;
-    return { h: wr, g: [f.bx / n, f.by / n, f.bz / n], pad, tube: C(el, wr, re, Math.max(f.rb + OFF + 0.003, re * 0.8), null, 0.02) }; };
+    const el = [f.ax, f.ay, f.az], wr = [f.ax + f.bx, f.ay + f.by, f.az + f.bz], re = f.ra + OFF - ARM_IN;
+    return { h: wr, g: [f.bx / n, f.by / n, f.bz / n], pad, tube: C(el, wr, re, Math.max(f.rb + OFF - ARM_IN + 0.003, re * 0.8), null, 0.02) }; };
   const SL = side("L"), SR = side("R");
   // the jacket whole: before the opening, the cuffs, the hem and the neck are cut
-  const solid = (x, y, z) => { const A = x > 0 ? SL : SR; let d = core(x, y, z) - OFF;
+  const solid = (x, y, z) => { const A = x > 0 ? SL : SR; let d = core(x, y, z) - OFF + ARM_IN * sstep(0, 0.03, TORSO(x, y, z) - ARM(x, y, z));   // (the sleeves closer to the arms than the body to the torso: at the same 2.4 cm the arms looked heavy)
     if (A.pad) d = smin(d, dPrim(A.pad, x, y, z), 0.025);
     d = smin(d, dPrim(A.tube, x, y, z), 0.012);
     if (y < YC) d += (Math.min(d, smin(TORSO(x, YC, z) - OFF - FLARE * (YC - y), LEGS(x, y, z) - OFF - 0.004, 0.06)) - d) * sstep(YC, YC - 0.04, y);   // (over the thighs' tops too: wider than the pelvis on a man, they came out through the skirt's sides)
@@ -49,7 +49,7 @@ function jacketShape({ O, P, J, slope }) {
     // surface and it stretched into a web when the arm rose
     if (y < YW) { const tb = y < YC ? Math.min(TORSO(x, YC, z), LEGS(x, y, z)) : TORSO(x, y, z); d = Math.max(d, 0.008 * sstep(YW, YW - 0.03, y) - Math.abs(tb - ARM(x, y, z)) / 2); }
     return d; };
-  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.03 + 6 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
+  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.004 + 12 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
   const sdf = (x, y, z) => {
     const u = Math.abs(x), A = x > 0 ? SL : SR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
     const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
@@ -73,7 +73,7 @@ const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/,
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004,   // (thinned as the body: a solid, not a sheet with an inner side)
-  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.05, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
+  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.036, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
     ["color", L("上着の色", "Jacket color"), { when: { ".on": true } }],
@@ -157,10 +157,12 @@ definePart({ src: import.meta.url,
       return (s >= 0) === (t >= 0) && (t >= 0) === (w >= 0) ? -dd : dd; };
     const ZS = J.neck[2] - 0.01, flaps = (x, y, z, B) => Math.max(shirtSdf(x, y, z, B, true, true) - TH - 0.002, z > ZS + 0.02 ? tri(Math.abs(x), y) : 1);
     // the band round the neck: a shell 6–10 mm off the neck, from the shirt's neckline up in front, from the neck's root behind (lower, it lay over the shoulders)
-    const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.025 - 0.25 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.06);   // (the neck's own width: wider, it lay over the shoulders above the jacket)
-    return { sdf: (x, y, z, B = bodySdf) => Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)), lo: [-0.11, yN - LEN - 0.02, -0.12], hi: [0.11, J.neck[1] + 0.06, 0.2] };
+    const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.04 - 0.1 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.06);   // (the neck's own width: wider, it lay over the shoulders above the jacket)
+    return { edge: (x, y, z) => z > ZS + 0.02 ? tri(Math.abs(x), y) : 1, sdf: (x, y, z, B = bodySdf) => Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)), lo: [-0.11, yN - LEN - 0.02, -0.12], hi: [0.11, J.neck[1] + 0.06, 0.2] };
   },
   spec: (st, { B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: 0.005, only: /^(chest|upperChest|neck)/ }),
+  // a grey line along the points' edges: white on the white shirt, they did not show
+  bands: { keys: [], value: (st) => st.edge, ranges: (O) => [[-0.003, 0.004, shade(O.color ?? "#ffffff", 0.72)]] },
 });
 
 definePart({ src: import.meta.url,
@@ -176,7 +178,7 @@ definePart({ src: import.meta.url,
   // the chest's curve in), widening to a pointed end
   build(ctx) {
     const { O, shirtSdf, bodySdf, J } = ctx, front = frontOf(shirtSdf, bodySdf), yN = necklineAt(front, 0, J.neck[1] + 0.02);
-    const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], KY = yN - 0.012, Y1 = Math.max(yH, yN - (O.length ?? 0.3) * (yS - yH)), W = O.width ?? 0.022;
+    const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], KY = yN - 0.004, Y1 = Math.max(yH, yN - (O.length ?? 0.3) * (yS - yH)), W = O.width ?? 0.022;
     const NY = 40, zAt = new Float32Array(NY + 1);
     { let m = -1; for (let i = 0; i <= NY; i++) { const y = KY + (Y1 - KY) * i / NY, f = front(0, y); m = Math.max(m, (f ?? 0.05) + TH + 0.004); zAt[i] = m; } }
     const kz = zAt[0];
