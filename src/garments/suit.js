@@ -50,7 +50,7 @@ function jacketShape({ O, P, J, slope }) {
     // surface and it stretched into a web when the arm rose
     if (y < YW) { const tb = y < YC ? Math.min(TORSO(x, YC, z), LEGS(x, y, z)) : TORSO(x, y, z); d = Math.max(d, 0.008 * sstep(YW, YW - 0.03, y) - Math.abs(tb - ARM(x, y, z)) / 2); }
     return d; };
-  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY - 0.018 + 12 * (x * x + nz * nz) - 0.3 * (nz + 0.05) - 0.1 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there), highest at the back: level, the collar rose in points beside the neck
+  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.014 + 12 * (x * x + nz * nz) - 0.12 * (nz + 0.05) - 0.1 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there), highest at the back: level, the collar rose in points beside the neck
   const sdf = (x, y, z) => {
     const u = Math.abs(x), A = x > 0 ? SL : SR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
     const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
