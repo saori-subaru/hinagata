@@ -50,24 +50,29 @@ function jacketShape({ O, P, J, slope }) {
     // surface and it stretched into a web when the arm rose
     if (y < YW) { const tb = y < YC ? Math.min(TORSO(x, YC, z), LEGS(x, y, z)) : TORSO(x, y, z); d = Math.max(d, 0.008 * sstep(YW, YW - 0.03, y) - Math.abs(tb - ARM(x, y, z)) / 2); }
     return d; };
-  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.014 + 12 * (x * x + nz * nz) - 0.12 * (nz + 0.05) - 0.1 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there), highest at the back: level, the collar rose in points beside the neck
+  // the neck's edge: level round the neck, STAND over where the shoulders meet it, a little higher behind and lower in front. (A bowl,
+  // rising away from the neck, met the jacket low at the middle of the back and high at the sides: the collar sagged in a U behind and
+  // stood in two points beside the neck. Level but lower, it took the shoulders' tops off.)
+  const NK = P.neck?.cloth ?? P.neck, rN = NK ? Math.max(NK.ra, NK.rb) : 0.05, STAND = O.stand ?? 0.008;
+  let yJ = 0.95; while (yJ > 0.6 && core(rN + OFF + 0.012, yJ, J.neck[2]) - OFF > 0) yJ -= 0.002;
+  const top = (x, z) => yJ + STAND - 0.2 * Math.max(0, z - ZS), neckD = NK ? (x, y, z) => dPrim(NK, x, y, z) : () => 1;
   const sdf = (x, y, z) => {
     const u = Math.abs(x), A = x > 0 ? SL : SR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
     const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
     let d = smax(solid(x, y, z), op, 0.004);
     if (Math.hypot(x - A.h[0], y - A.h[1], z - A.h[2]) < 0.1) d = smax(d, cuff, 0.006);   // (only near the wrist: the plane went on through the skirt beside the hand)
     const hem = y < HEM + 0.02 && ARM(x, y, z) < TORSO(x, Math.max(y, YC), z) ? -1 : HEM - y;   // the hem across the torso only: the adult's long arms hang below it
-    return Math.max(d, hem, y - top(x, z)); };
+    return Math.max(d, hem, y - top(x, z), 0.011 - neckD(x, y, z)); };   // (the neck's hole 11 mm round the neck: the shirt's collar shows in it; without it the jacket closed on the neck in a flat cap)
   // the skirt follows the hips alone: built with the wrists beside it (the A-pose), its sides took the forearms' weights and rose with the arms as fins
   const bones = (x, y, z) => y < YC && ARM(x, y, z) > Math.min(TORSO(x, YC, z), LEGS(x, y, z)) ? SKIRT_BONES : JBONES;
   // the fronts' overlap: the upper front's edge runs on from its lapel's fold across the middle and down to the hem, 1.8 cm past the
   // buttons. > 0 on the upper front; the line is painted where it is just over 0. Linear in x, so it stays straight on a thinned mesh's big
   // triangles; at the sides and the back it jumps far from 0 in one cell (a line too thin to see).
-  const LM = O.overlap === "right" ? -1 : 1, lap = (x, y, z) => z > ZS ? LM * x + Math.min(0.018, 2.5 * V.a * (V.VY - y)) : Math.abs(x) + 0.05;
+  const LM = O.overlap === "right" ? -1 : 1, lap = (x, y, z) => z > ZS ? LM * x + (y > V.VY ? 0.8 * V.a * (V.VY - y) : Math.min(0.018, 2.5 * V.a * (V.VY - y))) : Math.abs(x) + 0.05;   // (above the V's point the line runs inside the opening, where there is no jacket: steeper, it crossed the chest to the shoulder)
   // the base height `m` metres (after the stretch) below y: an adult's torso is stretched in a narrow band at the waist (4.7x there, 1x
   // above), so buttons and pockets set by base heights came out far apart and tall
   const down = (y, m) => { for (let left = m; left > 0 && y > 0.2; y -= 0.0005) left -= 0.0005 * slope(y); return y; };
-  const S = { sdf, solid, top, bones, lap, down, V, HEM, ZS, yH, yS: J["upperArm.L"][1] };
+  const S = { sdf, solid, top, neckD, bones, lap, down, V, HEM, ZS, yH, yS: J["upperArm.L"][1] };
   SHAPES.set(P, { O, S }); return S;
 }
 // a polygon's signed distance in (u, y) (inside < 0)
@@ -81,7 +86,7 @@ const JBONES = /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/,
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.004,   // (thinned as the body: a solid, not a sheet with an inner side)
-  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.036, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, overlap: "left", line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
+  defaults: { on: false, color: "#2f3442", v: 0.42, neck: 0.036, lapel: 0.036, hem: 0.075, cutaway: 0.6, offset: 0.024, pad: 0.6, flare: 0.08, collar: 0.032, stand: 0.008, overlap: "left", line: true, pockets: true, buttons: 2, buttonColor: "#15171d" },
   schema: [
     ["on", L("上着(スーツ)", "Jacket (suit)"), { help: L("シャツの上に長袖の上着。前はV字に開いて下は閉じる。シャツは長袖・すそ入れが合う。着たときだけ作る", "a long-sleeved jacket over the shirt, open in a V in front and buttoned below. Goes with a long-sleeved, tucked shirt; built only when worn") }],
     ["color", L("上着の色", "Jacket color"), { when: { ".on": true } }],
@@ -94,6 +99,7 @@ definePart({ src: import.meta.url,
     ["pad", L("肩パッド", "Shoulder pads"), { when: { ".on": true }, min: 0, max: 1.4, step: 0.05, help: L("肩の線を首から腕まで水平に近づける。0 = 体のなで肩のまま", "carries the shoulder line out level from the neck to the arm; 0 = the body's own slope") }],
     ["offset", L("上着の厚み", "Jacket thickness"), { when: { ".on": true }, min: 0.016, max: 0.04, step: 0.001, help: L("体からの浮き(m)。シャツ(1.4cm)とズボンより外に", "how far it stands off the body (m); outside the shirt (1.4 cm) and the pants") }],
     ["overlap", L("合わせ", "Fronts overlap"), { when: { ".on": true }, options: [{ value: "left", label: L("左前(男)", "Left over right (men's)") }, { value: "right", label: L("右前(女)", "Right over left (women's)") }], help: L("どちらの前身頃が上か(着ている人から見て)", "which front lies on top (the wearer's side)") }],
+    ["stand", L("襟の立ち", "Collar stand"), { when: { ".on": true }, min: 0, max: 0.03, step: 0.001, help: L("肩と首の境目から、襟が首に沿ってどれだけ立つか(m)", "how far the collar stands up the neck from where the shoulders meet it (m)") }],
     ["collar", L("上襟の幅", "Collar width"), { when: { ".on": true }, min: 0.015, max: 0.05, step: 0.001, help: L("首のまわりの襟の幅(m)", "the collar round the neck (m)") }],
     ["line", L("縁の線", "Edge lines"), { when: { ".on": true }, type: "boolean", cost: "instant", apply: "setBands", help: L("襟・ポケット・前の合わせの縁に濃い線", "a darker line along the lapels', collar's and flaps' edges and the fronts' overlap") }],
     ["pockets", L("ポケットのふた", "Pocket flaps"), { when: { ".on": true }, type: "boolean" }],
@@ -119,7 +125,7 @@ definePart({ src: import.meta.url,
     // the upper collar: a band along the neck's edge (the V above the gorge, then the bowl's rim over the shoulders and round the back), in
     // one piece; `inFrom` is how far in from that edge (m after the stretch). (Standing 12 mm above the rim it rose in points at the shoulders.)
     const CWD = O.collar ?? 0.032, inFrom = (x, y, z) => { const t = (S.top(x, z) - y) * sy; return z > ZS && y > V.VY ? Math.min(-V.open(Math.abs(x), y), t) : t; };
-    const collar = LW ? (x, y, z, front) => front && y < yG + g * 0.6 ? 1 : (() => { const e = inFrom(x, y, z); return Math.max(e - CWD, -e - IN); })() : null;
+    const collar = LW ? (x, y, z, front) => front && y < yG + g * 0.6 ? 1 : (() => { const e = inFrom(x, y, z); return Math.max(e - CWD, -e - IN, S.neckD(x, y, z) - 0.05 - 1.2 * Math.max(0, z - ZS)); })() : null;   // (round the neck only, wider toward the front where it runs down to the gorge: by its height alone it ran straight across the back)
     // the shapes' edge at a point (inside < 0): the mesh is cut by it, and the line along the edges is painted by it
     const edge = (x, y, z) => { const u = Math.abs(x), front = z > ZS + 0.015;
       return Math.min(front && lapel ? lapel(u, y) : 1, collar ? collar(x, y, z, front) : 1); };
