@@ -8,10 +8,11 @@ const L = (ja, en) => ({ ja, en }), smax = (a, b, k) => -smin(-a, -b, k), SEC = 
 const TH = 0.004;   // how far the collar points and the tie stand off the shirt
 
 // the shirt's front surface (z) at (x, y), or null where there is no shirt (above its neckline)
-const frontOf = (shirtSdf, B) => (x, y) => { if (shirtSdf(x, y, 0.3, B, true) < 0) return 0.3; let lo = -0.05, hi = 0.3; if (shirtSdf(x, y, lo, B, true) > 0) return null;
-  for (let k = 0; k < 26; k++) { const m = (lo + hi) / 2; if (shirtSdf(x, y, m, B, true) < 0) lo = m; else hi = m; } return lo; };
-// the front neckline's height at |x| = u: scanned down from the neck until the shirt is there
-const necklineAt = (front, u, y0) => { let y = y0; while (y > y0 - 0.15 && front(u, y) == null) y -= 0.002; return y; };
+const frontOf = (shirtSdf, B) => (x, y) => { if (shirtSdf(x, y, 0.3, B, true) < 0) return 0.3; let lo = 0.29; while (lo > -0.04 && shirtSdf(x, y, lo, B, true) > 0) lo -= 0.01; if (lo <= -0.04) return null; let hi = lo + 0.01;   // (the front half only: the back of the neckline is higher)
+  for (let k = 0; k < 16; k++) { const m = (lo + hi) / 2; if (shirtSdf(x, y, m, B, true) < 0) lo = m; else hi = m; } return lo; };
+// the front neckline's height at |x| = u: scanned down from above the neck until the shirt is there. (Started 2 cm over the neck joint it
+// started inside a dress shirt, whose neckline is 6 cm over it: the knot and the collar's points hung on the chest.)
+const necklineAt = (front, u, y0) => { let y = y0 + 0.14; while (y > y0 - 0.1 && front(u, y) == null) y -= 0.002; return y; };
 
 // the opening's V: from the neck (half width `neck` there) to the button (y = VY), |x| below this is open in front
 function vShape(O, J, slope) {
@@ -49,7 +50,7 @@ function jacketShape({ O, P, J, slope }) {
     // surface and it stretched into a web when the arm rose
     if (y < YW) { const tb = y < YC ? Math.min(TORSO(x, YC, z), LEGS(x, y, z)) : TORSO(x, y, z); d = Math.max(d, 0.008 * sstep(YW, YW - 0.03, y) - Math.abs(tb - ARM(x, y, z)) / 2); }
     return d; };
-  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY + 0.004 + 12 * (x * x + nz * nz) - 0.25 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there)
+  const top = (x, z) => { const nz = z - J.neck[2]; return V.NY - 0.018 + 12 * (x * x + nz * nz) - 0.3 * (nz + 0.05) - 0.1 * Math.max(0, z - ZS); };   // a bowl round the neck (a level cut took the shoulders' tops off: the shirt showed there), highest at the back: level, the collar rose in points beside the neck
   const sdf = (x, y, z) => {
     const u = Math.abs(x), A = x > 0 ? SL : SR, cuff = (x - A.h[0]) * A.g[0] + (y - A.h[1]) * A.g[1] + (z - A.h[2]) * A.g[2] + 0.02;
     const op = z > ZS ? (y > V.VY ? V.open(u, y) : (CW ? (CW * (HEM + 0.07 - y) - u) / Math.hypot(1, CW) : -1)) : -1;   // the opening (front only)
@@ -123,7 +124,7 @@ definePart({ src: import.meta.url,
     const edge = (x, y, z) => { const u = Math.abs(x), front = z > ZS + 0.015;
       return Math.min(front && lapel ? lapel(u, y) : 1, collar ? collar(x, y, z, front) : 1); };
     const sdf = (x, y, z) => { const dj = S.solid(x, y, z); if (dj > 0.02) return dj;
-      return Math.max(dj - 0.008, -dj - 0.014, edge(x, y, z)); };   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
+      return Math.max(dj - 0.003 - 0.005 * sstep(0, 0.02, inFrom(x, y, z)), -dj - 0.014, edge(x, y, z)); };   // (thinner toward the neck's edge: 8 mm proud there, the collar stood in points beside the neck)   // (buried 14 mm: a plate thinner than two cells came out with its edges worn away; the buried part is not drawn)
     return { sdf, edge, lo: [-0.2, V.VY - 0.06, -0.26], hi: [0.2, V.NY + 0.1, 0.3] };
   },
   // a darker line along the edges: the trim is the jacket's color on the jacket, and the outline draws only the silhouette
@@ -163,7 +164,7 @@ definePart({ src: import.meta.url,
 
 definePart({ src: import.meta.url,
   name: "shirtCollar", path: "outfit.shirt.shirtCollar", group: "shirt", section: SEC, outline: 0.003, thin: "cloth",
-  defaults: { on: false, color: "#ffffff", length: 0.04, spread: 0.05 },
+  defaults: { on: false, color: "#ffffff", length: 0.05, spread: 0.05, stand: 0, leaf: 0.03 },
   schema: [
     ["on", L("ワイシャツの襟", "Shirt collar points"), { help: L("首元に左右2枚のとがった襟。上着やネクタイと合わせる。着たときだけ作る", "two pointed collar flaps at the neck; with a jacket or a tie. Built only when worn") }],
     ["color", L("襟の色", "Collar color"), { when: { ".on": true }, help: L("ふつうはシャツと同じ色", "usually the shirt's color") }],
@@ -173,16 +174,20 @@ definePart({ src: import.meta.url,
   // each flap a triangle on the shirt's front (|x|, y): the neck's edge from the middle out, the point below and out; it stands off the
   // shirt and folds round the neck behind (a band up to the neckline all round)
   build(ctx) {
-    const { O, shirtSdf, bodySdf, J } = ctx, front = frontOf(shirtSdf, bodySdf), yN = necklineAt(front, 0.012, J.neck[1] + 0.02), LEN = O.length ?? 0.04, SP = O.spread ?? 0.05;
-    const P0 = [0.008, yN + 0.004], P1 = [0.05, yN + 0.012], P2 = [SP, yN - LEN];   // inner top, outer top, point
+    const { O, P, shirtSdf, bodySdf, J } = ctx, front = frontOf(shirtSdf, bodySdf), yN = necklineAt(front, 0.012, J.neck[1]), LEN = O.length ?? 0.05, SP = O.spread ?? 0.05, ST = O.stand ?? 0, LEAF = O.leaf ?? 0.03;
+    const NK = P.neck?.cloth ?? P.neck, neck = (x, y, z) => dPrim(NK, x, y, z);   // the neck alone (the body's distance takes the jaw in: the collar came out as a shelf under the chin)
+    const P0 = [0.012, yN + 0.002], P1 = [0.052, yN + 0.008], P2 = [SP, yN - LEN];   // inner top, outer top, point
     const seg = (p, a, b) => { const d = [b[0] - a[0], b[1] - a[1]], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1]) / (d[0] ** 2 + d[1] ** 2))); return Math.hypot(p[0] - a[0] - t * d[0], p[1] - a[1] - t * d[1]); };
     const side = (p, a, b) => (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
     const tri = (u, y) => { const p = [u, y], dd = Math.min(seg(p, P0, P1), seg(p, P1, P2), seg(p, P2, P0)), s = side(p, P0, P1), t = side(p, P1, P2), w = side(p, P2, P0);
       return (s >= 0) === (t >= 0) && (t >= 0) === (w >= 0) ? -dd : dd; };
-    const ZS = J.neck[2] - 0.01, flaps = (x, y, z, B) => Math.max(shirtSdf(x, y, z, B, true, true) - TH - 0.002, z > ZS + 0.02 ? tri(Math.abs(x), y) : 1);
-    // the band round the neck: a shell 6–10 mm off the neck, from the shirt's neckline up in front, from the neck's root behind (lower, it lay over the shoulders)
-    const neckBand = (x, y, z, B) => Math.max(Math.abs(B(x, y, z) - 0.008) - 0.003, (z > ZS ? yN - 0.006 : J.neck[1] - 0.01) - y, y - (J.neck[1] + 0.04 - 0.1 * Math.max(0, z - J.neck[2])), Math.abs(x) - 0.06);   // (the neck's own width: wider, it lay over the shoulders above the jacket)
-    return { edge: (x, y, z) => z > ZS + 0.02 ? tri(Math.abs(x), y) : 1, sdf: (x, y, z, B = bodySdf) => Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)), lo: [-0.11, yN - LEN - 0.02, -0.12], hi: [0.11, J.neck[1] + 0.06, 0.2] };
+    const ZS = J.neck[2] - 0.01, edge = (x, y, z) => Math.min(z > ZS + 0.02 ? tri(Math.abs(x), y) : 1, Math.max(neck(x, y, z) - LEAF, yN - 0.01 - y, z > ZS ? 0.013 - Math.abs(x) : -1));   // (the ring no lower than the front neckline: the neck's root is deep in the back, and it hung down it; open in front for the knot)
+    // the leaf: folded down and lying on the shirt round the neck's root (within LEAF of the neck), with the two points in front. (An adult's
+    // neck shows 2–3 cm: a stand up the neck, as on a real shirt, reached the chin.)
+    const flaps = (x, y, z, B) => Math.max(shirtSdf(x, y, z, B, true, true) - TH - 0.002, edge(x, y, z));
+    // a low stand closing the gap between the neck and the neckline: a shell 4–10 mm off the neck, ST over the shirt
+    const neckBand = (x, y, z, B) => Math.max(Math.abs(neck(x, y, z) - 0.007) - 0.003, -shirtSdf(x, y, z, B, true, true) - 0.006, shirtSdf(x, y, z, B, true, true) - ST - 0.014);
+    return { edge, sdf: (x, y, z, B = bodySdf) => ST > 0 ? Math.min(flaps(x, y, z, B), neckBand(x, y, z, B)) : flaps(x, y, z, B), lo: [-0.12, yN - LEN - 0.02, -0.14], hi: [0.12, yN + 0.09, 0.2] };
   },
   spec: (st, { B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: st.lo, hi: st.hi, h: 0.005, only: /^(chest|upperChest|neck)/ }),
   // a grey line along the points' edges: white on the white shirt, they did not show
@@ -201,15 +206,15 @@ definePart({ src: import.meta.url,
   // the knot under the collar's points, the blade hanging straight down from the furthest forward the shirt reaches above (it doesn't follow
   // the chest's curve in), widening to a pointed end
   build(ctx) {
-    const { O, shirtSdf, bodySdf, J } = ctx, front = frontOf(shirtSdf, bodySdf), yN = necklineAt(front, 0, J.neck[1] + 0.02);
-    const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], KY = yN - 0.004, Y1 = Math.max(yH, yN - (O.length ?? 0.3) * (yS - yH)), W = O.width ?? 0.022;
+    const { O, shirtSdf, bodySdf, J } = ctx, front = frontOf(shirtSdf, bodySdf), yN = necklineAt(front, 0, J.neck[1]);
+    const yS = J["upperArm.L"][1], yH = J["upperLeg.L"][1], KY = yN - 0.012, Y1 = Math.max(yH, yN - (O.length ?? 0.3) * (yS - yH)), W = O.width ?? 0.022;
     const NY = 40, zAt = new Float32Array(NY + 1);
     { let m = -1; for (let i = 0; i <= NY; i++) { const y = KY + (Y1 - KY) * i / NY, f = front(0, y); m = Math.max(m, (f ?? 0.05) + TH + 0.004); zAt[i] = m; } }
     const kz = zAt[0];
     const blade = (x, y, z) => { const t = Math.min(1, Math.max(0, (KY - y) / (KY - Y1))), hw = W * (0.55 + 0.45 * t), i = Math.min(NY - 1, Math.floor(t * NY)), f = t * NY - i, cz = zAt[i] * (1 - f) + zAt[i + 1] * f;
       const tip = (Y1 + 1.0 * Math.abs(x)) - y;   // the end cut to a point
       return smax(Math.max(Math.abs(x) - hw, Math.abs(z - cz) - 0.004), Math.max(y - KY, tip), 0.002); };
-    const knot = (x, y, z) => { const q = [x / 0.016, (y - KY) / 0.014, (z - kz) / 0.01]; return (Math.hypot(...q) - 1) * 0.01; };
+    const knot = (x, y, z) => { const q = [x / 0.016, (y - KY) / 0.014, (z - kz - 0.003) / 0.011]; return (Math.hypot(...q) - 1) * 0.01; };
     return { sdf: (x, y, z) => smin(blade(x, y, z), knot(x, y, z), 0.004), lo: [-0.06, Y1 - 0.02, kz - 0.06], hi: [0.06, KY + 0.03, Math.max(...zAt) + 0.03] };
   },
   spec: (st) => ({ sdf: st.sdf, lo: st.lo, hi: st.hi, h: 0.005, only: /^(spine|chest|upperChest|neck)/ }),
