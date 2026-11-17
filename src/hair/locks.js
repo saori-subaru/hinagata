@@ -14,6 +14,7 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
+const RIGID_HOLD = 0.12;   // hair.rigid 1: the pull toward the rest shape along the whole lock (per step); Sylvie running: the hanging hair 5 mm above its rest on average (0: 4 cm)
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
@@ -375,6 +376,9 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     if (X[j + 1] < floorY + r * SC) X[j + 1] = floorY + r * SC;   // the floor (the avatar's feet)
   }
   const RIG = rigid > 0 ? specs.map((s) => Math.min(1, rigid * (s.rigid ?? 1))) : null, va = new THREE.Vector3(), vb = new THREE.Vector3(), qr = new THREE.Quaternion();
+  // a rigid lock is held toward its rest along all its length (a rope is held only near the root): else the whole lock tilted back in a run
+  // and from the front the hanging hair looked shorter (2026-11-17, Saori: "正面から見たとき後ろ髪が短くなってない？")
+  if (RIG) specs.forEach((s, l) => { for (let i = 2; i < N; i++) K[l * N + i] = Math.max(K[l * N + i], RIGID_HOLD * RIG[l] * stiff * (s.stiff ?? 1)); });
   let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
   function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
     // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
