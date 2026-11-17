@@ -48,6 +48,7 @@ export const CHARACTERS = {
       hair: {
         tail: { kind: "side", y: 1.22, waves: 0.5, tie: { size: 2.2 } },
         rigid: 0.5, lockPoints: 5,
+        paint: { inner: 0.3 },
         sculpt: {
           nendo: {
             tips: [

@@ -195,5 +195,5 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
     if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, ahogeMesh };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, ahogeMesh };
 }

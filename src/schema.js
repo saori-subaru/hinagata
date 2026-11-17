@@ -222,6 +222,7 @@ const MAIN = [
   ["hair.paint.ring.on", L("天使の輪", "Angel ring"), { section: L("塗り", "Paint") }],
   ["hair.paint.ring.color", L("天使の輪の色", "Ring color"), { when: { "hair.paint.ring.on": true },  nullable: true, section: L("塗り", "Paint"), help: L("null = 髪の色から自動", "null = from the hair color") }],
   ["hair.paint.ring.strength", L("天使の輪の濃さ", "Ring strength"), { when: { "hair.paint.ring.on": true }, min: 0, max: 1, step: 0.01, section: L("塗り", "Paint") }],
+  ["hair.paint.inner", L("内側の影", "Inner shade"), { min: 0, max: 0.6, step: 0.01, section: L("塗り", "Paint"), help: L("後ろ髪の毛束の下(後頭部の下側)を暗くする。毛束が捲れても下が地肌や刈り上げに見えない", "darkens the hair under the back locks (the head's low back): lifted, they show shade, not a bald patch or an undercut") }],
 
   // outfit
   ["outfit.shirt.on", L("着る", "Wear"), { section: L("シャツ", "Shirt"), apply: "setWorn" }],

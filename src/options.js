@@ -735,7 +735,8 @@ export const DEFAULTS = {
         "width": 0.05,
         "zig": 0.07,
         "teeth": 30
-      }
+      },
+      "inner": 0
     },
     "bangs": "nendo",
     "drawn": [],
