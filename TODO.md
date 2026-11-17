@@ -1,9 +1,8 @@
 # 宿題 (TODO)
 
-## 形を保つ房（ブランチ claude/zen-mendel-i88qe4、⏳サオリの確認待ち）
-- ✅ 仕組み（hair.rigid / hair.lockPoints、DESIGN.md「Locks that keep their shape」）と、シルヴィのレシピへの組み込み（rigid 1・lockPoints 5）。横髪は耳の前の房をあごまで伸ばし、耳の上の房は耳の高さで止めた（左は右の鏡写し）。
-- ⏳ 横髪の長さを、サオリが三面図と見比べて確かめる。外ハネは強めると耳の上にトゲが出たので、元の弱さのまま。
-- 次: 前髪をとがった厚い房で決まった形に置く（揺らさない）。見本はシルヴィの三面図。
+## 髪の形と揺れ（main に入った）
+- ✅ 形を保つ房（hair.rigid / lockPoints）、後ろ髪を頭に沿わせる（shortLocks.hug / innerHug）、テールの段（tail.tiers / tierFlick）、内側の影（paint.inner）。シルヴィに入れた。
+- 次: 前髪をとがった厚い房で決まった形に置く（揺らさない）。見本はシルヴィの三面図。別ブランチ claude/beautiful-einstein-l1jqua の「層の髪」と重なるので、先にどちらで作るか決める。
 
 ## シルヴィを設定画に寄せる（ブランチ claude/elegant-knuth-sqa257、⏳サオリの確認待ち）
 - 済み: 前で留めるケープ・フード(背中の袋。ふち hoodRim はなし。ふちを付けると襟ぐりに沿ったなだらかな縁と、その内側の肩を覆う裏地)・低く広い襟ぐり(cape.neckOpen、シルヴィは 0.07)・ボタンをつなぐ紐(ボタンは大きめ、垂れるタブと房はマントに沿う)・前の帯の先がすそからはみ出す(dress.tabDrop)、その先の雫の金具・えりぐりとブーツのはき口の三角の切れ込み(shirt.collar.notch / shoes.notch)・ひざの赤みと線(body.knees)・袖口の帯・白いスカート(脇の布が長く、まん中は前だけ短い)とその下を一周のぞくペチコート・ベルトのくびれ・ブーツのベルト・前の柄・ケープのすその模様・白い肌・ブーツの底の穴。設計は DESIGN.md「シルヴィ's design sheet」。
