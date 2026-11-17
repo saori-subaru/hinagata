@@ -436,6 +436,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
+  parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's rim (cape.hood), in the cape's color
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
@@ -617,7 +618,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
-  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape"], armor: ARMOR };
+  const GARMENTS = { shirt: ["shirt"], pants: ["pants"], socks: ["socks"], suit: ["suit"], shoes: ["shoes", "soles", "laces"], cape: ["cape", "hood"], armor: ARMOR };
   for (const p of PARTS) (GARMENTS[p.group] ??= []).push(p.name);   // the garment parts (src/garments) go with their group (the collar and the scarf with the shirt) or are their own
   const outfitOf = (g) => OPT.outfit[g] ?? partOptions(OPT, partNamed(g));   // (a part's own garment: its options, wherever they are)
   const show = (k, on) => { const x = parts[k]; x.on = x.m.visible = x.o.visible = on; };
@@ -899,7 +900,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { OPT.outfit[k].color = c; if (!(DR && (k === "pants" || k === "shirt"))) parts[k].m.material.color.set(c); }
       if (dress !== undefined) OPT.outfit.dress.color = dress;   // null: the shirt's color
       if (DR && (shirt || dress !== undefined)) for (const k of ["shirt", "pants"]) parts[k].m.material.color.set(skirtOf(OPT).color);
-      if (cape) { parts.cape.m.material.color.set(cape); OPT.outfit.cape.color = cape; }
+      if (cape) { parts.cape.m.material.color.set(cape); parts.hood.m.material.color.set(cape); OPT.outfit.cape.color = cape; }
       if (soles) { parts.soles.m.material.color.set(soles); OPT.outfit.shoes.soleColor = soles; }
       if (laces) { parts.laces.m.material.color.set(laces); OPT.outfit.shoes.laceColor = laces; }
       if (armor) { for (const k of ARMOR) if (isMetal(k)) parts[k].m.material.color.set(armor); OPT.outfit.armor.color = armor; }

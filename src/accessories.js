@@ -5,11 +5,11 @@
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
 // Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, cross (an X),
-// tassel and tab (hanging down from where they are put), buckle (a frame), band (a ring around the limb at that
+// tassel and tab (hanging down from where they are put), buckle (a frame), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -63,6 +63,7 @@ const SHAPES = {
     const g = merge(parts); g.translate(0, 0, 0.15); return g; },
   buckle: () => { const box = (p, w, h, r) => { p.moveTo(-w + r, -h); p.lineTo(w - r, -h); p.quadraticCurveTo(w, -h, w, -h + r); p.lineTo(w, h - r); p.quadraticCurveTo(w, h, w - r, h); p.lineTo(-w + r, h); p.quadraticCurveTo(-w, h, -w, h - r); p.lineTo(-w, -h + r); p.quadraticCurveTo(-w, -h, -w + r, -h); return p; };
     const s = box(new THREE.Shape(), 0.5, 0.35, 0.1); s.holes.push(box(new THREE.Path(), 0.3, 0.16, 0.05)); const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
+  cord: () => { const g = new THREE.CapsuleGeometry(0.06, 0.88, 4, 10); g.rotateZ(Math.PI / 2); g.translate(0, 0, 0.06); return g; },
   tab: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.05); s.lineTo(w, 0.05); s.lineTo(w, -1); s.lineTo(0, -0.88); s.lineTo(-w, -1); s.lineTo(-w, 0.05);
     const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across

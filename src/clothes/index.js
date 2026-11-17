@@ -168,8 +168,17 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // or round lobes around it; tiers stack the skirt in steps, each tier flaring out over the top of the next; curl flares the last part out
   // and up (> 0) or draws it in (< 0)
   const HS = SK.hemShape ?? "plain", HN = Math.max(2, Math.round(SK.hemCount ?? 10)), HD = SK.hemDepth ?? 0.05, CURL = SK.curl ?? 0, SPAN = Math.max(0.05, SK_Y0 - SK.hem);
-  const hemAt = (x, dz) => { if (HS !== "zigzag" && HS !== "scallop") return SK.hem; const e = 2 * (((Math.atan2(x, dz) / (2 * Math.PI) + 1) * HN) % 1) - 1;
-    return SK.hem + HD * (HS === "zigzag" ? Math.abs(e) : 1 - Math.sqrt(Math.max(0, 1 - e * e))); };
+  // side panels (skirtOf's sideDrop, sideAt, sideOut; for シルヴィ): the sides hang sideDrop m lower than the middle panels in front and
+  // behind, from sideAt (the sine of the angle round from the middle line) on, standing sideOut m out over them: two layers, a petticoat
+  // showing under the shorter middle ones
+  const SD = SKIRT ? SK.sideDrop ?? 0 : 0, SAT = SK.sideAt ?? 0.4, SOUT = SD > 0 ? SK.sideOut ?? 0.005 : 0, SW = 0.04;
+  const sideOf = (x, dz) => SD > 0 ? sstep(SAT - SW, SAT + SW, Math.abs(x) / (Math.hypot(x, dz) || 1)) : 0;
+  const hemAt = (x, dz) => { const h = SK.hem - SD * sideOf(x, dz); if (HS !== "zigzag" && HS !== "scallop") return h; const e = 2 * (((Math.atan2(x, dz) / (2 * Math.PI) + 1) * HN) % 1) - 1;
+    return h + HD * (HS === "zigzag" ? Math.abs(e) : 1 - Math.sqrt(Math.max(0, 1 - e * e))); };
+  // the hem's cut as a distance: over the panels' step it is steep round the skirt, so divided by its slope there (else 3x too far, and
+  // the mesher's coarse pass skipped the step)
+  const hemCut = (x, y, dz) => { const v = hemAt(x, dz) - y; if (!SD) return v; const r = Math.hypot(x, dz) || 1, u = Math.min(1, Math.max(0, (Math.abs(x) / r - SAT + SW) / (2 * SW)));
+    return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * SW) * Math.abs(dz) / (r * r)); };
   const shapeOut = (y) => { const t = Math.min(1, Math.max(0, (SK_Y0 - y) / SPAN)); let e = CURL * 0.12 * sstep(0.55, 1, t) ** 2;
     return e; };
   // a petticoat (skirtOf's under: m it shows below the hem, for シルヴィ): a pleated layer just inside the skirt from 3 cm over the hem down
@@ -185,12 +194,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
+    if (SD) outer -= SOUT * sideOf(x, dz) + SK.flare * Math.max(0, SK.hem - y) * 0.9;   // side panels: out over the middle ones, flaring on below the middle's hem
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
-    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(hemAt(x, dz) - y), 0.008), y - top);
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -hemCut(x, y, dz), 0.008), y - top);
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
@@ -236,7 +246,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
   const soleSdf0 = PUMPS ? () => 1 : HBOOTS ? (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - 0.004, y - 0.009, -0.007 - y)   // (heel boots: a thin sole, a little wider than the boot, its bottom under the socks' (2.5 mm under the foot): they showed white under it)
-    : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.003 - y);   // (heels: none)
+    : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.007 - y);   // (heels: none) (its bottom under the socks', as the heel boots')
   const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
@@ -281,35 +291,60 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const smax = (a, b, k = 0.02) => -smin(-a, -b, k);
     // the upper arm's outer side at a height (rest pose): its axis, and 7.5 cm round it (the arm, a sleeve, the cape's offset) across the slant
     const UA = J["upperArm.L"], LA = J["lowerArm.L"], armK = (LA[0] - UA[0]) / Math.max(0.05, UA[1] - LA[1]), armX = (y) => UA[0] + armK * (UA[1] - y) + 0.075 * Math.hypot(1, armK);
+    // with a hood the cut round the neck is the hood's (inside its rim), so the collar's line is raised: cut there it laid the shirt's shoulders bare beside the rim
+    const HOOD_UP = 0.025;
     const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0;
-    const top = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x))) : 0);   // the collar a little higher at the back
+    const top = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x))) : 0) + (CA.hood ? HOOD_UP : 0);   // the collar a little higher at the back
     const hemY = (z) => CA.hem + TILT * z;
     const opening = (x, y, z) => Math.max((Math.abs(x) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, 0.02 - z);   // < 0 in the front's opening
-    // cape.hood: a hood lying down. Its rim: a roll round the back of the neck (a torus about the neck's axis, tipped up at the back, thinning
-    // out at the neck's sides). Its body: a second layer on the cape's back (S: the cape's outside), as wide as the shoulders at the collar
-    // and narrowing to a rounded point down the back, puffed in the middle
-    const hood = CA.hood ? (() => {
-      const NK = P.neck, HS = CA.hoodSize ?? 1, yR = CA.collar, zN = NK.az + NK.bz * (yR - NK.ay) / NK.by, Rt = NK.ra + 0.04, rt = 0.017, ca = Math.cos(0.4), sa = Math.sin(0.4);
-      const yT = CA.collar + 0.02, hw = 0.13 * HS, hd = 0.13 * HS;
-      return (x, y, z, S) => {
-        const py = y - yR, pz = z - zN, ry = py * ca + pz * sa, rz = -py * sa + pz * ca;   // in the rim's tipped plane
-        const rim = Math.hypot(Math.hypot(x, rz) - Rt, ry) - rt * (1 - sstep(-0.03, 0.03, rz));
-        const t = Math.min(1, Math.max(0, (yT - y) / hd)), e = Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd);
-        const layer = Math.max(S - 0.008 - 0.014 * Math.max(0, 1 - e * e), -S - 0.002, (e - 1) * Math.min(hw, hd), z + 0.02);
-        return smin(rim, layer, 0.02); };
-    })() : null;
-    const f = (x, y, z, B = bodySdf) => {
+    // the cape's outside before its cuts (S): the cone, and the body pushed out
+    const outside = (x, y, z, B = bodySdf) => {
       const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax1 = ax0 + CA.flare * 0.6 * drop, ax0_ = CLOSED ? smax(ax1, armX(y), 0.03) : ax1, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
       const q = Math.hypot(x / ax, z / az), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
       const mantle = CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);
-      const S = smin(cone, mantle, k), cut = CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y));   // open: the front edge behind the arms below the shoulders
+      return smin(cone, mantle, k); };
+    // cape.hood: a hood lying down. Its rim (its own part, "hood": finer cells than the cloth's, which left it ragged): a roll lying on the cape round the neck, a U on an ellipse from one end of the closure (closed:
+    // beside the middle at cape.close; open: the neck's sides) round the back, standing up behind the neck (taller and thicker there); inside
+    // the U the cape is cut away (the shirt shows between the closure's ends). A rim ending at the neck's sides stood behind it like a screen.
+    // Its body: a second layer on the cape's back (its outside pushed out), as wide as the shoulders at the collar and narrowing to a
+    // rounded point down the back, puffed in the middle
+    const hood = CA.hood ? (() => {
+      const NK = P.neck, HS = CA.hoodSize ?? 1, zAx = (y) => NK.az + NK.bz * (y - NK.ay) / NK.by, a = NK.ra + 0.045, zB = zAx(CA.collar) - NK.ra - 0.03;
+      let XF = a, zF = zAx(CA.collar) + 0.03;   // the U's ends (open: at the neck's sides)
+      if (CLOSED) { XF = NK.ra * 0.95; zF = 0.3; while (zF > 0 && outside(XF, CLOSE, zF) > 0) zF -= 0.001; }   // (closed: on the cape's front at the closure)
+      const c = Math.sqrt(Math.max(0, 1 - (XF / a) ** 2)), b = (zF - zB) / (1 + c), zc = zB + b, PH = Math.PI - Math.asin(Math.min(1, XF / a));   // ellipse: half axes a, b about z = zc; the U from -PH to PH (0 at the back)
+      // the roll's centre line (PX, PY, PZ: on the cape, its radius RR up) and how far it stands up from there (ST: behind the neck)
+      const N = 64, PX = [], PY = [], PZ = [], Y0 = [], RR = [], ST = [];
+      for (let i = 0; i <= N; i++) { const ph = -PH + 2 * PH * i / N, x = a * Math.sin(ph), z = zc - b * Math.cos(ph), back = Math.cos(ph / 2) ** 2;   // back: 1 behind the neck, 0 at the ends
+        let y = top(x, z); while (y > CAPE_Y - 0.12 && outside(x, y, z) > 0) y -= 0.001;   // its foot on the cape (or on its cut top)
+        const r = 0.008 + 0.008 * Math.min(1, 3 * back);
+        PX.push(x); PY.push(y - 0.004 + r); PZ.push(z); Y0.push(y - 0.004); RR.push(r); ST.push(0.03 * back * back * HS); }
+      const yLo = Math.min(...Y0) - 0.03, yHi = Math.max(...PY.map((y, i) => y + ST[i] + RR[i])) + 0.03, xHi = a + 0.03, zLo = zB - 0.03, zHi = zF + 0.03;
+      const footAt = (ph) => { const t = Math.min(N, Math.max(0, (ph + PH) / (2 * PH) * N)), i = Math.min(N - 1, Math.floor(t)), f = t - i; return Y0[i] * (1 - f) + Y0[i + 1] * f; };
+      const yT = footAt(0) + 0.01, hw = 0.13 * HS, hd = 0.13 * HS;   // the body starts under the roll behind the neck (above it, it climbed the neck's back as a board)
+      return { lo: [-xHi, yLo, zLo], hi: [xHi, yHi, zHi],
+        rim: (x, y, z) => { const db = Math.hypot(Math.max(0, Math.abs(x) - xHi), Math.max(0, yLo - y, y - yHi), Math.max(0, zLo - z, z - zHi)); if (db > 0) return db + 0.01;   // (outside its box: a lower bound)
+          let best = 1e9;
+          for (let i = 0; i < N; i++) { const ax = PX[i], ay = PY[i], az = PZ[i], dx = PX[i + 1] - ax, dy = PY[i + 1] - ay, dz = PZ[i + 1] - az;
+            const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy + (z - az) * dz) / (dx * dx + dy * dy + dz * dz || 1))), qx = ax + t * dx, qy = ay + t * dy, qz = az + t * dz;
+            const h = Math.hypot(x - qx, z - qz); if (h - 0.017 > best) continue;
+            const r = RR[i] + (RR[i + 1] - RR[i]) * t, st = ST[i] + (ST[i + 1] - ST[i]) * t, v = y - qy;
+            best = Math.min(best, Math.hypot(h, v > 0 ? Math.max(0, v - st) : v) - r); }   // a roll along the line, standing up st over it
+          return best; },
+        hole: (x, y, z) => Math.max((Math.hypot(x / a, (z - zc) / b) - 1) * Math.min(a, b), footAt(Math.atan2(x / a, -(z - zc) / b)) + 0.004 - y),   // < 0 inside the U, over its foot
+        layer: (x, y, z, S) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)), e = Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd);
+          return Math.max(S - 0.008 - 0.014 * Math.max(0, 1 - e * e), -S - 0.002, (e - 1) * Math.min(hw, hd), z + 0.02, y - yT); } };
+    })() : null;
+    const f = (x, y, z, B = bodySdf) => {
+      const S = outside(x, y, z, B), cut = CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y));   // open: the front edge behind the arms below the shoulders
       const d = Math.max(S, -(S + CA.thick), y - top(x, z), cut, hemY(z) - y);
-      return hood ? smin(d, hood(x, y, z, S), 0.004) : d; };
+      return hood ? Math.max(smin(d, hood.layer(x, y, z, S), 0.004), -hood.hole(x, y, z)) : d; };
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
     f.lo = [-w, Math.min(CA.hem, hemY(-d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED;
+    f.rim = hood ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's rim (parts.js "hood")
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met

@@ -14,7 +14,7 @@ export function skirtOf(OPT) {
   // the hem's shape (2026-10-07, Saori: "スカートやワンピースの先を、おおきなギザギザにしたり、丸っこい段々にしたり、先端を上にカールさせて広げたり、逆にすぼめたり"):
   // hemShape "plain" | "zigzag" | "scallop" (round lobes) | "tiers" (stacked like ruffles), hemCount (around / tiers), hemDepth (m), curl (-1..1: + the hem flares out and up, − draws in)
   const PT = OPT.outfit.pants, D = OPT.outfit.dress, F = OPT.fit ?? {}, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, ...(PT.skirt ?? {}), ...(F.skirtHem != null ? { hem: F.skirtHem } : {}) };   // (OPT.fit: the heights on the adult body, body/index.js adultFit)
-  const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl", "under", "underColor", "underPleats"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, under: 0, underColor: null, underPleats: 24 }[k]]));
+  const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl", "under", "underColor", "underPleats", "sideDrop", "sideAt", "sideOut"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, under: 0, underColor: null, underPleats: 24, sideDrop: 0, sideAt: 0.4, sideOut: 0.005 }[k]]));
   if (D?.on) return { ...base, ...shape(D), hem: F.dressHem ?? D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: F.dressWaist ?? D.waist ?? F.pantsTop ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
   return PT.kind === "skirt" ? { ...base, top: F.pantsTop ?? PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
 }
@@ -554,7 +554,10 @@ export const DEFAULTS = {
       "curl": 0,
       "under": 0,
       "underColor": "#3d6b4f",
-      "underPleats": 24
+      "underPleats": 24,
+      "sideDrop": 0,
+      "sideAt": 0.4,
+      "sideOut": 0.005
     },
     "pants": {
       "texture": {
@@ -592,7 +595,10 @@ export const DEFAULTS = {
         "bandWidth": 0.02,
         "under": 0,
         "underColor": "#3d6b4f",
-        "underPleats": 24
+        "underPleats": 24,
+        "sideDrop": 0,
+        "sideAt": 0.4,
+        "sideOut": 0.005
       },
       "hem": 0.3,
       "offset": 0.011,
