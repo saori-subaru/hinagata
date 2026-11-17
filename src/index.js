@@ -73,8 +73,8 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
-  return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
+  const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair, { knees, ...body } = OPT.body;   // (the gradient and the tails: no mesh of the cache)
+  return { ...rest, body, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
@@ -278,9 +278,32 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
   }
+  // the knees' blush and line (body.knees; for シルヴィ, as on her sheet): per vertex "knee" = (where it is from the nearer kneecap's middle in
+  // the front view, x and y, the vertical as built: a round blush on a stretched leg; how much it faces the front). The distance and the angle
+  // are taken per pixel (taken per vertex, over the thinned mesh's big triangles the line wandered off the circle in dashes). The colors in
+  // the shader (KNEE, instant: setKnees). The line: two short arcs either side under the kneecap, cut crisp from the distance
+  function addKnees(geo) {
+    const Pa = basePos(geo), K = ["L", "R"].map((s) => { const j = J[`lowerLeg.${s}`], y = j[1] + 0.006; let z = j[2]; while (z < j[2] + 0.2 && bodySdf(j[0], y, z) < 0) z += 0.001; return [j[0], y, z, ST.slope(y)]; });
+    const A = new Float32Array(Pa.length);
+    for (let i = 0; i < Pa.length; i += 3) { const x = Pa[i], c = Math.abs(x - K[0][0]) < Math.abs(x - K[1][0]) ? K[0] : K[1], dx = x - c[0], dy = (Pa[i + 1] - c[1]) * c[3];
+      A[i] = dx; A[i + 1] = dy; A[i + 2] = sstep(c[2] - 0.045, c[2] - 0.02, Pa[i + 2]); }
+    geo.setAttribute("knee", new THREE.BufferAttribute(A, 3));
+  }
+  const KNEE = { blush: { value: new THREE.Vector4() }, bc: { value: new THREE.Color() }, line: { value: new THREE.Vector4() }, lc: { value: new THREE.Color() } };   // blush: (on × strength, size); line: (on × strength, width, radius)
+  const kneeColors = () => { const B = OPT.body.knees?.blush ?? {}, Ln = OPT.body.knees?.line ?? {};
+    KNEE.blush.value.set(B.on ? B.strength ?? 0.3 : 0, B.size ?? 0.035, 0, 0); KNEE.bc.value.set(B.color ?? "#ff8a73");
+    KNEE.line.value.set(Ln.on ? Ln.strength ?? 0.55 : 0, Ln.width ?? 0.0016, Ln.radius ?? 0.02, 0); KNEE.lc.value.set(Ln.color ?? "#c98a80"); };
+  kneeColors();
   const shadeToon = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    sh.vertexShader = "attribute vec3 paint;\nvarying vec3 vPaint;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint;");
-    sh.fragmentShader = "varying vec3 vPaint;\n" + sh.fragmentShader.replace("#include <color_fragment>", "#include <color_fragment>\n  diffuseColor.rgb *= vPaint;"); }; return withShadeN(m); };
+    Object.assign(sh.uniforms, { kBlush: KNEE.blush, kBC: KNEE.bc, kLine: KNEE.line, kLC: KNEE.lc });
+    sh.vertexShader = "attribute vec3 paint;\nattribute vec3 knee;\nvarying vec3 vPaint;\nvarying vec3 vKnee;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint; vKnee = knee;");
+    sh.fragmentShader = "varying vec3 vPaint;\nvarying vec3 vKnee;\nuniform vec4 kBlush, kLine;\nuniform vec3 kBC, kLC;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  diffuseColor.rgb *= vPaint;
+  float kr = length(vKnee.xy);
+  if (kBlush.x > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, kBC, kBlush.x * exp(-kr * kr / (kBlush.y * kBlush.y)) * vKnee.z);
+  if (kLine.x > 0.0) { float d = abs(kr - kLine.z), w = fwidth(kr) * 0.7 + 1e-6, a = atan(vKnee.y, vKnee.x);
+    float arcs = smoothstep(-3.0, -2.8, a) * (1.0 - smoothstep(-2.05, -1.85, a)) + smoothstep(-1.3, -1.1, a) * (1.0 - smoothstep(-0.35, -0.15, a));
+    diffuseColor.rgb = mix(diffuseColor.rgb, kLC, kLine.x * arcs * vKnee.z * (1.0 - smoothstep(kLine.y * 0.5 - w, kLine.y * 0.5 + w, d))); }`); }; return withShadeN(m); };
 
   lap("setup");
   // build in workers: the body and the hair at once, then the clothes (they read the body's grid, so the result is the same as here).
@@ -405,7 +428,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
-  addPaint(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin); paintable(parts.body, "body");
+  addPaint(parts.body.m.geometry); addKnees(parts.body.m.geometry); parts.body.m.material.dispose(); parts.body.m.material = parts.body.toonMat = shadeToon(OPT.colors.skin); paintable(parts.body, "body");
   const SKO = skirtOf(OPT);   // a skirt or a dress's skirt (options.js), or null
   parts.shirt = skinned(meshPart("shirt"), SKO?.dress ? SKO.color : OPT.outfit.shirt.color, 0.005, "shirt");   // a dress: the top is the dress's color too
   parts.pants = skinned(meshPart("pants"), SKO?.color ?? OPT.outfit.pants.color, 0.005, SKO ? null : "pants");   // a skirt moves as cloth (its normals too): it keeps the mesh's own
@@ -940,6 +963,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
+    /** The knees' blush and line (instant): { blush: { on, color, strength, size }, line: { on, color, strength, width, radius } }. */
+    setKnees({ blush, line } = {}) { const K = (OPT.body.knees ??= { blush: {}, line: {} }); if (blush) Object.assign(K.blush ??= {}, blush); if (line) Object.assign(K.line ??= {}, line); kneeColors(); },
     setBlush({ cheeks, nose } = {}) { if (cheeks) Object.assign(OPT.face.blush.cheeks, cheeks); if (nose) Object.assign(OPT.face.blush.nose, nose); avatar.drawFace(); },
     /** Rebuild the hair: pick = { bangs, back, ahoge, bangsForm, backForm, nape } (as options.hair; any of them). Kept in options.hair. */
     setHair(pick) {

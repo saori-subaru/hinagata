@@ -180,6 +180,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the mesher's coarse pass skipped the step)
   const hemCut = (x, y, dz) => { const v = hemAt(x, dz) - y; if (!SD || (!MB && dz < 0)) return v; const r = Math.hypot(x, dz) || 1, u = Math.min(1, Math.max(0, (Math.abs(x) / r - SAT + SW) / (2 * SW)));
     return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * SW) * Math.abs(dz) / (r * r)); };
+  // front tabs (skirtOf's tabDrop, tabAt, tabWidth; for シルヴィ's straps' ends): two pointed tabs of the skirt hanging tabDrop below the hem
+  // in front, tabAt out from the middle; as a distance in the front view (x, y), < 0 inside. Below the hem they lie on the petticoat and
+  // take its color (bands by the plain hem): a print on the front shows on them
+  const TD = SKIRT ? SK.tabDrop ?? 0 : 0, TA = SK.tabAt ?? 0.1, TW = (SK.tabWidth ?? 0.04) / 2, TP = Math.min(TD, TW * 0.6), TN = Math.hypot(TW, TP);   // TP: the point's height
+  const tabCut = (x, y, dz) => { if (!TD || dz <= 0) return 1; const u = Math.abs(Math.abs(x) - TA), h = hemAt(Math.sign(x) * TA, dz), tip = h - TD;
+    return Math.max(u - TW, y - h - 0.02, (u * TP - (y - tip) * TW) / TN); };
   const shapeOut = (y) => { const t = Math.min(1, Math.max(0, (SK_Y0 - y) / SPAN)); let e = CURL * 0.12 * sstep(0.55, 1, t) ** 2;
     return e; };
   // a petticoat (skirtOf's under: m it shows below the hem, for シルヴィ): a pleated layer just inside the skirt from 3 cm over the hem down
@@ -202,7 +208,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
-    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -hemCut(x, y, dz), 0.008), y - top);
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(TD ? Math.min(hemCut(x, y, dz), tabCut(x, y, dz)) : hemCut(x, y, dz)), 0.008), y - top);
     // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
     const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
     for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
