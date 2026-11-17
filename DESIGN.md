@@ -884,6 +884,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 - The shin narrowed to 0.045 at the ankle: too sudden. 0.05, and an instep: one capsule from the ankle joint (as thick as the leg there) down to the top of the forefoot, so the leg runs into the foot as one slope. Its top stays at the ankle when the feet are resized (a small foot came apart from the leg: every foot part shrank toward a point on the floor, away from the ankle).
 - The heel stood out too far behind: its back at −0.059 (was −0.064), a little rounder blend.
 - The sole is flat: the foot's parts reach 4 mm under the floor and FOOT_FLAT (a plane cut, y −0.003) cuts them level.
+- A shoe's sole (not heels or heel boots) is built from its shape (clothes/index.js `soleMesh`): its outline traced by rays at 5 heights, bands and two caps, 800 triangles a pair at every quality (from the grid 3,200 at fine). It goes through the build kit (index.js `kit.clothes`): a part's `make` missing there is built by the workers from the grid.
 - weapon.sheath shows or hides the belt and the scabbard at once (avatar.setSheath; they are built whenever a sword or a greatsword is held).
 
 ### Swings that reach the one in front; a dagger; the waistband off the sleeves (2026-10-07, Saori: "剣も斧も正面にいる相手を斬りつける動きになっていない … 同じくらいの大きさの敵キャラが目の前にいると想定"; "振り上げた時の肘の曲がり方がおかしい"; "槍は…左手が持ててない"; "ワンピースを着た時のウエストの段が悪化 / 長袖で肘に変な盛り上がり")

@@ -292,6 +292,29 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
   const soleSdf0 = PUMPS ? () => 1 : HBOOTS ? (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - 0.004, y - 0.009, -0.007 - y)   // (heel boots: a thin sole, a little wider than the boot, its bottom under the socks' (2.5 mm under the foot): they showed white under it)
     : (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - SHOE.rim, y - (-0.003 + SHOE.sole), -0.007 - y);   // (heels: none) (its bottom under the socks', as the heel boots')
+  // a flat sole built from its shape (parts.js "soles"): its outline traced by rays at 5 heights, the bands between them and a cap at
+  // each end, ~600 triangles a pair at every quality (from the grid: 3,200 at fine)
+  const soleMesh = PUMPS || HBOOTS || HB ? null : () => {
+    const y0 = -0.007, y1 = -0.003 + SHOE.sole, YS = [0, 0.25, 0.5, 0.75, 1].map((t) => y0 + (y1 - y0) * t), K = 40, P = [], T = [];
+    const add = (p) => (P.push(p), P.length - 1), ym = (y0 + y1) / 2;
+    for (const sx of [1, -1]) {
+      let n = 0, mx = 0, mz = 0; for (let x = 0; x <= 0.24; x += 0.004) for (let z = -0.16; z <= 0.22; z += 0.004) if (soleSdf0(sx * x, ym, z) < 0) { n++; mx += x; mz += z; }
+      if (!n) continue; const cx = sx * mx / n, cz = mz / n;
+      const edge = (y, th) => { const dx = Math.cos(th), dz = Math.sin(th), g = (r) => soleCore(cx + dx * r, y, cz + dz * r) - SHOE.off - SHOE.rim; let a = 0, b = 0.005;
+        while (b < 0.3 && g(b) < 0) { a = b; b += 0.005; } for (let i = 0; i < 18; i++) { const c = (a + b) / 2; if (g(c) < 0) a = c; else b = c; } return [cx + dx * a, y, cz + dz * a]; };
+      const rings = YS.map((y) => Array.from({ length: K }, (_, k) => edge(y, (k / K) * 2 * Math.PI)));
+      const side = rings.map((r) => r.map(add));
+      for (let j = 0; j + 1 < YS.length; j++) for (let k = 0; k < K; k++) { const k1 = (k + 1) % K; T.push([side[j][k], side[j + 1][k], side[j + 1][k1]], [side[j][k], side[j + 1][k1], side[j][k1]]); }
+      for (const [j, y] of [[0, y0], [YS.length - 1, y1]]) { const c = add([cx, y, cz]), cap = rings[j].map(add); for (let k = 0; k < K; k++) T.push([c, cap[k], cap[(k + 1) % K]]); } }
+    // each triangle faced away from the middle (along the sole's gradient); the caps' own points keep the edges sharp
+    const pos = new Float32Array(P.length * 3), nor = new Float32Array(P.length * 3), idx = [], e = 0.001; P.forEach((p, i) => pos.set(p, i * 3));
+    for (const [a, b, c] of T) { const A = P[a], B = P[b], Cc = P[c], u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], w = [Cc[0] - A[0], Cc[1] - A[1], Cc[2] - A[2]];
+      const nn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], m = [(A[0] + B[0] + Cc[0]) / 3, (A[1] + B[1] + Cc[1]) / 3, (A[2] + B[2] + Cc[2]) / 3];
+      const f = (x, y, z) => soleSdf0(x, y, z), g = [f(m[0] + e, m[1], m[2]) - f(m[0] - e, m[1], m[2]), f(m[0], m[1] + e, m[2]) - f(m[0], m[1] - e, m[2]), f(m[0], m[1], m[2] + e) - f(m[0], m[1], m[2] - e)];
+      const s = nn[0] * g[0] + nn[1] * g[1] + nn[2] * g[2] < 0 ? -1 : 1; idx.push(...(s < 0 ? [a, c, b] : [a, b, c]));
+      for (const v of [a, b, c]) for (let q = 0; q < 3; q++) nor[v * 3 + q] += nn[q] * s; }
+    for (let v = 0; v < P.length; v++) { const l = Math.hypot(nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]) || 1; for (let q = 0; q < 3; q++) nor[v * 3 + q] /= l; }
+    return { pos, nor, idx: new Uint32Array(idx) }; };
   const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
@@ -475,6 +498,6 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
   // there in one mesh and tore apart walking
   const apart = (f) => (x, y, z) => Math.max(f(x, y, z), 0.004 - Math.abs(x));
-  return { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+  return { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), soleMesh, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
     garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)) }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

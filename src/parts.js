@@ -69,7 +69,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, kit, bodyAt = n
     case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: sided(/^foot/) }   // thin: their own fine grid
       : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
     case "soles": return OPT.outfit.shoes.kind === "heelBoots" ? { sdf: C.soleSdf, lo: [foot0[0], -0.1, foot0[2]], hi: [0.22, 0.04, 0.14], h: H * 0.6, only: sided(/^foot/) }   // heel boots: the heels (below the floor in the rest pose) are the soles'
-      : { sdf: C.soleSdf, lo: foot0, hi: [0.22, Math.max(0.03, (OPT.outfit.shoes.sole ?? 0.02) + 0.01), 0.14], h: H * 0.6, only: sided(/^foot/) };
+      : { sdf: C.soleSdf, lo: foot0, hi: [0.22, Math.max(0.03, (OPT.outfit.shoes.sole ?? 0.02) + 0.01), 0.14], h: H * 0.6, only: sided(/^foot/), make: C.soleMesh };   // (made from its shape: clothes/index.js)
     // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
     case "armorChest": return C.armor.helmSdf ? { sdf: C.armor.chestSdf, lo: [-0.3, 0.38, -0.26], hi: [0.3, 0.82, 0.28], h: H * 0.8, only: /^(hips|spine|chest|upperChest)/ }
       : { sdf: C.armor.chestSdf, lo: [-0.26, 0.47, -0.22], hi: [0.26, 0.76, 0.26], h: H * 0.8, only: /^(spine|chest|upperChest)/ };
