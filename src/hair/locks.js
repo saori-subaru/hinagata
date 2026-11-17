@@ -68,11 +68,13 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04 - (E.dy ?? 0));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
     specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0), hold: layer ? INNER_HOLD : 1, rigid: layer ? INNER_RIGID : 1,   // rise: it gets its thickness gently (no ridge at the root)
-      group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45 });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
+      group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45, hugW: sstep(0.2, 0.7, -Math.cos(th)) });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
   }
   // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
   const keepOut = (p, i) => { const r = 0.004; pushOutEllipsoid(p, ellipsoid.c, ellipsoid.r, r); for (const c of coll) pushOutSphere(p, c.c, c.r + r); };
-  return specs.map((s) => { let pts = drape(s, coll, ellipsoid, N, s.layer ? innerHugY : hugY);   // innerHugY: the inner layer down to its own height
+  // hugY / innerHugY (the inner layer): the locks lie on the head down to there, fully at the back, not at all at the sides (hugW): the nape
+  // hugs while the sides keep standing out (hugged all round, the sides came in and the hair's outline shrank to a ball)
+  return specs.map((s) => { const hy = s.layer ? innerHugY : hugY; let pts = drape(s, coll, ellipsoid, N, hy == null ? null : hy + (1 - s.hugW) * Math.max(0, s.root[1] - hy));
     if (s.fl) pts = bendLock(pts, s.fl, { center, keepOut });
     return { ...s, pts }; });
 }
