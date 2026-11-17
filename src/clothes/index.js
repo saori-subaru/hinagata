@@ -52,10 +52,16 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   // the bell sleeve: a shell around the forearm from the elbow (as wide as the sleeve) to the cuff, open there. It hangs: the bell's middle
   // drops below the arm toward the cuff, and its lower side reaches further (a slanted opening that shows from the front)
-  const bellShell = (x, y, z, A) => { const t = (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz, px = x - A.fx - t * A.gx, py = y - A.fy - t * A.gy, pz = z - A.fz - t * A.gz;
+  const bellAt = (x, y, z, A) => { const t = (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz, px = x - A.fx - t * A.gx, py = y - A.fy - t * A.gy, pz = z - A.fz - t * A.gz;
     const u = Math.min(1, Math.max(0, t / A.Lf)), c = BELL * 0.6 * u * u, s = px * A.dx + py * A.dy + pz * A.dz;   // s: how far below the arm (across it)
     const cone = (Math.hypot(px - c * A.dx, py - c * A.dy, pz - c * A.dz) - (0.042 + BELL * Math.pow(u, 1.6))) * 0.85;
-    return Math.max(cone, -(cone + 0.014), t - (A.Lf + 0.01 + 0.7 * Math.max(0, s)), -t); };
+    return [cone, t - (A.Lf + 0.01 + 0.7 * Math.max(0, s)), t]; };   // its outside, the opening's cut, how far down the forearm
+  const bellShell = (x, y, z, A) => { const [cone, end, t] = bellAt(x, y, z, A); return Math.max(cone, -(cone + 0.014), end, -t); };
+  // each bell as a sheet (sdf/sheet.js), from 3 cm up inside the sleeve (its top hidden there) to the opening: joined to the shirt, which is
+  // then meshed without them at its own cells (index.js withParts; at the bells' 7.4 mm cells the whole shirt was 37,000 triangles)
+  const bellSheets = BELL ? ARMS.map((A) => { const R = 0.042 + 1.6 * BELL + 0.04, e = A.Lf + 0.04 + 0.7 * R, ends = [[A.fx - 0.04 * A.gx, A.fy - 0.04 * A.gy, A.fz - 0.04 * A.gz], [A.fx + e * A.gx, A.fy + e * A.gy, A.fz + e * A.gz]];
+    return { o: (x, y, z) => bellAt(x, y, z, A)[0], tk: 0.014, cut: (x, y, z) => { const b = bellAt(x, y, z, A); return Math.max(b[1], -b[2] - 0.03); },
+      lo: [0, 1, 2].map((k) => Math.min(ends[0][k], ends[1][k]) - R), hi: [0, 1, 2].map((k) => Math.max(ends[0][k], ends[1][k]) + R) }; }) : null;
   // which arm's bell a point of the shirt belongs to ("L" / "R"), or null: on the bell's surface and off the body (the shirt's own side is
   // 1.4 cm off it). For the skin weights: the bell's lower side hangs by the hips, and following them it stretched into a web from the waist
   // to the arm when the arms went up (2026-10-05, Saori: "Tポーズで袖の裾が腰に張り付いてる")
@@ -199,11 +205,16 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // color is the skirt's bands below the hem (index.js, by skirtHem: the hem's height, base, at a point's angle)
   // (1 cm inside the skirt and as thick: thinner than its cells' 0.45 × it came out ragged under the hem)
   const PETTI = SKIRT && (SK.under ?? 0) > 0 ? (() => { const UP = SK.underPleats ?? 24, Y1 = SK.hem - SK.under, tk = SK.thick * Math.hypot(1, SK.flare);
-    return (x, y, z) => { const drop = Math.max(0, SK_Y0 - y), dz = z - SK_ZC, th = Math.atan2(x / (SK_AX + SK.flare * drop), dz / (SK_AZ + SK.flare * 0.8 * drop));
-      const o = DRAPE(x, y, z) - SK.flare * Math.max(0, SK.hem - y) * 0.9 + 0.01 + 0.008 * Math.abs(Math.sin(th * UP / 2)) * sstep(SK.hem + 0.02, Y1, y);
-      return Math.max(-smin(-Math.max(o, -(o + tk)), -(Y1 - y), 0.008), y - SK.hem - 0.03); }; })() : null;
+    const out = (x, y, z, flat = 0) => { const drop = Math.max(0, SK_Y0 - y), dz = z - SK_ZC, th = Math.atan2(x / (SK_AX + SK.flare * drop), dz / (SK_AZ + SK.flare * 0.8 * drop));
+      return DRAPE(x, y, z) - SK.flare * Math.max(0, SK.hem - y) * 0.9 + 0.01 + 0.008 * Math.abs(Math.sin(th * UP / 2)) * sstep(SK.hem + 0.02, Y1, y) * (1 - flat); };
+    const f = (x, y, z) => { const o = out(x, y, z); return Math.max(-smin(-Math.max(o, -(o + tk)), -(Y1 - y), 0.008), y - SK.hem - 0.03); };
+    // as a sheet: 7 mm thick (in the skirt's cloth over the hem, its top out of sight from inside too; as thick as the skirt, its rim stood 1 cm
+    // proud of the skirt's inside in a line), and flat under the front tabs: the straps' ends are printed there. As sheets the tabs, standing
+    // apart from it, were framed in outlines (the shapes merged in one distance had no edge there; Saori: "縦帯の下に緑の影")
+    f.sheet = { o: (x, y, z) => out(x, y, z, TD && z - SK_ZC > 0 ? sstep(0.012, 0, tabCut(x, y, z - SK_ZC)) : 0), tk: 0.007, cut: (x, y, z) => Math.max(Y1 - y, y - SK.hem - 0.03) }; return f; })() : null;
   const skirtSdf = (x, y, z, B = bodySdf) => { const d = skirtSdf0(x, y, z, B); return PETTI ? smin(d, PETTI(x, y, z), 0.005) : d; };
-  function skirtSdf0(x, y, z, B = bodySdf) {
+  // the skirt's outer side (< 0 inside; the cloth between it and -tk) and its thickness there
+  function skirtOuter(x, y, z, B = bodySdf) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
@@ -211,16 +222,30 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (CINCH) outer += CINCH * Math.exp(-(((y - CINCH_AT) / 0.035) ** 2));   // drawn in round cinchAt (a belt), smoothly: no step
     if (TD && dz > 0 && y < SK.hem + 0.01) { const tc = tabCut(x, y, dz); if (tc < 0.004) { const h = hemAt(Math.sign(x) * TA, dz); outer += 0.01 * sstep(h, h - TD, y) * sstep(0.004, 0, tc); } }   // the tabs sink toward their tips
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
-    const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
-    const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
+    return outer; }
+  const skirtTk = (y) => { const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
+    return SK.thick * Math.hypot(1, slope); };
+  const skirtTop = (z) => SK_Y0 - SK_TILT * z, skirtCut = (x, y, z) => { const dz = z - SK_ZC; return TD ? Math.min(hemCut(x, y, dz), tabCut(x, y, dz)) : hemCut(x, y, dz); };
+  // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline):
+  // tier i's outside, top and bottom
+  const tierOf = (i, y) => { const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN, l = Math.min(1, Math.max(0, t * n - i));
+    return { off: HD * (0.8 * i + 0.9 * l) * 0.9, yTop: i ? SK_Y0 - SPAN * i / n + 0.012 : Infinity, yBot: SK_Y0 - SPAN * (i + 1) / n }; };
+  function skirtSdf0(x, y, z, B = bodySdf) {
+    const dz = z - SK_ZC, top = skirtTop(z), outer = skirtOuter(x, y, z, B), tk = skirtTk(y), shell = (o) => Math.max(o, -(o + tk));
     // the hem's edge rounded (HR, m): cut square through the thin shell it meshed in steps, and the outline stood out of the steps in black
     // slivers (2026-10-09, Saori: "裾の黒いの"; worst at the scallops' notches)
-    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -(TD ? Math.min(hemCut(x, y, dz), tabCut(x, y, dz)) : hemCut(x, y, dz)), 0.008), y - top);
-    // tiers: a shell each, flaring out within it, its top tucked 1.2 cm up under the one above, so each tier has its own hem edge (and outline)
-    const n = Math.min(5, HN), t = (SK_Y0 - y) / SPAN; let d = 1e9;
-    for (let i = 0; i < n; i++) { const l = Math.min(1, Math.max(0, t * n - i)), o = outer - HD * (0.8 * i + 0.9 * l) * 0.9, yTop = i ? SK_Y0 - SPAN * i / n + 0.012 : top, yBot = SK_Y0 - SPAN * (i + 1) / n;
-      d = Math.min(d, Math.max(shell(o), y - Math.min(top, yTop), yBot - y)); }
+    if (HS !== "tiers") return Math.max(-smin(-shell(outer), -skirtCut(x, y, z), 0.008), y - top);
+    let d = 1e9;
+    for (let i = 0, n = Math.min(5, HN); i < n; i++) { const T = tierOf(i, y); d = Math.min(d, Math.max(shell(outer - T.off), y - Math.min(top, T.yTop), T.yBot - y)); }
     return d; };
+  // the skirt as sheets (sdf/sheet.js: each made through its middle, then given both sides): the skirt (or its tiers) and the petticoat.
+  // h: their cells at most a quarter of a pleat round the hem. Deep pleats close together (the forest's 44, 2.2 cm deep, 3.6 cm apart, in
+  // 2 cm cloth) are no sheet: its sides, pushed out, crossed inside each fold in holes. Such a skirt is meshed as a distance (null)
+  const pleatCell = (n, depth) => { const d = SK_Y0 - SK.hem; return n > 0 && depth > 0.003 ? 2 * Math.PI * Math.min(SK_AX + SK.flare * d, SK_AZ + SK.flare * 0.8 * d) / n / 4 : Infinity; };
+  const skirtSheets = SKIRT && pleatCell(SK.pleats, SK.pleatDepth) >= 0.0095 ? (B = bodySdf) => [
+    ...(HS !== "tiers" ? [{ o: (x, y, z) => skirtOuter(x, y, z), of: (x, y, z) => skirtOuter(x, y, z, B), tk: (x, y, z) => skirtTk(y), h: pleatCell(SK.pleats, SK.pleatDepth), cut: (x, y, z) => Math.max(hemCut(x, y, z - SK_ZC), y - skirtTop(z)) }]   // (the front tabs: the petticoat's)
+      : Array.from({ length: Math.min(5, HN) }, (_, i) => ({ o: (x, y, z) => skirtOuter(x, y, z) - tierOf(i, y).off, of: (x, y, z) => skirtOuter(x, y, z, B) - tierOf(i, y).off, tk: (x, y, z) => skirtTk(y), h: pleatCell(SK.pleats, SK.pleatDepth), cut: (x, y, z) => { const T = tierOf(i, y); return Math.max(y - Math.min(skirtTop(z), T.yTop), T.yBot - y); } }))),
+    ...(PETTI ? [{ ...PETTI.sheet, h: pleatCell(SK.underPleats ?? 24, 0.008) }] : [])] : null;
   const pantsSdf = SKIRT ? skirtSdf : pantsShape;   // シャツより少し外側。上の口は後ろ上がり   // シャツより少し外側。上の口は後ろ上がり
   // 靴: 足とくるぶしを包むスニーカー。甲(色つき)と底(白いゴム)の2つ。足の裏の高さはそのまま(地面にめりこまない)
   const SHOE = { off: OPT.outfit.shoes.offset, top: OPT.outfit.shoes.top, tilt: OPT.outfit.shoes.tilt, sole: OPT.outfit.shoes.sole, rim: OPT.outfit.shoes.rim };   // 足からの浮き / はき口の高さ / はき口の傾き / 底の厚み / 底のはみ出し
@@ -395,12 +420,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
             const beyond = Math.max(0, -s, s - 1) * Math.sqrt(ll) - (i === 0 && s < 0 || i === M - 2 && s > 1 ? 0 : 0.004);   // a little past each piece's ends (none at the line's own ends)
             best = Math.min(best, Math.max((n - Fa) / Math.hypot(1, 2 * k * a), a - (WO[i] * w + WO[i + 1] * t), -a - (WI[i] * w + WI[i + 1] * t), NIN - n, beyond)); }
           return smin(best, lining(x, y, z), 0.006); },
-        layer: (x, y, z, S) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)), e = Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd);
-          return Math.max(S - 0.008 - 0.014 * Math.max(0, 1 - e * e), -S - 0.002, (e - 1) * Math.min(hw, hd), z + 0.02, y - yT); } };
+        layer: (x, y, z, S, deep = 0.002) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)), e = Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd);
+          return Math.max(S - 0.008 - 0.014 * Math.max(0, 1 - e * e), -S - deep, (e - 1) * Math.min(hw, hd), z + 0.02, y - yT); },
+        bag: { lo: [-hw - 0.01, yT - hd - 0.01], hi: [hw + 0.01, yT + 0.01] } };
     })() : null;
+    const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
     const f = (x, y, z, B = bodySdf) => {
-      const S = outside(x, y, z, B), cut = CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y));   // open: the front edge behind the arms below the shoulders
-      const d = Math.max(S, -(S + CA.thick), neck ? neck.cut(x, y, z) : y - collarTop(x, z), cut, hemY(z) - y);
+      const S = outside(x, y, z, B), d = Math.max(S, -(S + CA.thick), cutOf(x, y, z));
       return hood ? smin(d, hood.layer(x, y, z, S), 0.004) : d; };
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
     f.lo = [-w, Math.min(CA.hem, hemY(-d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];
@@ -408,11 +434,14 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED;
     f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
+    // as a sheet (sdf/sheet.js), and the hood's bag on its back as a lump of its own, its underside 1 cm into the cloth (out of sight)
+    f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
+    f.bag = hood ? { sdf: (B = bodySdf) => (x, y, z) => hood.layer(x, y, z, outside(x, y, z, B), 0.01), lo: [...hood.bag.lo, f.lo[2]], hi: [...hood.bag.hi, -0.01] } : null;
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
   // there in one mesh and tore apart walking
   const apart = (f) => (x, y, z) => Math.max(f(x, y, z), 0.004 - Math.abs(x));
-  return { pantsSdf, shirtSdf, bellOf, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+  return { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
     garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)) }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

@@ -7,6 +7,8 @@
 import { skirtOf, hairForms } from "./options.js";
 import { PARTS, partNamed } from "./garments/index.js";
 import { armReach } from "./body/index.js";
+import { sheetsMesh, joinMeshes } from "./sdf/sheet.js";
+import { surfaceNets } from "./sdf/mesh.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip", "weaponSheath", "weaponBelt"];   // in the hands: metal, grip / straps, the shield's face
 export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
@@ -28,6 +30,9 @@ export const partClothCell = (H) => Math.min(H * 1.2, THIN);   // a skirt's or a
 // a cell spanning both sides of the thin shell put its vertex inside the cloth, between them, where it couldn't be pulled onto either; the
 // slanted triangles round it showed the outline's dark inside through the cloth. At 0.45 of the thickness both sides get their own vertices
 const clothCell = (h, thick) => Math.min(h, (thick ?? 0.018) * 0.45);
+// the skirt, the cape and bell sleeves are made as sheets (sdf/sheet.js: through the cloth's middle, then both sides): the middle's cells,
+// 1.2 x the mesh's (the fine quality's: the game's), free of the thickness
+const sheetCell = (H, clothH) => (clothH ? 0.0136 : H) * 1.2;
 
 export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   // clothH: the skirt's and the cape's cell, if set (the game quality: see index.js)
   // foot0: the feet's box, 2 cm under the floor: the mesher makes no faces between a box's first two layers, and the soles' bottom (3 mm
@@ -39,7 +44,8 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
     // bell sleeves: their shell (1.65 cm, clothes/index.js bellShell) at cloth cells (at the game's cells their opening came out ragged)
     case "shirt": { const SL = OPT.outfit.shirt.sleeve, long = SL === "long" || SL === "bell", w = (SL === "bell" ? 0.42 + (OPT.outfit.shirt.bell ?? 0.06) : long ? 0.37 : 0.3) + ax;   // long sleeves reach the wrists (and follow the forearms)
       const soft = C.bellOf ? { bone: (x) => x > 0 ? "lowerArm.L" : "lowerArm.R", k: (x, y, z) => C.bellOf(x, y, z, B) ? 0 : 1 } : null;   // bell sleeves: all on the forearm
-      return { sdf: C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B), soft, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: C.bellOf ? clothCell(H * OPT.quality.shirtCell, 0.0165) : H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
+      const bells = C.bellSheets ? { sheets: C.bellSheets, h: sheetCell(H, clothH) } : null;   // bell sleeves: sheets, joined to the shirt (index.js withParts)
+      return { sdf: bells ? (x, y, z) => C.shirtSdf(x, y, z, undefined, true) : C.shirtSdf, fast: (x, y, z) => C.shirtSdf(x, y, z, B, !!bells), soft, bells, lo: [-w, 0.33 - (long ? ay : 0), -0.2], hi: [w, 0.86, 0.22], h: H * OPT.quality.shirtCell, only: long ? /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ : /^(hips|spine|chest|upperChest|shoulder|neck|upperArm)/ }; }
     case "pants": { const PT = OPT.outfit.pants;
       const SKO = skirtOf(OPT);
       if (SKO) { const SK = SKO, hem = (SK.hem ?? 0.3) - Math.max(SK.under ?? 0, SK.sideDrop ?? 0, SK.tabDrop ?? 0), top = SK.top ?? OPT.fit?.pantsTop ?? PT.top, w = 0.17 + (SK.flare ?? 0.4) * (top - hem) + 0.04 + Math.max(0, SK.curl ?? 0) * 0.13 + (SK.hemShape === "tiers" ? (SK.hemDepth ?? 0.05) * 5.5 : 0);   // (curl and tiers stand further out)
@@ -47,12 +53,15 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
         // thighs when they turned up, and the cloth crumpled pulling it over them (2026-10-05, Saori: a dress sitting, tall body). The share
         // left on the hips shrinks as the legs grow
         const FOL = 1 - (1 - (SK.follow ?? 0.55)) / Math.max(1, OPT.body.proportion?.legs ?? 1);   // the skirt follows the hips, and the thighs only partly toward the hem (soft), so it swings with the legs without being torn apart between them
-        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-w, hem - 0.02, -w], hi: [w, top + 0.05, w], h: clothCell(clothH || partClothCell(H), SK.thick), only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
+        const lo = [-w, hem - 0.02, -w], hi = [w, top + 0.05, w];
+        return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo, hi, h: clothCell(clothH || partClothCell(H), SK.thick), make: C.skirtSheets ? () => sheetsMesh(C.skirtSheets(B), lo, hi, sheetCell(H, clothH)) : null, only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
       const y0 = Math.min({ knee: 0.17, long: 0.07 }[PT.length] ?? 0.2, (OPT.fit?.pantsHem ?? 1) - 0.03);   // long pants reach the ankles (the adult body's hems: OPT.fit)
       return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "cape": { const CA = OPT.outfit.cape;   // only built when worn (outfit.cape.on rebuilds the clothes)
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
+      const BG = C.capeSdf.bag, bag = () => { const r = surfaceNets(BG.sdf(), BG.lo, BG.hi, sheetCell(H, clothH) / 2, { proj: 2, fast: BG.sdf(B) }); return { pos: r.pos, nor: r.nor, idx: r.idx }; };   // the hood's bag: a lump (half the sheets' cells: 8 mm)
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: C.capeSdf.lo, hi: C.capeSdf.hi, h: clothCell(clothH || partClothCell(H), CA.thick),
+        make: () => { const m = sheetsMesh(C.capeSdf.sheets(B), C.capeSdf.lo, C.capeSdf.hi, sheetCell(H, clothH)); return BG ? joinMeshes([m, bag()]) : m; },
         only: C.capeSdf.closed ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed: over the arms, it goes down with them
     case "hood": { const R = C.capeSdf?.rim;   // the hood's fold along the neckline and its lining (clothes/index.js): 4 mm cells
       if (!R) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
