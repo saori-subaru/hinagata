@@ -187,7 +187,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * SW) * Math.abs(dz) / (r * r)); };
   // front tabs (skirtOf's tabDrop, tabAt, tabWidth; for シルヴィ's straps' ends): two pointed tabs of the skirt hanging tabDrop below the hem
   // in front, tabAt out from the middle; as a distance in the front view (x, y), < 0 inside. Below the hem they lie on the petticoat and
-  // take its color (bands by the plain hem): a print on the front shows on them
+  // take its color (bands by the plain hem): a print on the front shows on them. From the hem down they sink to the petticoat's face (1 cm
+  // in), so their edges, standing out of it, don't frame the print like a shadow (Saori: "縦帯の下に緑の影")
   const TD = SKIRT ? SK.tabDrop ?? 0 : 0, TA = SK.tabAt ?? 0.1, TW = (SK.tabWidth ?? 0.04) / 2, TP = Math.min(TD, TW * 0.6), TN = Math.hypot(TW, TP);   // TP: the point's height
   const tabCut = (x, y, dz) => { if (!TD || dz <= 0) return 1; const u = Math.abs(Math.abs(x) - TA), h = hemAt(Math.sign(x) * TA, dz), tip = h - TD;
     return Math.max(u - TW, y - h - 0.02, (u * TP - (y - tip) * TW) / TN); };
@@ -208,6 +209,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SD) outer -= SOUT * sideOf(x, dz) + SK.flare * Math.max(0, SK.hem - y) * 0.9;   // side panels: out over the middle ones, flaring on below the middle's hem
     if (CINCH) outer += CINCH * Math.exp(-(((y - CINCH_AT) / 0.035) ** 2));   // drawn in round cinchAt (a belt), smoothly: no step
+    if (TD && dz > 0 && y < SK.hem + 0.01) { const tc = tabCut(x, y, dz); if (tc < 0.004) { const h = hemAt(Math.sign(x) * TA, dz); outer += 0.01 * sstep(h, h - TD, y) * sstep(0.004, 0, tc); } }   // the tabs sink toward their tips
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
