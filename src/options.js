@@ -877,6 +877,7 @@ export const DEFAULTS = {
         "ph": [64, 44],
         "below": 0.01,
         "flick": 0,
+        "hug": 0,
         "edits": [],
         "lie": {
           "count": 17,
