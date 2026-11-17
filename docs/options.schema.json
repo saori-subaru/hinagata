@@ -7816,8 +7816,8 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.6,
-   "max": 3,
+   "min": 0.5,
+   "max": 2,
    "step": 0.01,
    "order": 216,
    "section": {
@@ -7825,8 +7825,8 @@
     "en": "Cape"
    },
    "help": {
-    "ja": "縁の太さと背中の袋の大きさ。大きいと肩をおおう襟巻きのよう",
-    "en": "the rim's thickness and the bag's size; big, it is a cowl over the shoulders"
+    "ja": "襟ぐりの縁の太さと背中の袋の大きさ",
+    "en": "the rim's thickness and the bag's size"
    },
    "when": {
     "outfit.cape.on": true,
@@ -7845,8 +7845,8 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.02,
-   "max": 0.12,
+   "min": 0.03,
+   "max": 0.16,
    "step": 0.001,
    "order": 217,
    "section": {
@@ -7854,8 +7854,8 @@
     "en": "Cape"
    },
    "help": {
-    "ja": "首の横でフードの縁が首から離れる距離(m)。広いほど首のまわりにすき間",
-    "en": "how far the hood's rim stands off the neck at its sides (m); wider leaves room round the neck"
+    "ja": "首の横で襟ぐりが首から離れる距離(m)。広いほど低く広い襟ぐりで、内側にシャツの肩が見える",
+    "en": "how far out from the neck the neckline is at its sides (m); wider is lower and wider, the shirt's shoulders showing inside it"
    },
    "when": {
     "outfit.cape.on": true,
