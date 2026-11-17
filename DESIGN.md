@@ -390,6 +390,8 @@ The editor moves the ties by hand too (editor/src/ties.js, "頭の上で結び�
 
 **Steps (`hair.tail.tiers`, `tierFlick`)**: the locks end in that many steps, each TIER_STEP of the length shorter, the ones furthest out from the head shortest, and each step hangs TIER_OUT × volume further out than the next longer one, like shingles, so its tips show on the tail's outer edge. `tierFlick` (m) bends every lock's lower part out from the head (bendLock). The short steps are not gathered to the bundle's middle. Spread over the bundle or gathered, their tips stayed inside the longer locks and the tail read as one taper.
 
+**Few wide locks**: with the tie on, a tail lock is no wider at the tie than the bundle (VOL × 0.9, widening to its own width by a third of its length). Sylvie's four locks of 0.11 stuck out of the ring. Tails without a tie are untouched.
+
 ### Gradients: hair tips and hems (2026-10-05, Saori; done)
 
 Asked whether a loaded texture should do the gradients: not for the hair. Projected by height, a bang's tip (at the brows) and a long lock's (at the waist) would get different colors; the locks already know their own root-to-tip position. So gradients are their own settings, and textures (next) are for patterns.
@@ -915,6 +917,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### Locks that keep their shape (hair.rigid, hair.lockPoints)
 - `hair.rigid` (0–1): each step the lock's rest shape is turned to where the lock leans (about its second point) and its points pulled toward it, so a tuft tilts as one piece instead of bending like a rope. It is also held toward its rest along its whole length (RIGID_HOLD; a rope only near the root), and it keeps more of its up-and-down (RIGID_VDAMP). With no hold the whole lock tilted back flat on a run. At 0.12 with the rope's VDAMP the hair stood still. `hair.lockPoints`: every lock remade with this many points (0 = as built); rigid locks need about 5. Both 0 by default = the old motion, the same mesh.
+- `shortLocks.hug` / `innerHug` (head space): hanging locks lie on the head down to that height, then hang; the inner layer can go lower, so its tips line the nape under the outer hem. Thicker locks (`thick`) filled the gap too, but widened the whole head.
 - Hanging locks lie in two layers. The inner one is held INNER_HOLD times as firmly and kept whole (INNER_RIGID), so a run lifts the outer layer over hair. When both lifted together, they bared the block under them: a smooth dome as pale as the skin, which read as a bald head or an undercut. `hair.paint.inner` also darkens the block's low back (hairUV th 1.0–1.6 rad, behind the ears). It applies only while the back is made of locks: otherwise the block is the back hair itself.
 - A tail has its own hold (TAIL_HOLD, twice RIGID_HOLD) and bounce (TAIL_VDAMP), both scaled by `hair.tail.stiff`. It has no hair under it, and its stiff is 1 against the hanging locks' ~3. With too little hold the wind lays it out flat behind, like a stick.
 - Locks pass through the ears (no collider there). A long lock hanging over an elf ear buries the ear's root in hair, and rigid holds it there while running. Keep the lock over each ear short and lengthen the one in front of it instead (Sylvie: shortLocks.edits). Lengthened locks behind the ears hung below the back's hem.

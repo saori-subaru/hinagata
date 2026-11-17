@@ -46,7 +46,7 @@ export const CHARACTERS = {
         { kind: "cross", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.034, color: "#66907d", mirror: true, lift: 0.0138 },
       ],
       hair: {
-        tail: { kind: "side", y: 1.18, waves: 0.5, tiers: 3, tierFlick: 0.015, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
+        tail: { kind: "side", y: 1.18, count: 4, width: 0.11, waves: 0.5, tiers: 3, tierFlick: 0.015, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
         // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
@@ -69,7 +69,7 @@ export const CHARACTERS = {
             overlap: 1.44,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.9,
+            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
             // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
             // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes
             edits: [

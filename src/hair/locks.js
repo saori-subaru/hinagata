@@ -57,7 +57,7 @@ export function bendLock(P, fl, { center, keepOut = null, from = 0.5 }) {
   for (let i = k0 + 1; i < N; i++) { const u = (i - k0) / (N - 1 - k0), r = rot(sub3(P[i], P[i - 1]), TH * Math.pow(u, 1.3)); Q[i] = [Q[i - 1][0] + r[0], Q[i - 1][1] + r[1], Q[i - 1][2] + r[2]]; if (keepOut) keepOut(Q[i], i); }
   return Q;
 }
-export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null, N = 12 }) {
+export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null, innerHugY = hugY, N = 12 }) {
   const deg = Math.PI / 180, specs = [], n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, PH = L.ph ?? [52, 30];
   let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };   // the same small differences every build
   for (const layer of [0, 1]) for (let i = 0; i < n - layer; i++) {
@@ -72,7 +72,7 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
   }
   // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
   const keepOut = (p, i) => { const r = 0.004; pushOutEllipsoid(p, ellipsoid.c, ellipsoid.r, r); for (const c of coll) pushOutSphere(p, c.c, c.r + r); };
-  return specs.map((s) => { let pts = drape(s, coll, ellipsoid, N, hugY);
+  return specs.map((s) => { let pts = drape(s, coll, ellipsoid, N, s.layer ? innerHugY : hugY);   // innerHugY: the inner layer down to its own height
     if (s.fl) pts = bendLock(pts, s.fl, { center, keepOut });
     return { ...s, pts }; });
 }
@@ -252,7 +252,8 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
         if (ell) pushOutEllipsoid(P[q], ell.c, ell.r, rad(q)); for (const c of coll) pushOutSphere(P[q], c.c, c.r + rad(q));
         const A = P[q - 1], d = [P[q][0] - A[0], P[q][1] - A[1], P[q][2] - A[2]], l = Math.hypot(...d) || 1; for (let k = 0; k < 3; k++) P[q][k] = A[k] + d[k] * seg[q - 1] / l; }
       let L = 0; for (let q = 1; q < N; q++) L += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
-      out.push({ root: P[0], pts: P, len: L, w, thick: T.thick, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: 0.7 * GA });   // group: they swing together (createLocks)
+      const pinch = T.tie?.on ? Math.min(1, VOL * 0.9 / w) : 1;   // squeezed by the tie: no wider there than the bundle (wide locks stuck out of the ring)
+      out.push({ root: P[0], pts: P, len: L, w, thick: T.thick, prof: pinch < 1 ? (t) => width(t) * (pinch + (1 - pinch) * sstep(0, 0.3, t)) : undefined, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, group: `tail${ai}`, cohere: 0.7 * GA });   // group: they swing together (createLocks)
     }
   });
   return out;

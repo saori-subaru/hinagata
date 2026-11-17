@@ -880,6 +880,7 @@ export const DEFAULTS = {
         "below": 0.01,
         "flick": 0,
         "hug": 0,
+        "innerHug": 0,
         "edits": [],
         "lie": {
           "count": 17,
