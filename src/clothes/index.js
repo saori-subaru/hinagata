@@ -311,7 +311,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // Its body: a second layer on the cape's back (its outside pushed out), as wide as the shoulders at the collar and narrowing to a
     // rounded point down the back, puffed in the middle
     const hood = CA.hood ? (() => {
-      const NK = P.neck, HS = CA.hoodSize ?? 1, OPN = CA.hoodOpen ?? 0.07, zAx = (y) => NK.az + NK.bz * (y - NK.ay) / NK.by, a = NK.ra + OPN, zB = zAx(CA.collar) - NK.ra - OPN * 0.6;
+      const NK = P.neck, HS = CA.hoodSize ?? 1, OPN = CA.hoodOpen ?? 0.07, zAx = (y) => NK.az + NK.bz * (y - NK.ay) / NK.by, a = NK.ra + OPN, zB = zAx(CA.collar) - NK.ra - 0.03;   // (wide at the sides, out over the shoulders; behind, close to the neck)
       let XF = a, zF = zAx(CA.collar) + 0.03;   // the U's ends (open: at the neck's sides)
       if (CLOSED) { XF = NK.ra * 0.95; zF = 0.3; while (zF > 0 && outside(XF, CLOSE, zF) > 0) zF -= 0.001; }   // (closed: on the cape's front at the closure)
       const c = Math.sqrt(Math.max(0, 1 - (XF / a) ** 2)), b = (zF - zB) / (1 + c), zc = zB + b, PH = Math.PI - Math.asin(Math.min(1, XF / a));   // ellipse: half axes a, b about z = zc; the U from -PH to PH (0 at the back)
