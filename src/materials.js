@@ -74,24 +74,28 @@ float bIn(float t, float lo, float hi) { float w = fwidth(t) * 0.7 + 1e-6; retur
 }
 /** A picture on a garment, projected (the meshes have no UVs: they are remade from shapes on every change). From texP / texN, each vertex's
  *  place and normal when the mesh was made (they stay with the cloth when it moves). U.mode: 0 = tile (from the three axes, blended by the
- *  normal: patterns), 1 = wrap (around the body's upright axis, like a label), 2 = front (once, from the front: a print).
+ *  normal: patterns), 1 = wrap (around the body's upright axis, like a label), 2 = front (once, from the front: a print), 3 = hem (around,
+ *  up from the hem by texH, each vertex's height over the garment's hem as built: a border that follows a slanted or shaped hem; a whole
+ *  number of repeats round the body, so no seam at the back).
  *  U: { on, map, mode, scale (m per repeat / the print's size), rot (radians), off (vec2, m), opacity, blend (0 = over, 1 = multiply) } as shared uniforms. */
 export function withTex(m, U) {
   const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
     Object.assign(sh.uniforms, { tOn: U.on, tMap: U.map, tMode: U.mode, tScale: U.scale, tRot: U.rot, tOff: U.off, tOpacity: U.opacity, tBlend: U.blend });
-    sh.vertexShader = "attribute vec3 texP;\nattribute vec3 texN;\nvarying vec3 vTexP;\nvarying vec3 vTexN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vTexP = texP; vTexN = texN;");
+    sh.vertexShader = "attribute vec3 texP;\nattribute vec3 texN;\nattribute float texH;\nvarying vec3 vTexP;\nvarying vec3 vTexN;\nvarying float vTexH;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vTexP = texP; vTexN = texN; vTexH = texH;");
     sh.fragmentShader = `uniform float tOn, tMode, tScale, tRot, tOpacity, tBlend;
 uniform vec2 tOff;
 uniform sampler2D tMap;
 varying vec3 vTexP;
 varying vec3 vTexN;
+varying float vTexH;
 vec2 tUV(vec2 p) { float c = cos(tRot), s = sin(tRot); p -= tOff; return vec2(c * p.x - s * p.y, s * p.x + c * p.y) / max(tScale, 0.001); }
 vec4 tSample() {
   vec3 n = normalize(vTexN), p = vTexP;
   if (tMode < 0.5) { vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z + 1e-5);
     return texture2D(tMap, tUV(vec2(-p.z * sign(n.x), p.y))) * w.x + texture2D(tMap, tUV(p.xz)) * w.y + texture2D(tMap, tUV(vec2(p.x * sign(n.z), p.y))) * w.z; }   // each face seen from outside, not mirrored
   if (tMode < 1.5) { float a = atan(p.x, p.z) / 6.2831853; return texture2D(tMap, tUV(vec2(a * 6.2831853 * 0.15, p.y))); }   // around: 0.15 m of the image's width per radian (about a body's girth)
+  if (tMode > 2.5) { float a = atan(p.x, p.z) / 6.2831853, k = max(1.0, floor(0.94 / max(tScale, 0.001) + 0.5)); return texture2D(tMap, vec2(a * k - tOff.x / max(tScale, 0.001), (vTexH - tOff.y) / max(tScale, 0.001))); }   // along the hem
   vec2 uv = tUV(p.xy) + 0.5; if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 || n.z < 0.0) return vec4(0.0);   // once, from the front, centered at the offset
   return texture2D(tMap, uv) * smoothstep(0.0, 0.3, n.z);
 }

@@ -20,6 +20,8 @@ export function heelPose(OPT, J) {
 
 /** the cape's shoulder line (rest pose): where the mantle over the shoulders turns into the part that hangs */
 export const capeTop = (J) => J["upperArm.L"][1] + 0.005;
+/** boots' straps (shoes.straps, strapAt, strapWidth, strapGap): [from, to] in m under the boot's top (clothes and index.js' bands) */
+export const strapRanges = (S) => Array.from({ length: Math.max(0, Math.min(2, Math.round(S.straps ?? 0))) }, (_, i) => { const a = (S.strapAt ?? 0.03) + i * ((S.strapWidth ?? 0.012) + (S.strapGap ?? 0.014)); return [a, a + (S.strapWidth ?? 0.012)]; });
 
 export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const pick = (...names) => names.flatMap((n) => [P[n]?.cloth ?? P[n] ?? null, P[`${n}.L`] ?? null, P[`${n}.R`] ?? null]).filter(Boolean);   // .cloth: a part's own shape for clothes (the bust: joined across the middle)
@@ -172,14 +174,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return e; };
   // a petticoat (skirtOf's under: m it shows below the hem, for シルヴィ): a pleated layer just inside the skirt from 3 cm over the hem down
   // past it, flaring on as the skirt does, with its own pleats (underPleats). Part of the skirt's mesh, so it moves with the cloth; its
-  // color is the skirt's bands below the hem (index.js), so underOf gives the hem's height (base) at a point's angle
+  // color is the skirt's bands below the hem (index.js, by skirtHem: the hem's height, base, at a point's angle)
   // (1 cm inside the skirt and as thick: thinner than its cells' 0.45 × it came out ragged under the hem)
   const PETTI = SKIRT && (SK.under ?? 0) > 0 ? (() => { const UP = SK.underPleats ?? 24, Y1 = SK.hem - SK.under, tk = SK.thick * Math.hypot(1, SK.flare);
     return (x, y, z) => { const drop = Math.max(0, SK_Y0 - y), dz = z - SK_ZC, th = Math.atan2(x / (SK_AX + SK.flare * drop), dz / (SK_AZ + SK.flare * 0.8 * drop));
       const o = DRAPE(x, y, z) - SK.flare * Math.max(0, SK.hem - y) * 0.9 + 0.01 + 0.008 * Math.abs(Math.sin(th * UP / 2)) * sstep(SK.hem + 0.02, Y1, y);
       return Math.max(-smin(-Math.max(o, -(o + tk)), -(Y1 - y), 0.008), y - SK.hem - 0.03); }; })() : null;
   const skirtSdf = (x, y, z, B = bodySdf) => { const d = skirtSdf0(x, y, z, B); return PETTI ? smin(d, PETTI(x, y, z), 0.005) : d; };
-  const underOf = PETTI ? (x, z) => hemAt(x, z - SK_ZC) : null;
   function skirtSdf0(x, y, z, B = bodySdf) {
     const drop = Math.max(0, SK_Y0 - y), ax = SK_AX + SK.flare * drop, az = SK_AZ + SK.flare * 0.8 * drop, dz = z - SK_ZC;
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
@@ -228,7 +229,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // heels: thin leather close to the foot (0.6 cm, not a sneaker's 1.2), over a narrower foot (body/index.js) and a slimmer toe (2026-10-07)
   const SHOE_OFF = PUMPS ? 0.006 : SHOE.off, CUFF = BOOTS ? OPT.outfit.shoes.cuff ?? 0 : 0;
   const shoeTop = (x, y, z) => TOP - TILT * z - y;   // how far under the top (m, base): the cuff is painted by it
-  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
+  // boots' straps (shoes.straps, for シルヴィ): up to 2 bands round the shaft under the top, 2.5 mm out (their color: index.js paintBands)
+  const STRAPS = BOOTS ? strapRanges(OPT.outfit.shoes) : [], strapIn = (t) => { let v = 0; for (const [a, b] of STRAPS) v = Math.max(v, sstep(a - 0.002, a + 0.002, t) * sstep(b + 0.002, b - 0.002, t)); return v; };
+  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
     let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
@@ -267,7 +270,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // cape.front "closed" (a capelet, for シルヴィ): it goes on round the front, closed at cape.close and opening below it (cape.open: the
   // half-width gained per m down), its top dipping in front to the closure. Its sides flare at the upper arm's slope (rest pose), so the arms
   // stay under it, and it never goes inside the body pushed out (the chest). Its hem rises toward the front by cape.tilt per m.
-  // capeSdf.lo / .hi: its box (parts.js); .edge: how far in from the hem or the front's edges (m, as built: the trim line, index.js)
+  // capeSdf.lo / .hi: its box (parts.js); .edge: how far in from the hem or the front's edges (m, as built: the trim line, index.js); .hemOf: the hem's height (base)
   const CA = OPT.outfit.cape, CAPE_Y = capeTop(J), capeSdf = CA?.on ? (() => {
     const CLOSED = CA.front === "closed", ST = makeStretch(OPT, J);
     const out = (dx, dz) => { let t = 0; while (t < 0.4 && bodySdf(dx * t, CAPE_Y, dz * t) < 0) t += 0.001; return t; };
@@ -305,12 +308,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
     f.lo = [-w, Math.min(CA.hem, hemY(-d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
+    f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED;
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
   // there in one mesh and tore apart walking
   const apart = (f) => (x, y, z) => Math.max(f(x, y, z), 0.004 - Math.abs(x));
-  return { pantsSdf, shirtSdf, bellOf, cuffOf, underOf, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+  return { pantsSdf, shirtSdf, bellOf, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
     garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)) }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

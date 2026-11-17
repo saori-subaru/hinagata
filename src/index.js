@@ -16,7 +16,7 @@ import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
-import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
+import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
@@ -132,7 +132,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, cuffOf, underOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, cuffOf, petticoat, skirtHem, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -332,7 +332,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const gradU = (G) => ({ on: { value: G?.on ? 1 : 0 }, color: { value: new THREE.Color(G?.color ?? "#ffffff") }, start: { value: G?.start ?? 0.6 }, soft: { value: G?.soft ?? 0.3 } });
   const GRAD = { hair: gradU(OPT.hair.gradient), bangs: null, shirt: gradU(OPT.outfit.shirt.gradient), pants: gradU(OPT.outfit.pants.gradient), dress: gradU(OPT.outfit.dress.gradient), cape: gradU(OPT.outfit.cape.gradient) };
   // pictures on the garments (materials.js withTex): one set of uniforms per garment; the picture loads in the background (avatar.setTexture)
-  const TEX_MODE = { tile: 0, wrap: 1, front: 2 }, TEX_BLEND = { over: 0, multiply: 1 }, texOf = (k) => OPT.outfit[k]?.texture;
+  const TEX_MODE = { tile: 0, wrap: 1, front: 2, hem: 3 }, TEX_BLEND = { over: 0, multiply: 1 }, texOf = (k) => OPT.outfit[k]?.texture;
   // each garment keeps one texture object and only its image changes (swapping in a new texture object after the first frames left most of
   // the garment sampling a stale, blank one: only a patch showed the picture)
   const texObj = () => { const t = new THREE.Texture(); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.image = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }); t.needsUpdate = true; return t; };
@@ -439,10 +439,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
-  // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts
-  { const gradT = (list, key) => { const U = GRAD[key]; let lo = Infinity, hi = -Infinity; for (const x of list) { const P = x.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) { lo = Math.min(lo, P[i]); hi = Math.max(hi, P[i]); } }
+  // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts.
+  // texH (a picture along the hem): the height over the hem as built (a skirt's or a cape's own hem line, base positions; else its lowest point)
+  { const hemH = (key) => key === "cape" ? capeSdf?.hemOf : (key === "dress" || key === "pants") ? skirtHem : null;
+    const gradT = (list, key) => { const U = GRAD[key]; let lo = Infinity, hi = -Infinity; for (const x of list) { const P = x.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) { lo = Math.min(lo, P[i]); hi = Math.max(hi, P[i]); } }
       for (const x of list) { const P = x.m.geometry.attributes.position.array, G = new Float32Array(P.length / 3); for (let v = 0; v < G.length; v++) G[v] = (hi - P[v * 3 + 1]) / ((hi - lo) || 1);
         x.m.geometry.setAttribute("gradT", new THREE.BufferAttribute(G, 1));
+        { const f = hemH(key), Pb = basePos(x.m.geometry), H = new Float32Array(P.length / 3); for (let v = 0; v < H.length; v++) H[v] = f ? ST.fwd(Pb[v * 3 + 1]) - ST.fwd(f(Pb[v * 3], Pb[v * 3 + 2])) : P[v * 3 + 1] - lo;
+          x.m.geometry.setAttribute("texH", new THREE.BufferAttribute(H, 1)); }
         x.m.geometry.setAttribute("texP", new THREE.BufferAttribute(Float32Array.from(P), 3)); x.m.geometry.setAttribute("texN", new THREE.BufferAttribute(Float32Array.from(x.m.geometry.attributes.normal.array), 3));   // where each point was when made (the picture stays on the cloth when it moves)
         x.wrap = (m) => withTex(withGrad(m, U), TEX[key]); x.m.material = x.wrap(x.m.material); paintable(x, key); } };
     if (SKO?.dress) gradT([parts.shirt, parts.pants], "dress"); else { gradT([parts.shirt], "shirt"); gradT([parts.pants], "pants"); }
@@ -474,11 +478,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
     g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
   for (const p of PARTS) if (p.bands && garments[p.name]) banded(p.name, p.bands.value(garments[p.name]));
-  if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
-  // with a petticoat (underOf): how far down from the top as a share of the way to the hem (> 1 under it: the band's edge on the hem's line,
+  if (((OPT.outfit.shoes.cuff ?? 0) > 0 || (OPT.outfit.shoes.straps ?? 0) > 0) && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
+  // with a petticoat: how far down from the top as a share of the way to the hem (> 1 under it: the band's edge on the hem's line,
   // not on the vertices beside it: marked per point it came out notched); a waistband in that share of the average length
   const SKL = SKO ? ST.fwd(SKO.top) - ST.fwd(SKO.hem) : 1;
-  if (underOf) banded("pants", (x, y, z) => { const t = ST.fwd(SKO.top - (SKO.tilt ?? 0) * z); return (t - ST.fwd(y)) / Math.max(0.02, t - ST.fwd(underOf(x, z))); });
+  if (petticoat) banded("pants", (x, y, z) => { const t = ST.fwd(SKO.top - (SKO.tilt ?? 0) * z); return (t - ST.fwd(y)) / Math.max(0.02, t - ST.fwd(skirtHem(x, z))); });
   else if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
   if (capeSdf) banded("cape", capeSdf.edge);   // the cape's trim line: how far in from its hem or front edges
   if (cuffOf) banded("shirt", cuffOf);   // long and bell sleeves' cuffs: how far up from the sleeve's end
@@ -488,8 +492,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const O = OPT.outfit, SH = O.shoes, SS = O.socks.stripes ?? {};
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
     for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
-    put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
-    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = underOf ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(underOf && SU.underColor ? [[1.004, 100, SU.underColor]] : [])]); }
+    put(BANDS.shoes, [...((SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []), ...strapRanges(SH).map(([a, b]) => [a, b, SH.strapColor ?? SH.color])]);
+    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = petticoat ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(petticoat && SU.underColor ? [[1.004, 100, SU.underColor]] : [])]); }
     { const C = O.cape; put(BANDS.cape, C.line ? [[C.lineIn ?? 0.012, (C.lineIn ?? 0.012) + (C.lineWidth ?? 0.008), C.line]] : []); }
     { const S = O.shirt, W = S.cuffWidth ?? 0.022; put(BANDS.shirt, [...(S.cuffColor ? [[-1, W, S.cuffColor]] : []), ...(S.cuffLine ? [[W * 0.4, W * 0.6, S.cuffLine]] : [])]); }
     const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
