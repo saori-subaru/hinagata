@@ -132,7 +132,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, shirtSdf, bellOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, shirtSdf, bellOf, cuffOf, underOf, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -469,13 +469,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
-  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
+  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU(), cape: bandU(), shirt: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
   const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
     g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
   for (const p of PARTS) if (p.bands && garments[p.name]) banded(p.name, p.bands.value(garments[p.name]));
   if ((OPT.outfit.shoes.cuff ?? 0) > 0 && /^(boots|heelBoots)$/.test(OPT.outfit.shoes.kind)) banded("shoes", shoeTop);
-  if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
+  // with a petticoat (underOf): how far down from the top as a share of the way to the hem (> 1 under it: the band's edge on the hem's line,
+  // not on the vertices beside it: marked per point it came out notched); a waistband in that share of the average length
+  const SKL = SKO ? ST.fwd(SKO.top) - ST.fwd(SKO.hem) : 1;
+  if (underOf) banded("pants", (x, y, z) => { const t = ST.fwd(SKO.top - (SKO.tilt ?? 0) * z); return (t - ST.fwd(y)) / Math.max(0.02, t - ST.fwd(underOf(x, z))); });
+  else if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
+  if (capeSdf) banded("cape", capeSdf.edge);   // the cape's trim line: how far in from its hem or front edges
+  if (cuffOf) banded("shirt", cuffOf);   // long and bell sleeves' cuffs: how far up from the sleeve's end
   let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
   banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
   function paintBands() {   // the bands' colors and places from the options (instant: setColors, setBands)
@@ -483,7 +489,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
     for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
     put(BANDS.shoes, (SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []);
-    { const SB = O.pants.skirt ?? {}; put(BANDS.pants, SB.bandColor ? [[-1, SB.bandWidth ?? 0.02, SB.bandColor]] : []); }
+    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = underOf ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(underOf && SU.underColor ? [[1.004, 100, SU.underColor]] : [])]); }
+    { const C = O.cape; put(BANDS.cape, C.line ? [[C.lineIn ?? 0.012, (C.lineIn ?? 0.012) + (C.lineWidth ?? 0.008), C.line]] : []); }
+    { const S = O.shirt, W = S.cuffWidth ?? 0.022; put(BANDS.shirt, [...(S.cuffColor ? [[-1, W, S.cuffColor]] : []), ...(S.cuffLine ? [[W * 0.4, W * 0.6, S.cuffLine]] : [])]); }
     const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
   paintBands();
   const AO = OPT.outfit.armor, DECO_COLOR = { plume: "#d6453d", horns: "#eee3c9", wings: "#f6f3ec" }, armorColor = (k) => k === "armorMail" ? AO.mailColor : k === "armorVisor" ? AO.visorColor : k === "armorDeco" ? (AO.decoColor ?? DECO_COLOR[AO.deco] ?? AO.color) : AO.color, isMetal = (k) => (k === "weaponR" || k === "weaponL") || ARMOR.includes(k) && !["armorMail", "armorVisor", "armorDeco"].includes(k);
