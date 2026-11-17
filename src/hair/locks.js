@@ -14,8 +14,10 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
-const RIGID_HOLD = 0.12;   // hair.rigid 1: the pull toward the rest shape along the whole lock (per step); without it a rigid lock tilted back as one piece on a run (the back hair looked short from the front)
-// a rigid tail swings from its tie: held half as firmly, and its up-and-down kept (a bounce of the whole tuft, not jelly). At the full hold it hung still on a run
+// a rigid lock (hair.rigid) is pulled toward its rest along its whole length (per step, × rigid × stiff), and keeps more of its up-and-down
+// (a bounce of the whole tuft, not jelly). At 0.12 / VDAMP the hair stood still on a run; at 0 it tilted back flat
+const RIGID_HOLD = 0.03, RIGID_VDAMP = 0.6;
+// a tail hangs from its tie with no hair under it: twice the hold (its stiff is 1 to the hanging locks' ~3), or the wind lays it out flat like a stick
 export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
@@ -319,7 +321,7 @@ export function colliders(J, BI, sdf) {
 // rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, hold = RIGID_HOLD, vdamp = VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points) }));
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
