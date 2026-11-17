@@ -1,7 +1,8 @@
 # 宿題 (TODO)
 
-## 形を保つ房（ブランチ claude/zen-mendel-i88qe4）
-- 仕組みは済み（hair.rigid / hair.lockPoints、DESIGN.md「Locks that keep their shape」）。🚧シルヴィのレシピ（src/presets.js）へはまだ入れていない。服の別セッションが終わってから rigid 1・lockPoints 5 を入れる。
+## 形を保つ房（ブランチ claude/zen-mendel-i88qe4、⏳サオリの確認待ち）
+- ✅ 仕組み（hair.rigid / hair.lockPoints、DESIGN.md「Locks that keep their shape」）と、シルヴィのレシピへの組み込み（rigid 1・lockPoints 5）。横髪は耳の前後の房をあご〜首まで伸ばして外へはねさせ、耳の上の房は耳の高さで止めた。
+- ⏳ 横髪の長さとはねを、サオリが三面図と見比べて確かめる。
 - 次: 前髪をとがった厚い房で決まった形に置く（揺らさない）。見本はシルヴィの三面図。
 
 ## シルヴィを設定画に寄せる（ブランチ claude/elegant-knuth-sqa257、⏳サオリの確認待ち）

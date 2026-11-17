@@ -47,6 +47,7 @@ export const CHARACTERS = {
       ],
       hair: {
         tail: { kind: "side", y: 1.22, waves: 0.5, tie: { size: 2.2 } },
+        rigid: 1, lockPoints: 5,
         sculpt: {
           nendo: {
             tips: [
@@ -65,12 +66,19 @@ export const CHARACTERS = {
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01,
+            // 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one over it buried the ear's root in hair);
+            // the ones before and behind the ears (0, 11; 2, 9; 14, 20 under them) reach the chin and the neck, flicked out as in her design sheet
             edits: [
-              { i: 9, dy: -0.0372, da: 5.05 },
+              { i: 0, dy: -0.0922, da: 0.46, fl: 0.02 },
+              { i: 1, dy: -0.01, da: -3.67 },
+              { i: 2, dy: -0.0822, da: -5.05, fl: 0.02 },
+              { i: 9, dy: -0.0822, da: 5.05, fl: 0.02 },
+              { i: 10, dy: -0.01, da: 3.67 },
+              { i: 11, dy: -0.0922, da: -0.46, fl: 0.02 },
+              { i: 14, dy: -0.05 },
+              { i: 20, dy: -0.05 },
               { i: 26, dy: 0.0251, da: 11.34 },
               { i: 27, dy: 0.012, da: -15.16 },
-              { i: 11, dy: -0.0522, da: -0.46 },
-              { i: 10, dy: -0.0652, da: 3.67 },
             ],
             stiff: 2.7,
           },
