@@ -218,14 +218,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
     return SI ? { pos: P, nor: N, idx: out, si: SI, sw: SW } : { pos: P, nor: N, idx: out };
   }
-  // the elf ears' blades, made as rings on the body's surface (body/index.js earBlades), join the body; its own triangles under them go
+  // made apart and joined to their part: the elf ears' blades (rings on the body's surface, body/index.js earBlades; the body's own triangles
+  // under them go) and the ahoge (hair/index.js ahogeMesh, on the head bone)
   function withParts(name, rec) {
-    const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null; if (!EB) return rec;
+    if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
+    const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
+    return EB ? joined(rec, EB, EB.under) : rec;
+  }
+  function joined(rec, EB, under, bone1) {
     const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
-    for (let v = 0; v < n; v++) drop[v] = EB.under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
+    if (under) for (let v = 0; v < n; v++) drop[v] = under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
     for (let t = 0; t < idx.length; t += 3) if (!(drop[idx[t]] && drop[idx[t + 1]] && drop[idx[t + 2]])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
     let m = 0; for (const v of kept) if (map[v] < 0) map[v] = m++;
-    const k = EB.pos.length / 3, sk = skinOf(EB.pos, weightsAt, BI), P2 = new Float32Array((m + k) * 3), N2 = new Float32Array((m + k) * 3), SI = new si.constructor((m + k) * 4), SW = new Float32Array((m + k) * 4);
+    const k = EB.pos.length / 3, sk = skinOf(EB.pos, weightsAt, BI, bone1), P2 = new Float32Array((m + k) * 3), N2 = new Float32Array((m + k) * 3), SI = new si.constructor((m + k) * 4), SW = new Float32Array((m + k) * 4);
     for (let v = 0; v < n; v++) { const u = map[v]; if (u < 0) continue; for (let c = 0; c < 3; c++) { P2[u * 3 + c] = pos[v * 3 + c]; N2[u * 3 + c] = nor[v * 3 + c]; } for (let c = 0; c < 4; c++) { SI[u * 4 + c] = si[v * 4 + c]; SW[u * 4 + c] = sw[v * 4 + c]; } }
     P2.set(EB.pos, m * 3); N2.set(EB.nor, m * 3); SI.set(sk.si, m * 4); SW.set(sk.sw, m * 4);
     const I = new Uint32Array(kept.length + EB.idx.length); for (let i = 0; i < kept.length; i++) I[i] = map[kept[i]]; for (let i = 0; i < EB.idx.length; i++) I[kept.length + i] = EB.idx[i] + m;

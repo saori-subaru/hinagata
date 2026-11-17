@@ -33,13 +33,43 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     }
     return G(segs, 0.006);
   }
-  const AY = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) - 1.39;   // the ahoge sits on the top of the head
-  // ahoge: one curled strand standing up from the top of the hair, arching forward (size: hair.sculpt.ahogeSize)
-  const ahogeOn = (shell) => { const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shell || 0.02);   // standing on hair this thick
-    const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D);   // direction it curls: 0 = forward, 90 = toward the character's left
-    const pts = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]].map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), segs = [];
-    for (let i = 0; i + 1 < pts.length; i++) { const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1); segs.push(strandSeg(pts[i], pts[i + 1], (0.014 * (1 - t0 * 0.55)) * S, (0.014 * (1 - t1 * 0.55)) * S, 0.6)); }
-    return G(segs, 0.006); };
+  // ahoge: one curled strand standing up from the top of the hair, arching forward (hair.sculpt.ahogeSize; ahogeDir turns it). Made straight
+  // as triangles, not in the hair's field: on the game's 13.6 mm grid a strand this thin on a small head (0.69) came out in pieces. A flat
+  // ribbon (rings of the locks' lens) along a curve through AHOGE, its root 2 cm inside the hair, sharp at the tip; joined to the hair in index.js
+  const AHOGE = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]];   // head space before ahogeDir; y from the hair's top
+  const LENS = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // across the curl's plane, through it
+  /** The ahoge's triangles { pos, nor, idx } (toBody: head space → the mesh's), or null when the style has none. 6 x 12 rings and the tip. */
+  function ahogeMesh(pick, toBody = (x, y, z) => [x, y, z], { K = 12, W = 0.016, FLAT = 0.45 } = {}) {
+    if (!pick.ahoge) return null;
+    const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
+    const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D), side = [cd, 0, -sd];   // 0 = forward, 90 = toward the character's left
+    const Q = AHOGE.map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), n = Q.length;
+    const at = (i) => Q[Math.max(0, Math.min(n - 1, i))], ext = (i) => i < 0 ? Q[0].map((v, k) => 2 * v - Q[1][k]) : i >= n ? Q[n - 1].map((v, k) => 2 * v - Q[n - 2][k]) : at(i);
+    const cr = (i, t) => { const a = ext(i - 1), b = at(i), c = at(i + 1), d = ext(i + 2), t2 = t * t, t3 = t2 * t;   // Catmull-Rom
+      return b.map((_, k) => 0.5 * (2 * b[k] + (c[k] - a[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * t3)); };
+    const F = []; for (let i = 0; i < n - 1; i++) for (let j = 0; j < 16; j++) F.push(cr(i, j / 16)); F.push(Q[n - 1]);
+    const len = [0]; for (let i = 1; i < F.length; i++) len.push(len[i - 1] + Math.hypot(F[i][0] - F[i - 1][0], F[i][1] - F[i - 1][1], F[i][2] - F[i - 1][2]));
+    const L = len[len.length - 1], along = (s) => { let i = 1; while (i < F.length - 1 && len[i] < s * L) i++; const u = (s * L - len[i - 1]) / (len[i] - len[i - 1] || 1); return F[i - 1].map((v, k) => v + (F[i][k] - v) * u); };
+    const norm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const pos = [], nor = [], h = 0.0005;
+    // normals: through the map's Jacobian (cofactors: its inverse transpose up to scale)
+    const toN = (p, v) => { const J = [0, 1, 2].map((k) => { const e = [0, 0, 0]; e[k] = h; const a = toBody(p[0] + e[0], p[1] + e[1], p[2] + e[2]), b = toBody(p[0] - e[0], p[1] - e[1], p[2] - e[2]); return a.map((x, m) => (x - b[m]) / (2 * h)); });
+      return norm(cross(J[1], J[2]).map((c, m) => c * v[0] + cross(J[2], J[0])[m] * v[1] + cross(J[0], J[1])[m] * v[2])); };
+    const put = (p, nv) => { pos.push(...toBody(...p)); nor.push(...toN(p, nv)); };
+    for (let r = 0; r < K; r++) {
+      const s = r / K, c = along(s), T = norm(along(Math.min(1, s + 0.01)).map((v, k) => v - along(Math.max(0, s - 0.01))[k]));
+      const U = norm(cross(T, side)), V = cross(U, T), w = W * S * Math.pow(1 - s * s, 0.7), b = w * FLAT;   // wide through the arc, then sharp
+      for (const [ax, th] of LENS) put(c.map((v, k) => v + w * ax * U[k] + b * th * V[k]), norm(U.map((u, k) => ax * u / w + th * V[k] / b)));
+    }
+    const tip = along(1); put(tip, norm(tip.map((v, k) => v - along(0.99)[k])));
+    const R = LENS.length, idx = [], T0 = K * R;
+    for (let r = 0; r + 1 < K; r++) for (let k = 0; k < R; k++) { const a = r * R + k, b = r * R + (k + 1) % R, c = a + R, d = b + R; idx.push(a, c, d, a, d, b); }
+    for (let k = 0; k < R; k++) idx.push((K - 1) * R + k, T0, (K - 1) * R + (k + 1) % R);
+    // wound so the faces look out (the first triangle's normal against its points' normals)
+    const P3 = (i) => pos.slice(i * 3, i * 3 + 3), fn = cross(P3(idx[1]).map((v, k) => v - P3(idx[0])[k]), P3(idx[2]).map((v, k) => v - P3(idx[0])[k]));
+    if (fn[0] * nor[idx[0] * 3] + fn[1] * nor[idx[0] * 3 + 1] + fn[2] * nor[idx[0] * 3 + 2] < 0) for (let i = 0; i < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]];
+    return { pos: new Float32Array(pos), nor: new Float32Array(nor), idx: new Uint32Array(idx) };
+  }
   const smax = (a, b, k) => -smin(-a, -b, k);
   // 前髪ブロック: 大きな毛束を数本(太く・平たく・先がとがる)。顔の前に乗る
   const HELMET = E([0, 1.13, 0.07], [0.268, 0.135, 0.212], "head");
@@ -160,9 +190,10 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
   const backAsLocks = (pick) => (["short", "hang", "bob", "flip"].includes(pick.back) && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
-  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), thin = L && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null, sh = thin ? OPT.hair.sculpt.lockShell : SHELL;
+  const shellOf = (pick) => bangsAsLocks(pick) && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null ? OPT.hair.sculpt.lockShell : SHELL;   // the block's thickness
+  const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), sh = shellOf(pick), thin = sh !== SHELL;
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
     if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
-    return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick)), ...(pick.ahoge ? [ahogeOn(sh)] : [])]); };   // pick: { bangs, back, ahoge }
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks };
+    return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, ahogeMesh };
 }
