@@ -822,6 +822,7 @@ export const DEFAULTS = {
         "puff": 0.012,
         "lockStiff": 4,
         "lockSpan": 13,
+        "branch": 0,
         "lockRise": 0.03,
         "lockHangY": 0.86,
         "lockRoot": 70,

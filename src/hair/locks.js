@@ -168,10 +168,19 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       // forehead, the cheek, the jaw: it stays 2 mm over whatever it meets, so it follows the face)
       if (tp.fl) { const keepOut = (p) => { const hx = p[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1, floor = surfaceAlong(surf, [0, p[1], center[2]], [hx / h, 0, hz / h]) + 0.002 + 0.25 * w * thick; if (h < floor) { p[0] = hx / h * floor; p[2] = center[2] + hz / h * floor; } };
         const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
-      for (let q = 0; q < N; q++) pts[q] = toRoot(...pts[q]);
-      let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
-        front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
+      // branch (0..1): a thin strand on the clump's edge away from the middle (one in each gap between the front tufts, none at the sides),
+      // opening out from halfway and reaching a little past its tip (the drawing's fine strands between wide tufts; overlapping tufts drew
+      // crossing lines instead)
+      const sd0 = tp.a >= 0 ? 1 : -1, BR = hang > 0.02 || Math.abs(tp.a) > (B.branchSpan ?? 55) * deg ? 0 : B.branch ?? 0, sides = BR > 0 && j === (sd0 > 0 ? k - 1 : 0) ? [sd0] : [];
+      const branches = sides.map((sd) => { const e = Math.hypot(pts[N - 1][0] - pts[N - 2][0], pts[N - 1][1] - pts[N - 2][1], pts[N - 1][2] - pts[N - 2][2]) || 1, dT = pts[N - 1].map((v, m) => (v - pts[N - 2][m]) / e);
+        return pts.map((p, q) => { const t = q / (N - 1), th = Math.atan2(p[0], p[2] - center[2]), o = sd * (0.42 * w / sx + 0.012 * BR * Math.max(0, t - 0.4) ** 2 / 0.36), x = Math.max(0, (t - 0.5) / 0.5) ** 2 * 0.014 * BR, r = 0.0015 * t;
+          return [p[0] + Math.cos(th) * o + dT[0] * x + Math.sin(th) * r, p[1] + dT[1] * x, p[2] - Math.sin(th) * o + dT[2] * x + Math.cos(th) * r]; }); });
+      for (const P of [pts, ...branches]) {
+        for (let q = 0; q < N; q++) P[q] = toRoot(...P[q]);
+        let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]);
+        const thin = P !== pts;
+        out.push({ root: P[0], pts: P, len, w: thin ? w * (0.12 + 0.1 * BR) : w, thick: thin ? 0.5 : thick, layer: 0, curl: 0, rise: true, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
+          front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 }); }   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
   return out;
