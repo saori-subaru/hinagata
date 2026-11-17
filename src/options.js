@@ -517,6 +517,7 @@ export const DEFAULTS = {
       "open": 0.6,
       "tilt": 0,
       "hood": false,
+      "hoodRim": true,
       "hoodSize": 1,
       "neckOpen": null,
       "line": null,

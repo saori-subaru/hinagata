@@ -334,8 +334,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         return Math.max(w * across + (1 - w) * level, level - 0.02 * (1 - sstep(0.015, 0.035, rN - r.t))); };
       return { at, cut, ray, line: rays.map((r) => r.p) };
     })();
-    // cape.hood (シルヴィ): a hood lying down: a fold along the neckline (its own part, "hood": 4 mm cells; at the cloth's 8 mm it came out
-    // ragged) and the bag on the back. Across the line the fold is a mound, rounded on top, its outer side going down into the cape and its
+    // cape.hood (シルヴィ): a hood lying down: a fold along the neckline (cape.hoodRim; its own part, "hood": 4 mm cells; at the cloth's 8 mm
+    // it came out ragged) and the bag on the back. Across the line the fold is a mound, rounded on top, its outer side going down into the cape and its
     // inner side down onto the clothes, so nothing shows between them; wider inside and higher toward the back. (A roll lying on the cut
     // read as a tube, the clothes' shoulders showing under it; a rim on an ellipse round the neck as a stiff collar; a mound of cape as a
     // neck pillow)
@@ -367,8 +367,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         const r = neck.ray(x, z), inside = r ? rN - r.t - 0.004 : 0;   // (past the rays it has sunk)
         return Math.max(B - g, -(B + 0.004), neck.at(x, z) - 0.008 - y, y - neck.at(x, z) - 0.055 + 0.3 * Math.max(0, rN - NK.ra), inside); };
       const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind
-      return { lo, hi,
-        rim: (x, y, z) => { const db = Math.hypot(Math.max(0, lo[0] - x, x - hi[0]), Math.max(0, lo[1] - y, y - hi[1]), Math.max(0, lo[2] - z, z - hi[2])); if (db > 0) return db + 0.01;   // (outside its box: a lower bound)
+      return { lo, hi, rim: CA.hoodRim === false ? null : (x, y, z) => { const db = Math.hypot(Math.max(0, lo[0] - x, x - hi[0]), Math.max(0, lo[1] - y, y - hi[1]), Math.max(0, lo[2] - z, z - hi[2])); if (db > 0) return db + 0.01;   // (outside its box: a lower bound)
           let best = 1e9;
           for (let i = 0; i < M - 1; i++) { const sx = X[i + 1] - X[i], sy = Y[i + 1] - Y[i], sz = Z[i + 1] - Z[i], ll = sx * sx + sy * sy + sz * sz || 1, s = ((x - X[i]) * sx + (y - Y[i]) * sy + (z - Z[i]) * sz) / ll;
             const t = Math.min(1, Math.max(0, s)), qx = x - X[i] - t * sx, qy = y - Y[i] - t * sy, qz = z - Z[i] - t * sz;
@@ -390,7 +389,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED;
-    f.rim = hood ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
+    f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
