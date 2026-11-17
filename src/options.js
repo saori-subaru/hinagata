@@ -491,7 +491,9 @@ export const DEFAULTS = {
         "bowl": 2.2,
         "tilt": 0.3,
         "front": 0.35,
-        "forward": 0.01
+        "forward": 0.01,
+        "notch": 0,
+        "notchWidth": 0.016
       },
       "shoulderFit": {
         "x0": 0,
@@ -685,6 +687,8 @@ export const DEFAULTS = {
       "strapAt": 0.03,
       "strapWidth": 0.012,
       "strapGap": 0.014,
+      "notch": 0,
+      "notchWidth": 0.024,
       "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
