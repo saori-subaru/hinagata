@@ -649,7 +649,7 @@ export function makeStretch(OPT, J) {
  * under it toward the root, where the body's own mesh goes on (no edge between them). P, HT: buildBody's; sdf: the body's distance (base space).
  * Returns { pos, nor, idx, under(x, y, z): a body point the blade covers (its triangles can go) } or null.
  */
-export function earBlades(P, HT, sdf, { N = 14, S = 24, D0 = 0.0004 } = {}) {
+export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   // N around (even: the rims at 0° and 180°), S + 1 rings: 43 points an ear (14 x 25 looked the same)
   const toH = HT.identity ? (x, y, z) => [x, y, z] : HT.toHead, fromH = HT.identity ? (x, y, z) => [x, y, z] : HT.fromHead;
   const pos = [], nor = [], idx = [], unders = [];
   for (const s of ["L", "R"]) {
