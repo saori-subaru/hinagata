@@ -52,8 +52,8 @@ export const CHARACTERS = {
         sculpt: {
           nendo: {
             tips: [
-              // the first and the last: the sidelocks before the ears, down under the jaw and curling in along it (her design sheet)
-              [-80, 0.79, 0.69, 0.33, null, -4, 0.006, -0.016, 0.95],
+              // the first and the last: the sidelocks before the ears, down to just under the jaw (her design sheet). Curled in (fl < 0), their ends went behind the jaw, out of sight
+              [-78, 0.80, 0.69, 0.33, null, -4, 0.006, 0, 0.95],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
               [-41.804, 1.002],
               [-43.334, 0.923],
@@ -62,7 +62,7 @@ export const CHARACTERS = {
               [46.958, 0.943],
               [54.716, 0.919],
               [42.444, 0.898, 0.5, 0, null, -3.5],
-              [80, 0.79, 0.66, -0.33, null, 4, 0.006, -0.016, 0.95],
+              [78, 0.80, 0.66, -0.33, null, 4, 0.006, 0, 0.95],
             ],
             overlap: 1.44,
           },
