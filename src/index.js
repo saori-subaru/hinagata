@@ -63,7 +63,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
  *                       The face is kept as built on top of the share, cloth is thinned less, and thinning stops before the shape would change by
  *                       more than 1% of the part's size, so a part may keep more than asked (2026-10-06: a share alone thinned a chibi paper-thin),
- *             spare: false (default) — armor that isn't worn is built only when it is put on (setWorn); true builds it now (an editor),
+ *             spare: false (default) — armor and the bodysuit that aren't worn are built only when put on (setWorn); true builds them now (an editor),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
@@ -124,10 +124,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
   const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
-  // armor that isn't worn is not built now (2026-10-05: the tennis game waited for a suit of armor nobody wore, as long as for the clothes):
-  // it is built when it is put on (setWorn), here on the main thread. settings.spare builds it anyway (the editor: everything ready to put
-  // on at once). What the cache has comes anyway (it costs nothing)
-  const LATER = new Set(!spare && !OPT.outfit.armor.on ? ARMOR.filter((k) => !hit?.[k]) : []);
+  // armor and the bodysuit that aren't worn are not built now (a game waited for armor nobody wore as long as for the clothes; the suit is
+  // a whole body of triangles): built when put on (setWorn), here on the main thread. settings.spare builds them anyway (the editor:
+  // everything ready to put on at once). What the cache has comes anyway (it costs nothing)
+  const LATER = new Set([...(!spare && !OPT.outfit.armor.on ? ARMOR : []), ...(!spare && !OPT.outfit.suit?.on ? ["suit"] : [])].filter((k) => !hit?.[k]));
   let building = true;
 
   lap("cache");
@@ -504,14 +504,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the full-body suit (outfit.suit): its second color (accent) on the collar, the cuffs at the wrists, the boots (the feet and ankles) and
   // panels down the sides, painted by where each point is (base proportions) and which way it faces, as a gradient of two steps (withGrad)
   const SUIT = { on: { value: 1 }, color: { value: new THREE.Color(OPT.outfit.suit?.accent ?? "#d8433f") }, start: { value: 0.5 }, soft: { value: 0.04 } };
-  parts.suit = skinned(meshPart("suit"), OPT.outfit.suit?.color ?? "#f1f1f4", 0.003, "suit");
-  { const g = parts.suit.m.geometry, Pa = basePos(g), N = g.attributes.normal.array, T = new Float32Array(Pa.length / 3);
+  const suitPart = () => { const x = skinned(meshPart("suit"), OPT.outfit.suit?.color ?? "#f1f1f4", 0.003, LATER.has("suit") ? null : "suit"), g = x.m.geometry, Pa = basePos(g), N = g.attributes.normal.array, T = new Float32Array(Pa.length / 3);
     for (let v = 0; v < T.length; v++) { const x = Pa[v * 3], y = Pa[v * 3 + 1], z = Pa[v * 3 + 2], nx = Math.abs(N[v * 3]);
       let a = Math.max(sstep(0.772, 0.782, y), 1 - sstep(0.115, 0.125, y));   // the collar, the boots
       for (const W of WRISTS) { const q = [x - W.h[0], y - W.h[1], z - W.h[2]], t = q[0] * W.d[0] + q[1] * W.d[1] + q[2] * W.d[2]; if (Math.hypot(...q) < 0.12 && t > -0.045) a = 1; }   // the cuffs
       if ((y > 0.2 && y < 0.6) || (Math.abs(x) > 0.19 && y < 0.74)) a = Math.max(a, sstep(0.84, 0.9, N[v * 3] * Math.sign(x)));   // down the outer sides (of the body under the chest, the legs, the arms)
       T[v] = a; }
-    g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); parts.suit.wrap = (m) => withGrad(m, SUIT); parts.suit.m.material = parts.suit.wrap(parts.suit.m.material); }
+    g.setAttribute("gradT", new THREE.BufferAttribute(T, 1)); x.wrap = (m) => withGrad(m, SUIT); x.m.material = x.wrap(x.m.material); return x; };
+  parts.suit = suitPart();   // (not worn: an empty stand-in, see LATER)
   // the garment parts (src/garments; 2026-10-10, for 島風: a sailor collar and its scarf, gloves, hip strings, a headband, and any part added
   // there). Built only when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
   for (const p of PARTS) parts[p.name] = skinned(meshPart(p.name), partOptions(OPT, p).color ?? p.defaults?.color ?? "#888888", p.outline, p.soft ? p.name : null);
@@ -670,7 +670,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
   const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => outfitOf(g).on !== false || isDress(g);
   const wear = (g, on) => { outfitOf(g).on = on;
-    if (g === "armor" && on && LATER.size) for (const k of ARMOR) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } x.m.material.dispose(); x.o.material.dispose(); LATER.delete(k); parts[k] = armorPart(k); }   // built now (see LATER)
+    const late = on ? (g === "armor" ? ARMOR : g === "suit" ? ["suit"] : []).filter((k) => LATER.has(k)) : [];   // built now (see LATER)
+    for (const k of late) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } x.m.material.dispose(); x.o.material.dispose(); LATER.delete(k); parts[k] = k === "suit" ? suitPart() : armorPart(k); }
     for (const k of GARMENTS[g]) show(k, on || isDress(g));
     if (AO.style === "full") { const plate = OPT.outfit.armor.on;   // full plate hides the clothes and the hair (they would poke out between the plates); taking it off brings back what is worn
       if (g === "armor") { for (const h of ["shirt", "pants", "socks", "shoes", "cape"]) for (const k of GARMENTS[h]) show(k, !plate && worn(h)); show("hair", !plate); for (const k of LOCK_PARTS) if (parts[k]) show(k, !plate); }
