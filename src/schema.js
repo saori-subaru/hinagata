@@ -203,6 +203,7 @@ const MAIN = [
   ["hair.tail.size", L("太さ", "Thickness"), { min: 0.5, max: 2, step: 0.05, section: L("結び髪", "Tails"), help: L("束ごと太く・細く(倍)。髪ゴムも合わせて変わる", "the whole bundle thicker or thinner (×); the tie follows") }],
   ["hair.tail.lift", L("はね上がり", "Lift"), { min: 0, max: 0.12, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から外へ張り出してから落ちるまで(m)", "how far it stands out from the tie before falling (m)") }],
   ["hair.tail.wave", L("うねり", "Wave"), { min: 0, max: 0.06, step: 0.002, section: L("結び髪", "Tails"), help: L("束ごと外と内へ波打つ幅(m)。0 = まっすぐ", "how far the bundle snakes out and in as it falls (m). 0 = straight") }],
+  ["hair.tail.stiff", L("テールの硬さ", "Tail stiffness"), { min: 0.2, max: 3, step: 0.1, section: L("結び髪", "Tails"), help: L("小さいほどよく揺れる", "lower swings more") }],
   ["hair.tail.waves", L("うねりの数", "Waves"), { min: 0.5, max: 4, step: 0.1, section: L("結び髪", "Tails"), help: L("根元から毛先までの波の数", "how many waves from the tie to the tips") }],
   ["hair.tail.gather", L("毛先をまとめる", "Gather the tips"), { min: 0, max: 1, step: 0.05, section: L("結び髪", "Tails"), help: L("1 = 毛先が一点に集まって細くなり、束ごと揺れる / 0 = 毛先が広がる(前の形)", "1 = the tips come together to a point and the bundle swings as one, 0 = the tips fan out (as before)") }],
   ["hair.tail.y", L("結ぶ高さ", "Tie height"), { min: 0.95, max: 1.22, step: 0.005, nullable: true, section: L("結び髪", "Tails"), help: L("null = 種類ごとの高さ", "null = each kind's own height") }],

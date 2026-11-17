@@ -14,7 +14,9 @@ import * as THREE from "three";
 const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const RING = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // the cross-section: a flat lens (across, out), 6 points
 const SUB = 3;
-const RIGID_HOLD = 0.12;   // hair.rigid 1: the pull toward the rest shape along the whole lock (per step); Sylvie running: the hanging hair 5 mm above its rest on average (0: 4 cm)
+const RIGID_HOLD = 0.12;   // hair.rigid 1: the pull toward the rest shape along the whole lock (per step); without it a rigid lock tilted back as one piece on a run (the back hair looked short from the front)
+// a rigid tail swings from its tie: held half as firmly, and its up-and-down kept (a bounce of the whole tuft, not jelly). At the full hold it hung still on a run
+export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
@@ -317,7 +319,7 @@ export function colliders(J, BI, sdf) {
 // rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0 }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, hold = RIGID_HOLD, vdamp = VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points) }));
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
@@ -378,7 +380,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   const RIG = rigid > 0 ? specs.map((s) => Math.min(1, rigid * (s.rigid ?? 1))) : null, va = new THREE.Vector3(), vb = new THREE.Vector3(), qr = new THREE.Quaternion();
   // a rigid lock is held toward its rest along all its length (a rope is held only near the root): else the whole lock tilted back in a run
   // and from the front the hanging hair looked shorter (2026-11-17, Saori: "正面から見たとき後ろ髪が短くなってない？")
-  if (RIG) specs.forEach((s, l) => { for (let i = 2; i < N; i++) K[l * N + i] = Math.max(K[l * N + i], RIGID_HOLD * RIG[l] * stiff * (s.stiff ?? 1)); });
+  if (RIG) specs.forEach((s, l) => { for (let i = 2; i < N; i++) K[l * N + i] = Math.max(K[l * N + i], hold * RIG[l] * stiff * (s.stiff ?? 1)); });
   let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
   function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
     // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
@@ -388,7 +390,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (let l = 0; l < NL; l++) for (let i = 0; i < N; i++) { const p = l * N + i, j = p * 3;
       if (i < 2) { for (let q = 0; q < 3; q++) { P[j + q] = X[j + q]; X[j + q] = T[j + q]; } continue; }   // the root and the next point ride on the head
       for (let q = 0; q < 3; q++) { const raw = X[j + q] - P[j + q], tv = (T[j + q] - TP[j + q]) / sub; let v = raw * keep;
-        if (keep) v = q === 1 ? tv + (v - tv) * VDAMP : tv + (raw - tv) * keep;   // its swing is kept against the head's motion, not the world's: moving fast, the world's drag
+        if (keep) v = q === 1 ? tv + (v - tv) * vdamp : tv + (raw - tv) * keep;   // its swing is kept against the head's motion, not the world's: moving fast, the world's drag
         P[j + q] = X[j + q]; X[j + q] += v; }                                     // had laid it out flat behind like a stick (the tennis player's 7 m/s, 2026-10-05); the wind (AIR) streams it now   // up and down it mostly goes with the head (it bobbed like jelly on a run's steps)
       const ph = PH[l], fl = 1 + 0.35 * Math.sin(clock * 7 + ph * 1.9 + i * 0.8), up = 0.22 * Math.sin(clock * 5.3 + ph * 2.3 + i * 1.1) * airN;   // a flutter along the stream, and a little up and down: waves, not a straight line
       X[j] += gx + AIR[0] * fl * h * h * fk; X[j + 1] += gy + (AIR[1] * fl + up) * h * h * fk; X[j + 2] += gz + AIR[2] * fl * h * h * fk;   // the wind (air drag pulling it along)

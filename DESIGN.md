@@ -913,6 +913,7 @@ Decided: working name "Hinagata" (check npm before publishing); code-drawn face 
 
 ### Locks that keep their shape (hair.rigid, hair.lockPoints)
 - `hair.rigid` (0–1): each step the lock's rest shape is turned to where the lock leans (about its second point) and its points pulled toward it, so a tuft tilts as one piece instead of bending like a rope. It is also held toward its rest along its whole length (RIGID_HOLD 0.12; a rope only near the root): without it the whole lock tilted back on a run and the hanging hair looked short from the front. `hair.lockPoints`: every lock remade with this many points (0 = as built); rigid locks need about 5. Both 0 by default = the old motion, the same mesh.
+- A rigid tail is held half as firmly (TAIL_HOLD), times `hair.tail.stiff`, and keeps its up-and-down (TAIL_VDAMP, against VDAMP for the rest). It trails back and bounces as one piece; at the full hold it hung still on a run. Below about 0.2 stiff the wind lays it out flat behind, like a stick.
 - Locks pass through the ears (no collider there). A long lock hanging over an elf ear buries the ear's root in hair, and rigid holds it there while running. Keep the lock over each ear short and lengthen the one in front of it instead (Sylvie: shortLocks.edits). Lengthened locks behind the ears hung below the back's hem.
 
 ### Locks don't stretch on a jump (2026-10-07, Saori: "ジャンプなどで上下に動いた時の髪がバネのように伸び縮みする")
