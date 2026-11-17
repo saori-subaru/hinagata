@@ -19,6 +19,8 @@ const SUB = 3;
 const RIGID_HOLD = 0.03, RIGID_VDAMP = 0.6;
 // a tail hangs from its tie with no hair under it: twice the hold (its stiff is 1 to the hanging locks' ~3), or the wind lays it out flat like a stick
 export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
+// rigid hanging locks: the inner layer held 4x as firmly and kept whole, so a run lifts the outer one over hair, not over the block (its smooth dome, as pale as the skin, read as a bald head)
+const INNER_HOLD = 4, INNER_RIGID = 2;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
@@ -64,7 +66,7 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const root = dir.map((v, k) => center[k] + v * (t - 0.012));   // a little under the surface: the root is hidden in the hair
     const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04 - (E.dy ?? 0));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
-    specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0),   // rise: it gets its thickness gently (no ridge at the root)
+    specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0), hold: layer ? INNER_HOLD : 1, rigid: layer ? INNER_RIGID : 1,   // rise: it gets its thickness gently (no ridge at the root)
       group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45 });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
   }
   // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
@@ -380,9 +382,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     if (X[j + 1] < floorY + r * SC) X[j + 1] = floorY + r * SC;   // the floor (the avatar's feet)
   }
   const RIG = rigid > 0 ? specs.map((s) => Math.min(1, rigid * (s.rigid ?? 1))) : null, va = new THREE.Vector3(), vb = new THREE.Vector3(), qr = new THREE.Quaternion();
-  // a rigid lock is held toward its rest along all its length (a rope is held only near the root): else the whole lock tilted back in a run
-  // and from the front the hanging hair looked shorter (2026-11-17, Saori: "正面から見たとき後ろ髪が短くなってない？")
-  if (RIG) specs.forEach((s, l) => { for (let i = 2; i < N; i++) K[l * N + i] = Math.max(K[l * N + i], hold * RIG[l] * stiff * (s.stiff ?? 1)); });
+  // a rigid lock is held toward its rest along all its length (a rope only near the root); s.hold: this lock's share of the hold
+  if (RIG) specs.forEach((s, l) => { for (let i = 2; i < N; i++) K[l * N + i] = Math.max(K[l * N + i], hold * (s.hold ?? 1) * RIG[l] * stiff * (s.stiff ?? 1)); });
   let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
   function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
     // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
