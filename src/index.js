@@ -15,7 +15,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch, isArmBone, adultFit } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone, adultFit, earBlades } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
@@ -56,7 +56,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built at 4.5 mm cells, then thinned to 7 % (meshoptimizer; the face kept as
  *              built, skirts and capes at most 10.5 mm and 0.45 of their thickness, not thinned): about the triangles of "game" (fewer than
- *              "high" by half), the sharpest shapes (a nose tip, an elf ear's point), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
+ *              "high" by half), the sharpest shapes (a nose tip; an elf ear's blade is made apart, sharp at any quality), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15% and lighter hair locks, about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
@@ -162,14 +162,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
     if (w && MS) { rec = simplified(rec, name); }   // a worker builds full meshes; they are thinned here (with their skin weights)
-    if (w) fresh[name] = rec;
+    if (w) fresh[name] = rec = withParts(name, rec);
     if (!rec && make) { const r = make(); const { si, sw } = skinOf(r.pos, weightsAt, BI, bone1, only, soft); rec = fresh[name] = { ...r, si, sw }; time = { sample: 0, project: 0 }; }
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
       if (MS) ({ pos, nor, idx } = simplified({ pos, nor, idx }, name));
       const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only, soft);
-      rec = fresh[name] = { pos, nor, idx, si, sw };
+      rec = fresh[name] = withParts(name, { pos, nor, idx, si, sw });
     }
     const g = new THREE.BufferGeometry();
     let gp = rec.pos, gn = rec.nor;
@@ -217,6 +217,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (SI) for (let k = 0; k < 4; k++) { SI[m * 4 + k] = si[v * 4 + k]; SW[m * 4 + k] = sw[v * 4 + k]; } }
     for (let i = 0; i < out.length; i++) out[i] = map[out[i]];
     return SI ? { pos: P, nor: N, idx: out, si: SI, sw: SW } : { pos: P, nor: N, idx: out };
+  }
+  // the elf ears' blades, made as rings on the body's surface (body/index.js earBlades), join the body; its own triangles under them go
+  function withParts(name, rec) {
+    const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null; if (!EB) return rec;
+    const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
+    for (let v = 0; v < n; v++) drop[v] = EB.under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
+    for (let t = 0; t < idx.length; t += 3) if (!(drop[idx[t]] && drop[idx[t + 1]] && drop[idx[t + 2]])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
+    let m = 0; for (const v of kept) if (map[v] < 0) map[v] = m++;
+    const k = EB.pos.length / 3, sk = skinOf(EB.pos, weightsAt, BI), P2 = new Float32Array((m + k) * 3), N2 = new Float32Array((m + k) * 3), SI = new si.constructor((m + k) * 4), SW = new Float32Array((m + k) * 4);
+    for (let v = 0; v < n; v++) { const u = map[v]; if (u < 0) continue; for (let c = 0; c < 3; c++) { P2[u * 3 + c] = pos[v * 3 + c]; N2[u * 3 + c] = nor[v * 3 + c]; } for (let c = 0; c < 4; c++) { SI[u * 4 + c] = si[v * 4 + c]; SW[u * 4 + c] = sw[v * 4 + c]; } }
+    P2.set(EB.pos, m * 3); N2.set(EB.nor, m * 3); SI.set(sk.si, m * 4); SW.set(sk.sw, m * 4);
+    const I = new Uint32Array(kept.length + EB.idx.length); for (let i = 0; i < kept.length; i++) I[i] = map[kept[i]]; for (let i = 0; i < EB.idx.length; i++) I[kept.length + i] = EB.idx[i] + m;
+    return { pos: P2, nor: N2, idx: I, si: SI, sw: SW };
   }
   function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
     if (soft) addSoftNormals(soft, geo);

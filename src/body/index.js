@@ -1,6 +1,7 @@
 // The body: joints (bones) and the signed-distance parts that make the naked body, head and face sculpt.
 import { handFrame } from "../clothes/weapons.js";
 import { smin, E, axes, cut, G, C, dPrim, blend, blendFast, plane, sstep, thicken } from "../sdf/prim.js";
+import { grad4 } from "../sdf/mesh.js";
 const HEAD_SCALE0 = 0.9;   // the head size the neck width is set for (neck.follow): the chibi's, the default until 2026-10-06 (not DEFAULTS' now: every neck would change)
 const ARM0 = { "upperArm.L": [0.115, 0.732, 0], "lowerArm.L": [0.232, 0.612, 0.005], "hand.L": [0.322, 0.52, 0.01] };   // the base arm (left), as built at the base proportions
 
@@ -324,7 +325,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       const a = [m * Math.cos(bk) * Math.cos(up), Math.sin(up), -Math.sin(bk) * Math.cos(up)];   // out to the side, up by angle, back by back (degrees)
       const bu = nrm([-a[0] * a[1], 1 - a[1] * a[1], -a[2] * a[1]]), bn = nrm([a[1] * bu[2] - a[2] * bu[1], a[2] * bu[0] - a[0] * bu[2], a[0] * bu[1] - a[1] * bu[0]]);   // bu: up across the blade (the tip bends that way), bn: its face
       const s0 = ec.map((v, i) => v - a[i] * L0), mid = s0.map((v, i) => v + a[i] * L * 0.5 + bu[i] * CV * L * 0.25);
-      P[`earTip.${s}`] = { t: 3, k: EL.k, bone: "head", bx0: mid[0], by0: mid[1], bz0: mid[2], br: L * 0.6 + W + CV * L,
+      P[`earTip.${s}`] = { t: 3, k: EL.k, bone: "head", bx0: mid[0], by0: mid[1], bz0: mid[2], br: L * 0.6 + W + CV * L, blade: { s0, a, bu, L, W, FL, CV },
         f: (x, y, z) => { const d = [x - s0[0], y - s0[1], z - s0[2]], t = Math.min(1, Math.max(0, (d[0] * a[0] + d[1] * a[1] + d[2] * a[2]) / L));
           const q = [0, 1, 2].map((i) => d[i] - a[i] * t * L - bu[i] * CV * L * t * t), qa = q[0] * a[0] + q[1] * a[1] + q[2] * a[2], qw = q[0] * bn[0] + q[1] * bn[1] + q[2] * bn[2];
           const qb = Math.sqrt(Math.max(0, q[0] * q[0] + q[1] * q[1] + q[2] * q[2] - qa * qa - qw * qw)), r = W * (1 - Math.pow(t, 1.3)) + 0.0015;   // a leaf: widest at the ear, to a point
@@ -639,4 +640,45 @@ export function makeStretch(OPT, J) {
     let lo = Math.min(inv(Y), Y - armDy), hi = Math.max(inv(Y), Y - armDy); for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; if (up(m, a) < Y) lo = m; else hi = m; } return (lo + hi) / 2; };
   return { identity: false, fwd, inv, slope, k: 1 / Math.max(1, sL, sc, sw), lift: fwd(yn + 0.1) - (yn + 0.1), legK: (fwd(yh) - fwd(ya)) / (yh - ya),
     rigid, armDy, up, upSlope, down, bone: (b, y) => rigid && isArmBone(b) ? y + armDy : fwd(y), shz, shzD };   // bone: where a joint at base height y goes
+}
+
+/**
+ * The elf ears' blades (ears.elf) made as rings of points along the blade, each put on the body's surface (a ray from the blade's middle out
+ * to where the distance turns positive), not where the body's grid crossed it: the blade's rim is sharper than the grid's cells, and its points
+ * sat in a staircase the outline traced (2026-11-17, Saori: 「エルフ耳なんてただの三角形でしょ」). The rings lie D0 over the surface and dive D0
+ * under it toward the root, where the body's own mesh goes on (no edge between them). P, HT: buildBody's; sdf: the body's distance (base space).
+ * Returns { pos, nor, idx, under(x, y, z): a body point the blade covers (its triangles can go) } or null.
+ */
+export function earBlades(P, HT, sdf, { N = 14, S = 24, D0 = 0.0004 } = {}) {
+  const toH = HT.identity ? (x, y, z) => [x, y, z] : HT.toHead, fromH = HT.identity ? (x, y, z) => [x, y, z] : HT.fromHead;
+  const pos = [], nor = [], idx = [], unders = [];
+  for (const s of ["L", "R"]) {
+    const e = P[`earTip.${s}`]; if (!e?.blade) continue;
+    const { s0, a, bu, L, W, FL, CV } = e.blade, bn = [a[1] * bu[2] - a[2] * bu[1], a[2] * bu[0] - a[0] * bu[2], a[0] * bu[1] - a[1] * bu[0]];
+    const along = (q) => ((q[0] - s0[0]) * a[0] + (q[1] - s0[1]) * a[1] + (q[2] - s0[2]) * a[2]) / L, rAt = (t) => W * (1 - Math.pow(t, 1.3)) + 0.0015;
+    const mid = (t) => s0.map((v, i) => v + a[i] * t * L + bu[i] * CV * L * t * t);   // the blade's middle line (head space), as its distance has it
+    // a ray from the section's middle at t toward its ellipse's point at angle f (base space): [start, unit direction, the ellipse's length]
+    const ray = (t, f) => { const c = mid(t), r = rAt(t), b = fromH(...c), d = fromH(...c.map((v, i) => v + r * (bu[i] * Math.cos(f) + bn[i] * FL * Math.sin(f)))).map((v, i) => v - b[i]), l = Math.hypot(...d); return [b, d.map((v) => v / l), l]; };
+    // where g turns positive along the ray (up to 1.6x the ellipse's length; null: none, or the start isn't inside)
+    const hit = (g, [b, d, l]) => { const at = (u) => g(b[0] + d[0] * u, b[1] + d[1] * u, b[2] + d[2] * u), far = l * 1.6 + 0.003; if (at(0) >= 0) return null;
+      let u0 = 0, u1 = l / 6; while (u1 <= far && at(u1) < 0) { u0 = u1; u1 += l / 6; } if (u1 > far) return null;
+      for (let k = 0; k < 14; k++) { const um = (u0 + u1) / 2; if (at(um) >= 0) u1 = um; else u0 = um; } return (u0 + u1) / 2; };
+    // the root: the first section clear of the head (every ray meets the surface about where the ellipse says)
+    let TS = 1; for (let t = 0.1; t < 0.8 && TS === 1; t += 0.02) { let ok = true; for (let j = 0; j < N && ok; j++) { const R = ray(t, 2 * Math.PI * j / N), u = hit(sdf, R); ok = u != null && u < R[2] * 1.25 + 0.001; } if (ok) TS = t + 0.02; }
+    if (TS >= 0.8) continue;
+    const TR = 0.06, g = (x, y, z) => sdf(x, y, z) - D0 * (2 * sstep(TS, TS + TR, along(toH(x, y, z))) - 1), v0 = pos.length / 3;
+    const put = (p) => { const n = grad4(g, p[0], p[1], p[2], 0.0005); pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); };
+    for (let i = 0; i <= S; i++) { const t = TS + (1 - TS) * (1 - Math.pow(1 - i / S, 1.5));   // closer together toward the tip
+      for (let j = 0; j < N; j++) { const R = ray(t, 2 * Math.PI * j / N), u = hit(g, R) ?? R[2] + D0; put(R[0].map((v, k) => v + R[1][k] * u)); } }
+    { const c = mid(1), b = fromH(...c), d = fromH(...c.map((v, i) => v + a[i] * 0.004)).map((v, i) => v - b[i]), l = Math.hypot(...d), R = [b, d.map((v) => v / l), l * 0.0015 / 0.004];
+      const u = hit(g, R) ?? R[2]; put(b.map((v, k) => v + R[1][k] * u)); }   // the tip
+    const tip = pos.length / 3 - 1, V = (i, j) => v0 + i * N + (j % N), i0 = idx.length;
+    for (let i = 0; i < S; i++) for (let j = 0; j < N; j++) idx.push(V(i, j), V(i + 1, j), V(i + 1, j + 1), V(i, j), V(i + 1, j + 1), V(i, j + 1));
+    for (let j = 0; j < N; j++) idx.push(V(S, j), tip, V(S, j + 1));
+    { const [A, B, Cc] = [idx[i0], idx[i0 + 1], idx[i0 + 2]].map((v) => pos.slice(v * 3, v * 3 + 3)), u = B.map((v, k) => v - A[k]), w = Cc.map((v, k) => v - A[k]);   // wound to face along the normals
+      const fn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], n = nor.slice(idx[i0] * 3, idx[i0] * 3 + 3);
+      if (fn[0] * n[0] + fn[1] * n[1] + fn[2] * n[2] < 0) for (let k = i0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; } }
+    unders.push((x, y, z) => { const q = toH(x, y, z); return along(q) > TS + TR + 0.03 && e.f(q[0], q[1], q[2]) < 0.002; });
+  }
+  return pos.length ? { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx), under: (x, y, z) => unders.some((f) => f(x, y, z)) } : null;
 }
