@@ -388,6 +388,8 @@ The editor moves the ties by hand too (editor/src/ties.js, "頭の上で結び�
 
 **Waves (2026-10-05, Saori: Nahida's wavy tail and long side lock)**: `hair.tail.wave` (m, 0 = straight) snakes the whole bundle out and in from the head as it falls, `waves` times from the tie to the tips (all its locks together, a little apart in phase). A bang tuft's row takes a 10th value, the wave of its hanging part (side to side across its flat side; `nendo.waves` waves); the editor's tuft tool has it as "うねり(垂れた部分)". Drawn locks are as wavy as they are drawn.
 
+**Steps (`hair.tail.tiers`, `tierFlick`)**: the locks end in that many steps, each TIER_STEP of the length shorter, the ones furthest out from the head shortest, and each step hangs TIER_OUT × volume further out than the next longer one, like shingles, so its tips show on the tail's outer edge. `tierFlick` (m) bends every lock's lower part out from the head (bendLock). The short steps are not gathered to the bundle's middle. Spread over the bundle or gathered, their tips stayed inside the longer locks and the tail read as one taper.
+
 ### Gradients: hair tips and hems (2026-10-05, Saori; done)
 
 Asked whether a loaded texture should do the gradients: not for the hair. Projected by height, a bang's tip (at the brows) and a long lock's (at the waist) would get different colors; the locks already know their own root-to-tip position. So gradients are their own settings, and textures (next) are for patterns.
