@@ -168,16 +168,17 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // or round lobes around it; tiers stack the skirt in steps, each tier flaring out over the top of the next; curl flares the last part out
   // and up (> 0) or draws it in (< 0)
   const HS = SK.hemShape ?? "plain", HN = Math.max(2, Math.round(SK.hemCount ?? 10)), HD = SK.hemDepth ?? 0.05, CURL = SK.curl ?? 0, SPAN = Math.max(0.05, SK_Y0 - SK.hem);
-  // side panels (skirtOf's sideDrop, sideAt, sideOut; for シルヴィ): the sides hang sideDrop m lower than the middle panels in front and
-  // behind, from sideAt (the sine of the angle round from the middle line) on, standing sideOut m out over them: two layers, a petticoat
-  // showing under the shorter middle ones
+  // side panels (skirtOf's sideDrop, sideAt, sideOut, middleBack; for シルヴィ): the sides hang sideDrop m lower than the middle panels in
+  // front and behind (middleBack false: in front only, the back all one long panel), from sideAt (the sine of the angle round from the middle
+  // line) on, standing sideOut m out over them: two layers, a petticoat showing under the shorter middle ones
   const SD = SKIRT ? SK.sideDrop ?? 0 : 0, SAT = SK.sideAt ?? 0.4, SOUT = SD > 0 ? SK.sideOut ?? 0.005 : 0, SW = 0.04;
-  const sideOf = (x, dz) => SD > 0 ? sstep(SAT - SW, SAT + SW, Math.abs(x) / (Math.hypot(x, dz) || 1)) : 0;
+  const CINCH = SKIRT ? SK.cinch ?? 0 : 0, CINCH_AT = SK.cinchAt ?? 0.55;   // skirtOf's cinch (m) at cinchAt (base): drawn in there, as by a belt
+  const MB = SK.middleBack !== false, sideOf = (x, dz) => SD > 0 ? (!MB && dz < 0 ? 1 : sstep(SAT - SW, SAT + SW, Math.abs(x) / (Math.hypot(x, dz) || 1))) : 0;   // (at the sides |x| / r is 1 either way)
   const hemAt = (x, dz) => { const h = SK.hem - SD * sideOf(x, dz); if (HS !== "zigzag" && HS !== "scallop") return h; const e = 2 * (((Math.atan2(x, dz) / (2 * Math.PI) + 1) * HN) % 1) - 1;
     return h + HD * (HS === "zigzag" ? Math.abs(e) : 1 - Math.sqrt(Math.max(0, 1 - e * e))); };
   // the hem's cut as a distance: over the panels' step it is steep round the skirt, so divided by its slope there (else 3x too far, and
   // the mesher's coarse pass skipped the step)
-  const hemCut = (x, y, dz) => { const v = hemAt(x, dz) - y; if (!SD) return v; const r = Math.hypot(x, dz) || 1, u = Math.min(1, Math.max(0, (Math.abs(x) / r - SAT + SW) / (2 * SW)));
+  const hemCut = (x, y, dz) => { const v = hemAt(x, dz) - y; if (!SD || (!MB && dz < 0)) return v; const r = Math.hypot(x, dz) || 1, u = Math.min(1, Math.max(0, (Math.abs(x) / r - SAT + SW) / (2 * SW)));
     return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * SW) * Math.abs(dz) / (r * r)); };
   const shapeOut = (y) => { const t = Math.min(1, Math.max(0, (SK_Y0 - y) / SPAN)); let e = CURL * 0.12 * sstep(0.55, 1, t) ** 2;
     return e; };
@@ -195,6 +196,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const th = Math.atan2(x / ax, dz / az), pl = SK.pleatDepth * sstep(SK_Y0 - 0.02, SK.hem, y) * Math.abs(Math.sin(th * SK.pleats / 2));
     const top = SK_Y0 - SK_TILT * z; let outer = DRAPE(x, y, z) + pl - shapeOut(y) * 0.9;   // < 0 inside
     if (SD) outer -= SOUT * sideOf(x, dz) + SK.flare * Math.max(0, SK.hem - y) * 0.9;   // side panels: out over the middle ones, flaring on below the middle's hem
+    if (CINCH) outer += CINCH * Math.exp(-(((y - CINCH_AT) / 0.035) ** 2));   // drawn in round cinchAt (a belt), smoothly: no step
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
     const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     const tk = SK.thick * Math.hypot(1, slope), shell = (o) => Math.max(o, -(o + tk));
@@ -317,19 +319,19 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const N = 64, PX = [], PY = [], PZ = [], Y0 = [], RR = [], ST = [];
       for (let i = 0; i <= N; i++) { const ph = -PH + 2 * PH * i / N, x = a * Math.sin(ph), z = zc - b * Math.cos(ph), back = Math.cos(ph / 2) ** 2;   // back: 1 behind the neck, 0 at the ends
         let y = top(x, z); while (y > CAPE_Y - 0.12 && outside(x, y, z) > 0) y -= 0.001;   // its foot on the cape (or on its cut top)
-        const r = 0.01 + 0.006 * Math.min(1, 3 * back);
-        PX.push(x); PY.push(y - 0.004 + r); PZ.push(z); Y0.push(y - 0.004); RR.push(r); ST.push((0.012 * Math.min(1, 2 * back) + 0.02 * back * back) * HS); }
-      const yLo = Math.min(...Y0) - 0.03, yHi = Math.max(...PY.map((y, i) => y + ST[i] + RR[i])) + 0.03, xHi = a + 0.03, zLo = zB - 0.03, zHi = zF + 0.03;
+        const r = 0.016 * HS * (0.6 + 0.4 * Math.min(1, 3 * back));   // (hoodSize: a big hood is a thick cowl over the shoulders)
+        PX.push(x); PY.push(y - 0.004 + r * 0.8); PZ.push(z); Y0.push(y - 0.004); RR.push(r); ST.push(0.025 * back * back * HS); }   // (its section 1.25 r wide, 0.8 r tall: lying over the shoulders)
+      const RM = Math.max(...RR) * 1.25, yLo = Math.min(...Y0) - 0.03, yHi = Math.max(...PY.map((y, i) => y + ST[i] + RR[i])) + 0.03, xHi = a + RM + 0.03, zLo = zB - RM - 0.03, zHi = zF + RM + 0.03;
       const footAt = (ph) => { const t = Math.min(N, Math.max(0, (ph + PH) / (2 * PH) * N)), i = Math.min(N - 1, Math.floor(t)), f = t - i; return Y0[i] * (1 - f) + Y0[i + 1] * f; };
-      const yT = footAt(0) + 0.01, hw = 0.13 * HS, hd = 0.13 * HS;   // the body starts under the roll behind the neck (above it, it climbed the neck's back as a board)
+      const LS = Math.min(HS, 1.3), yT = footAt(0) + 0.01, hw = 0.13 * LS, hd = 0.13 * LS;   // the body starts under the roll behind the neck (above it, it climbed the neck's back as a board)
       return { lo: [-xHi, yLo, zLo], hi: [xHi, yHi, zHi],
         rim: (x, y, z) => { const db = Math.hypot(Math.max(0, Math.abs(x) - xHi), Math.max(0, yLo - y, y - yHi), Math.max(0, zLo - z, z - zHi)); if (db > 0) return db + 0.01;   // (outside its box: a lower bound)
           let best = 1e9;
           for (let i = 0; i < N; i++) { const ax = PX[i], ay = PY[i], az = PZ[i], dx = PX[i + 1] - ax, dy = PY[i + 1] - ay, dz = PZ[i + 1] - az;
             const t = Math.min(1, Math.max(0, ((x - ax) * dx + (y - ay) * dy + (z - az) * dz) / (dx * dx + dy * dy + dz * dz || 1))), qx = ax + t * dx, qy = ay + t * dy, qz = az + t * dz;
-            const h = Math.hypot(x - qx, z - qz); if (h - 0.017 > best) continue;
+            const h = Math.hypot(x - qx, z - qz); if (h - RM - 0.001 > best) continue;
             const r = RR[i] + (RR[i + 1] - RR[i]) * t, st = ST[i] + (ST[i + 1] - ST[i]) * t, v = y - qy;
-            best = Math.min(best, Math.hypot(h, v > 0 ? Math.max(0, v - st) : v) - r); }   // a roll along the line, standing up st over it
+            const rh = r * 1.25, rv = r * 0.8; best = Math.min(best, (Math.hypot(h / rh, (v > 0 ? Math.max(0, v - st) : v) / rv) - 1) * rv); }   // a roll along the line, standing up st over it
           return best; },
         hole: (x, y, z) => { const ph = Math.max(-PH, Math.min(PH, Math.atan2(x / a, -(z - zc) / b))), back = Math.cos(ph / 2) ** 2;   // < 0 inside the U, from 3 cm under its foot (the
           return Math.max((Math.hypot(x / a, (z - zc) / b) - 1) * Math.min(a, b), footAt(ph) - 0.004 - 0.026 * Math.min(1, 4 * back) - y); },   // cape's shell left there covered the shirt), little near the closure's ends
