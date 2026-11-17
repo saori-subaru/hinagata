@@ -100,7 +100,7 @@ simulated on the CPU every frame. Budget for both:
   character is small on the screen, and not at all when it is off the screen. Without it they are simulated in full every frame:
   about 5 ms a character, 10–13 with a skirt or long hair, 25–30 with a dress, a cape and long hair (a 2.8 GHz cloud CPU). `avatar.detail`
   says what the last update did; `{ detail: "full" | "half" | "low" | "off" }` sets it yourself.
-- `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, about half the build
+- `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair and cloth, about half the build
   time: crowds, small characters, phones), "fine" (the sharpest shapes, e.g. a nose tip, at about the triangles of
   "game", but about 2.5x as long to build the first time; the default for `body.adult`) or "high" (6.8 mm cells unthinned, 2–3x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
   `{ simplify: 0.15 }` thins the "game" mesh to that share of the triangles (meshoptimizer, from your import map's "meshoptimizer", else
