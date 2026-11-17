@@ -4,11 +4,12 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, band (a ring around the limb at that
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, cross (an X),
+// tassel and tab (hanging down from where they are put), buckle (a frame), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -49,6 +50,22 @@ const SHAPES = {
       parts.push(smooth(tg)); }
     const k = new THREE.SphereGeometry(0.13, 14, 10); k.scale(0.85, 1, 0.75); k.translate(0, 0, 0.1); parts.push(k);
     return merge(parts); },
+  // for シルヴィ: an X of two rounded bars (spin 45: a +), 1 across; a tassel hanging 1 down from where it is put (a knot, a collar, a fringe
+  // of cords); a buckle's frame, 1 wide; a tab, a strap 0.36 wide hanging 1 down from where it is put, its end cut in a V
+  cross: () => { const bar = (a) => { const s = new THREE.Shape(), w = 0.12, l = 0.5; s.moveTo(-l + w, -w); s.lineTo(l - w, -w); s.absarc(l - w, 0, w, -Math.PI / 2, Math.PI / 2, false); s.lineTo(-l + w, w); s.absarc(-l + w, 0, w, Math.PI / 2, Math.PI * 1.5, false);
+      const g = flat(s, 0.06); g.rotateZ(a); return g; };
+    const g = merge([bar(Math.PI / 4), bar(-Math.PI / 4)]); g.computeVertexNormals(); return g; },
+  tassel: () => { const parts = [], up = new THREE.Vector3(0, 1, 0);
+    const knot = new THREE.SphereGeometry(0.14, 12, 10); knot.translate(0, -0.12, 0); parts.push(knot);
+    const neck = new THREE.CylinderGeometry(0.1, 0.12, 0.12, 12); neck.translate(0, -0.3, 0); parts.push(neck);
+    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, t = new THREE.Vector3(0.07 * Math.cos(a), -0.34, 0.07 * Math.sin(a)), b = new THREE.Vector3(0.13 * Math.cos(a), -1, 0.13 * Math.sin(a)), d = b.clone().sub(t);
+      const c = new THREE.CylinderGeometry(0.035, 0.03, d.length(), 5); c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.clone().normalize())); c.translate((t.x + b.x) / 2, (t.y + b.y) / 2, (t.z + b.z) / 2); parts.push(c); }
+    const g = merge(parts); g.translate(0, 0, 0.15); return g; },
+  buckle: () => { const box = (p, w, h, r) => { p.moveTo(-w + r, -h); p.lineTo(w - r, -h); p.quadraticCurveTo(w, -h, w, -h + r); p.lineTo(w, h - r); p.quadraticCurveTo(w, h, w - r, h); p.lineTo(-w + r, h); p.quadraticCurveTo(-w, h, -w, h - r); p.lineTo(-w, -h + r); p.quadraticCurveTo(-w, -h, -w + r, -h); return p; };
+    const s = box(new THREE.Shape(), 0.5, 0.35, 0.1); s.holes.push(box(new THREE.Path(), 0.3, 0.16, 0.05)); const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
+  cord: () => { const g = new THREE.CapsuleGeometry(0.06, 0.88, 4, 10); g.rotateZ(Math.PI / 2); g.translate(0, 0, 0.06); return g; },
+  tab: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.05); s.lineTo(w, 0.05); s.lineTo(w, -1); s.lineTo(0, -0.88); s.lineTo(-w, -1); s.lineTo(-w, 0.05);
+    const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
   button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
   // an anchor (2026-10-10, for 島風): the shank with a ring on top and the stock across under it, the arms curving up to the flukes; 1 tall,
