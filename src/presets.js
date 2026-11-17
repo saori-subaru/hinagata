@@ -49,11 +49,12 @@ export const CHARACTERS = {
         tail: { kind: "side", y: 1.22, waves: 0.5, tie: { size: 2.2 } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
+        // the sidelocks: from the temples under the bangs straight down before the ears to just under the jaw (her design sheet; head space)
+        drawn: [{ pts: [[0.16, 1.08, 0.07], [0.178, 1.0, 0.085], [0.183, 0.9, 0.092], [0.175, 0.8, 0.098]], width: 0.055, thick: 0.35, stiff: 3, mirror: true }],   // stiff 1: a run blew them back level with the ears
         sculpt: {
           nendo: {
             tips: [
-              // the first and the last: the sidelocks before the ears, down to just under the jaw (her design sheet). Curled in (fl < 0), their ends went behind the jaw, out of sight
-              [-78, 0.80, 0.69, 0.33, null, -4, 0.006, 0, 0.95],
+              [-81.52, 0.887, 0.69, 0.33, null, 6],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
               [-41.804, 1.002],
               [-43.334, 0.923],
@@ -62,7 +63,7 @@ export const CHARACTERS = {
               [46.958, 0.943],
               [54.716, 0.919],
               [42.444, 0.898, 0.5, 0, null, -3.5],
-              [78, 0.80, 0.66, -0.33, null, 4, 0.006, 0, 0.95],
+              [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
             overlap: 1.44,
           },
