@@ -413,7 +413,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       // the bag: inside an ellipse narrowing downward (bagCut < 0), its top bagTop (m) over the cape's outer side: 8 mm at its rim, 22 in the middle
       const bagE = (x, y) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)); return Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd); };
       const bagTop = (x, y) => { const e = bagE(x, y); return 0.008 + 0.014 * Math.max(0, 1 - e * e); };
-      const bagCut = (x, y, z) => Math.max((bagE(x, y) - 1) * Math.min(hw, hd), z + 0.02, y - yT);
+      const bagOut = (x, y, z) => Math.max((bagE(x, y) - 1) * Math.min(hw, hd), z + 0.02), bagCut = (x, y, z) => Math.max(bagOut(x, y, z), y - yT);   // bagOut: its outline but the top
       return { lo, hi, rim: CA.hoodRim === false ? null : (x, y, z) => { const db = Math.hypot(Math.max(0, lo[0] - x, x - hi[0]), Math.max(0, lo[1] - y, y - hi[1]), Math.max(0, lo[2] - z, z - hi[2])); if (db > 0) return db + 0.01;   // (outside its box: a lower bound)
           let best = 1e9;
           for (let i = 0; i < M - 1; i++) { const sx = X[i + 1] - X[i], sy = Y[i + 1] - Y[i], sz = Z[i + 1] - Z[i], ll = sx * sx + sy * sy + sz * sz || 1, s = ((x - X[i]) * sx + (y - Y[i]) * sy + (z - Z[i]) * sz) / ll;
@@ -425,7 +425,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
             best = Math.min(best, Math.max((n - Fa) / Math.hypot(1, 2 * k * a), a - (WO[i] * w + WO[i + 1] * t), -a - (WI[i] * w + WI[i + 1] * t), NIN - n, beyond)); }
           return smin(best, lining(x, y, z), 0.006); },
         layer: (x, y, z, S, deep = 0.002) => Math.max(S - bagTop(x, y), -S - deep, bagCut(x, y, z)),
-        bagTop, bagCut, bagY: yT,
+        bagTop, bagCut, bagOut, bagY: yT,
         bag: { lo: [-hw - 0.01, yT - hd - 0.01], hi: [hw + 0.01, yT + 0.01] } };
     })() : null;
     const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
@@ -441,10 +441,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
     // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
-    // Its top ends 1 cm under the neckline and rises out of the cape over 3 cm (sunk 4 mm at the top): ending on the neckline's own cut, its rim
-    // and the cape's crossed there in black spikes
-    f.bag = hood ? { sheet: (B = bodySdf) => { const yc = hood.bagY - 0.01, w = (y) => sstep(yc, yc - 0.03, y), top = (x, y) => hood.bagTop(x, y) * w(y) - 0.004 * (1 - w(y));
-      return { o: (x, y, z) => outside(x, y, z) - top(x, y), of: (x, y, z) => outside(x, y, z, B) - top(x, y), tk: (x, y, z) => top(x, y) + 0.01, cut: (x, y, z) => Math.max(hood.bagCut(x, y, z), y - yc) }; }, lo: [...hood.bag.lo, f.lo[2]], hi: [...hood.bag.hi, -0.01] } : null;
+    // Its top ends 1 cm under the neckline (and under its height at the back) and rises out of the cape over 3 cm (sunk 4 mm at its top): ending
+    // on the neckline itself, its rim and the cape's ran together in black shards, worst over the shoulders
+    f.bag = hood ? { sheet: (B = bodySdf) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return hood.bagTop(x, y) * w - 0.004 * (1 - w); };
+      return { o: (x, y, z) => outside(x, y, z) - top(x, y, z), of: (x, y, z) => outside(x, y, z, B) - top(x, y, z), tk: (x, y, z) => top(x, y, z) + 0.01, smooth: 3, cut: (x, y, z) => Math.max(hood.bagOut(x, y, z), dTop(x, y, z) + 0.01) }; },
+      lo: [...hood.bag.lo, f.lo[2]], hi: [...hood.bag.hi, -0.01] } : null;
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
