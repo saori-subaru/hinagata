@@ -67,7 +67,7 @@ export const CHARACTERS = {
               [42.444, 0.898, 0.5, 0, null, -3.5],
               [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
-            overlap: 1.44,
+            overlap: 1.5, lockSpan: 20, lockThick: 0.35,   // wide thick clumps ending in points (at 13 each clump split into thin strands: strings over the forehead)
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
