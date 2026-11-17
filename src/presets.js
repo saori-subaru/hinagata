@@ -27,7 +27,7 @@ export const CHARACTERS = {
       },
       outfit: {   // (2026-11-17, from Saori's design sheet: a hooded capelet closed with two buttons, cuffs, a petticoat, strapped boots)
         shirt: { on: false, sleeve: "bell", bell: 0.04, underarm: "loose", cuffColor: "#66907d", cuffLine: "#efe8dc", cuffWidth: 0.03 },
-        cape: { on: true, color: "#66907d", hem: 0.53, flare: 0.45, sway: 0.25, front: "closed", close: 0.715, open: 0.5, tilt: 0.25, hood: true, hoodOpen: 0.13, line: "#efe8dc",
+        cape: { on: true, color: "#66907d", hem: 0.53, flare: 0.45, sway: 0.25, front: "closed", close: 0.715, open: 0.5, tilt: 0.25, hood: true, neckOpen: 0.13, line: "#efe8dc",
           texture: { src: SYLVIE_CAPE, mode: "hem", scale: 0.47 } },
         dress: { gradient: { color: "#d5e3d7", start: 0.7, soft: 0.5 }, on: true, color: "#ffffff", waist: 0.63, hem: 0.4, flare: 0.55, pleats: 0, under: 0.06, underColor: "#55776b", underPleats: 20,
           sideDrop: 0.035, sideAt: 0.6, sideOut: 0.01, middleBack: false, cinch: 0.012, cinchAt: 0.53,

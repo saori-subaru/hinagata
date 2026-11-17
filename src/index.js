@@ -436,7 +436,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
-  parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's rim (cape.hood), in the cape's color
+  parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;

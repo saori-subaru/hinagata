@@ -54,7 +54,7 @@ export function partSpec(name, { OPT, H, clothH = 0, kit, bodyAt = null }) {   /
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: C.capeSdf.lo, hi: C.capeSdf.hi, h: clothCell(clothH || partClothCell(H), CA.thick),
         only: C.capeSdf.closed ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed: over the arms, it goes down with them
-    case "hood": { const R = C.capeSdf?.rim;   // the hood's rim round the neck (clothes/index.js): a roll 1.6-3.2 cm thick, at cells under a quarter of it
+    case "hood": { const R = C.capeSdf?.rim;   // the hood's fold along the neckline and its lining (clothes/index.js): 4 mm cells
       if (!R) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: R.sdf, lo: R.lo, hi: R.hi, h: Math.min(0.004, Math.max(H * 0.5, 0.0025)), only: /^(neck|upperChest|chest|shoulder)/ }; }
     case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" || k === "heelBoots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: sided(/^(foot|lowerLeg)/) }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)

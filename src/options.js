@@ -518,7 +518,7 @@ export const DEFAULTS = {
       "tilt": 0,
       "hood": false,
       "hoodSize": 1,
-      "hoodOpen": 0.07,
+      "neckOpen": null,
       "line": null,
       "lineIn": 0.012,
       "lineWidth": 0.008
