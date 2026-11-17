@@ -18,10 +18,10 @@ function onto(f, p, n = 3, lim = 0.03) { for (let i = 0; i < n; i++) { const g =
 /**
  * sheet: { o(x, y, z): < 0 under the cloth's outer side (about a distance); of: the same from a quicker body, for the grid's samples
  * only (where the body's grid is read far off the body it is blocky: the points are put on o itself); tk: its thickness, a number or
- * (x, y, z) → (the inner side at o = -tk); cut(x, y, z): < 0 where the cloth is; smooth: rounds of averaging the push directions (0) }. lo, hi: a box holding the cloth; h: the middle's cells.
+ * (x, y, z) → (the inner side at o = -tk); cut(x, y, z): < 0 where the cloth is }. lo, hi: a box holding the cloth; h: the middle's cells.
  * Returns { pos, nor, idx } (Float32Array, Float32Array, Uint32Array): the outer side, the inner side and the rim along the cut.
  */
-export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h) {
+export function sheetMesh({ o, of = o, tk, cut }, lo, hi, h) {
   const T = typeof tk === "function" ? tk : () => tk, mid = (x, y, z) => o(x, y, z) + T(x, y, z) / 2;
   // the middle and, past the cut, two cells more (cut away below: there it ends in the cells' steps)
   const r = surfaceNets((x, y, z) => Math.max(mid(x, y, z), cut(x, y, z) - 2 * h), lo, hi, h, { proj: 2, fast: (x, y, z) => Math.max(of(x, y, z) + T(x, y, z) / 2, cut(x, y, z) - 2 * h) });
@@ -64,12 +64,7 @@ export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h) {
     if (at(b) * dir < 0) return [p[0] + n[0] * dir * t / 2, p[1] + n[1] * dir * t / 2, p[2] + n[2] * dir * t / 2];
     for (let k = 0; k < 12; k++) { const c = (a + b) / 2; if (at(c) * dir < 0) a = c; else b = c; }
     const u = (a + b) / 2; return [p[0] + n[0] * u, p[1] + n[1] * u, p[2] + n[2] * u]; };
-  // the directions to the sides: the middle's normals, averaged over their neighbours `smooth` times. Over a hollow (the nape under the hood's
-  // bag, 2-3 cm thick) the normals met before the outer side, and its points crossed over in dark wedges. Not for every sheet: along the
-  // cape's neckline, where it turns over the shoulders, averaged normals twisted its rim into shards
-  let NN = new Float64Array(nm * 3); for (let v = 0; v < nm; v++) NN.set(unit(g4(mid, P[v * 3], P[v * 3 + 1], P[v * 3 + 2])), v * 3);
-  if (smooth) { const nb = Array.from({ length: nm }, () => new Set()); for (let t = 0; t < I.length; t += 3) for (let k = 0; k < 3; k++) { const a = I[t + k], b = I[t + (k + 1) % 3]; nb[a].add(b); nb[b].add(a); }
-    for (let it = 0; it < smooth; it++) { const M2 = new Float64Array(nm * 3); for (let v = 0; v < nm; v++) { let x = NN[v * 3], y = NN[v * 3 + 1], z = NN[v * 3 + 2]; for (const u of nb[v]) { x += NN[u * 3]; y += NN[u * 3 + 1]; z += NN[u * 3 + 2]; } M2.set(unit([x, y, z]), v * 3); } NN = M2; } }
+  const NN = new Float64Array(nm * 3); for (let v = 0; v < nm; v++) NN.set(unit(g4(mid, P[v * 3], P[v * 3 + 1], P[v * 3 + 2])), v * 3);   // the directions to the sides: the middle's normals
   for (let v = 0; v < nm; v++) {
     const p = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]], n0 = [NN[v * 3], NN[v * 3 + 1], NN[v * 3 + 2]], t0 = T(p[0], p[1], p[2]), q = side(o, p, n0, 1, t0), w = side(inner, p, n0, -1, t0);
     set(v, q, unit(g4(o, q[0], q[1], q[2]))); const g = unit(g4(o, w[0], w[1], w[2])); set(nm + v, w, [-g[0], -g[1], -g[2]]);

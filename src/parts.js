@@ -58,7 +58,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, kit, bodyAt = n
       return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
     case "cape": { const CA = OPT.outfit.cape;   // only built when worn (outfit.cape.on rebuilds the clothes)
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
-      const BG = C.capeSdf.bag, bag = () => sheetsMesh([BG.sheet(B)], BG.lo, BG.hi, sheetCell(H, clothH, sheetK) / 2);   // the hood's bag: a sheet over the cape's (half its cells: its dome is small)
+      const BG = C.capeSdf.bag, bag = () => BG.mesh();   // the hood's bag: built from its shape (clothes/index.js)
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: C.capeSdf.lo, hi: C.capeSdf.hi, h: clothCell(clothH || partClothCell(H), CA.thick),
         make: () => { const m = sheetsMesh(C.capeSdf.sheets(B), C.capeSdf.lo, C.capeSdf.hi, sheetCell(H, clothH, sheetK)); return BG ? joinMeshes([m, bag()]) : m; },
         only: C.capeSdf.closed ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed: over the arms, it goes down with them

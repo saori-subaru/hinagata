@@ -438,14 +438,38 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED;
     f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
-    // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
-    // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)
+    // as a sheet (sdf/sheet.js)
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
-    // Its top ends 1 cm under the neckline (and under its height at the back) and rises out of the cape over 3 cm (sunk 4 mm at its top): ending
-    // on the neckline itself, its rim and the cape's ran together in black shards, worst over the shoulders
-    f.bag = hood ? { sheet: (B = bodySdf) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return hood.bagTop(x, y) * w - 0.004 * (1 - w); };
-      return { o: (x, y, z) => outside(x, y, z) - top(x, y, z), of: (x, y, z) => outside(x, y, z, B) - top(x, y, z), tk: (x, y, z) => top(x, y, z) + 0.01, smooth: 3, cut: (x, y, z) => Math.max(hood.bagOut(x, y, z), dTop(x, y, z) + 0.01) }; },
-      lo: [...hood.bag.lo, f.lo[2]], hi: [...hood.bag.hi, -0.01] } : null;
+    // The hood's bag: built from its shape, rings inside its outline over the cape's outer side and a wall down into it (~400 triangles at
+    // every quality; as a sheet on a grid it was 4,000 with a hidden underside, and at lite's cells a box sticking out behind). Its top ends
+    // 1 cm under the neckline and rises out of the cape over 3 cm (sunk 4 mm at its top): ending on the neckline itself, its rim and the
+    // cape's ran together in black shards, worst over the shoulders
+    f.bag = hood ? { mesh: () => {
+      const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return hood.bagTop(x, y) * w - 0.004 * (1 - w); };
+      const inBag = (x, y, z) => Math.max(hood.bagOut(x, y, z), dTop(x, y, z) + 0.01);
+      // the point behind (x, y) at h over the cape's outer side (null: no cape there)
+      const at = (x, y, h) => { let a = 0, b = -0.45; if (outside(x, y, a) - h >= 0 || outside(x, y, b) - h <= 0) return null;
+        for (let k = 0; k < 30; k++) { const c = (a + b) / 2; if (outside(x, y, c) - h < 0) a = c; else b = c; } return [x, y, (a + b) / 2]; };
+      const onTop = (x, y) => { const p = at(x, y, 0); return p && at(x, y, top(...p)); };
+      const K = 32, F = [0.3, 0.55, 0.75, 0.88, 0.96, 1], cx = 0, cy = hood.bagY - 0.45 * (hood.bag.hi[1] - hood.bag.lo[1]);
+      const R = []; for (let k = 0; k < K; k++) { const th = (k / K) * 2 * Math.PI, dx = Math.cos(th), dy = Math.sin(th), inside = (r) => { const p = at(cx + dx * r, cy + dy * r, 0); return p && inBag(...p) < 0; };
+        let a = 0, b = 0.003; while (b < 0.4 && inside(b)) { a = b; b += 0.006; } for (let i = 0; i < 16; i++) { const c = (a + b) / 2; if (inside(c)) a = c; else b = c; } R.push([dx * a, dy * a]); }
+      const P = [], I = [], add = (p) => (P.push(p), P.length - 1), c0 = add(onTop(cx, cy));
+      const ring = F.map((t) => R.map(([u, v]) => add(onTop(cx + u * t, cy + v * t) ?? at(cx + u * t, cy + v * t, 0))));
+      const wallT = R.map(([u, v]) => add(onTop(cx + u, cy + v) ?? at(cx + u, cy + v, 0))), wallB = R.map(([u, v]) => add(at(cx + u, cy + v, -0.004) ?? at(cx + u, cy + v, 0)));
+      for (let k = 0; k < K; k++) { const k1 = (k + 1) % K; I.push([c0, ring[0][k], ring[0][k1], 0]);
+        for (let j = 0; j + 1 < F.length; j++) I.push([ring[j][k], ring[j + 1][k], ring[j + 1][k1], 0], [ring[j][k], ring[j + 1][k1], ring[j][k1], 0]);
+        I.push([wallT[k], wallB[k], wallB[k1], k + 1], [wallT[k], wallB[k1], wallT[k1], k + 1]); }
+      // each triangle faced out (the dome: along the cape's gradient; the wall: away from the middle), normals summed per point
+      const pos = new Float32Array(P.length * 3), nor = new Float32Array(P.length * 3), idx = [];
+      P.forEach((p, i) => pos.set(p, i * 3));
+      for (const [a, b, c, wall] of I) { const A = P[a], Bp = P[b], Cp = P[c], u = [Bp[0] - A[0], Bp[1] - A[1], Bp[2] - A[2]], w = [Cp[0] - A[0], Cp[1] - A[1], Cp[2] - A[2]];
+        const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], m = [(A[0] + Bp[0] + Cp[0]) / 3, (A[1] + Bp[1] + Cp[1]) / 3, (A[2] + Bp[2] + Cp[2]) / 3];
+        const e = 0.001, ref = wall ? [R[wall - 1][0], R[wall - 1][1], 0] : [outside(m[0] + e, m[1], m[2]) - outside(m[0] - e, m[1], m[2]), outside(m[0], m[1] + e, m[2]) - outside(m[0], m[1] - e, m[2]), outside(m[0], m[1], m[2] + e) - outside(m[0], m[1], m[2] - e)];
+        const flip = n[0] * ref[0] + n[1] * ref[1] + n[2] * ref[2] < 0, t = flip ? [a, c, b] : [a, b, c], s = flip ? -1 : 1; idx.push(...t);
+        for (const v of [a, b, c]) for (let q = 0; q < 3; q++) nor[v * 3 + q] += n[q] * s; }
+      for (let v = 0; v < P.length; v++) { const l = Math.hypot(nor[v * 3], nor[v * 3 + 1], nor[v * 3 + 2]) || 1; for (let q = 0; q < 3; q++) nor[v * 3 + q] /= l; }
+      return { pos, nor, idx: new Uint32Array(idx) }; } } : null;
     return f;
   })() : null;
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
