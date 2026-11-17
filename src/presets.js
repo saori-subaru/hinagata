@@ -49,8 +49,9 @@ export const CHARACTERS = {
         tail: { kind: "side", y: 1.22, waves: 0.5, tie: { size: 2.2 } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
-        // the sidelocks: from the temples under the bangs straight down before the ears to just under the jaw (her design sheet; head space)
-        drawn: [{ pts: [[0.16, 1.08, 0.07], [0.178, 1.0, 0.085], [0.183, 0.9, 0.092], [0.175, 0.8, 0.098]], width: 0.055, thick: 0.35, stiff: 3, mirror: true }],   // stiff 1: a run blew them back level with the ears
+        // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
+        // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
+        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.042, thick: 0.35, stiff: 3, mirror: true }],
         sculpt: {
           nendo: {
             tips: [
