@@ -66,17 +66,15 @@ export const CHARACTERS = {
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01,
-            // 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one over it buried the ear's root in hair);
-            // the ones before and behind the ears (0, 11; 2, 9; 14, 20 under them) reach the chin and the neck, flicked out as in her design sheet
+            // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
+            // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes
             edits: [
-              { i: 0, dy: -0.0922, da: 0.46, fl: 0.02 },
+              { i: 0, dy: -0.0922, da: 0.46 },
               { i: 1, dy: -0.01, da: -3.67 },
-              { i: 2, dy: -0.0822, da: -5.05, fl: 0.02 },
-              { i: 9, dy: -0.0822, da: 5.05, fl: 0.02 },
+              { i: 2, dy: -0.0372, da: -5.05 },
+              { i: 9, dy: -0.0372, da: 5.05 },
               { i: 10, dy: -0.01, da: 3.67 },
-              { i: 11, dy: -0.0922, da: -0.46, fl: 0.02 },
-              { i: 14, dy: -0.05 },
-              { i: 20, dy: -0.05 },
+              { i: 11, dy: -0.0922, da: -0.46 },
               { i: 26, dy: 0.0251, da: 11.34 },
               { i: 27, dy: 0.012, da: -15.16 },
             ],
