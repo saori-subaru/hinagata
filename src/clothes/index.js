@@ -304,21 +304,21 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const mantle = CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);
       return smin(cone, mantle, k); };
     // cape.hood: a hood lying down. Its rim (its own part, "hood": finer cells than the cloth's, which left it ragged): a roll lying on the cape round the neck, a U on an ellipse from one end of the closure (closed:
-    // beside the middle at cape.close; open: the neck's sides) round the back, standing up behind the neck (taller and thicker there); inside
-    // the U the cape is cut away (the shirt shows between the closure's ends). A rim ending at the neck's sides stood behind it like a screen.
+    // beside the middle at cape.close; open: the neck's sides) round the back, cape.hoodOpen out from the neck at its sides, raised (most behind
+    // the neck); inside the U the cape is cut away (the shirt shows round the neck). A rim ending at the neck's sides stood behind it like a screen.
     // Its body: a second layer on the cape's back (its outside pushed out), as wide as the shoulders at the collar and narrowing to a
     // rounded point down the back, puffed in the middle
     const hood = CA.hood ? (() => {
-      const NK = P.neck, HS = CA.hoodSize ?? 1, zAx = (y) => NK.az + NK.bz * (y - NK.ay) / NK.by, a = NK.ra + 0.045, zB = zAx(CA.collar) - NK.ra - 0.03;
+      const NK = P.neck, HS = CA.hoodSize ?? 1, OPN = CA.hoodOpen ?? 0.07, zAx = (y) => NK.az + NK.bz * (y - NK.ay) / NK.by, a = NK.ra + OPN, zB = zAx(CA.collar) - NK.ra - OPN * 0.6;
       let XF = a, zF = zAx(CA.collar) + 0.03;   // the U's ends (open: at the neck's sides)
       if (CLOSED) { XF = NK.ra * 0.95; zF = 0.3; while (zF > 0 && outside(XF, CLOSE, zF) > 0) zF -= 0.001; }   // (closed: on the cape's front at the closure)
       const c = Math.sqrt(Math.max(0, 1 - (XF / a) ** 2)), b = (zF - zB) / (1 + c), zc = zB + b, PH = Math.PI - Math.asin(Math.min(1, XF / a));   // ellipse: half axes a, b about z = zc; the U from -PH to PH (0 at the back)
-      // the roll's centre line (PX, PY, PZ: on the cape, its radius RR up) and how far it stands up from there (ST: behind the neck)
+      // the roll's centre line (PX, PY, PZ: on the cape, its radius RR up) and how far it stands up from there (ST: at the sides, most behind the neck)
       const N = 64, PX = [], PY = [], PZ = [], Y0 = [], RR = [], ST = [];
       for (let i = 0; i <= N; i++) { const ph = -PH + 2 * PH * i / N, x = a * Math.sin(ph), z = zc - b * Math.cos(ph), back = Math.cos(ph / 2) ** 2;   // back: 1 behind the neck, 0 at the ends
         let y = top(x, z); while (y > CAPE_Y - 0.12 && outside(x, y, z) > 0) y -= 0.001;   // its foot on the cape (or on its cut top)
-        const r = 0.008 + 0.008 * Math.min(1, 3 * back);
-        PX.push(x); PY.push(y - 0.004 + r); PZ.push(z); Y0.push(y - 0.004); RR.push(r); ST.push(0.03 * back * back * HS); }
+        const r = 0.01 + 0.006 * Math.min(1, 3 * back);
+        PX.push(x); PY.push(y - 0.004 + r); PZ.push(z); Y0.push(y - 0.004); RR.push(r); ST.push((0.012 * Math.min(1, 2 * back) + 0.02 * back * back) * HS); }
       const yLo = Math.min(...Y0) - 0.03, yHi = Math.max(...PY.map((y, i) => y + ST[i] + RR[i])) + 0.03, xHi = a + 0.03, zLo = zB - 0.03, zHi = zF + 0.03;
       const footAt = (ph) => { const t = Math.min(N, Math.max(0, (ph + PH) / (2 * PH) * N)), i = Math.min(N - 1, Math.floor(t)), f = t - i; return Y0[i] * (1 - f) + Y0[i + 1] * f; };
       const yT = footAt(0) + 0.01, hw = 0.13 * HS, hd = 0.13 * HS;   // the body starts under the roll behind the neck (above it, it climbed the neck's back as a board)
@@ -331,7 +331,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
             const r = RR[i] + (RR[i + 1] - RR[i]) * t, st = ST[i] + (ST[i + 1] - ST[i]) * t, v = y - qy;
             best = Math.min(best, Math.hypot(h, v > 0 ? Math.max(0, v - st) : v) - r); }   // a roll along the line, standing up st over it
           return best; },
-        hole: (x, y, z) => Math.max((Math.hypot(x / a, (z - zc) / b) - 1) * Math.min(a, b), footAt(Math.atan2(x / a, -(z - zc) / b)) + 0.004 - y),   // < 0 inside the U, over its foot
+        hole: (x, y, z) => { const ph = Math.max(-PH, Math.min(PH, Math.atan2(x / a, -(z - zc) / b))), back = Math.cos(ph / 2) ** 2;   // < 0 inside the U, from 3 cm under its foot (the
+          return Math.max((Math.hypot(x / a, (z - zc) / b) - 1) * Math.min(a, b), footAt(ph) - 0.004 - 0.026 * Math.min(1, 4 * back) - y); },   // cape's shell left there covered the shirt), little near the closure's ends
         layer: (x, y, z, S) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)), e = Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd);
           return Math.max(S - 0.008 - 0.014 * Math.max(0, 1 - e * e), -S - 0.002, (e - 1) * Math.min(hw, hd), z + 0.02, y - yT); } };
     })() : null;
