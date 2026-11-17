@@ -1,6 +1,8 @@
 // Ready-made characters (2026-10-06, Saori made them in the editor): character files, version 3 (the tall defaults with a head of 0.7: they keep it under version 4's 0.64).
 // In a game: createAvatar(CHARACTERS.sylvie.file). In the editor: the character list → 「プリセットから作る」.
 // Add one: make it in the editor, Export → JSON (or copy the code), and put its options here with the version it was made in.
+import { BODY_TYPES } from "./body/types.js";
+
 export const CHARACTERS = {
   sylvie: {
     name: { ja: "シルヴィ", en: "Sylvie" },
@@ -102,6 +104,28 @@ export const CHARACTERS = {
         },
       },
       face: { parts: { eyes: "image", brows: "image", mouth: "image" } },
+    } },
+  },
+  // the hair in layers (hair/shell.js) on the chibi girl: the long wolf cut, its points tipped lime, short bangs, fox ears and tail
+  kon: {
+    name: { ja: "コン", en: "Kon" },
+    about: { ja: "層の髪(ウルフカット)のきつねの子", en: "A fox girl in layered hair (a wolf cut)" },
+    file: { hinagata: 5, name: "コン", options: {
+      ...structuredClone(BODY_TYPES.girl),
+      colors: { hair: "#b9d5e8", eyes: "#f39a4a" },
+      hair: {
+        ahoge: false,
+        gradient: { on: true, color: "#d6f04c", start: 0.62, soft: 0.3, bangs: false },
+        layers: { on: true, style: "wolf" },
+        sculpt: { nendo: { tips: [[-82, 0.9, 0.69, 0.33, null, 6], [-58, 0.97, 0.5, 0, null, 5], [-38, 1.045], [-21, 1.035], [-6, 0.99, 0.8, 0.04], [9, 1.035], [25, 1.045], [42, 1.04], [60, 0.97, 0.5, 0, null, -4], [84, 0.9, 0.66, -0.33, null, -12]] } },
+      },
+      outfit: {
+        shirt: { color: "#f5f4f2", sleeve: "long", length: "out" },
+        pants: { color: "#2b3150", length: "shorts" },
+        socks: { color: "#25252b" },
+        shoes: { kind: "laced", color: "#f06c9b", laceColor: "#3a3040" },
+        extras: { ears: "fox", earInColor: "#f4a3b9", tail: "fox", tailSize: 1.3 },
+      },
     } },
   },
   lumina: {

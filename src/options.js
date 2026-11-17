@@ -675,6 +675,19 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "layers": {
+      "on": false,
+      "style": "wolf",
+      "list": null,
+      "length": 1,
+      "volume": 1,
+      "points": 1,
+      "thick": 0.014,
+      "shade": 0.05,
+      "stiff": 3,
+      "damping": 0.88,
+      "cohere": 0.8
+    },
     "gradient": {
       "on": false,
       "color": "#7cc47f",

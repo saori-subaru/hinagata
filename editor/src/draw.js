@@ -21,7 +21,7 @@ export function createDrawTool({ vp, store, onChange = () => {} }) {
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x4b4acf, depthTest: false }));
   line.renderOrder = 20; line.frustumCulled = false;
   const toNdc = (e) => { const r = vp.canvas.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, vp.camera); };
-  const HAIR = new Set(["hair", "locks", "bangs", "drawn", "tails", "tailTie"]);
+  const HAIR = new Set(["hair", "locks", "bangs", "drawn", "tails", "tailTie", "layers"]);
   const targets = () => av ? Object.entries(av.parts).filter(([, x]) => x.m.visible).map(([k, x]) => { x.m.userData.drawHair = HAIR.has(k); return x.m; }) : [];
   const lifted = (hit) => { const n = hit.face ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld) : ray.ray.direction.clone().negate(); return hit.point.clone().addScaledVector(n, 0.5 * S.width * S.thick + 0.002); };
   // a point on the screen → a world point: on the hair (lifted off it) or, off it, on the plane through the last bit of hair it touched

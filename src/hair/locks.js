@@ -255,14 +255,15 @@ export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   
 // hugY (root space, or null): above this height the lock lies on the head (held onto the ellipsoid, not just kept out of it), so it follows
 // the head's shape, curving in below its widest part, and only hangs free below: the outline of the long block it replaced (2026-10-04,
 // Saori: "it used to follow the head, dent in a little, then fall; now it falls straight from the top")
-function drape(s, coll, ell, N = 12, hugY = null) {
+// rad(i): how far the point keeps off (else from the lock's width there) / init: points to start from (a neighbour's drape: then fewer iters do)
+export function drape(s, coll, ell, N = 12, hugY = null, rad = null, init = null, iters = 160) {
   const seg = s.len / (N - 1), P = [];
-  for (let i = 0; i < N; i++) P.push([s.root[0], s.root[1] - seg * i, s.root[2]]);
-  const r = (i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003;
-  for (let it = 0; it < 160; it++) {
+  for (let i = 0; i < N; i++) P.push(init ? [...init[i]] : [s.root[0], s.root[1] - seg * i, s.root[2]]);
+  const r = rad ?? ((i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003);
+  for (let it = 0; it < iters; it++) {
     for (let i = 2; i < N; i++) P[i][1] -= 0.002;
     for (let k = 0; k < 3; k++) {
-      for (let i = 1; i < N; i++) { const a = P[i - 1], b = P[i], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...d) || 1; for (let q = 0; q < 3; q++) b[q] = a[q] + d[q] * seg / l; }   // from the root down: the root stays
+      for (let i = 1; i < N; i++) { const a = P[i - 1], b = P[i], dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], f = seg / (Math.sqrt(dx * dx + dy * dy + dz * dz) || 1); b[0] = a[0] + dx * f; b[1] = a[1] + dy * f; b[2] = a[2] + dz * f; }   // from the root down: the root stays
       for (let i = 1; i < N; i++) { if (hugY != null && P[i][1] > hugY) onEllipsoid(P[i], ell.c, ell.r, r(i)); else pushOutEllipsoid(P[i], ell.c, ell.r, r(i)); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r(i)); }
     }
   }
@@ -275,7 +276,7 @@ const rise = (t, off) => -0.006 + (off + 0.006) * sstep(0, 0.33, t);
 // how wide a lock is along its length (t: 0 root → 1 tip): a little fuller in the middle, then to a sharp point
 export const width = (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - t * t * t), 0.8);
 
-function pushOutSphere(p, c, r) { const dx = p[0] - c[0], dy = p[1] - c[1], dz = p[2] - c[2], d = Math.hypot(dx, dy, dz); if (d >= r || d < 1e-9) return; const k = r / d; p[0] = c[0] + dx * k; p[1] = c[1] + dy * k; p[2] = c[2] + dz * k; }
+export function pushOutSphere(p, c, r) { const dx = p[0] - c[0], dy = p[1] - c[1], dz = p[2] - c[2], d = Math.hypot(dx, dy, dz); if (d >= r || d < 1e-9) return; const k = r / d; p[0] = c[0] + dx * k; p[1] = c[1] + dy * k; p[2] = c[2] + dz * k; }
 // onto an ellipsoid (grown by m), from inside or outside
 function onEllipsoid(p, c, r, m) { const qx = (p[0] - c[0]) / (r[0] + m), qy = (p[1] - c[1]) / (r[1] + m), qz = (p[2] - c[2]) / (r[2] + m), d = Math.hypot(qx, qy, qz); if (d < 1e-9) return; p[0] = c[0] + qx / d * (r[0] + m); p[1] = c[1] + qy / d * (r[1] + m); p[2] = c[2] + qz / d * (r[2] + m); }
 // out of an ellipsoid (center c, radii r, grown by m): along the scaled direction (good enough near the surface)
@@ -308,9 +309,9 @@ export function colliders(J, BI, sdf) {
  *   trailing behind went into it). slack: how far in past the rest it may go (m)
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, meshless = false }) {   // meshless: the chains alone (read with restPoints; the hair layers' guides, hair/shell.js)   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
-  const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
+  const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = meshless ? 0 : NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
   specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * (s.prof ?? width)(t) + 0.003;
     if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
@@ -325,13 +326,13 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       FN[i * 3] = o[0] / l; FN[i * 3 + 1] = o[1] / l; FN[i * 3 + 2] = o[2] / l; FD[i] = (o[0] * x + o[1] * y + o[2] * z) / l - slack; } }
   // the mesh
   const pos = new Float32Array(NV * 3), nor = new Float32Array(NV * 3), shn = new Float32Array(NV * 3), idx = [];
-  for (let l = 0; l < NL; l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RG.length; k++) {
+  for (let l = 0; l < (meshless ? 0 : NL); l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RG.length; k++) {
     const a = l * VPL + r * RG.length + k, b = l * VPL + r * RG.length + (k + 1) % RG.length, c = a + RG.length, d = b + RG.length; idx.push(a, b, c, b, d, c); }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
   { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RG.length) / (ringsPer - 1) * (specs[Math.floor(v / VPL)].grad ?? 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
-  if (uvAt) { const U = new Float32Array(NV * 2);   // per ring: the point along the rest chain at its share of the lock (the mesh isn't made yet: it comes with the first update)
+  if (uvAt && !meshless) { const U = new Float32Array(NV * 2);   // per ring: the point along the rest chain at its share of the lock (the mesh isn't made yet: it comes with the first update)
     for (let l = 0; l < NL; l++) for (let r = 0; r < ringsPer; r++) { const f = r / (ringsPer - 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i, a = specs[l].pts[i], b = specs[l].pts[i + 1];
       const uv = uvAt(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
       for (let k = 0; k < RG.length; k++) { const v = l * VPL + r * RG.length + k; U[v * 2] = uv[0]; U[v * 2 + 1] = uv[1]; } }
@@ -440,11 +441,14 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       if (first || instant || jump > 0.5) { X.set(T); P.set(T); for (let s = 0; s < (first ? 40 : 20); s++) step(H, 0); first = false; acc = 0; }   // settle (also when the avatar was moved far at once: no whip across the scene)
       else if (coarse) { acc = Math.min(acc + dt, 4 * H); const n = Math.floor(acc / H); if (n) { sub = 1; if (n !== kn) { kn = n; KN = K.map((k) => 1 - (1 - k) ** n); } KS = n > 1 ? KN : K; step(n * H, damping ** n, (n + 1) / (2 * n)); KS = K; acc -= n * H; } }
       else { acc = Math.min(acc + dt, 4 * H); sub = Math.max(1, Math.floor(acc / H)); while (acc >= H) { step(H, damping); acc -= H; } }
-      mesh();
+      if (!meshless) mesh();
     },
     /** the locks' rest shapes (root space): [{ pts, w, … }] in build order (an editor's handles) */
     specs,
     /** The locks as they hang in the rest pose (glTF export). The next update moves them again. */
-    rest() { M.identity(); Mi.identity(); X.set(R); mesh(); first = true; },
+    rest() { M.identity(); Mi.identity(); X.set(R); if (!meshless) mesh(); first = true; },
+    /** The chains' points now, turned back through the head into rest space: out[(lock * N + point) * 3 …] (N: points per lock). */
+    restPoints(out = new Float32Array(NP * 3)) { const e = Mi.elements; for (let i = 0; i < NP * 3; i += 3) { const x = X[i], y = X[i + 1], z = X[i + 2];
+      out[i] = e[0] * x + e[4] * y + e[8] * z + e[12]; out[i + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; out[i + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; } return out; },
   };
 }

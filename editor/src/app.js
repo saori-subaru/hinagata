@@ -87,7 +87,7 @@ function showStats(av, ms = lastMs) {
 
 // instant changes through the engine's own methods (schema `apply`)
 const COLOR_KEY = { "colors.skin": "skin", "colors.hair": "hair", "colors.eyes": "eyes", "outfit.shirt.color": "shirt", "outfit.pants.color": "pants", "outfit.dress.color": "dress", "outfit.cape.color": "cape", "outfit.socks.color": "socks", "outfit.shoes.color": "shoes", "outfit.shoes.soleColor": "soles", "outfit.shoes.laceColor": "laces", "outfit.armor.color": "armor", "outfit.weapon.color": "weapon", "outfit.weapon.gripColor": "grip", "outfit.weapon.shieldColor": "shield", "outfit.weapon.sheathColor": "sheath", "outfit.extras.earColor": "ears", "outfit.extras.earInColor": "earsIn", "outfit.extras.tailColor": "tail", "outfit.extras.wingColor": "wings", "outfit.extras.haloColor": "halo", "outfit.suit.color": "suit", "outfit.suit.accent": "suitAccent" };   // (the garment parts' colors: the schema's colorKey)
-let locksT = 0;
+let locksT = 0, layersT = 0;
 function applyInstant(av, p, v) {
   const k = p.split("."), last = k.at(-1);
   switch (SCHEMA[p]?.apply) {
@@ -110,6 +110,7 @@ function applyInstant(av, p, v) {
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
     case "setAccessories": av.setAccessories(structuredClone(v)); return true;
     case "setExpressions": av.setExpressions(structuredClone(v)); return true;
+    case "setLayers": clearTimeout(layersT); layersT = setTimeout(() => { try { av.setLayers({ [last]: structuredClone(v) }); vp.apply(); } catch (e) { console.warn(e); } }, 150); return true;   // hair.layers.<key>: rebuilt once a slider rests
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
       const ch = k.length > 4 ? { [k[3]]: { [last]: v } } : { [last]: v }; clearTimeout(locksT); locksT = setTimeout(() => { try { av.setLocks(k[2], ch); vp.apply(); backs.refresh(); } catch (e) { console.warn(e); } }, 150); return true; }
   }

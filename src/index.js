@@ -20,6 +20,7 @@ import { buildClothes, capeTop, heelPose } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
+import { createShell, layersOf } from "./hair/shell.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -73,7 +74,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
   const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
-  const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair;   // (the gradient and the tails: no mesh of the cache)
+  const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, layers, ...hair } = OPT.hair;   // (the gradient, the tails and the layers: no mesh of the cache)
   return { ...rest, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
@@ -521,7 +522,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
-  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails", "layers"], HAIR_BACK = ["hair", "locks", "tails"];
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
@@ -533,18 +534,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie", "layers"];   // layers: options.hair.layers (hair/shell.js)   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
-    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
+    const LY = OPT.hair.layers, layersWanted = !!LY?.on && layersOf(LY).length > 0, layersOn = which.includes("layers") && layersWanted;   // layers (hair/shell.js) take the back locks' place
+    const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks && !layersWanted, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on && !layersWanted, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none";
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
-    if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn) return out;
+    if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn && !layersOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
@@ -589,6 +591,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
     }
+    if (layersOn) { const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR), L = OPT.hair.sculpt.long;
+      const sim = createShell({ LY, kit: { cap, center: c, coll, ell, bottomY: (y) => ST.fwd(y), hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null, thick: LY.thick ?? 0.014 }, head: BI.head, coll, ell, skeleton, root, lite: LITE, uvAt: ringUV });
+      const x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), GRAD.hair); x.m.material = x.wrap(x.m.material); x.sim = sim; out.layers = x; }
     if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
@@ -952,6 +957,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (parts.locks) { for (const m of [parts.locks.m, parts.locks.o]) { root.remove(m); m.geometry.dispose(); } delete parts.locks; }
       const x = makeLocks(["locks"]).locks; if (x) { parts.locks = x; x.on = on; x.m.visible = x.o.visible = vis; }
       hairGrad();   // the lowest tip may have moved
+    },
+    /** The hair in layers (options.hair.layers: { on, style, list, length, volume, points, thick, stiff, … }): rebuilds them alone, and the
+     *  back locks they take the place of. */
+    setLayers(values) {
+      const LY = OPT.hair.layers; for (const [k, v] of Object.entries(structuredClone(values))) LY[k] = v;
+      const on = parts.hair.on, vis = parts.hair.m.visible;
+      for (const k of ["layers", "locks"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
+      for (const [k, x] of Object.entries(makeLocks(["layers", "locks"]))) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = vis; }
+      hairGrad();
     },
     /** Locks drawn by hand (options.hair.drawn): [{ pts: [[x, y, z], …] (head space, root to tip), width (m), thick (×width), stiff, mirror }].
      *  Rebuilds only them. */
