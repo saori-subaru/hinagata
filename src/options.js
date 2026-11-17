@@ -654,6 +654,8 @@ export const DEFAULTS = {
     }
   },
   "hair": {
+    "rigid": 0,
+    "lockPoints": 0,
     "paint": {
       "strands": {
         "on": true,

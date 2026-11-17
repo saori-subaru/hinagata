@@ -186,6 +186,8 @@ const MAIN = [
   ["hair.sculpt.long.splitAngle", L("二股の開き", "Split angle"), { when: { "hair.back": "long" }, min: 10, max: 90, step: 1, section: L("後ろ髪の毛束", "Back locks"), help: L("束がどれだけ外へ持ち上がるか(度)", "how far out the bundles lift (degrees)") }],
   ["hair.sculpt.long.flick", L("はね(+) / 内巻き(−)", "Flick out (+) / curl in (−)"), { when: { "hair.back": "long" }, min: -0.06, max: 0.08, step: 0.002, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks" }],
   ["hair.sculpt.long.stiff", L("硬さ", "Stiffness"), { when: { "hair.back": "long" }, min: 0.3, max: 4, step: 0.1, section: L("後ろ髪の毛束", "Back locks"), apply: "setLocks", help: L("小さいほどよく揺れる", "lower swings more") }],
+  ["hair.rigid", L("房の形を保つ", "Locks keep their shape"), { min: 0, max: 1, step: 0.05, section: L("毛束の揺れ", "Lock motion"), help: L("1 = 房が曲がらず根元から傾くだけ / 0 = 縄のようにどこでも曲がる", "1 = a lock doesn't bend, it only tilts from its root / 0 = it bends anywhere, like a rope") }],
+  ["hair.lockPoints", L("房の節の数", "Points per lock"), { min: 0, max: 14, step: 1, section: L("毛束の揺れ", "Lock motion"), help: L("房を作り直す点の数(少ないほど軽い)。0 = そのまま。形を保つ房なら 5 前後で足りる", "how many points each lock is remade with (fewer = lighter). 0 = as built. Locks that keep their shape need about 5") }],
   ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.side", L("結ぶ側", "Side"), { when: { "hair.tail.kind": "side" }, options: opts({ L: ["左", "Left"], R: ["右", "Right"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.length", L("長さ", "Length"), { min: 0.1, max: 0.9, step: 0.01, section: L("結び髪", "Tails") }],

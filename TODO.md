@@ -1,5 +1,9 @@
 # 宿題 (TODO)
 
+## 形を保つ房（ブランチ claude/zen-mendel-i88qe4）
+- 仕組みは済み（hair.rigid / hair.lockPoints、DESIGN.md「Locks that keep their shape」）。🚧シルヴィのレシピ（src/presets.js）へはまだ入れていない。服の別セッションが終わってから rigid 1・lockPoints 5 を入れる。
+- 次: 前髪をとがった厚い房で決まった形に置く（揺らさない）。見本はシルヴィの三面図。
+
 ## 使う側のエージェントがパーツを足しやすくする（2026-10-10、ブランチ agent-dx。サオリ「順番はお任せ」）
 島風づくり（他のユーザーのエージェントがパーツを足しながらキャラを作るテスト）で分かったこと。上から順に:
 1. ~~改行を LF に統一（.gitattributes）~~ 済み

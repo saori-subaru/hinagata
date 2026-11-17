@@ -275,6 +275,11 @@ const rise = (t, off) => -0.006 + (off + 0.006) * sstep(0, 0.33, t);
 // how wide a lock is along its length (t: 0 root → 1 tip): a little fuller in the middle, then to a sharp point
 export const width = (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - t * t * t), 0.8);
 
+function resample(P, n) {   // n points spaced evenly along the polyline P, its ends kept
+  const L = [0]; for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
+  const out = []; let k = 0; for (let q = 0; q < n; q++) { const d = L.at(-1) * q / (n - 1); while (k < P.length - 2 && L[k + 1] < d) k++; const t = (d - L[k]) / ((L[k + 1] - L[k]) || 1); out.push(P[k].map((v, c) => v + (P[k + 1][c] - v) * t)); }
+  return out;
+}
 function pushOutSphere(p, c, r) { const dx = p[0] - c[0], dy = p[1] - c[1], dz = p[2] - c[2], d = Math.hypot(dx, dy, dz); if (d >= r || d < 1e-9) return; const k = r / d; p[0] = c[0] + dx * k; p[1] = c[1] + dy * k; p[2] = c[2] + dz * k; }
 // onto an ellipsoid (grown by m), from inside or outside
 function onEllipsoid(p, c, r, m) { const qx = (p[0] - c[0]) / (r[0] + m), qy = (p[1] - c[1]) / (r[1] + m), qz = (p[2] - c[2]) / (r[2] + m), d = Math.hypot(qx, qy, qz); if (d < 1e-9) return; p[0] = c[0] + qx / d * (r[0] + m); p[1] = c[1] + qy / d * (r[1] + m); p[2] = c[2] + qz / d * (r[2] + m); }
@@ -308,7 +313,11 @@ export function colliders(J, BI, sdf) {
  *   trailing behind went into it). slack: how far in past the rest it may go (m)
  * Returns { geometry, update(dt, instant), rest() }; the geometry is skinned to the head bone (skinIndex / skinWeight set).
  */
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+// rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
+//   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
+//   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0 }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points) }));
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
@@ -365,6 +374,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     for (const c of CN) { pp[0] = X[j]; pp[1] = X[j + 1]; pp[2] = X[j + 2]; pushOutSphere(pp, c.now, (c.r + r) * SC); X[j] = pp[0]; X[j + 1] = pp[1]; X[j + 2] = pp[2]; }
     if (X[j + 1] < floorY + r * SC) X[j + 1] = floorY + r * SC;   // the floor (the avatar's feet)
   }
+  const RIG = rigid > 0 ? specs.map((s) => Math.min(1, rigid * (s.rigid ?? 1))) : null, va = new THREE.Vector3(), vb = new THREE.Vector3(), qr = new THREE.Quaternion();
   let KS = K, KN = null, kn = 1;   // KS: the pull toward the rest shape for this step: K, or what n steps of K add up to (a coarse step, KN)
   function step(h, keep, fk = 1) {   // one step of h seconds (fk: the share of the forces' h² that n small steps would have moved it, (n + 1) / 2n)
     // the rest shape already hangs (it was draped under gravity), and the pull toward it carries that shape with the head. So only the part of
@@ -381,6 +391,11 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       if (SPR) { const t = i / (N - 1), dx = T[j] - CW[0], dz = T[j + 2] - CW[2], dl = Math.hypot(dx, dz) || 1, o = (SPR > 0 ? SPR * SPREAD_OUT * t ** 1.5 : SPR * SPREAD_IN * t) * LEN[l] * SC * (floor ? 0.3 : 1), k = Math.min(1, KS[p] + Math.abs(SPR) * SPREAD_K);   // its rest place out or in (not up: what was lifted fell back onto the lock on landing and crumpled it), followed more firmly
         X[j] += (T[j] + dx / dl * o - X[j]) * k; X[j + 1] += (T[j + 1] - X[j + 1]) * k; X[j + 2] += (T[j + 2] + dz / dl * o - X[j + 2]) * k; }
       else for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] - X[j + q]) * KS[p]; }
+    if (RIG) for (let l = 0; l < NL; l++) { const rg = RIG[l]; if (!rg) continue; const b1 = (l * N + 1) * 3; let ax = 0, ay = 0, az = 0, bx = 0, by = 0, bz = 0;
+      for (let i = 2; i < N; i++) { const j = (l * N + i) * 3; ax += T[j] - T[b1]; ay += T[j + 1] - T[b1 + 1]; az += T[j + 2] - T[b1 + 2]; bx += X[j] - X[b1]; by += X[j + 1] - X[b1 + 1]; bz += X[j + 2] - X[b1 + 2]; }
+      va.set(ax, ay, az).normalize(); vb.set(bx, by, bz).normalize(); qr.setFromUnitVectors(va, vb);   // how far the lock leans off its rest, as one turn
+      for (let i = 2; i < N; i++) { const j = (l * N + i) * 3; va.set(T[j] - T[b1], T[j + 1] - T[b1 + 1], T[j + 2] - T[b1 + 2]).applyQuaternion(qr);
+        X[j] += (X[b1] + va.x - X[j]) * rg; X[j + 1] += (X[b1 + 1] + va.y - X[j + 1]) * rg; X[j + 2] += (X[b1 + 2] + va.z - X[j + 2]) * rg; } }
     for (const { ls, c } of BUNDLES) for (let i = 2; i < N; i++) { const m = [0, 0, 0];
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) m[q] += (X[j + q] - T[j + q]) / ls.length; }
       for (const l of ls) { const j = (l * N + i) * 3; for (let q = 0; q < 3; q++) X[j + q] += (T[j + q] + m[q] - X[j + q]) * c; } }
