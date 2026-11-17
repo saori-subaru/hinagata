@@ -139,7 +139,9 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
     const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
     // a wide clump is several locks side by side whose tips gather toward the clump's tip (the outer ones end a little higher): strands, not a sheet.
     // A tuft made narrow (its width wd) splits into fewer
-    const k = Math.max(1, Math.round(2 * half * tp.wd / ((B.lockSpan ?? 13) * deg)));
+    // oneLock (°): a tuft within it of the middle stays one wide lock, side by side with its neighbours (no overlap): the drawing's clean front
+    // tufts. The side tufts keep splitting: as one lock from the crown a side tuft ran slanting back past the ear
+    const one = Math.abs(tp.a) <= (B.oneLock ?? 0) * deg, k = one ? 1 : Math.max(1, Math.round(2 * half * tp.wd / ((B.lockSpan ?? 13) * deg)));
     const mid = leave(Math.max(tp.y, HY), tp.a - tp.sw);   // where the clump's middle leaves the head: its hanging locks gather under it
     for (let j = 0; j < k; j++) {
       const f = k > 1 ? (j + 0.5) / k * 2 - 1 : 0, tipA = tp.a - tp.sw + f * half * (B.lockTipSpread ?? 0.45) * tp.wd, tipY = tp.y + Math.abs(f) * (B.lockRise ?? 0.03);   // f: -1..1 across the clump
@@ -152,7 +154,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
         rd = [Math.sin(ra) * Math.cos(ph), Math.sin(ph), Math.cos(ra) * Math.cos(ph)];
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
       let reach = 0, last = null;
-      const w = 2 * half / k * r0 * (B.overlap ?? 1.25) * (k > 1 ? 1.35 : 1) * tp.wd * sx, thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
+      const w = 2 * half / k * r0 * (one ? 1 : B.overlap ?? 1.25) * (k > 1 ? 1.35 : 1) * tp.wd * sx, thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
       const upper = 1.15 * Math.hypot(...tip.map((v, m) => v - root[m])), share = upper / (upper + hang);   // the points spread over the whole length
       for (let q = 0; q < N; q++) { const t = q / (N - 1);
         let px, py, pz;
@@ -168,10 +170,10 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       // forehead, the cheek, the jaw: it stays 2 mm over whatever it meets, so it follows the face)
       if (tp.fl) { const keepOut = (p) => { const hx = p[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1, floor = surfaceAlong(surf, [0, p[1], center[2]], [hx / h, 0, hz / h]) + 0.002 + 0.25 * w * thick; if (h < floor) { p[0] = hx / h * floor; p[2] = center[2] + hz / h * floor; } };
         const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
-      // branch (0..1): a thin strand on the clump's edge away from the middle (one in each gap between the front tufts, none at the sides),
+      // branch (0..1): a thin strand on the clump's edge away from the middle (one in each gap between the front tufts: within oneLock, else 55°),
       // opening out from halfway and reaching a little past its tip (the drawing's fine strands between wide tufts; overlapping tufts drew
       // crossing lines instead)
-      const sd0 = tp.a >= 0 ? 1 : -1, BR = hang > 0.02 || Math.abs(tp.a) > (B.branchSpan ?? 55) * deg ? 0 : B.branch ?? 0, sides = BR > 0 && j === (sd0 > 0 ? k - 1 : 0) ? [sd0] : [];
+      const sd0 = tp.a >= 0 ? 1 : -1, BR = hang > 0.02 || Math.abs(tp.a) > (B.oneLock || 55) * deg ? 0 : B.branch ?? 0, sides = BR > 0 && j === (sd0 > 0 ? k - 1 : 0) ? [sd0] : [];
       const branches = sides.map((sd) => { const e = Math.hypot(pts[N - 1][0] - pts[N - 2][0], pts[N - 1][1] - pts[N - 2][1], pts[N - 1][2] - pts[N - 2][2]) || 1, dT = pts[N - 1].map((v, m) => (v - pts[N - 2][m]) / e);
         return pts.map((p, q) => { const t = q / (N - 1), th = Math.atan2(p[0], p[2] - center[2]), o = sd * (0.42 * w / sx + 0.012 * BR * Math.max(0, t - 0.4) ** 2 / 0.36), x = Math.max(0, (t - 0.5) / 0.5) ** 2 * 0.014 * BR, r = 0.0015 * t;
           return [p[0] + Math.cos(th) * o + dT[0] * x + Math.sin(th) * r, p[1] + dT[1] * x, p[2] - Math.sin(th) * o + dT[2] * x + Math.cos(th) * r]; }); });

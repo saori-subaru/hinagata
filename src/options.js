@@ -823,6 +823,7 @@ export const DEFAULTS = {
         "lockStiff": 4,
         "lockSpan": 13,
         "branch": 0,
+        "oneLock": 0,
         "lockRise": 0.03,
         "lockHangY": 0.86,
         "lockRoot": 70,
