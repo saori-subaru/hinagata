@@ -46,13 +46,14 @@ export const CHARACTERS = {
         { kind: "cross", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.034, color: "#66907d", mirror: true, lift: 0.0138 },
       ],
       hair: {
-        tail: { kind: "side", y: 1.18, count: 4, width: 0.07, spread: 1.0, waves: 0.5, tiers: 3, tierFlick: 0.015, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
+        tail: { kind: "side", y: 1.18, count: 4, width: 0.07, spread: 1.0, waves: 0.5, tiers: 3, tierFlick: 0.025, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
         // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
         // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
         drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
         sculpt: {
+          shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           nendo: {
             tips: [
               [-81.52, 0.887, 0.69, 0.33, null, 6],
@@ -69,21 +70,21 @@ export const CHARACTERS = {
             overlap: 1.44,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.09, flick: 0.01, hug: 0.95, innerHug: 0.82,   // below: down to the hood, showing behind the neck from the front (her design sheet)
+            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
             // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
             // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes.
             // Behind the ears (2, 9 and the inner 13, 14, 20, 21) longer and flicked out: the sides flare at the jaw while the nape hugs (her design sheet)
             edits: [
               { i: 0, dy: -0.0922, da: 0.46 },
               { i: 1, dy: -0.01, da: -3.67 },
-              { i: 2, dy: -0.08, da: -5.05, fl: 0.012 },
-              { i: 9, dy: -0.08, da: 5.05, fl: 0.012 },
+              { i: 2, dy: -0.03, da: -5.05, fl: 0.012 },
+              { i: 9, dy: -0.03, da: 5.05, fl: 0.012 },
               { i: 10, dy: -0.01, da: 3.67 },
               { i: 11, dy: -0.0922, da: -0.46 },
-              { i: 13, dy: -0.05, fl: 0.012 },
-              { i: 14, dy: -0.06, fl: 0.012 },
-              { i: 20, dy: -0.06, fl: 0.012 },
-              { i: 21, dy: -0.05, fl: 0.012 },
+              { i: 13, dy: -0.012, fl: 0.012 },
+              { i: 14, dy: -0.001, fl: 0.012 },
+              { i: 20, dy: -0.001, fl: 0.012 },
+              { i: 21, dy: -0.012, fl: 0.012 },
               { i: 26, dy: 0.0251, da: 11.34 },
               { i: 27, dy: 0.012, da: -15.16 },
             ],

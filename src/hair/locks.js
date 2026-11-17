@@ -19,7 +19,7 @@ const SUB = 3;
 const RIGID_HOLD = 0.03, RIGID_VDAMP = 0.6;
 // a tail hangs from its tie with no hair under it: twice the hold (its stiff is 1 to the hanging locks' ~3), or the wind lays it out flat like a stick
 export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
-const TIER_STEP = 0.25, TIER_OUT = 0.8;   // hair.tail.tiers: each step of the tail's tips this share of its length shorter than the next
+const TIER_STEP = 0.25, TIER_OUT = 0.3;   // hair.tail.tiers: each step of the tail's tips this share of its length shorter than the next
 // rigid hanging locks: the inner layer held 4x as firmly and kept whole, so a run lifts the outer one over hair, not over the block (its smooth dome, as pale as the skin, read as a bald head)
 const INNER_HOLD = 4, INNER_RIGID = 2;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
@@ -247,7 +247,7 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
       if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }
-      if (TN > 1 && T.tierFlick) P.splice(0, N, ...bendLock(P, T.tierFlick, { center: ell?.c ?? p, from: 0.55 }));   // each step's tips flick out from the head
+      if (TN > 1 && T.tierFlick && tier) P.splice(0, N, ...bendLock(P, T.tierFlick * tier / (TN - 1), { center: ell?.c ?? p, from: 0.7 }));   // only the shorter steps' tips, out a little: the longest hangs straight (bent from the middle, the whole tail swung out)   // each step's tips flick out from the head
       const seg = []; for (let q = 1; q < N; q++) seg.push(Math.hypot(P[q][0] - P[q - 1][0], P[q][1] - P[q - 1][1], P[q][2] - P[q - 1][2]));
       const w = T.width * S * (0.8 + 0.4 * hash(i + 3)), rad = (q) => 0.5 * w * T.thick * width(q / (N - 1)) + 0.003;
       for (let it = 0; it < 30; it++) for (let q = 2; q < N; q++) {   // off the head and the body, keeping the links' lengths (from the root down)
