@@ -237,11 +237,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
-      // たて長の目のにっこり: the same thick lash as an arch, fullest in the middle, its outer end split in two
+      // たて長の目のにっこり: the same thick lash as an arch drooping to the outer corner (タレ目), its outer end split in two
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.04, -0.014); qc(0.006, 0.04, 0.05, -0.006); ln(0.058, -0.006); ln(0.051, -0.013); ln(0.054, -0.021); qc(0.008, 0.014, -0.034, -0.021); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        fctx.beginPath(); mv(-0.04, -0.004); qc(-0.004, 0.034, 0.049, -0.024); ln(0.057, -0.026); ln(0.05, -0.031); ln(0.052, -0.039); qc(-0.002, 0.008, -0.034, -0.011); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
         fctx.restore();
       },
     },
