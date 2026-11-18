@@ -4,7 +4,7 @@
 export const PART_LABELS = {
   eyes: { round: { ja: "まる目", en: "Round" }, sparkle: { ja: "キラキラ目", en: "Sparkly" }, classic: { ja: "まる目(前)", en: "Round (classic)" }, happy: { ja: "にっこり", en: "Happy" }, closed: { ja: "とじ目", en: "Closed" }, surprised: { ja: "びっくり", en: "Surprised" }, glare: { ja: "ジト目", en: "Glare" }, sanpaku: { ja: "三白眼", en: "Sanpaku" }, lidded: { ja: "半目(ハイライト下)", en: "Half-lidded" }, image: { ja: "絵の目", en: "Picture" }, imageClosed: { ja: "絵のとじ目", en: "Picture (closed)" } },
   brows: { normal: { ja: "ふつう", en: "Normal" }, classic: { ja: "ふつう(前)", en: "Normal (classic)" }, worried: { ja: "こまり", en: "Worried" }, angry: { ja: "おこ", en: "Angry" }, none: { ja: "なし", en: "None" }, image: { ja: "絵の眉", en: "Picture" } },
-  mouth: { smile: { ja: "にこ", en: "Smile" }, open: { ja: "あーん", en: "Open" }, openSoft: { ja: "あーん(細)", en: "Open (soft)" }, o: { ja: "お", en: "O" }, cat: { ja: "ω", en: "Cat (ω)" }, frown: { ja: "へ", en: "Frown" }, image: { ja: "絵の口", en: "Picture" } },
+  mouth: { smile: { ja: "にこ", en: "Smile" }, open: { ja: "あーん", en: "Open" }, openSoft: { ja: "あーん(上だけ線)", en: "Open (top line)" }, o: { ja: "お", en: "O" }, cat: { ja: "ω", en: "Cat (ω)" }, frown: { ja: "へ", en: "Frown" }, image: { ja: "絵の口", en: "Picture" } },
   nose: { shadow: { ja: "影", en: "Shadow" }, dot: { ja: "点", en: "Dot" }, line: { ja: "線", en: "Line" }, none: { ja: "なし", en: "None" }, image: { ja: "絵の鼻", en: "Picture" } },
   cheeks: { none: { ja: "なし", en: "None" }, flush: { ja: "ぽっ", en: "Flush" } },
 };
