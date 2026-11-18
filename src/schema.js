@@ -124,6 +124,8 @@ const MAIN = [
   ["face.parts.cheeks", L("ほっぺ", "Cheeks"), { options: partOpts("cheeks"), section: L("パーツ", "Parts"), apply: "setFace" }],
   ["face.parts.nose", L("鼻", "Nose"), { options: partOpts("nose"), nullable: true, section: L("パーツ", "Parts"), apply: "setFace", help: L("null = 「鼻の影」のオンオフに合わせる", "null = follow the nose shadow switch") }],
   ["face.noseSize", L("鼻の点の大きさ", "Nose dot size"), { when: { "face.parts.nose": "dot" }, min: 0.3, max: 2, step: 0.05, section: L("パーツ", "Parts") }],
+  ["face.openSize", L("開き口の大きさ", "Open mouth size"), { min: 0.6, max: 1.8, step: 0.05, section: L("パーツ", "Parts"), help: L("あーん(上だけ線)の大きさ", "the size of Open (top line)") }],
+  ["face.lashHatch", L("まつ毛を線で塗る", "Hatched lashes"), { section: L("パーツ", "Parts"), help: L("たて長の目のまつ毛をベタでなく、薄い塗りに細い斜線で", "the tall eyes' lashes lighter, with thin slanted strokes instead of solid") }],
   ["face.noseColor", L("鼻の色(点・線)", "Nose color (dot, line)"), { type: "color", nullable: true, section: L("パーツ", "Parts"), help: L("null = 種類ごとの色", "null = each kind's own color") }],
   ["face.browsOverHair", L("眉を髪の上に描く", "Brows over the hair"), { section: L("パーツ", "Parts"), help: L("顔がこちらを向いている間、眉を前髪の上に透かして描く。額の高い眉(1.11 より上)も描ける。額から 4.5cm 以内にかぶる帽子やかぶとの上にも出る", "While the face is turned to the viewer the brows show over the bangs, and may sit high on the forehead (over 1.11). They also show over a hat or a helm within 4.5 cm of the forehead") }],
   ["face.eyeSize", L("目の大きさ", "Eye size"), { min: 0.8, max: 1.8, step: 0.01, section: L("位置", "Layout"), apply: "setFaceLayout" }],
