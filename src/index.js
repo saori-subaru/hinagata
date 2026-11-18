@@ -584,9 +584,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
-      const write = mode !== "all", test = mode === "none" || (mode === "front" && HAIR_BACK.includes(k));
-      if (f.userData.hairStencil !== write) { Object.assign(f, { stencilWrite: write, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = write; }
-      if (o.userData.hairStencil !== test) { Object.assign(o, { stencilWrite: test, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = test; }
+      // hair.tail.outline: the tails mark their own pixels (2), so their line shows where they lie over the other hair, and the other hair's over them; between their own locks there is none
+      const ref = k === "tails" && OPT.hair.tail?.outline ? 2 : 1, write = mode !== "all", test = mode === "none" || (mode === "front" && HAIR_BACK.includes(k)), fk = write ? ref : 0, ok = test ? ref : 0;
+      if (f.userData.hairStencil !== fk) { Object.assign(f, { stencilWrite: write, stencilRef: ref, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = fk; }
+      if (o.userData.hairStencil !== ok) { Object.assign(o, { stencilWrite: test, stencilRef: ref, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = ok; }
       x.o.renderOrder = test ? 1 : 0; }
   }
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
@@ -735,12 +736,17 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null;
+  let faceLayer = null, browLayer = null;
+  if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
+    const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
+    if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
+    browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
 
@@ -986,6 +992,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
+      if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     /** The knees' blush and line (instant): { blush: { on, color, strength, size }, line: { on, color, strength, width, radius } }. */
@@ -1106,7 +1113,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Fingerprint of mesh positions and skin weights (for checking refactors). */
     checksum() { return ["body", "shirt", "pants", "socks", "shoes", "soles", "hair"].map((k) => parts[k]).map((x) => { const a = x.m.geometry.attributes; let h = 0; for (const k of ["position", "skinIndex", "skinWeight"]) { const v = a[k].array; for (let i = 0; i < v.length; i++) h = (h * 31 + Math.round(v[i] * 1e5)) % 1000000007; } return h; }); },
 
-    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT)]) U.map.value.dispose(); root.removeFromParent(); },
+    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); face.BROWS?.tex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT)]) U.map.value.dispose(); root.removeFromParent(); },
   };
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);

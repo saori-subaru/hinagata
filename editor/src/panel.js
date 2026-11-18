@@ -328,7 +328,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         check(t("drawMirror"), S.mirror, (v) => D.set("mirror", v)))];
     if (S.on) kids.push(h("div", { class: "help" }, t("drawHelp")));
     if (S.move) kids.push(h("div", { class: "help" }, t("drawMoveHelp")));
-    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1]]) {   // the brush for the next lock
+    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1], ["taper", "drawTaper", 0, 1, 0.05]]) {   // the brush for the next lock
       const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
       rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
