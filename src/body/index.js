@@ -349,8 +349,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const palm = at(w, [D, 0.03], [N, 0.002]);
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
-    const FR = AD ? 0.55 : 1, FL = AD ? 1.45 : 1, FS = AD ? 0.7 : 1;
-    P[`palm.${s}`] = E(palm, [0.034 * HK, (AD ? 0.036 : 0.05) * HK, (AD ? 0.012 : 0.019) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
+    // body.sculpt.hand: slim = how far toward that hand, whatever the body (null: by the body); fingers = their thickness (null: slim's. Under about
+    // 0.8 the game quality's 13.6 mm cells break them up: the adult body is built fine)
+    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? (AD ? 1 : 0), hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, 0.55), FL = hs(1, 1.45), FS = hs(1, 0.7);
+    P[`palm.${s}`] = E(palm, [0.034 * HK, hs(0.05, 0.036) * HK, hs(0.019, 0.012) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
       const fd = D.map((v, k) => v * Math.cos(sp * FS) + S[k] * Math.sin(sp * FS)), b0 = at(palm, [D, 0.022], [S, o * FS * (fist ? 0.85 : 1)]);
@@ -358,7 +360,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // 開いた指: 付け根側(fingers の骨)と先側(fingerTips の骨)の2本に分ける = 中ほどで曲がる。つなぎ目は溶かす幅を小さく(同じ太さの継ぎ目がふくらまないように)
       const mid = at(b0, [fd, len * FL * 0.48], [N, 0.003]);
       P[`finger${i}.${s}`] = C(b0, mid, 0.0125 * HK * FR, 0.012 * HK * FR, `fingers.${s}`, 0.008);   // 指の股はくっきり
-      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len * FL], [N, 0.006]), 0.012 * HK * FR, (AD ? 0.0095 : 0.0115) * HK * FR, `fingerTips.${s}`, 0.002);
+      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len * FL], [N, 0.006]), 0.012 * HK * FR, hs(0.0115, 0.0095) * HK * FR, `fingerTips.${s}`, 0.002);
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
     P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022 * FL], [D, 0.016 * FL], [N, 0.016]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012);

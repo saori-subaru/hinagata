@@ -192,6 +192,7 @@ export const CHARACTERS = {
   o.colors.hair = "#f4ece3";
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
   o.body.sculpt.crown = { y: 1.34, blend: 0.14 };   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
+  o.body.sculpt.hand = { slim: 1, fingers: 0.9 };   // her sheet's hands: slender, tapering, the fingers together (fingers 0.9: the thickness the game quality still builds clean)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
       hair: {
