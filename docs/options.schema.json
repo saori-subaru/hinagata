@@ -18109,6 +18109,13 @@
      }
     },
     {
+     "value": "tallHappy",
+     "label": {
+      "ja": "たて長のにっこり",
+      "en": "Tall (happy)"
+     }
+    },
+    {
      "value": "image",
      "label": {
       "ja": "絵の目",
@@ -18223,6 +18230,13 @@
      "label": {
       "ja": "あーん",
       "en": "Open"
+     }
+    },
+    {
+     "value": "openSoft",
+     "label": {
+      "ja": "あーん(上だけ線)",
+      "en": "Open (top line)"
      }
     },
     {

@@ -256,7 +256,7 @@ export const CHARACTERS = {
         layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
         // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
         expressions: {
-          happy: { eyes: "tallHappy", brows: "thin", mouth: "open", cheeks: "none" },
+          happy: { eyes: "tallHappy", brows: "thin", mouth: "openSoft", cheeks: "none" },
           sad: { eyes: "tall", brows: "worried", mouth: "small", cheeks: "none" },
           angry: { eyes: "tall", brows: "angry", mouth: "small", cheeks: "none" },
           surprised: { eyes: "tall", brows: "thin", mouth: "o", cheeks: "none" },
