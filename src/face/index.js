@@ -49,13 +49,14 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
   // the lash of the tall eyes on the current path: solid, or (face.lashHatch) a pale opaque fill (the iris must not show through) with short
   // strokes laid along the lash's curve (an arc round the eye: they tilt down toward its ends) and a thin edge, like a pencil drawing's
-  const lashFill = (cx, cy, c = "#3f3a52") => { if (!OPT.face.lashHatch) { fctx.fillStyle = c; fctx.fill(); return; }
-    const pale = "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * 0.45) * 255).toString(16).padStart(2, "0")).join("");
-    fctx.fillStyle = pale; fctx.fill(); fctx.save(); fctx.clip(); const h = new Path2D(), X0 = px(cx), R = pu(0.075), L = pu(0.0075), dy = pu(0.0021), dx = pu(0.0055);
+  const lashFill = (cx, cy, over = [], c = "#3f3a52") => { if (!OPT.face.lashHatch) { fctx.fillStyle = c; fctx.fill(); return; }
+    const pale = "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * 0.3) * 255).toString(16).padStart(2, "0")).join("");
+    fctx.fillStyle = pale; fctx.fill(); fctx.save(); fctx.clip(); const h = new Path2D(), X0 = px(cx), R = pu(0.075), L = pu(0.0095), dy = pu(0.0038), dx = pu(0.0105);
     for (let j = 0, y = py(cy + 0.07); y < py(cy - 0.05); j++, y += dy) for (let i = 0, x = px(cx - 0.09) + (j % 2) * dx / 2 + Math.sin(j * 2.1) * dx * 0.2; x < px(cx + 0.09); i++, x += dx) {
       const a = Math.atan((x - X0) / R), l = L * (0.75 + 0.25 * Math.sin(i * 1.3 + j)); h.moveTo(x - Math.cos(a) * l / 2, y - Math.sin(a) * l / 2); h.lineTo(x + Math.cos(a) * l / 2, y + Math.sin(a) * l / 2); }
     fctx.lineWidth = pu(0.0009); fctx.lineCap = "round"; fctx.strokeStyle = c + "cc"; fctx.stroke(h); fctx.restore();
-    fctx.lineWidth = pu(0.0012); fctx.strokeStyle = c; fctx.lineJoin = "round"; fctx.stroke(); };
+    fctx.lineWidth = pu(0.0012); fctx.strokeStyle = c; fctx.lineJoin = "round"; fctx.stroke();
+    const o = new Path2D(); for (const [a, b, e, f] of over) { o.moveTo(px(cx + a), py(cy + b)); o.lineTo(px(cx + e), py(cy + f)); } fctx.lineWidth = pu(0.001); fctx.strokeStyle = c + "cc"; fctx.stroke(o); };   // over: strokes running past the inner and outer ends [x0, y0, x1, y1] (eye space)
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
   const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
@@ -233,7 +234,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         // the lash: its inner end cut aslant, highest over the inner half and sloping down to the outer corner (a drooping eye), where it
         // hangs down and out as a wing, a tick out of its edge
         fctx.beginPath(); mv(-0.042, 0.02); qc(-0.04, 0.036, -0.031, 0.043); bz(-0.012, 0.0525, 0.016, 0.05, 0.036, 0.04); qc(0.047, 0.033, 0.054, 0.022); ln(0.064, 0.019); ln(0.057, 0.013);
-        qc(0.062, 0.003, 0.062, -0.01); bz(0.055, 0.0, 0.046, 0.012, 0.034, 0.022); qc(0.004, 0.037, -0.033, 0.026); fctx.closePath(); lashFill(cx, cy);
+        qc(0.062, 0.003, 0.062, -0.01); bz(0.055, 0.0, 0.046, 0.012, 0.034, 0.022); qc(0.004, 0.037, -0.033, 0.026); fctx.closePath(); lashFill(cx, cy, OPT.face.lashHatch ? [[-0.03, 0.04, -0.05, 0.034], [-0.032, 0.03, -0.049, 0.022], [0.05, 0.03, 0.07, 0.022], [0.052, 0.018, 0.068, 0.01]] : []);
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.02, 0.06); qc(0.002, 0.065, 0.026, 0.056); fctx.stroke();   // the lid's crease
         fctx.restore();
       },
@@ -242,7 +243,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       tallClosed: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.037, -0.011); qc(0.008, -0.0185, 0.05, -0.011); ln(0.057, -0.0095); ln(0.0505, -0.0165); ln(0.056, -0.0225); qc(0.008, -0.04, -0.036, -0.022); ln(-0.032, -0.016); fctx.closePath(); lashFill(cx, cy);
+        fctx.beginPath(); mv(-0.037, -0.011); qc(0.008, -0.0185, 0.05, -0.011); ln(0.057, -0.0095); ln(0.0505, -0.0165); ln(0.056, -0.0225); qc(0.008, -0.04, -0.036, -0.022); ln(-0.032, -0.016); fctx.closePath(); lashFill(cx, cy, OPT.face.lashHatch ? [[-0.026, -0.013, -0.045, -0.012], [-0.026, -0.02, -0.043, -0.024], [0.045, -0.012, 0.064, -0.008], [0.045, -0.02, 0.062, -0.026]] : []);
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
@@ -250,7 +251,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); lashFill(cx, cy);
+        fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); lashFill(cx, cy, OPT.face.lashHatch ? [[-0.03, -0.008, -0.048, -0.016], [-0.028, -0.013, -0.044, -0.022], [0.042, -0.008, 0.063, -0.014], [0.044, -0.016, 0.06, -0.026]] : []);
         line(0.0018, "#3f3a5280"); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
         fctx.restore();
       },
