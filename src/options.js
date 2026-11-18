@@ -736,7 +736,8 @@ export const DEFAULTS = {
         "zig": 0.07,
         "teeth": 30
       },
-      "inner": 0
+      "inner": 0,
+      "oneShade": 0
     },
     "bangs": "nendo",
     "drawn": [],
