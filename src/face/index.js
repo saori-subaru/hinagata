@@ -242,7 +242,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
         fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        line(0.0018, "#3f3a52"); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin lash-colored line from the top toward the inner corner
+        line(0.0018, "#3f3a5280"); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
         fctx.restore();
       },
     },
