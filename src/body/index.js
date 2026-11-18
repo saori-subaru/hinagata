@@ -349,8 +349,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const palm = at(w, [D, 0.03], [N, 0.002]);
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
-    const FR = AD ? 0.55 : 1, FL = AD ? 1.45 : 1, FS = AD ? 0.7 : 1;
-    P[`palm.${s}`] = E(palm, [0.034 * HK, (AD ? 0.036 : 0.05) * HK, (AD ? 0.012 : 0.019) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
+    // body.sculpt.hand: slim = how far toward that hand, whatever the body (null: by the body); fingers = their thickness (null: slim's. Under about
+    // 0.8 the game quality's 13.6 mm cells break them up: the adult body is built fine)
+    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? (AD ? 1 : 0), hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, 0.55), FL = hs(1, 1.45), FS = hs(1, 0.7);
+    P[`palm.${s}`] = E(palm, [0.034 * HK, hs(0.05, 0.036) * HK, hs(0.019, 0.012) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {
       const fd = D.map((v, k) => v * Math.cos(sp * FS) + S[k] * Math.sin(sp * FS)), b0 = at(palm, [D, 0.022], [S, o * FS * (fist ? 0.85 : 1)]);
@@ -358,7 +360,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       // 開いた指: 付け根側(fingers の骨)と先側(fingerTips の骨)の2本に分ける = 中ほどで曲がる。つなぎ目は溶かす幅を小さく(同じ太さの継ぎ目がふくらまないように)
       const mid = at(b0, [fd, len * FL * 0.48], [N, 0.003]);
       P[`finger${i}.${s}`] = C(b0, mid, 0.0125 * HK * FR, 0.012 * HK * FR, `fingers.${s}`, 0.008);   // 指の股はくっきり
-      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len * FL], [N, 0.006]), 0.012 * HK * FR, (AD ? 0.0095 : 0.0115) * HK * FR, `fingerTips.${s}`, 0.002);
+      P[`fingerTip${i}.${s}`] = C(mid, at(b0, [fd, len * FL], [N, 0.006]), 0.012 * HK * FR, hs(0.0115, 0.0095) * HK * FR, `fingerTips.${s}`, 0.002);
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
     P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022 * FL], [D, 0.016 * FL], [N, 0.016]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012);
@@ -679,6 +681,60 @@ export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   //
       const fn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], n = nor.slice(idx[i0] * 3, idx[i0] * 3 + 3);
       if (fn[0] * n[0] + fn[1] * n[1] + fn[2] * n[2] < 0) for (let k = i0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; } }
     unders.push((x, y, z) => { const q = toH(x, y, z); return along(q) > TS + TR + 0.03 && e.f(q[0], q[1], q[2]) < 0.002; });
+  }
+  return pos.length ? { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx), under: (x, y, z) => unders.some((f) => f(x, y, z)) } : null;
+}
+
+/** The open hands' fingers as rings laid on the body's surface, joined to its mesh as the ears' blades are (index.js withParts): on the game
+ *  quality's 13.6 mm cells a finger is one or two cells thick and came out jagged. Each ring is cast out from the finger's middle line onto the
+ *  surface as the field has it. A ray that would pass halfway to the next finger stops there and goes straight out to the surface instead, so
+ *  two fingers that run together share a seam along the dip between them. Where a ray finds no surface (inside the palm) the point stays at
+ *  the finger's own radius, buried. The rings start BACK inside the palm, D0 under its surface and coming up over it in 3 mm (as the blades do:
+ *  an end standing out of the surface showed its outline's inside), so the seam with the body's own coarse mesh is on the flat of the hand,
+ *  not between the knuckles. under: the body's own triangles there (they go). A fist (a weapon held) is left as it is. */
+export function fingerTubes(P, sdf, { N = 10, DS = 0.005, D0 = 0.0004, BACK = 0.008 } = {}) {
+  const pos = [], nor = [], idx = [], unders = [], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  for (const s of ["L", "R"]) {
+    const fingers = ["finger0", "finger1", "finger2", "finger3", "thumb"].map((n) => [P[`${n}.${s}`], n === "thumb" ? null : P[`fingerTip${n.slice(6)}.${s}`]].filter(Boolean)
+      .map((c) => { const L = Math.hypot(c.bx, c.by, c.bz); return { c, a: [c.ax, c.ay, c.az], d: [c.bx / L, c.by / L, c.bz / L], L }; })).filter((f) => f.length);
+    if (fingers.some((f) => f.length > 1 && dot(f[0].d, f[1].d) < 0.95)) continue;   // a fist
+    // the nearest point of a finger's middle line (run on back into the palm), and how far
+    const near = (f, q) => { let best = null; f.forEach((e, i) => { const w = q.map((v, k) => v - e.a[k]), t = Math.min(e.L, Math.max(i ? 0 : -BACK * 2, dot(w, e.d))), c = e.a.map((v, k) => v + e.d[k] * t), l = Math.hypot(q[0] - c[0], q[1] - c[1], q[2] - c[2]); if (!best || l < best.l) best = { c, l }; }); return best; };
+    for (const segs of fingers) {
+      const last = segs[segs.length - 1], rT = last.c.rb, total = segs.reduce((q, e) => q + e.L, 0), v0 = pos.length / 3, others = fingers.filter((f) => f !== segs);
+      // the ring at t along the finger (before 0: in the palm; past its end: the round tip, the rings closing in): [middle, the two axes across, the radius there]
+      const ring = (t) => { let e = segs[0], u = t; if (segs.length > 1 && t > e.L) { u = t - e.L; e = segs[1]; }
+        const m = e.a.map((v, k) => v + e.d[k] * u), ref = Math.abs(e.d[1]) < 0.8 ? [0, 1, 0] : [0, 0, 1], q = dot(ref, e.d);
+        let U = ref.map((v, k) => v - e.d[k] * q); const ul = Math.hypot(...U); U = U.map((v) => v / ul);
+        const V = [e.d[1] * U[2] - e.d[2] * U[1], e.d[2] * U[0] - e.d[0] * U[2], e.d[0] * U[1] - e.d[1] * U[0]], o = t - total;
+        return [m, U, V, o > 0 ? Math.sqrt(Math.max(rT * rT - o * o, 0)) : e.c.ra + (e.c.rb - e.c.ra) * Math.min(1, Math.max(0, u) / e.L), e.d]; };
+      // where g turns positive along the ray from b toward d (l: about where; null: not by 1.6 l)
+      const e0 = segs[0], g = (x, y, z) => sdf(x, y, z) - D0 * (2 * sstep(-BACK, -BACK + 0.003, (x - e0.a[0]) * e0.d[0] + (y - e0.a[1]) * e0.d[1] + (z - e0.a[2]) * e0.d[2]) - 1);
+      const hit = (b, d, l) => { const at = (u) => g(b[0] + d[0] * u, b[1] + d[1] * u, b[2] + d[2] * u), far = l * 1.6 + 0.003; if (at(0) >= 0) return null;
+        let u0 = 0, u1 = l / 6; while (u1 <= far && at(u1) < 0) { u0 = u1; u1 += l / 6; } if (u1 > far) return null;
+        for (let k = 0; k < 14; k++) { const um = (u0 + u1) / 2; if (at(um) >= 0) u1 = um; else u0 = um; } return (u0 + u1) / 2; };
+      const over = (q) => { const o = others.map((f) => near(f, q)).reduce((a, b) => a.l < b.l ? a : b); return [near(segs, q).l - o.l, o.c]; };   // > 0: nearer another finger's line (and that line's point)
+      const put = (b, d, l, ax) => { let u = hit(b, d, l), ue = u ?? l, q = b.map((v, k) => v + d[k] * ue);
+        if (others.length && over(q)[0] > 0) { let u0 = 0; for (let k = 0; k < 14; k++) { const um = (u0 + ue) / 2; if (over(b.map((v, i) => v + d[i] * um))[0] > 0) ue = um; else u0 = um; }
+          q = b.map((v, k) => v + d[k] * ue); u = null;
+          // in the gap between two fingers (the ray stepped over it): back to this finger's own side of it
+          if (g(q[0], q[1], q[2]) >= 0) { let u0 = 0; for (let k = 0; k < 14; k++) { const um = (u0 + ue) / 2; if (g(b[0] + d[0] * um, b[1] + d[1] * um, b[2] + d[2] * um) >= 0) ue = um; else u0 = um; } q = b.map((v, k) => v + d[k] * ue); u = ue; }
+          // halfway to the next finger: from there straight out (across the way to that finger, in the ring's plane) to the surface, the seam
+          else { const e = over(q)[1].map((v, k) => v - b[k]), ea = dot(e, ax), e1 = e.map((v, k) => v - ax[k] * ea), el = Math.hypot(...e1) || 1, dn = dot(d, e1) / el, w = d.map((v, k) => v - e1[k] / el * dn), wl = Math.hypot(...w);
+            if (wl > 0.15) { const wd = w.map((v) => v / wl), h = hit(q, wd, l); if (h != null) { q = q.map((v, k) => v + wd[k] * h); u = h; } } } }
+        const n = u == null ? d : grad4(g, q[0], q[1], q[2], 0.0005); pos.push(q[0], q[1], q[2]); nor.push(n[0], n[1], n[2]); };
+      const ts = []; for (let t = -BACK; t < total; t += DS) ts.push(t); for (const k of [0, 0.4, 0.7, 0.9]) ts.push(total + rT * k);
+      for (const t of ts) { const [m, U, V, r, ax] = ring(t); for (let j = 0; j < N; j++) { const f = 2 * Math.PI * j / N; put(m, U.map((v, k) => v * Math.cos(f) + V[k] * Math.sin(f)), r, ax); } }
+      put(last.a.map((v, k) => v + last.d[k] * last.L), last.d, rT, last.d);   // the tip
+      const S = ts.length - 1, tip = pos.length / 3 - 1, Vx = (i, j) => v0 + i * N + (j % N), i0 = idx.length;
+      for (let i = 0; i < S; i++) for (let j = 0; j < N; j++) idx.push(Vx(i, j), Vx(i + 1, j), Vx(i + 1, j + 1), Vx(i, j), Vx(i + 1, j + 1), Vx(i, j + 1));
+      for (let j = 0; j < N; j++) idx.push(Vx(S, j), tip, Vx(S, j + 1));
+      { const [A, B, Cc] = [idx[idx.length - 3], idx[idx.length - 2], idx[idx.length - 1]].map((v) => pos.slice(v * 3, v * 3 + 3)), u = B.map((v, k) => v - A[k]), w = Cc.map((v, k) => v - A[k]);   // wound to face outward (read at the tip: its points are never buried)
+        const fn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+        if (dot(fn, last.d) < 0) for (let k = i0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; } }
+      const R0 = Math.max(...segs.map((e) => Math.max(e.c.ra, e.c.rb))) + 0.006;   // (from halfway back along the rings in the palm; as far out as the rings reach)
+      unders.push((x, y, z) => { const q = [x, y, z]; return dot(q.map((v, k) => v - e0.a[k]), e0.d) > -BACK / 2 && near(segs, q).l < R0; });
+    }
   }
   return pos.length ? { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx), under: (x, y, z) => unders.some((f) => f(x, y, z)) } : null;
 }

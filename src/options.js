@@ -109,6 +109,11 @@ export const DEFAULTS = {
     },
     "sculpt": {
       "bustX": null,
+      "hand": {
+        "slim": null,
+        "fingers": null,
+        "rings": true
+      },
       "waist": {
         "y": 0.555,
         "height": 0.07,

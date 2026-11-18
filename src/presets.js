@@ -193,6 +193,10 @@ export const CHARACTERS = {
   o.colors.hair = "#f4ece3";
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
   o.body.sculpt.crown = { y: 1.34, blend: 0.14 };   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
+  o.body.sculpt.hand = { slim: 1, fingers: 0.7 };   // her sheet's hands: slender, tapering, the fingers together (fingers 0.7: a child's, not the adult hand's 0.55)
+  // her sheet's neck: a thin column, the shirt's neckline and the cape close round its base (lower and wider they bared the slope to the shoulders,
+  // and the neck read as wide as that)
+  o.body.sculpt.neck = { ...o.body.sculpt.neck, width: 0.5 }; Object.assign(o.outfit.shirt.collar, { y: 0.786, bowl: 4 }); o.outfit.cape.neckOpen = 0.05;
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
       hair: {
