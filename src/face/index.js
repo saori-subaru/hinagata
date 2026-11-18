@@ -237,13 +237,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
-      // たて長の目のにっこり (a nendoroid smile): a ∩ thick in the middle and pointed at both ends, two lashes flicking out at the outer end, a faint crease over it
+      // たて長の目のにっこり: a low arch of the thick lash, its outer end split in two, a short stroke for the lid over it
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.044, -0.014); bz(-0.033, 0.032, 0.032, 0.042, 0.057, -0.005); bz(0.032, 0.021, -0.026, 0.013, -0.044, -0.014); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        for (const [a, b, c, d] of [[0.05, 0.004, 0.071, -0.012], [0.04, 0.01, 0.063, -0.001]]) { fctx.beginPath(); mv(a, b); ln(c, d); ln(a - 0.008, b - 0.003); fctx.closePath(); fctx.fill(); }   // lashes at the outer end
-        line(0.0016, "#a0807890"); fctx.beginPath(); mv(-0.024, 0.036); qc(0.008, 0.052, 0.038, 0.036); fctx.stroke();   // the lid's crease
+        fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        line(0.0018, "#8f7f8ab0"); fctx.beginPath(); mv(0.008, 0.013); qc(0.024, 0.017, 0.039, 0.006); fctx.stroke();   // a short stroke for the lid
         fctx.restore();
       },
     },
