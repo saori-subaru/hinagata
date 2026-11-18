@@ -43,7 +43,7 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   /** The ahoge's triangles { pos, nor, idx } (toBody: head space → the mesh's), or null when the style has none. 6 x 12 rings and the tip. */
   function ahogeMesh(pick, toBody = (x, y, z) => [x, y, z], { K = 12, W = 0.016, FLAT = 0.45 } = {}) {
     if (!pick.ahoge) return null;
-    const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
+    const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02) + (OPT.hair.sculpt.crownPuff ?? 0);   // standing on hair this thick
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D), side = [cd, 0, -sd];   // 0 = forward, 90 = toward the character's left
     const CRN = OPT.body.head.crown ?? 1;   // the head above the brows is stretched by body.head.crown after this: undone here, or a taller head stood the strand upright
     const LEAN = (OPT.hair.sculpt.ahogeLean ?? 0) * deg, ct = Math.cos(LEAN), st = Math.sin(LEAN), A0 = OPT.hair.sculpt.ahogeCurl ? AHOGE_CURL : AHOGE, pz = A0[0][2];
@@ -201,5 +201,10 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
     if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, ahogeMesh };
+  // crownPuff (m): the block alone swells round the crown, for its mesh only (the locks keep to the hair as it was, hairSdfOf). They then come
+  // out from under it lower down, risen to their full height: the outline over the head is one curve, not a dome with a step round it
+  const CROWN_PUFF = [0.4, 0.8];   // the sine of the height over the head's center where the swell starts and where it is whole
+  const hairBlockSdfOf = (pick) => { const f = hairSdfOf(pick), P = OPT.hair.sculpt.crownPuff ?? 0; if (!(P > 0)) return f;
+    return (x, y, z) => { const dy = y - SK.y, l = Math.hypot(x, dy, z + 0.005) || 1; return f(x, y, z) - P * sstep(CROWN_PUFF[0], CROWN_PUFF[1], dy / l); }; };
+  return { BANGS, BACKS, SIDE, hairSdfOf, hairBlockSdfOf, bangsAsLocks, backAsLocks, ahogeMesh };
 }

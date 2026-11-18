@@ -204,6 +204,7 @@ export const CHARACTERS = {
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
           ahogeCurl: true, ahogeSize: 1.05,   // small and curled round as on her design sheet
+          crownPuff: 0.02,   // the crown one round curve (the locks rose from the block in a step round it: a flat top with corners)
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
           // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's

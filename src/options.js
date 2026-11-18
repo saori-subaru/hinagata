@@ -909,6 +909,7 @@ export const DEFAULTS = {
       "shortBack": 0.86,
       "shell": 0.036,
       "lockShell": 0.016,
+      "crownPuff": 0,
       "ahogeSize": 1.15,
       "ahogeDir": 90,
       "ahogeLean": 0,
