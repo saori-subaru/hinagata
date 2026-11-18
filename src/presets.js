@@ -187,7 +187,7 @@ export const CHARACTERS = {
 };
 // シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
-  o.body.sculpt.crown = { ...o.body.sculpt.crown, y: 1.38, blend: 0.12 };   // the top cut higher and rounded wide: at 1.32/0.05 the taller head came out flat with corners
+  o.body.sculpt.crown = { ...o.body.sculpt.crown, y: 1.42, blend: 0.2 };   // the top cut high and rounded wide: at 1.32/0.05 the taller head came out flat with corners
   o.body.head.crown = 1.35;   // the top of the head high over the eyes (higher than her design sheet, her choice)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
@@ -205,6 +205,7 @@ export const CHARACTERS = {
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
           ahogeCurl: true, ahogeSize: 0.85,   // small and curled round as on her design sheet
+          lockShell: 0.055,   // the locks thick over the cap: thinner, the top stood as a small dome on the wider sides
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
           // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's
