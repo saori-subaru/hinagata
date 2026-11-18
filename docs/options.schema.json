@@ -18428,12 +18428,16 @@
    "cost": "instant",
    "apply": "setFaceLayout",
    "min": 1.02,
-   "max": 1.14,
+   "max": 1.24,
    "step": 0.001,
    "order": 87,
    "section": {
     "ja": "位置",
     "en": "Layout"
+   },
+   "help": {
+    "ja": "1.11 より上は「眉を髪の上に描く」をオンに(顔の絵の上端で切れる)",
+    "en": "over 1.11 needs “Brows over the hair” (the face picture ends there)"
    }
   },
   "face.layout.mouthY": {

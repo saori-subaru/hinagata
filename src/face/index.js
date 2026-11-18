@@ -198,33 +198,33 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0018, "#c98c80b0"); fctx.beginPath(); mv(-0.012, TOP + 0.013); qc(0.014, TOP + 0.018, 0.038, TOP + 0.017); fctx.stroke();   // the lid's crease, close over it
         fctx.restore();
       },
-      // たて長の目 (シルヴィ's design sheet): flat colors, no rim. A thick lash across the top, sloping down past the outer corner and hanging
-      // out as a wing (a drooping eye; the white shows under it); a tall iris with rounded lower corners, under the lash's inner end, darker
-      // under the lid, a lighter zone below the pupil with a pale box in it
+      // たて長の目 (シルヴィ's design sheet): flat colors, no rim. A thick lash across the top, sloping down to the outer corner and hanging
+      // there as a wing (a drooping eye); a tall iris with rounded lower corners, darker under the lid, a lighter zone below the pupil with a
+      // pale box in it; the white shows beside it. ⛔ Its proportions are Saori's choice: don't refit them to the sheet (the sheet's eye is smaller)
       tall: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         const box = (x0, y0, x1, y1, r, fill) => { const [ax, ay] = P(x0, y1), [bx, by] = P(x1, y0), q = pu(r); fctx.beginPath(); fctx.moveTo(ax + q, ay); fctx.arcTo(bx, ay, bx, by, q); fctx.arcTo(bx, by, ax, by, q); fctx.arcTo(ax, by, ax, ay, q); fctx.arcTo(ax, ay, bx, ay, q); fctx.closePath(); fctx.fillStyle = fill; fctx.fill(); };   // (arcTo: Safari 15 has no roundRect)
         const tint = (c, t) => "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * t) * 255).toString(16).padStart(2, "0")).join("");
         const flip = fctx.getTransform().a < 0, hx = flip ? 1 : -1;   // the highlight stays on the same side of both eyes (the light's side), not mirrored
-        const IR = EYE_COL, S = LAY.eyeSize * 0.8; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(S, S); fctx.translate(-px(cx), -py(cy));   // (0.8: as big as the round eye at the same eyeSize)
-        const open = () => { fctx.beginPath(); mv(-0.038, 0.034); qc(0.0, 0.048, 0.05, 0.033); bz(0.072, 0.014, 0.058, -0.03, 0.028, -0.047); qc(0.0, -0.052, -0.026, -0.047); bz(-0.036, -0.034, -0.04, 0.0, -0.038, 0.034); fctx.closePath(); };
-        open(); { const g = fctx.createLinearGradient(...P(0, 0.038), ...P(0, -0.02)); g.addColorStop(0, "#cfc9d2"); g.addColorStop(0.45, "#eeebee"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        const open = () => { fctx.beginPath(); mv(-0.033, 0.03); qc(0.0, 0.04, 0.038, 0.032); bz(0.055, 0.012, 0.044, -0.03, 0.022, -0.043); qc(0.0, -0.048, -0.022, -0.043); bz(-0.031, -0.032, -0.035, 0.0, -0.033, 0.03); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.034), ...P(0, -0.02)); g.addColorStop(0, "#cfc9d2"); g.addColorStop(0.45, "#eeebee"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
         fctx.save(); open(); fctx.clip();
-        const ir = () => { fctx.beginPath(); mv(-0.036, 0.045); ln(0.036, 0.045); bz(0.039, 0.0, 0.038, -0.049, 0.015, -0.049); ln(-0.015, -0.049); bz(-0.038, -0.049, -0.039, 0.0, -0.036, 0.045); fctx.closePath(); };
+        const ir = () => { fctx.beginPath(); mv(-0.028, 0.04); ln(0.028, 0.04); bz(0.031, 0.0, 0.03, -0.045, 0.011, -0.045); ln(-0.011, -0.045); bz(-0.03, -0.045, -0.031, 0.0, -0.028, 0.04); fctx.closePath(); };
         ir(); fctx.fillStyle = IR[1]; fctx.fill();
         fctx.save(); ir(); fctx.clip();
-        fctx.beginPath(); mv(-0.045, 0.05); ln(0.045, 0.05); ln(0.045, 0.023); qc(0.0, 0.013, -0.045, 0.023); fctx.closePath(); fctx.fillStyle = IR[0] + "66"; fctx.fill();   // darker under the lid
-        fctx.beginPath(); mv(-0.045, -0.01); bz(-0.024, -0.014, -0.016, 0.0, 0.0, 0.0); bz(0.016, 0.0, 0.024, -0.014, 0.045, -0.01); ln(0.045, -0.055); ln(-0.045, -0.055); fctx.closePath(); fctx.fillStyle = tint(IR[1], 0.27); fctx.fill();   // the lighter zone
-        box(-0.017, -0.056, 0.017, -0.024, 0.009, tint(IR[1], 0.6)); box(-0.01, -0.056, 0.01, -0.031, 0.006, tint(IR[1], 0.78));   // the pale box at the bottom
+        fctx.beginPath(); mv(-0.04, 0.045); ln(0.04, 0.045); ln(0.04, 0.02); qc(0.0, 0.01, -0.04, 0.02); fctx.closePath(); fctx.fillStyle = IR[0] + "66"; fctx.fill();   // darker under the lid
+        fctx.beginPath(); mv(-0.04, -0.006); bz(-0.02, -0.01, -0.014, 0.004, 0.0, 0.004); bz(0.014, 0.004, 0.02, -0.01, 0.04, -0.006); ln(0.04, -0.05); ln(-0.04, -0.05); fctx.closePath(); fctx.fillStyle = tint(IR[1], 0.27); fctx.fill();   // the lighter zone
+        box(-0.016, -0.052, 0.016, -0.02, 0.009, tint(IR[1], 0.6)); box(-0.0095, -0.052, 0.0095, -0.027, 0.006, tint(IR[1], 0.78));   // the pale box at the bottom
         fctx.restore();
-        ell(cx, cy, 0.0046, 0.012, IR[0]); ell(cx, cy, 0.0046, 0.012, "#20282a60");   // the pupil: the iris's dark, not black
+        ell(cx, cy + 0.004, 0.0052, 0.0125, IR[0]); ell(cx, cy + 0.004, 0.0052, 0.0125, "#20282a60");   // the pupil: the iris's dark, not black
         fctx.restore();
-        ell(cx + hx * 0.031, cy + 0.023, 0.0052, 0.0044, "#ffffff"); ell(cx + hx * 0.033, cy - 0.033, 0.0016, 0.0016, "#ffffff"); ell(cx - hx * 0.033, cy - 0.03, 0.0016, 0.0016, "#ffffffe0");
-        // the lash: its inner end cut aslant over the iris's inner edge, flat over the iris, then down round the outer corner and out as a wing
-        // to a point half way down the eye, a tick out of its edge
-        fctx.beginPath(); mv(-0.04, 0.026); qc(-0.039, 0.04, -0.03, 0.049); bz(-0.01, 0.0545, 0.022, 0.0545, 0.046, 0.047); qc(0.06, 0.04, 0.068, 0.027); ln(0.079, 0.023); ln(0.071, 0.017);
-        qc(0.077, 0.009, 0.08, -0.004); bz(0.071, 0.002, 0.062, 0.014, 0.048, 0.026); qc(0.006, 0.05, -0.032, 0.032); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.016, 0.066); qc(0.01, 0.071, 0.04, 0.06); fctx.stroke();   // the lid's crease
+        ell(cx + hx * 0.0245, cy + 0.02, 0.005, 0.0042, "#ffffff"); ell(cx + hx * 0.026, cy - 0.029, 0.0016, 0.0016, "#ffffff"); ell(cx - hx * 0.026, cy - 0.026, 0.0016, 0.0016, "#ffffffe0");
+        // the lash: its inner end cut aslant, highest over the inner half and sloping down to the outer corner (a drooping eye), where it
+        // hangs down and out as a wing, a tick out of its edge
+        fctx.beginPath(); mv(-0.042, 0.02); qc(-0.04, 0.036, -0.031, 0.043); bz(-0.012, 0.0525, 0.016, 0.05, 0.036, 0.04); qc(0.047, 0.033, 0.054, 0.022); ln(0.064, 0.019); ln(0.057, 0.013);
+        qc(0.062, 0.003, 0.062, -0.01); bz(0.055, 0.0, 0.046, 0.012, 0.034, 0.022); qc(0.004, 0.037, -0.033, 0.026); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.02, 0.06); qc(0.002, 0.065, 0.026, 0.056); fctx.stroke();   // the lid's crease
         fctx.restore();
       },
     },
@@ -232,7 +232,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       image: () => imgPart("brow", BROW.x, BROW.y),
       normal: () => { const { x, y } = BROW; fctx.beginPath(); fctx.moveTo(px(x - 0.034), py(y - 0.006)); fctx.quadraticCurveTo(px(x - 0.002), py(y + 0.014), px(x + 0.04), py(y - 0.002));   // 細くとがる眉(内側が太め)
         fctx.quadraticCurveTo(px(x), py(y + 0.006), px(x - 0.033), py(y - 0.012)); fctx.closePath(); fctx.fillStyle = "#6a4a3e"; fctx.fill(); },
-      thin: () => { const { x, y } = BROW; line(0.0024, "#6a5a5e"); fctx.beginPath(); fctx.moveTo(px(x - 0.035), py(y + 0.011)); fctx.quadraticCurveTo(px(x - 0.004), py(y + 0.015), px(x + 0.035), py(y - 0.013)); fctx.stroke(); },   // a long thin arc, its outer end lower
+      thin: () => { const { x, y } = BROW; line(0.0028, "#6a5a5e"); fctx.beginPath(); fctx.moveTo(px(x - 0.044), py(y + 0.012)); fctx.quadraticCurveTo(px(x - 0.006), py(y + 0.017), px(x + 0.044), py(y - 0.017)); fctx.stroke(); },   // a long thin arc, its outer end lower
       classic: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + m * 0.026), py(y - 0.004)); fctx.stroke(); },
       worried: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y + 0.008)); fctx.quadraticCurveTo(px(x), py(y + 0.004), px(x + m * 0.026), py(y - 0.008)); fctx.stroke(); },
       angry: (m) => { const { x, y } = BROW; line(0.006); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.01)); fctx.quadraticCurveTo(px(x), py(y), px(x + m * 0.026), py(y + 0.004)); fctx.stroke(); },

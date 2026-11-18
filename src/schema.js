@@ -129,7 +129,7 @@ const MAIN = [
   ["face.layout.eyeX", L("目の間隔", "Eye spacing"), { min: 0.07, max: 0.16, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout", alsoShapes: "body" }],
   ["face.layout.eyeY", L("目の高さ", "Eye height"), { min: 0.94, max: 1.06, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout", alsoShapes: "body" }],
   ["face.layout.browX", L("眉の間隔", "Brow spacing"), { min: 0.07, max: 0.16, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout" }],
-  ["face.layout.browY", L("眉の高さ", "Brow height"), { min: 1.02, max: 1.14, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout" }],
+  ["face.layout.browY", L("眉の高さ", "Brow height"), { min: 1.02, max: 1.24, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout", help: L("1.11 より上は「眉を髪の上に描く」をオンに(顔の絵の上端で切れる)", "over 1.11 needs “Brows over the hair” (the face picture ends there)") }],
   ["face.layout.mouthY", L("口の高さ", "Mouth height"), { min: 0.86, max: 0.95, step: 0.001, section: L("位置", "Layout"), apply: "setFaceLayout" }],
   ["face.blush.cheeks.on", L("ほっぺの赤み", "Cheek blush"), { section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.cheeks.color", L("ほっぺの色", "Cheek color"), { when: { "face.blush.cheeks.on": true }, section: L("赤み", "Blush"), apply: "setBlush" }],

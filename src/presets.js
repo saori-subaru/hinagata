@@ -18,7 +18,6 @@ export const CHARACTERS = {
         thickness: { upperArm: 0.77, forearm: 0.74, thigh: 0.6, thighTop: 0.61, calf: 0.6 },
         knees: { blush: { on: true }, line: { on: true } },   // pink knees with the kneecap's line, as on her sheet
         sculpt: {
-          socketSize: 0.7,   // her eyes are small and close: the sockets with them (at the default's size they left a line beside the nose, seen from three quarters)
           neck: { width: 0.75 },
           cheeks: { y: 0.94, height: 0.14 },
           chin: { k: 0.024, sharp: 0.1 },
@@ -55,24 +54,24 @@ export const CHARACTERS = {
         drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
         sculpt: {
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
-          // the bangs as on her design sheet (the locks' edges read off its front view): bands cut aslant to a point (lockBand), each from its
-          // own place on the head (lockRootSpread 1: their edges follow the head's round, not lines from the crown), rooted under the cap's
-          // hairline (lockRoot). Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean]
+          // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
+          // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's
+          // round, not lines from the crown), rooted under the cap's hairline (lockRoot). lockSpan 14: the middle blade stays one lock.
+          // Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean]
           nendo: {
             tips: [
               [-81.52, 0.887, 0.69, 0.33, null, 6],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
-              [-40, 0.917, null, null, null, -9.1, 0, 0, 0.5, 0, -0.5],   // outside the eye, hooking in to the cheek
-              [-20.2, 1.003, null, null, null, 5.6, 0.002, 0, 0.38],   // over the eye: a narrow lock flowing out
-              [-0.5, 0.985, null, null, null, 3.5, -0.004, 0, 0.44, 0, -0.67],   // under the middle one, its point showing below it
-              [9.3, 0.982, 0.8, 0.04, "c", 0, 0.004, 0, 1.29, 0, -0.75],   // the middle: a wide blade, its point at the far eye's inner corner
-              [20.7, 0.997, 0.8, 0, "c", -5.2, 0, 0, 0.58, 0, -1],   // from the middle one's edge out over the eye
-              [25.6, 0.985, null, null, null, -8, 0.002, 0, 0.47, 0, -0.7],
-              [45, 0.91, 0.5, 0, null, 15.5, 0, 0, 0.77, 0, 0.5],   // outside the eye, hooking in to the cheek
-              [54.716, 0.919],
+              [-54, 0.9215, null, null, null, -9.9, 0, 0, 0.58, 0, -0.5],   // outside the eye, hooking in to the cheek
+              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
+              [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
+              [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
+              [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.35, 0, -1],   // from the middle one's edge out over the eye
+              [40.6, 1.008, null, null, null, -10, 0.002, 0, 0.56, 0, -0.7],
+              [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
               [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
-            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48,
+            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
@@ -99,12 +98,12 @@ export const CHARACTERS = {
         },
       },
       face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.05, x: 0.123, y: 0.936 }, nose: { on: false } },
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
         parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
         noseColor: "#c98a80",   // the knees' line's color (body.knees.line)
-        browsOverHair: true,   // her brows are a whole eye over the eyes, drawn over the bangs
-        eyeSize: 0.96,
-        layout: { eyeX: 0.082, eyeY: 0.986, browX: 0.0945, browY: 1.099, mouthY: 0.9 },
+        browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
+        eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
+        layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
         // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
         expressions: {
           happy: { eyes: "happy", brows: "thin", mouth: "open", cheeks: "flush" },
