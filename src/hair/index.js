@@ -43,7 +43,9 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   /** The ahoge's triangles { pos, nor, idx } (toBody: head space → the mesh's), or null when the style has none. 6 x 12 rings and the tip. */
   function ahogeMesh(pick, toBody = (x, y, z) => [x, y, z], { K = 12, W = 0.016, FLAT = 0.45 } = {}) {
     if (!pick.ahoge) return null;
-    const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
+    const S = OPT.hair.sculpt.ahogeSize ?? 1, top0 = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
+    // ... or lower, where the hair's top really is: a crown cut with a wide blend rounds the top off below crown.y, and the strand stood in the air over it
+    let top = top0; { const f = hairSdfOf(pick); let lo = top0 - 0.12, hi = top0 + 0.02; if (f(0, lo, 0) < 0 && f(0, hi, 0) > 0) { for (let k = 0; k < 24; k++) { const m = 0.5 * (lo + hi); if (f(0, m, 0) < 0) lo = m; else hi = m; } top = Math.min(top0, lo + 0.012); } }
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D), side = [cd, 0, -sd];   // 0 = forward, 90 = toward the character's left
     const CRN = OPT.body.head.crown ?? 1;   // the head above the brows is stretched by body.head.crown after this: undone here, or a taller head stood the strand upright
     const LEAN = (OPT.hair.sculpt.ahogeLean ?? 0) * deg, ct = Math.cos(LEAN), st = Math.sin(LEAN), A0 = OPT.hair.sculpt.ahogeCurl ? AHOGE_CURL : AHOGE, pz = A0[0][2];
