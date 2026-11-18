@@ -187,7 +187,7 @@ export const CHARACTERS = {
 };
 // シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
-  o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet
+  o.body.head.crown = 1.35;   // the top of the head high over the eyes (higher than her design sheet, her choice)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
       hair: {
