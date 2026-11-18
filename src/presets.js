@@ -188,7 +188,11 @@ export const CHARACTERS = {
 };
 // シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
-  o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet
+  // hair a shade darker than her skin, as on her design sheet (as pale as the skin, the forehead between the bangs and the hair over it read as
+  // one bare patch), and the ring a light highlight (the automatic ring is never lighter than 0.85: on pale hair a skin-colored band across the bangs)
+  o.colors.hair = "#f4ece3";
+  o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
+  o.body.sculpt.crown = { y: 1.34, blend: 0.14 };   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
       hair: {
@@ -196,14 +200,15 @@ export const CHARACTERS = {
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
-        paint: { inner: 0.3 },
-        // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
-        // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
+        paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4" } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
+        // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
+        // straight down along the cheeks, curving in a little under the jaw (head space)
         // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
-        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
+        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
           { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
+          ahogeCurl: true, ahogeSize: 1.05,   // small and curled round as on her design sheet
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
           // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's
@@ -217,7 +222,7 @@ export const CHARACTERS = {
               [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
               [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
               [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
-              [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.35, 0, -1],   // from the middle one's edge out over the eye
+              [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.66, 0, -1],   // from the middle one's edge out over the eye, reaching in under that edge (narrower, 0.35, the forehead showed beside the blade from her left)
               [40.6, 1.008, null, null, null, -10, 0.002, 0, 0.56, 0, -0.7],
               [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
               [84, 0.87, 0.66, -0.33, null, -12.5],
@@ -249,15 +254,15 @@ export const CHARACTERS = {
         },
       },
       face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 9 }, nose: { on: false } },
         parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
-        noseColor: "#c98a80",   // the knees' line's color (body.knees.line)
+        noseColor: "#c98a8090", noseSize: 0.65, openSize: 1.3, lashHatch: true,   // the knees' line's color (body.knees.line), see-through; a small dot
         browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
         eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
         layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
         // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
         expressions: {
-          happy: { eyes: "happy", brows: "thin", mouth: "open", cheeks: "flush" },
+          happy: { eyes: "tallHappy", brows: "thin", mouth: "openSoft", cheeks: "none" },
           sad: { eyes: "tall", brows: "worried", mouth: "small", cheeks: "none" },
           angry: { eyes: "tall", brows: "angry", mouth: "small", cheeks: "none" },
           surprised: { eyes: "tall", brows: "thin", mouth: "o", cheeks: "none" },

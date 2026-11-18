@@ -736,7 +736,8 @@ export const DEFAULTS = {
         "zig": 0.07,
         "teeth": 30
       },
-      "inner": 0
+      "inner": 0,
+      "oneShade": 0
     },
     "bangs": "nendo",
     "drawn": [],
@@ -910,6 +911,8 @@ export const DEFAULTS = {
       "lockShell": 0.016,
       "ahogeSize": 1.15,
       "ahogeDir": 90,
+      "ahogeLean": 0,
+      "ahogeCurl": false,
       "long": {
         "locks": true,
         "hug": false,
@@ -997,7 +1000,9 @@ export const DEFAULTS = {
         "strength": 0.45,
         "size": 0.042,
         "x": 0.15,
-        "y": 0.95
+        "y": 0.95,
+        "hatch": 0,
+        "hatchColor": "#e07a8a"
       },
       "nose": {
         "on": false,
@@ -1014,6 +1019,9 @@ export const DEFAULTS = {
       "color": "#a8786290"
     },
     "noseColor": null,
+    "noseSize": 1,
+    "openSize": 1,
+    "lashHatch": false,
     "browsOverHair": false,
     "parts": {
       "eyes": "round",
