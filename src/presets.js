@@ -10,7 +10,7 @@ export const CHARACTERS = {
     name: { ja: "シルヴィ", en: "Sylvie" },
     about: { ja: "エルフの女の子", en: "An elf girl" },
     file: { hinagata: 3, name: "シルヴィ", options: {
-      colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#41714d" },
+      colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#4f957a" },
       body: {
         proportion: { legs: 1.65, torso: 1.3, arms: 1.45 },   // arms: made when the tall default was 1.45
         head: { scale: 0.69, depth: 0.92 },
@@ -93,10 +93,18 @@ export const CHARACTERS = {
           long: { flick: 0.002, bottom: 0.85 },
         },
       },
-      face: {
-        blush: { cheeks: { on: true }, nose: { on: true } },
-        parts: { mouth: "image" },
-        layout: { eyeX: 0.088 },
+      face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
+        parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
+        eyeSize: 1.08,
+        layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.094, browY: 1.08, mouthY: 0.906 },
+        // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
+        expressions: {
+          happy: { eyes: "happy", brows: "thin", mouth: "open", cheeks: "flush" },
+          sad: { eyes: "tall", brows: "worried", mouth: "small", cheeks: "none" },
+          angry: { eyes: "tall", brows: "angry", mouth: "small", cheeks: "none" },
+          surprised: { eyes: "tall", brows: "thin", mouth: "o", cheeks: "none" },
+        },
         drawn: [{ id: "e1", name: "表情1", eye: null, brow: null, mouth: null, cheeks: "none", blink: true }],
       },
     } },

@@ -7,7 +7,7 @@ import { shaded } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
-const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "image"];
+const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "tall", "image"];
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -192,11 +192,39 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0018, "#c98c80b0"); fctx.beginPath(); mv(-0.012, TOP + 0.013); qc(0.014, TOP + 0.018, 0.038, TOP + 0.017); fctx.stroke();   // the lid's crease, close over it
         fctx.restore();
       },
+      // たて長の目 (シルヴィ's design sheet): flat colors, no rim. A thick lash straight across, hooking down at the outer corner; a tall
+      // iris with rounded lower corners, darker under the lid, a lighter zone below the pupil with a pale box in it; the white shows beside it
+      tall: () => {
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
+        const box = (x0, y0, x1, y1, r, fill) => { const [ax, ay] = P(x0, y1), [bx, by] = P(x1, y0), q = pu(r); fctx.beginPath(); fctx.moveTo(ax + q, ay); fctx.arcTo(bx, ay, bx, by, q); fctx.arcTo(bx, by, ax, by, q); fctx.arcTo(ax, by, ax, ay, q); fctx.arcTo(ax, ay, bx, ay, q); fctx.closePath(); fctx.fillStyle = fill; fctx.fill(); };   // (arcTo: Safari 15 has no roundRect)
+        const tint = (c, t) => "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * t) * 255).toString(16).padStart(2, "0")).join("");
+        const flip = fctx.getTransform().a < 0, hx = flip ? 1 : -1;   // the highlight stays on the same side of both eyes (the light's side), not mirrored
+        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        const open = () => { fctx.beginPath(); mv(-0.033, 0.03); qc(0.0, 0.04, 0.038, 0.032); bz(0.045, 0.006, 0.039, -0.032, 0.022, -0.043); qc(0.0, -0.048, -0.022, -0.043); bz(-0.031, -0.032, -0.035, 0.0, -0.033, 0.03); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.034), ...P(0, -0.02)); g.addColorStop(0, "#cfc9d2"); g.addColorStop(0.45, "#eeebee"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        fctx.save(); open(); fctx.clip();
+        const ir = () => { fctx.beginPath(); mv(-0.028, 0.04); ln(0.028, 0.04); bz(0.031, 0.0, 0.03, -0.045, 0.011, -0.045); ln(-0.011, -0.045); bz(-0.03, -0.045, -0.031, 0.0, -0.028, 0.04); fctx.closePath(); };
+        ir(); fctx.fillStyle = IR[1]; fctx.fill();
+        fctx.save(); ir(); fctx.clip();
+        fctx.beginPath(); mv(-0.04, 0.045); ln(0.04, 0.045); ln(0.04, 0.02); qc(0.0, 0.01, -0.04, 0.02); fctx.closePath(); fctx.fillStyle = IR[0] + "66"; fctx.fill();   // darker under the lid
+        fctx.beginPath(); mv(-0.04, -0.006); bz(-0.02, -0.01, -0.014, 0.004, 0.0, 0.004); bz(0.014, 0.004, 0.02, -0.01, 0.04, -0.006); ln(0.04, -0.05); ln(-0.04, -0.05); fctx.closePath(); fctx.fillStyle = tint(IR[1], 0.27); fctx.fill();   // the lighter zone
+        box(-0.016, -0.052, 0.016, -0.02, 0.009, tint(IR[1], 0.6)); box(-0.0095, -0.052, 0.0095, -0.027, 0.006, tint(IR[1], 0.78));   // the pale box at the bottom
+        fctx.restore();
+        ell(cx, cy + 0.004, 0.0052, 0.0125, IR[0]); ell(cx, cy + 0.004, 0.0052, 0.0125, "#20282a60");   // the pupil: the iris's dark, not black
+        fctx.restore();
+        ell(cx + hx * 0.0245, cy + 0.02, 0.005, 0.0042, "#ffffff"); ell(cx + hx * 0.026, cy - 0.029, 0.0016, 0.0016, "#ffffff"); ell(cx - hx * 0.026, cy - 0.026, 0.0016, 0.0016, "#ffffffe0");
+        // the lash: its inner end cut aslant, the outer end down the eye's side to a point, a tick out of the corner
+        fctx.beginPath(); mv(-0.042, 0.022); qc(-0.039, 0.035, -0.031, 0.041); qc(0.004, 0.052, 0.042, 0.043); qc(0.051, 0.037, 0.055, 0.025); ln(0.048, 0.028);
+        bz(0.053, 0.013, 0.051, -0.006, 0.043, -0.02); bz(0.044, 0.0, 0.043, 0.014, 0.036, 0.026); qc(0.0, 0.035, -0.033, 0.026); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.018, 0.059); qc(0.004, 0.063, 0.024, 0.058); fctx.stroke();   // the lid's crease
+        fctx.restore();
+      },
     },
     brows: {
       image: () => imgPart("brow", BROW.x, BROW.y),
       normal: () => { const { x, y } = BROW; fctx.beginPath(); fctx.moveTo(px(x - 0.034), py(y - 0.006)); fctx.quadraticCurveTo(px(x - 0.002), py(y + 0.014), px(x + 0.04), py(y - 0.002));   // 細くとがる眉(内側が太め)
         fctx.quadraticCurveTo(px(x), py(y + 0.006), px(x - 0.033), py(y - 0.012)); fctx.closePath(); fctx.fillStyle = "#6a4a3e"; fctx.fill(); },
+      thin: (m) => { const { x, y } = BROW; line(0.0022, "#8a7078"); fctx.beginPath(); fctx.moveTo(px(x - m * 0.02), py(y - 0.001)); fctx.quadraticCurveTo(px(x), py(y + 0.005), px(x + m * 0.02), py(y - 0.003)); fctx.stroke(); },   // a short faint line
       classic: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + m * 0.026), py(y - 0.004)); fctx.stroke(); },
       worried: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y + 0.008)); fctx.quadraticCurveTo(px(x), py(y + 0.004), px(x + m * 0.026), py(y - 0.008)); fctx.stroke(); },
       angry: (m) => { const { x, y } = BROW; line(0.006); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.01)); fctx.quadraticCurveTo(px(x), py(y), px(x + m * 0.026), py(y + 0.004)); fctx.stroke(); },
@@ -212,6 +240,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.003); shape(); fctx.stroke(); },   // ふちは口の形を引き直してから(前は 舌の楕円の線を描いていて、口とずれて見えた。2026-10-09 サオリ)
       o: () => { const { x, y } = MOUTHP; ell(x, y - 0.004, 0.009, 0.011, MOUTH); line(0.003); fctx.stroke(); },
       cat: () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
+      small: () => { const { x, y } = MOUTHP; line(0.0022, "#5a3c48"); fctx.beginPath(); fctx.moveTo(px(x - 0.0065), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y + 0.004), px(x + 0.0065), py(y - 0.002)); fctx.stroke(); },   // a tiny arc
       frown: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.013), py(y - 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.013), py(y - 0.006)); fctx.stroke(); },
     },
     nose: {   // 鼻の下の影: 光に関係なく、いつも同じ所に描く(アニメ調の塗り)。位置は頭の座標で、絵のずれ(FACE_DY)を打ち消して置く

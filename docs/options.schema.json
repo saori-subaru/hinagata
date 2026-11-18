@@ -17974,6 +17974,13 @@
      }
     },
     {
+     "value": "tall",
+     "label": {
+      "ja": "たて長の目",
+      "en": "Tall"
+     }
+    },
+    {
      "value": "image",
      "label": {
       "ja": "絵の目",
@@ -18019,6 +18026,13 @@
      "label": {
       "ja": "ふつう(前)",
       "en": "Normal (classic)"
+     }
+    },
+    {
+     "value": "thin",
+     "label": {
+      "ja": "細い",
+      "en": "Thin"
      }
     },
     {
@@ -18102,6 +18116,13 @@
      "label": {
       "ja": "へ",
       "en": "Frown"
+     }
+    },
+    {
+     "value": "small",
+     "label": {
+      "ja": "ちょん",
+      "en": "Tiny"
      }
     },
     {
