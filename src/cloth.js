@@ -24,8 +24,10 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
  *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
  *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
  *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind).
+ *  armCap: { bones: [[upperArm, lowerArm], …], y } — the cloth's targets follow these arms only down to y (the arm's direction's height, -1..1): a raised arm
+ *    lifted a closed cape with it like a flap that stretched and showed its inside; above that the cape hangs and only the arm's capsule pushes it.
  *  air: how much the moving air lifts it (a cape streams back and up when running, 2026-10-05 Saori: "もっと靡いて上に上がるように"). 0 = none. */
-export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0, air = 0 }) {
+export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0, air = 0, armCap = null }) {
   const g0 = m.geometry, GP = g0.attributes.position.array, GN = g0.attributes.normal.array, R = Float32Array.from(GP), SI = g0.attributes.skinIndex.array, SW = g0.attributes.skinWeight.array, n = R.length / 3;   // GP / GN: what is drawn; R / NR: the built mesh (kept)
   // the skirt is a shell 1-2 cm thick: only its outer side is moved as cloth; each point of the inner side rides along with the nearest outer
   // point (keeping its offset from it, as skinned). Half the points and edges: the cost is about halved and the look is the same
@@ -54,10 +56,16 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   const COL = colliders.map((c) => { const b = bones.find((x) => x.name === c.bone), bb = c.boneB ? bones.find((x) => x.name === c.boneB) : b, w = b.getWorldPosition(new THREE.Vector3()), wb = bb.getWorldPosition(new THREE.Vector3());
     return { ...c, b, bb, oa: new THREE.Vector3(...c.a).sub(w), ob: new THREE.Vector3(...c.b).sub(wb) }; }), wp = new THREE.Vector3();   // boneB: the far end rides on another bone (a bridge between the thighs)
   let first = true;
+  const CAP = armCap ? armCap.bones.map(([a, b]) => [bones.findIndex((x) => x.name === a), bones.find((x) => x.name === a), bones.find((x) => x.name === b)]).filter((c) => c[0] >= 0 && c[2]) : [];
+  const cA = new THREE.Vector3(), cB = new THREE.Vector3(), cD = new THREE.Vector3(), cAx = new THREE.Vector3(), cQ = new THREE.Quaternion(), cM = new THREE.Matrix4(), cT = new THREE.Matrix4();
 
   function targets() {   // the usual skinning (the same as the GPU does), into root space
     inv.copy(root.matrixWorld).invert();
     for (let k = 0; k < bones.length; k++) { tmp.multiplyMatrices(inv, bones[k].matrixWorld).multiply(skeleton.boneInverses[k]); BM.set(tmp.elements, k * 16); }
+    for (const [k, a, b] of CAP) {   // an arm raised past armCap.y: turn its matrix back down about the shoulder until its direction is at y
+      cA.setFromMatrixPosition(a.matrixWorld).applyMatrix4(inv); cB.setFromMatrixPosition(b.matrixWorld).applyMatrix4(inv); cD.subVectors(cB, cA).normalize(); if (cD.y <= armCap.y) continue;
+      const h = Math.hypot(cD.x, cD.z) || 1e-6, ny = armCap.y, nh = Math.sqrt(1 - ny * ny); cB.set(cD.x / h * nh, ny, cD.z / h * nh); cQ.setFromUnitVectors(cD, cB);
+      cM.makeTranslation(cA.x, cA.y, cA.z).multiply(cT.makeRotationFromQuaternion(cQ)).multiply(cT.makeTranslation(-cA.x, -cA.y, -cA.z)); tmp.fromArray(BM, k * 16).premultiply(cM); BM.set(tmp.elements, k * 16); }
     for (let v = 0; v < n; v++) { const x = R[v * 3], y = R[v * 3 + 1], z = R[v * 3 + 2]; let tx = 0, ty = 0, tz = 0;
       for (let q = 0; q < 4; q++) { const w = SW[v * 4 + q]; if (!w) continue; const e = SI[v * 4 + q] * 16;
         tx += w * (BM[e] * x + BM[e + 4] * y + BM[e + 8] * z + BM[e + 12]); ty += w * (BM[e + 1] * x + BM[e + 5] * y + BM[e + 9] * z + BM[e + 13]); tz += w * (BM[e + 2] * x + BM[e + 6] * y + BM[e + 10] * z + BM[e + 14]); }
