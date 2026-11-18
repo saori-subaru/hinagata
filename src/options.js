@@ -910,6 +910,7 @@ export const DEFAULTS = {
       "lockShell": 0.016,
       "ahogeSize": 1.15,
       "ahogeDir": 90,
+      "ahogeLean": 0,
       "long": {
         "locks": true,
         "hug": false,
