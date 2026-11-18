@@ -3,7 +3,7 @@
 import * as THREE from "three";
 
 import { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId } from "./names.js";
-import { shaded } from "../materials.js";
+import { shaded, pulled } from "../materials.js";
 export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
@@ -28,11 +28,17 @@ export function irisColors(base) {
 export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const FACE = { x0: -0.2, x1: 0.2, y0: 0.82, y1: 1.12, S: 2560, dy: FACE_DY };   // 顔の絵が受け持つ範囲(体の座標)と、1単位あたりのピクセル数
   const faceCanvas = document.createElement("canvas"); faceCanvas.width = (FACE.x1 - FACE.x0) * FACE.S; faceCanvas.height = (FACE.y1 - FACE.y0) * FACE.S;
-  const fctx = faceCanvas.getContext("2d");
+  const mainCtx = faceCanvas.getContext("2d"); let fctx = mainCtx;   // (the brows' own picture swaps in while they are drawn: BROWS)
   const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
   // 顔の絵も体と同じ陰影で(光を無視すると暗い場所で目だけ光って見える)。setShading で作り直す
   const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(shaded(style, 0xffffff, bands), { map: faceTex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const faceMat = faceMatFor(OPT.shading.style);
+  // face.browsOverHair: the brows on their own picture (the layer over the hair must show nothing else), BROWS.up higher on the head than the
+  // face picture (a high brow, past its top at 1.12, isn't cut), on a layer drawn BROWS.pull nearer the camera than it is (index.js browLayer)
+  const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: 0.045 } : null;
+  if (BROWS) { const c = BROWS.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; BROWS.ctx = c.getContext("2d");
+    BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
+  const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK = "#3a2632", MOUTH = "#b8475e";
   const LAY = { eyeSize: OPT.face.eyeSize };   // 目の大きさ(コードで描く目)。あとから setLayout で変えられる
@@ -192,31 +198,33 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0018, "#c98c80b0"); fctx.beginPath(); mv(-0.012, TOP + 0.013); qc(0.014, TOP + 0.018, 0.038, TOP + 0.017); fctx.stroke();   // the lid's crease, close over it
         fctx.restore();
       },
-      // たて長の目 (シルヴィ's design sheet): flat colors, no rim. A thick lash straight across, hooking down at the outer corner; a tall
-      // iris with rounded lower corners, darker under the lid, a lighter zone below the pupil with a pale box in it; the white shows beside it
+      // たて長の目 (シルヴィ's design sheet): flat colors, no rim. A thick lash across the top, sloping down past the outer corner and hanging
+      // out as a wing (a drooping eye; the white shows under it); a tall iris with rounded lower corners, under the lash's inner end, darker
+      // under the lid, a lighter zone below the pupil with a pale box in it
       tall: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         const box = (x0, y0, x1, y1, r, fill) => { const [ax, ay] = P(x0, y1), [bx, by] = P(x1, y0), q = pu(r); fctx.beginPath(); fctx.moveTo(ax + q, ay); fctx.arcTo(bx, ay, bx, by, q); fctx.arcTo(bx, by, ax, by, q); fctx.arcTo(ax, by, ax, ay, q); fctx.arcTo(ax, ay, bx, ay, q); fctx.closePath(); fctx.fillStyle = fill; fctx.fill(); };   // (arcTo: Safari 15 has no roundRect)
         const tint = (c, t) => "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * t) * 255).toString(16).padStart(2, "0")).join("");
         const flip = fctx.getTransform().a < 0, hx = flip ? 1 : -1;   // the highlight stays on the same side of both eyes (the light's side), not mirrored
-        const IR = EYE_COL; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        const open = () => { fctx.beginPath(); mv(-0.033, 0.03); qc(0.0, 0.04, 0.038, 0.032); bz(0.045, 0.006, 0.039, -0.032, 0.022, -0.043); qc(0.0, -0.048, -0.022, -0.043); bz(-0.031, -0.032, -0.035, 0.0, -0.033, 0.03); fctx.closePath(); };
-        open(); { const g = fctx.createLinearGradient(...P(0, 0.034), ...P(0, -0.02)); g.addColorStop(0, "#cfc9d2"); g.addColorStop(0.45, "#eeebee"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
+        const IR = EYE_COL, S = LAY.eyeSize * 0.8; fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(S, S); fctx.translate(-px(cx), -py(cy));   // (0.8: as big as the round eye at the same eyeSize)
+        const open = () => { fctx.beginPath(); mv(-0.038, 0.034); qc(0.0, 0.048, 0.05, 0.033); bz(0.072, 0.014, 0.058, -0.03, 0.028, -0.047); qc(0.0, -0.052, -0.026, -0.047); bz(-0.036, -0.034, -0.04, 0.0, -0.038, 0.034); fctx.closePath(); };
+        open(); { const g = fctx.createLinearGradient(...P(0, 0.038), ...P(0, -0.02)); g.addColorStop(0, "#cfc9d2"); g.addColorStop(0.45, "#eeebee"); g.addColorStop(1, "#fbfafa"); fctx.fillStyle = g; fctx.fill(); }
         fctx.save(); open(); fctx.clip();
-        const ir = () => { fctx.beginPath(); mv(-0.028, 0.04); ln(0.028, 0.04); bz(0.031, 0.0, 0.03, -0.045, 0.011, -0.045); ln(-0.011, -0.045); bz(-0.03, -0.045, -0.031, 0.0, -0.028, 0.04); fctx.closePath(); };
+        const ir = () => { fctx.beginPath(); mv(-0.036, 0.045); ln(0.036, 0.045); bz(0.039, 0.0, 0.038, -0.049, 0.015, -0.049); ln(-0.015, -0.049); bz(-0.038, -0.049, -0.039, 0.0, -0.036, 0.045); fctx.closePath(); };
         ir(); fctx.fillStyle = IR[1]; fctx.fill();
         fctx.save(); ir(); fctx.clip();
-        fctx.beginPath(); mv(-0.04, 0.045); ln(0.04, 0.045); ln(0.04, 0.02); qc(0.0, 0.01, -0.04, 0.02); fctx.closePath(); fctx.fillStyle = IR[0] + "66"; fctx.fill();   // darker under the lid
-        fctx.beginPath(); mv(-0.04, -0.006); bz(-0.02, -0.01, -0.014, 0.004, 0.0, 0.004); bz(0.014, 0.004, 0.02, -0.01, 0.04, -0.006); ln(0.04, -0.05); ln(-0.04, -0.05); fctx.closePath(); fctx.fillStyle = tint(IR[1], 0.27); fctx.fill();   // the lighter zone
-        box(-0.016, -0.052, 0.016, -0.02, 0.009, tint(IR[1], 0.6)); box(-0.0095, -0.052, 0.0095, -0.027, 0.006, tint(IR[1], 0.78));   // the pale box at the bottom
+        fctx.beginPath(); mv(-0.045, 0.05); ln(0.045, 0.05); ln(0.045, 0.023); qc(0.0, 0.013, -0.045, 0.023); fctx.closePath(); fctx.fillStyle = IR[0] + "66"; fctx.fill();   // darker under the lid
+        fctx.beginPath(); mv(-0.045, -0.01); bz(-0.024, -0.014, -0.016, 0.0, 0.0, 0.0); bz(0.016, 0.0, 0.024, -0.014, 0.045, -0.01); ln(0.045, -0.055); ln(-0.045, -0.055); fctx.closePath(); fctx.fillStyle = tint(IR[1], 0.27); fctx.fill();   // the lighter zone
+        box(-0.017, -0.056, 0.017, -0.024, 0.009, tint(IR[1], 0.6)); box(-0.01, -0.056, 0.01, -0.031, 0.006, tint(IR[1], 0.78));   // the pale box at the bottom
         fctx.restore();
-        ell(cx, cy + 0.004, 0.0052, 0.0125, IR[0]); ell(cx, cy + 0.004, 0.0052, 0.0125, "#20282a60");   // the pupil: the iris's dark, not black
+        ell(cx, cy, 0.0046, 0.012, IR[0]); ell(cx, cy, 0.0046, 0.012, "#20282a60");   // the pupil: the iris's dark, not black
         fctx.restore();
-        ell(cx + hx * 0.0245, cy + 0.02, 0.005, 0.0042, "#ffffff"); ell(cx + hx * 0.026, cy - 0.029, 0.0016, 0.0016, "#ffffff"); ell(cx - hx * 0.026, cy - 0.026, 0.0016, 0.0016, "#ffffffe0");
-        // the lash: its inner end cut aslant, the outer end down the eye's side to a point, a tick out of the corner
-        fctx.beginPath(); mv(-0.042, 0.022); qc(-0.039, 0.035, -0.031, 0.041); qc(0.004, 0.052, 0.042, 0.043); qc(0.051, 0.037, 0.055, 0.025); ln(0.048, 0.028);
-        bz(0.053, 0.013, 0.051, -0.006, 0.043, -0.02); bz(0.044, 0.0, 0.043, 0.014, 0.036, 0.026); qc(0.0, 0.035, -0.033, 0.026); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.018, 0.059); qc(0.004, 0.063, 0.024, 0.058); fctx.stroke();   // the lid's crease
+        ell(cx + hx * 0.031, cy + 0.023, 0.0052, 0.0044, "#ffffff"); ell(cx + hx * 0.033, cy - 0.033, 0.0016, 0.0016, "#ffffff"); ell(cx - hx * 0.033, cy - 0.03, 0.0016, 0.0016, "#ffffffe0");
+        // the lash: its inner end cut aslant over the iris's inner edge, flat over the iris, then down round the outer corner and out as a wing
+        // to a point half way down the eye, a tick out of its edge
+        fctx.beginPath(); mv(-0.04, 0.026); qc(-0.039, 0.04, -0.03, 0.049); bz(-0.01, 0.0545, 0.022, 0.0545, 0.046, 0.047); qc(0.06, 0.04, 0.068, 0.027); ln(0.079, 0.023); ln(0.071, 0.017);
+        qc(0.077, 0.009, 0.08, -0.004); bz(0.071, 0.002, 0.062, 0.014, 0.048, 0.026); qc(0.006, 0.05, -0.032, 0.032); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.016, 0.066); qc(0.01, 0.071, 0.04, 0.06); fctx.stroke();   // the lid's crease
         fctx.restore();
       },
     },
@@ -224,7 +232,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       image: () => imgPart("brow", BROW.x, BROW.y),
       normal: () => { const { x, y } = BROW; fctx.beginPath(); fctx.moveTo(px(x - 0.034), py(y - 0.006)); fctx.quadraticCurveTo(px(x - 0.002), py(y + 0.014), px(x + 0.04), py(y - 0.002));   // 細くとがる眉(内側が太め)
         fctx.quadraticCurveTo(px(x), py(y + 0.006), px(x - 0.033), py(y - 0.012)); fctx.closePath(); fctx.fillStyle = "#6a4a3e"; fctx.fill(); },
-      thin: (m) => { const { x, y } = BROW; line(0.0022, "#8a7078"); fctx.beginPath(); fctx.moveTo(px(x - m * 0.02), py(y - 0.001)); fctx.quadraticCurveTo(px(x), py(y + 0.005), px(x + m * 0.02), py(y - 0.003)); fctx.stroke(); },   // a short faint line
+      thin: () => { const { x, y } = BROW; line(0.0024, "#6a5a5e"); fctx.beginPath(); fctx.moveTo(px(x - 0.035), py(y + 0.011)); fctx.quadraticCurveTo(px(x - 0.004), py(y + 0.015), px(x + 0.035), py(y - 0.013)); fctx.stroke(); },   // a long thin arc, its outer end lower
       classic: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.002)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + m * 0.026), py(y - 0.004)); fctx.stroke(); },
       worried: (m) => { const { x, y } = BROW; line(0.0055); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y + 0.008)); fctx.quadraticCurveTo(px(x), py(y + 0.004), px(x + m * 0.026), py(y - 0.008)); fctx.stroke(); },
       angry: (m) => { const { x, y } = BROW; line(0.006); fctx.beginPath(); fctx.moveTo(px(x - m * 0.024), py(y - 0.01)); fctx.quadraticCurveTo(px(x), py(y), px(x + m * 0.026), py(y + 0.004)); fctx.stroke(); },
@@ -250,10 +258,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       image: () => imgPart("nose", NOSEP.x, NOSEP.y),
       // code-drawn noses (2026-10-07, Saori: "鼻を書いてみてもらえますか"), just under the nose's tip: a small dot, or a short stroke down
       // the shadow side with a soft shadow beside it
-      dot: () => ell(NOSEP.x, NOSEP.y - 0.003, 0.0026, 0.0021, "#5e3a46e0"),
+      dot: () => ell(NOSEP.x, NOSEP.y - 0.003, 0.0026, 0.0021, OPT.face.noseColor ?? "#5e3a46e0"),
       line: () => { const { x, y } = NOSEP, g = fctx.createRadialGradient(px(x + 0.004), py(y - 0.002), 0, px(x + 0.004), py(y - 0.002), pu(0.008)); g.addColorStop(0, "#d9897a50"); g.addColorStop(1, "#d9897a00");
         fctx.fillStyle = g; fctx.fillRect(px(x - 0.006), py(y + 0.008), pu(0.02), pu(0.02));
-        line(0.0026, "#7a4a52"); fctx.beginPath(); fctx.moveTo(px(x + 0.002), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.0035), py(y - 0.001), px(x - 0.001), py(y - 0.004)); fctx.stroke(); },
+        line(0.0026, OPT.face.noseColor ?? "#7a4a52"); fctx.beginPath(); fctx.moveTo(px(x + 0.002), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.0035), py(y - 0.001), px(x - 0.001), py(y - 0.004)); fctx.stroke(); },
       none: () => {},
     },
     cheeks: {
@@ -290,22 +298,24 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     // blinking: the closed eye drawn as its own entry (face.images.eyeClosed) whatever the open eye is, else the code's line
     for (const slot of SLOTS) { const shut = slot === "eyes" && blinking && BLINKS.has(sel.eyes), name = shut ? (PART_IMG.eyeClosed.img ? "imageClosed" : "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       const other = slot === "eyes" && !shut ? otherEye(name) : null;   // the other eye's own picture, if this eye has one
+      const own = slot === "brows" && BROWS; if (own) { fctx = BROWS.ctx; fctx.setTransform(1, 0, 0, 1, 0, 0); fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height); fctx.translate(0, pu(BROWS.up)); }
       if (SIDED[slot]) for (const m of [1, -1]) { if (m < 0 && other) { imgPart(other, -(EYE.x + 2 * PART_IMG[other].dx), EYE.y); continue; }   // (placed at the mirrored point: imgPart adds dx)
         fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
-      else draw(1); }
+      else draw(1);
+      if (own) { fctx = mainCtx; BROWS.tex.needsUpdate = true; } }
     faceTex.needsUpdate = true;
   }
-  function faceLayerGeometry(src, FACE_WRAP, toHead = null) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled)
+  function faceLayerGeometry(src, FACE_WRAP, toHead = null, F = FACE) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled). F: the picture's heights (the brows' own: BROWS.frame)
     const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, NS = src.attributes.shadeN?.array ?? N0, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
     const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
     // (the head's front down to where it faces 80° aside: from 72° (normal z 0.3) and z 0.05 the blush ended square on the cheek and the brows'
     // outer ends were cut off, seen from aside or on a narrower head, 2026-10-09, Saori. The picture is clear outside its parts, so a wider layer costs nothing)
-    const ok = (v) => { const [x, y, z] = H(v); return y > FACE.y0 + 0.004 && y < FACE.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17; };
+    const ok = (v) => { const [x, y, z] = H(v); return y > F.y0 + 0.004 && y < F.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17; };
     const map = new Map(), pos = [], nor = [], uv = [], col = [], si = [], sw = [], idx = [];
     const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
       pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で
       const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
-      uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - FACE.y0) / (FACE.y1 - FACE.y0));
+      uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - F.y0) / (F.y1 - F.y0));
       { const nz = N0[v * 3 + 2], t = (a, b, q) => Math.min(1, Math.max(0, (q - a) / (b - a))), a = t(0.17, 0.3, nz) * t(0.0, 0.03, z) * t(FACE.x1 - 0.004, FACE.x1 - 0.012, Math.abs(x)); col.push(1, 1, 1, a * a * (3 - 2 * a)); }   // the picture fades out toward the layer's edge (no square end on a cheek seen from aside)
       for (let q = 0; q < 4; q++) { si.push(SI[v * 4 + q]); sw.push(SW[v * 4 + q]); } map.set(v, n); return n; };
     for (let t = 0; t < I0.length; t += 3) { const a = I0[t], b = I0[t + 1], c = I0[t + 2]; if (ok(a) && ok(b) && ok(c)) idx.push(add(a), add(b), add(c)); }
@@ -321,5 +331,5 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   }
   const setEyeColor = (c) => { EYE_COL.splice(0, 4, ...irisColors(c)); };
   const getLayout = () => ({ eyeX: EYE.x, eyeY: EYE.y, eyeSize: LAY.eyeSize, browX: BROW.x, browY: BROW.y, mouthY: MOUTHP.y });
-  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, faceMatFor, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, presetName, DRAWN, drawParts, faceLayerGeometry };
+  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, faceMatFor, BROWS, browMatFor, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, presetName, DRAWN, drawParts, faceLayerGeometry };
 }

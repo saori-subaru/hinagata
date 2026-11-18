@@ -28,6 +28,20 @@ export function shaded(style, c, bands = 2) {
   if (style === "soft") return softToon(c);
   return toon(c, bands);
 }
+// drawn d (m, the mesh's own size) nearer the camera than it is, along the line of sight (it stays where it is on the screen): it shows over
+// what lies that close in front of it. More when seen aslant (a layer over it is thicker along the line of sight: the far brow of a face seen
+// from three quarters sank under the bangs), nothing once the head (its +z, carried by the skin) turns away. Skinned meshes only
+export function pulled(m, d) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.vertexShader = sh.vertexShader.replace("#include <project_vertex>", `#include <project_vertex>
+#ifdef USE_SKINNING
+  { vec3 toCam = isOrthographic ? vec3( 0.0, 0.0, 1.0 ) : normalize( -mvPosition.xyz ), fwd = normalize( mat3( modelViewMatrix ) * ( skinMatrix * vec4( 0.0, 0.0, 1.0, 0.0 ) ).xyz );
+    vec4 pp = mvPosition; pp.xyz += toCam * ( ${d.toFixed(4)} * length( modelViewMatrix[ 1 ].xyz ) * smoothstep( 0.05, 0.4, dot( fwd, toCam ) ) / clamp( dot( normalize( transformedNormal ), toCam ), 0.35, 1.0 ) );
+    gl_Position = projectionMatrix * pp; }
+#endif`); };
+  m.customProgramCacheKey = () => `pull${d}|` + key;
+  return m;
+}
 // light the mesh by its "shadeN" attribute (normals softened for shading, see smoothNormals in sdf/mesh.js) instead of its own normals.
 // Only for meshes that have it. Keeps the material's own shader changes, and gives it its own program (three caches programs by this key)
 export function withShadeN(m) {

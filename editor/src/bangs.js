@@ -4,7 +4,8 @@
 // only the bangs (avatar.setBangs).
 // The bangs it works on (2026-10-07, Saori: "なんで姫カットとかって前髪動かせないんですかね" → the hime cut and the side-swept too, as locks or a block):
 //   ふさ (nendo):  hair.sculpt.nendo.tips, rows [angle (degrees around the head, 0 = front), tip height (head space), slope?, skew?, group?,
-//                  sweep (degrees)?, extra thickness?, flick (m)?, width (×)?, wave?]. A tip can go down to the waist (the tuft hangs).
+//                  sweep (degrees)?, extra thickness?, flick (m)?, width (×)?, wave?, lean (-1..1: the point at the lock's edge on that side)?].
+//                  A tip can go down to the waist (the tuft hangs).
 //   姫カット:      hair.sculpt.hime.tips, the same rows (its tips are cut straight across).
 //   横流し:        hair.sculpt.side.strands, rows [from angle, to angle, to height angle (up from the head's middle), radius, bend] (degrees, m):
 //                  the dot is a strand's tip.
@@ -13,7 +14,7 @@ import * as THREE from "three";
 const D2R = Math.PI / 180;
 const tipAngle = (t) => t[0] - (t[5] ?? 0);   // where the tip really is: a swept tuft ends that far to the side
 // the kinds: where their rows are, how wide they may go, the sliders of a picked one ([row index, label, min, max, step, default])
-const TUFTS = [[8, "bangWidth", 0.2, 2, 0.05, 1], [5, "bangSweep", -25, 25, 0.5, 0], [7, "bangFlick", -0.04, 0.04, 0.001, 0], [9, "bangWave", 0, 0.05, 0.002, 0], [6, "bangThick", -0.02, 0.03, 0.001, 0]];
+const TUFTS = [[8, "bangWidth", 0.2, 2, 0.05, 1], [5, "bangSweep", -25, 25, 0.5, 0], [10, "bangLean", -1, 1, 0.05, 0], [7, "bangFlick", -0.04, 0.04, 0.001, 0], [9, "bangWave", 0, 0.05, 0.002, 0], [6, "bangThick", -0.02, 0.03, 0.001, 0]];
 const KINDS = {
   nendo: { path: "hair.sculpt.nendo.tips", span: "hair.sculpt.nendo.span", sliders: TUFTS },
   hime: { path: "hair.sculpt.hime.tips", span: "hair.sculpt.hime.span", sliders: TUFTS.filter(([k]) => k === 8 || k === 6) },   // (no sweep, flick or wave: a straight cut)

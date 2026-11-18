@@ -61,7 +61,7 @@ const T = {
     backPick: "Click a dot to pick a lock", backNone: "With hanging short hair, short hair or long hair", backW: "Width (×)", backTh: "Thickness (×)", backFl: "Flick out (+) / curl in (−)", backReset: "Reset this lock", backResetAll: "Reset all", backN: (n) => `${n} changed`,
     bangTufts: "Bang tufts", bangHelp: "Drag a dot: left / right moves the tuft around the head, up / down moves its tip (down to the waist: below the head it hangs). Releasing it rebuilds the bangs.",
     bangPick: "Click a dot to pick a tuft", bangAdd: "Add a tuft", bangDel: "Remove this tuft", bangNeedNendo: "Tufts can be moved with bangs (not with “None”)",
-    bangWidth: "Width (×)", bangSweep: "Sweep (°)", bangFlick: "Flick out (+) / curl in (−)", bangWave: "Wave (hanging part)", bangThick: "Extra thickness", sideWidth: "Width (m)", sideBend: "Bend (°)", sideRoot: "Root (° around the head)", bangN: (n) => `${n} tufts`,
+    bangWidth: "Width (×)", bangSweep: "Sweep (°)", bangLean: "Point to one side (−1…1)", bangFlick: "Flick out (+) / curl in (−)", bangWave: "Wave (hanging part)", bangThick: "Extra thickness", sideWidth: "Width (m)", sideBend: "Bend (°)", sideRoot: "Root (° around the head)", bangN: (n) => `${n} tufts`,
     confirmDelExpr: (n) => `Remove the expression “${n}” and its pictures?`, tplCount: "This template was made for a different number of expressions. Write it out again (or match the expressions) and redraw",
   },
   ja: {
@@ -123,7 +123,7 @@ const T = {
     backPick: "玉を押すと毛束を選べる", backNone: "後ろ髪が「ショート(たらし)」「ショート」「ロング」のときに動かせる", backW: "この毛束の幅(倍)", backTh: "この毛束の厚み(倍)", backFl: "はね(+) / 内巻き(−)", backReset: "この毛束を元に戻す", backResetAll: "全部元に戻す", backN: (n) => `${n}本 変更`,
     bangTufts: "前髪のふさ", bangHelp: "玉を引っぱる: 左右 = 頭のまわりの位置 / 上下 = 毛先の高さ(腰まで。頭より下は垂れる)。離すと前髪を作り直す。",
     bangPick: "玉を押すとふさを選べる", bangAdd: "ふさを足す", bangDel: "このふさを消す", bangNeedNendo: "前髪が「なし」のときは動かせない",
-    bangWidth: "このふさの幅(倍)", bangSweep: "流れ(度)", bangFlick: "はね(+) / 内巻き(−)", bangWave: "うねり(垂れた部分)", bangThick: "このふさの厚さ(足す)", sideWidth: "この房の幅(m)", sideBend: "曲がり(度)", sideRoot: "根元の位置(度)", bangN: (n) => `ふさ ${n}本`,
+    bangWidth: "このふさの幅(倍)", bangSweep: "流れ(度)", bangLean: "毛先の寄り(−1〜1)", bangFlick: "はね(+) / 内巻き(−)", bangWave: "うねり(垂れた部分)", bangThick: "このふさの厚さ(足す)", sideWidth: "この房の幅(m)", sideBend: "曲がり(度)", sideRoot: "根元の位置(度)", bangN: (n) => `ふさ ${n}本`,
     confirmDelExpr: (n) => `表情「${n}」とその絵を消す?`, tplCount: "表情の数が違うキャラのテンプレ。書き出し直して(か、表情の数を合わせて)描き直して",
   },
 };

@@ -822,6 +822,7 @@ export const DEFAULTS = {
         "puff": 0.012,
         "lockStiff": 4,
         "lockSpan": 13,
+        "lockBand": 0,
         "lockRise": 0.03,
         "lockHangY": 0.86,
         "lockRoot": 70,
@@ -1010,6 +1011,8 @@ export const DEFAULTS = {
       "height": 0.0075,
       "color": "#a8786290"
     },
+    "noseColor": null,
+    "browsOverHair": false,
     "parts": {
       "eyes": "round",
       "brows": "normal",
