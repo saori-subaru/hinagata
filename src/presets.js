@@ -96,6 +96,7 @@ export const CHARACTERS = {
       face: {
         blush: { cheeks: { on: true }, nose: { on: true } },
         parts: { mouth: "image" },
+        expressions: { happy: { eyes: "happy", brows: "normal", mouth: "openSoft", cheeks: "flush" } },   // 絵の口に合う開き口で笑う
         layout: { eyeX: 0.088 },
         drawn: [{ id: "e1", name: "表情1", eye: null, brow: null, mouth: null, cheeks: "none", blink: true }],
       },

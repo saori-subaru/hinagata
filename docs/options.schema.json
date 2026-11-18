@@ -18084,6 +18084,13 @@
      }
     },
     {
+     "value": "openSoft",
+     "label": {
+      "ja": "あーん(細)",
+      "en": "Open (soft)"
+     }
+    },
+    {
      "value": "o",
      "label": {
       "ja": "お",
