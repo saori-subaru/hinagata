@@ -49,14 +49,17 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
   // the lash of the tall eyes on the current path: solid, or (face.lashHatch) a pale opaque fill (the iris must not show through) with short
   // strokes laid along the lash's curve (an arc round the eye: they tilt down toward its ends) and a thin edge, like a pencil drawing's
-  const lashFill = (cx, cy, over = [], c = "#3f3a52") => { if (!OPT.face.lashHatch) { fctx.fillStyle = c; fctx.fill(); return; }
-    const pale = "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * 0.3) * 255).toString(16).padStart(2, "0")).join("");
-    fctx.fillStyle = pale; fctx.fill(); fctx.save(); fctx.clip(); const h = new Path2D(), X0 = px(cx), R = pu(0.075), L = pu(0.0095), dy = pu(0.0038), dx = pu(0.0105);
-    for (let j = 0, y = py(cy + 0.07); y < py(cy - 0.05); j++, y += dy) for (let i = 0, x = px(cx - 0.09) + (j % 2) * dx / 2 + Math.sin(j * 2.1) * dx * 0.2; x < px(cx + 0.09); i++, x += dx) {
-      const a = Math.atan((x - X0) / R), l = L * (0.75 + 0.25 * Math.sin(i * 1.3 + j)); h.moveTo(x - Math.cos(a) * l / 2, y - Math.sin(a) * l / 2); h.lineTo(x + Math.cos(a) * l / 2, y + Math.sin(a) * l / 2); }
-    fctx.lineWidth = pu(0.0009); fctx.lineCap = "round"; fctx.strokeStyle = c + "cc"; fctx.stroke(h); fctx.restore();
-    fctx.lineWidth = pu(0.0012); fctx.strokeStyle = c; fctx.lineJoin = "round"; fctx.stroke();
-    const o = new Path2D(); for (const [a, b, e, f] of over) { o.moveTo(px(cx + a), py(cy + b)); o.lineTo(px(cx + e), py(cy + f)); } fctx.lineWidth = pu(0.001); fctx.strokeStyle = c + "cc"; fctx.stroke(o); };   // over: strokes running past the inner and outer ends [x0, y0, x1, y1] (eye space)
+  const lashFill = (cx, cy, over = [], c = "#3f3a52") => { fctx.fillStyle = c; fctx.fill(); if (!OPT.face.lashHatch) return;
+    const pale = "#" + hexRgb(c).map((v) => Math.round((v + (1 - v) * 0.5) * 255).toString(16).padStart(2, "0")).join("");
+    fctx.save(); fctx.clip(); const h = new Path2D(), X0 = px(cx), R = pu(0.075), L = pu(0.0105), dy = pu(0.0042), dx = pu(0.0125);
+    for (let j = 0, y = py(cy + 0.07); y < py(cy - 0.05); j++, y += dy) for (let i = 0, x = px(cx - 0.09) + (j % 2) * dx / 2 + Math.sin(j * 2.1) * dx * 0.3; x < px(cx + 0.09); i++, x += dx) {
+      const yy = y + Math.sin(i * 2.7 + j * 1.3) * dy * 0.3, a = Math.atan((x - X0) / R) + Math.sin(i * 1.9 + j * 0.7) * 0.12, l = L * (0.6 + 0.4 * Math.sin(i * 1.3 + j));
+      h.moveTo(x - Math.cos(a) * l / 2, yy - Math.sin(a) * l / 2); h.lineTo(x + Math.cos(a) * l / 2, yy + Math.sin(a) * l / 2); }
+    fctx.lineWidth = pu(0.001); fctx.lineCap = "round"; fctx.strokeStyle = pale + "b0"; fctx.stroke(h); fctx.restore();   // pale strokes on the dark lash read as gaps
+    fctx.fillStyle = c; over.forEach(([a, b, e, f], i) => {   // over: strokes running past the inner and outer ends [x0, y0, x1, y1] (eye space), drawn as bent tapering hairs
+      const k = 0.75 + 0.45 * Math.abs(Math.sin(i * 2.3 + 1)), x0 = px(cx + a), y0 = py(cy + b), ex = px(cx + a + (e - a) * k), ey = py(cy + b + (f - b) * k), ux = ex - x0, uy = ey - y0, n = Math.hypot(ux, uy) || 1, nx = -uy / n, ny = ux / n;
+      const w = pu(0.0011) * (0.8 + 0.4 * Math.sin(i * 1.7)), bd = n * 0.16 * Math.sin(i * 3.1 + 0.6), mx = (x0 + ex) / 2 + nx * bd, my = (y0 + ey) / 2 + ny * bd;
+      fctx.beginPath(); fctx.moveTo(x0 + nx * w, y0 + ny * w); fctx.quadraticCurveTo(mx + nx * w * 0.6, my + ny * w * 0.6, ex, ey); fctx.quadraticCurveTo(mx - nx * w * 0.6, my - ny * w * 0.6, x0 - nx * w, y0 - ny * w); fctx.closePath(); fctx.fill(); }); };
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
   const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
