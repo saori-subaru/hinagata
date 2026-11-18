@@ -54,6 +54,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     const flick = arch > 0 ? [[0.056, -0.022], [0.044, -0.018]] : [[0.058, 0.010], [0.046, -0.002]];   // 目じりの跳ね(あき目の翼と同じ向きで外へ)
     fctx.lineTo(...P(...flick[0])); fctx.lineTo(...P(...flick[1]));
     for (let i = N; i >= 0; i--) fctx.lineTo(...P(...bot[i])); fctx.closePath(); fctx.fillStyle = "#3a2830"; fctx.fill();
+    { const L = (t) => { const [x, y] = at(t); return P(x, y + 0.014 + 0.004 * t); };   // 二重の線(あき目と同じ色・太さ、まぶたに沿って上に)
+      line(0.0028, "#c98c80"); fctx.lineWidth *= k; fctx.beginPath();
+      if (arch > 0) { fctx.moveTo(...L(0.3)); for (let i = 1; i <= 12; i++) fctx.lineTo(...L(0.3 + 0.55 * i / 12)); }
+      else { fctx.moveTo(...P(-0.012, 0.024)); fctx.quadraticCurveTo(...P(0.014, 0.033), ...P(0.036, 0.02)); }   // ∪ に沿わせると内側にもう1本のまぶたに見える: あき目の二重と同じ ∩ を低く
+      fctx.stroke(); fctx.fillStyle = "#3a2830"; }
     if (arch < 0) for (const [x, y, ex, ey] of [[0.03, -0.006, 0.036, -0.019], [0.039, -0.003, 0.048, -0.013]]) {   // 閉じた目じりの下向きのまつげ2本(根元が太いとげ)
       const nx = -(ey - y), ny = ex - x, l = Math.hypot(nx, ny), w = 0.0022 / l;
       fctx.beginPath(); fctx.moveTo(...P(x + nx * w, y + ny * w)); fctx.lineTo(...P(ex, ey)); fctx.lineTo(...P(x - nx * w, y - ny * w)); fctx.closePath(); fctx.fill(); }
