@@ -187,6 +187,9 @@ export const CHARACTERS = {
 };
 // シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
+  // hair a shade darker than her skin, as on her design sheet (as pale as the skin, the forehead between the bangs and the hair over it read as
+  // one bare patch), and the ring a light highlight (the automatic ring is never lighter than 0.85: on pale hair a skin-colored band across the bangs)
+  o.colors.hair = "#e6dcd1";
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
@@ -195,7 +198,7 @@ export const CHARACTERS = {
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
-        paint: { inner: 0.3, oneShade: 1 },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
+        paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4" } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
         // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
@@ -213,11 +216,8 @@ export const CHARACTERS = {
             tips: [
               [-81.52, 0.887, 0.69, 0.33, null, 6],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
-              [-54, 0.9215, null, null, null, -9.9, 0, 0, 1.229, 0, -0.5],   // outside the eye, hooking in to the cheek
-              // the other side's 40.6 lock mirrored: without it the forehead showed between the locks up to the hairline, unoutlined (a bald patch from a quarter view).
-              // A lock is as wide as the gap to its neighbours: the widths beside it (1.229, 0.48) keep those two as wide as they were
-              [-40.6, 1.008, null, null, null, 10, 0.002, 0, 0.606, 0, 0.7],
-              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.48, 0, 1],   // over the eye: a narrow lock flowing out, to the lash, lying against the middle blade's edge (lean 1, as 26.1 does)
+              [-54, 0.9215, null, null, null, -9.9, 0, 0, 0.58, 0, -0.5],   // outside the eye, hooking in to the cheek
+              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
               [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
               [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
               [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.66, 0, -1],   // from the middle one's edge out over the eye, reaching in under that edge (narrower, 0.35, the forehead showed beside the blade from her left)
