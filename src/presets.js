@@ -10,10 +10,10 @@ export const CHARACTERS = {
     name: { ja: "シルヴィ", en: "Sylvie" },
     about: { ja: "エルフの女の子", en: "An elf girl" },
     file: { hinagata: 3, name: "シルヴィ", options: {
-      colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#4f957a" },
+      colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#41714d" },
       body: {
         proportion: { legs: 1.65, torso: 1.3, arms: 1.45 },   // arms: made when the tall default was 1.45
-        head: { scale: 0.69, depth: 0.92, crown: 1.2 },   // the top of the head as high over the eyes as on her design sheet
+        head: { scale: 0.69, depth: 0.92 },
         torso: { chest: 0.92, belly: 0.6, waist: 0.026, hips: 0.92, bust: 0.77, butt: 0.96, back: 0.56 },
         thickness: { upperArm: 0.77, forearm: 0.74, thigh: 0.6, thighTop: 0.61, calf: 0.6 },
         knees: { blush: { on: true }, line: { on: true } },   // pink knees with the kneecap's line, as on her sheet
@@ -23,7 +23,7 @@ export const CHARACTERS = {
           chin: { k: 0.024, sharp: 0.1 },
           cheekTrim: { depth: 0 },
           cheekFill: { depth: 0.004 },
-          ears: { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } },   // short, level and a little back, as on her design sheet: their tips show beside the hair
+          ears: { elf: { on: true, length: 0.255, width: 0.05, angle: -20 } },
         },
       },
       outfit: {   // (2026-11-17, from Saori's design sheet: a hooded capelet closed with two buttons, cuffs, a petticoat, strapped boots)
@@ -46,76 +46,57 @@ export const CHARACTERS = {
         { kind: "cross", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.034, color: "#66907d", mirror: true, lift: 0.0138 },
       ],
       hair: {
-        // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
-        // with its own outline over the other hair (without it, the same color, it read as part of the head)
-        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
+        tail: { kind: "side", y: 1.18, count: 4, width: 0.07, spread: 1.0, waves: 0.5, tiers: 3, tierFlick: 0.025, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
         // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
         // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
-        // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
-        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
-          { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
+        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
         sculpt: {
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
-          // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
-          // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's
-          // round, not lines from the crown), rooted under the cap's hairline (lockRoot). lockSpan 14: the middle blade stays one lock.
-          // Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean]
           nendo: {
             tips: [
               [-81.52, 0.887, 0.69, 0.33, null, 6],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
-              [-54, 0.9215, null, null, null, -9.9, 0, 0, 0.58, 0, -0.5],   // outside the eye, hooking in to the cheek
-              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
-              [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
-              [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
-              [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.35, 0, -1],   // from the middle one's edge out over the eye
-              [40.6, 1.008, null, null, null, -10, 0.002, 0, 0.56, 0, -0.7],
-              [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
+              [-41.804, 1.002],
+              [-43.334, 0.923],
+              [7.098, 0.99, 0.8, 0.04, "c", 0, 0, 0, 0.9],
+              [36.781, 1.002, 0.8, 0, "c"],
+              [46.958, 0.943],
+              [54.716, 0.919],
+              [42.444, 0.898, 0.5, 0, null, -3.5],
               [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
-            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
+            overlap: 1.44,
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
-            // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
-            // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
-            // (2, 9) they hang to the jaw
+            // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
+            // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes.
+            // Behind the ears (2, 9 and the inner 13, 14, 20, 21) longer and flicked out: the sides flare at the jaw while the nape hugs (her design sheet)
             edits: [
-              { i: 0, da: 0.46 },
-              { i: 1, dy: 0.03, da: -3.67, fl: -0.006 },
-              { i: 2, dy: 0.02, da: -5.05, fl: -0.004 },
-              { i: 9, dy: 0.02, da: 5.05, fl: -0.004 },
-              { i: 10, dy: 0.03, da: 3.67, fl: -0.006 },
-              { i: 11, da: -0.46 },
-              { i: 12, dy: 0.05 },
-              { i: 13, dy: 0.09 },
-              { i: 14, dy: 0.01 },
-              { i: 20, dy: 0.01 },
-              { i: 21, dy: 0.09 },
-              { i: 22, dy: 0.05 },
+              { i: 0, dy: -0.0922, da: 0.46 },
+              { i: 1, dy: -0.01, da: -3.67 },
+              { i: 2, dy: -0.03, da: -5.05, fl: 0.012 },
+              { i: 9, dy: -0.03, da: 5.05, fl: 0.012 },
+              { i: 10, dy: -0.01, da: 3.67 },
+              { i: 11, dy: -0.0922, da: -0.46 },
+              { i: 13, dy: -0.012, fl: 0.012 },
+              { i: 14, dy: -0.001, fl: 0.012 },
+              { i: 20, dy: -0.001, fl: 0.012 },
+              { i: 21, dy: -0.012, fl: 0.012 },
+              { i: 26, dy: 0.0251, da: 11.34 },
+              { i: 27, dy: 0.012, da: -15.16 },
             ],
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },
         },
       },
-      face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
-        parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
-        noseColor: "#c98a80",   // the knees' line's color (body.knees.line)
-        browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
-        eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
-        layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
-        // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
-        expressions: {
-          happy: { eyes: "happy", brows: "thin", mouth: "open", cheeks: "flush" },
-          sad: { eyes: "tall", brows: "worried", mouth: "small", cheeks: "none" },
-          angry: { eyes: "tall", brows: "angry", mouth: "small", cheeks: "none" },
-          surprised: { eyes: "tall", brows: "thin", mouth: "o", cheeks: "none" },
-        },
+      face: {
+        blush: { cheeks: { on: true }, nose: { on: true } },
+        parts: { mouth: "image" },
+        layout: { eyeX: 0.088 },
         drawn: [{ id: "e1", name: "表情1", eye: null, brow: null, mouth: null, cheeks: "none", blink: true }],
       },
     } },
@@ -204,6 +185,86 @@ export const CHARACTERS = {
     } },
   },
 };
+// シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
+{ const o = structuredClone(CHARACTERS.sylvie.file.options);
+  o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet
+  o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
+  Object.assign(o, {
+      hair: {
+        // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
+        // with its own outline over the other hair (without it, the same color, it read as part of the head)
+        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
+        rigid: 0.5, lockPoints: 5,
+        paint: { inner: 0.3 },
+        // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
+        // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
+        // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
+        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
+          { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
+          { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
+        sculpt: {
+          shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
+          // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
+          // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's
+          // round, not lines from the crown), rooted under the cap's hairline (lockRoot). lockSpan 14: the middle blade stays one lock.
+          // Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean]
+          nendo: {
+            tips: [
+              [-81.52, 0.887, 0.69, 0.33, null, 6],
+              [-59.948, 0.918, 0.5, 0, null, 5.5],
+              [-54, 0.9215, null, null, null, -9.9, 0, 0, 0.58, 0, -0.5],   // outside the eye, hooking in to the cheek
+              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
+              [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
+              [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
+              [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.35, 0, -1],   // from the middle one's edge out over the eye
+              [40.6, 1.008, null, null, null, -10, 0.002, 0, 0.56, 0, -0.7],
+              [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
+              [84, 0.87, 0.66, -0.33, null, -12.5],
+            ],
+            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
+          },
+          shortLocks: {
+            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
+            // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
+            // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
+            // (2, 9) they hang to the jaw
+            edits: [
+              { i: 0, da: 0.46 },
+              { i: 1, dy: 0.03, da: -3.67, fl: -0.006 },
+              { i: 2, dy: 0.02, da: -5.05, fl: -0.004 },
+              { i: 9, dy: 0.02, da: 5.05, fl: -0.004 },
+              { i: 10, dy: 0.03, da: 3.67, fl: -0.006 },
+              { i: 11, da: -0.46 },
+              { i: 12, dy: 0.05 },
+              { i: 13, dy: 0.09 },
+              { i: 14, dy: 0.01 },
+              { i: 20, dy: 0.01 },
+              { i: 21, dy: 0.09 },
+              { i: 22, dy: 0.05 },
+            ],
+            stiff: 2.7,
+          },
+          long: { flick: 0.002, bottom: 0.85 },
+        },
+      },
+      face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
+        parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
+        noseColor: "#c98a80",   // the knees' line's color (body.knees.line)
+        browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
+        eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
+        layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
+        // her own expressions: setFace("sad") … keep her eyes and brows (the stock ones swap in the round eyes)
+        expressions: {
+          happy: { eyes: "happy", brows: "thin", mouth: "open", cheeks: "flush" },
+          sad: { eyes: "tall", brows: "worried", mouth: "small", cheeks: "none" },
+          angry: { eyes: "tall", brows: "angry", mouth: "small", cheeks: "none" },
+          surprised: { eyes: "tall", brows: "thin", mouth: "o", cheeks: "none" },
+        },
+        drawn: [{ id: "e1", name: "表情1", eye: null, brow: null, mouth: null, cheeks: "none", blink: true }],
+      },
+  });
+  CHARACTERS.sylvie2 = { name: { ja: "シルヴィ v2", en: "Sylvie v2" }, about: { ja: "設定画に寄せたシルヴィ", en: "Sylvie as on her design sheet" }, file: { hinagata: 3, name: "シルヴィ v2", options: o } }; }
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
 // 6 heads on the adult body (body.adult), made 2026-10-08/09 beside a Genshin character's picture and her three views, then Saori's VRoid
