@@ -287,7 +287,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       image: () => imgPart("nose", NOSEP.x, NOSEP.y),
       // code-drawn noses (2026-10-07, Saori: "鼻を書いてみてもらえますか"), just under the nose's tip: a small dot, or a short stroke down
       // the shadow side with a soft shadow beside it
-      dot: () => ell(NOSEP.x, NOSEP.y - 0.003, 0.0026, 0.0021, OPT.face.noseColor ?? "#5e3a46e0"),
+      dot: () => { const k = OPT.face.noseSize ?? 1; ell(NOSEP.x, NOSEP.y - 0.003, 0.0026 * k, 0.0021 * k, OPT.face.noseColor ?? "#5e3a46e0"); },
       line: () => { const { x, y } = NOSEP, g = fctx.createRadialGradient(px(x + 0.004), py(y - 0.002), 0, px(x + 0.004), py(y - 0.002), pu(0.008)); g.addColorStop(0, "#d9897a50"); g.addColorStop(1, "#d9897a00");
         fctx.fillStyle = g; fctx.fillRect(px(x - 0.006), py(y + 0.008), pu(0.02), pu(0.02));
         line(0.0026, OPT.face.noseColor ?? "#7a4a52"); fctx.beginPath(); fctx.moveTo(px(x + 0.002), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.0035), py(y - 0.001), px(x - 0.001), py(y - 0.004)); fctx.stroke(); },

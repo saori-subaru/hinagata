@@ -1016,6 +1016,7 @@ export const DEFAULTS = {
       "color": "#a8786290"
     },
     "noseColor": null,
+    "noseSize": 1,
     "browsOverHair": false,
     "parts": {
       "eyes": "round",
