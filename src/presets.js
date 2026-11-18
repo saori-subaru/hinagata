@@ -248,7 +248,7 @@ export const CHARACTERS = {
         },
       },
       face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945 }, nose: { on: false } },
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 9 }, nose: { on: false } },
         parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
         noseColor: "#c98a80",   // the knees' line's color (body.knees.line)
         browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs

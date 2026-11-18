@@ -137,6 +137,8 @@ const MAIN = [
   ["face.blush.cheeks.size", L("ほっぺの大きさ", "Cheek size"), { when: { "face.blush.cheeks.on": true }, min: 0.02, max: 0.07, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.cheeks.x", L("ほっぺの間隔", "Cheek spacing"), { when: { "face.blush.cheeks.on": true }, min: 0.1, max: 0.19, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.cheeks.y", L("ほっぺの高さ", "Cheek height"), { when: { "face.blush.cheeks.on": true }, min: 0.9, max: 1.0, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
+  ["face.blush.cheeks.hatch", L("ほっぺの斜線", "Cheek hatching"), { when: { "face.blush.cheeks.on": true }, min: 0, max: 16, step: 1, section: L("赤み", "Blush"), apply: "setBlush", help: L("赤みの上に細い縦線を何本引くか(0 = なし)", "how many thin upright strokes over the blush (0 = none)") }],
+  ["face.blush.cheeks.hatchColor", L("斜線の色", "Hatching color"), { when: { "face.blush.cheeks.on": true }, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.nose.on", L("鼻先の赤み", "Nose blush"), { section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.nose.color", L("鼻先の色", "Nose blush color"), { when: { "face.blush.nose.on": true }, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.nose.strength", L("鼻先の濃さ", "Nose blush strength"), { when: { "face.blush.nose.on": true }, min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],

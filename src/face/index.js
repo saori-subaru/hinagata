@@ -237,11 +237,13 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
-      // たて長の目のにっこり: the same thick lash as an arch drooping to the outer corner (タレ目), the inner end running out flat (no hook down), its outer end split in two
+      // たて長の目のにっこり (a nendoroid smile): a ∩ thick in the middle and pointed at both ends, two lashes flicking out at the outer end, a faint crease over it
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.042, 0.004); bz(-0.015, 0.011, 0.024, 0.026, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); bz(0.022, 0.005, -0.012, 0.0, -0.04, -0.002); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        fctx.beginPath(); mv(-0.044, -0.014); bz(-0.033, 0.032, 0.032, 0.042, 0.057, -0.005); bz(0.032, 0.021, -0.026, 0.013, -0.044, -0.014); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        for (const [a, b, c, d] of [[0.05, 0.004, 0.071, -0.012], [0.04, 0.01, 0.063, -0.001]]) { fctx.beginPath(); mv(a, b); ln(c, d); ln(a - 0.008, b - 0.003); fctx.closePath(); fctx.fill(); }   // lashes at the outer end
+        line(0.0016, "#a0807890"); fctx.beginPath(); mv(-0.024, 0.036); qc(0.008, 0.052, 0.038, 0.036); fctx.stroke();   // the lid's crease
         fctx.restore();
       },
     },
@@ -306,6 +308,9 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   function drawBlush() {
     const B = OPT.face.blush; if (!B) return;
     if (B.cheeks.on) for (const m of [1, -1]) soft(m * B.cheeks.x, B.cheeks.y, B.cheeks.size, 0.68, B.cheeks.color, B.cheeks.strength);
+    const n = B.cheeks.on ? B.cheeks.hatch ?? 0 : 0;   // thin upright strokes over the blush (a pencil drawing's cheeks), longest in the middle
+    if (n) for (const m of [1, -1]) { const { x, y, size: r } = B.cheeks; line(0.0011, B.cheeks.hatchColor ?? "#e07a8a");
+      for (let i = 0; i < n; i++) { const u = (i + 0.5) / n * 2 - 1, h = r * 0.62 * Math.sqrt(1 - u * u) * (0.8 + 0.2 * Math.cos(i * 2.3)), X = m * x + u * r * 0.8; fctx.beginPath(); fctx.moveTo(px(X + 0.001), py(y + h)); fctx.lineTo(px(X - 0.001), py(y - h)); fctx.stroke(); } }
     if (B.nose.on) soft(0, 0.929 + OPT.body.sculpt.nose.lift - FACE.dy, B.nose.size, 0.85, B.nose.color, B.nose.strength);   // 鼻先(頭の座標。body/index.js の鼻の先端と同じ高さ)
   }
   for (const { id } of DRAWN) {   // a part not drawn for this expression falls back to the ふつう picture

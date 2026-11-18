@@ -997,7 +997,9 @@ export const DEFAULTS = {
         "strength": 0.45,
         "size": 0.042,
         "x": 0.15,
-        "y": 0.95
+        "y": 0.95,
+        "hatch": 0,
+        "hatchColor": "#e07a8a"
       },
       "nose": {
         "on": false,
