@@ -218,11 +218,16 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     mouth: {
       image: () => imgPart("mouth", MOUTHP.x, MOUTHP.y),
       smile: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.014), py(y + 0.003)); fctx.quadraticCurveTo(px(x), py(y - 0.01), px(x + 0.014), py(y + 0.003)); fctx.stroke(); },
-      open: () => { const { x, y } = MOUTHP;
-        const shape = () => { fctx.beginPath(); fctx.moveTo(px(x - 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.016), py(y - 0.02), px(x), py(y - 0.02)); fctx.quadraticCurveTo(px(x - 0.016), py(y - 0.02), px(x - 0.02), py(y + 0.006)); fctx.closePath(); };
+      open: () => { const { x, y } = MOUTHP, P = (a, b) => [px(x + a), py(y + b)];   // 線は上だけ(閉じ口と同じ細さで両端は細く)、下は線なしで消す。舌は大きく
+        const shape = () => { fctx.beginPath(); fctx.moveTo(...P(-0.019, 0.006)); fctx.quadraticCurveTo(...P(0, 0.009), ...P(0.019, 0.006)); fctx.bezierCurveTo(...P(0.0195, -0.011), ...P(0.012, -0.021), ...P(0, -0.021)); fctx.bezierCurveTo(...P(-0.012, -0.021), ...P(-0.0195, -0.011), ...P(-0.019, 0.006)); fctx.closePath(); };
         shape(); fctx.fillStyle = MOUTH; fctx.fill();
-        fctx.save(); shape(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore();
-        line(0.003); shape(); fctx.stroke(); },   // ふちは口の形を引き直してから(前は 舌の楕円の線を描いていて、口とずれて見えた。2026-10-09 サオリ)
+        fctx.save(); shape(); fctx.clip();
+        ell(x, y - 0.023, 0.016, 0.0125, "#ee8798"); ell(x - 0.003, y - 0.017, 0.006, 0.0035, "#f6a8b4");   // 舌とそのつや
+        ell(x, y + 0.009, 0.022, 0.006, "#7a2a3c70"); fctx.restore();                                    // 上唇の下の影
+        fctx.fillStyle = INK; for (const m of [1, -1]) {   // 上の線(中ほど 3.5mm、口角で少し上へはねる)と、口角から脇を下りて消える線(下は線なし)
+          fctx.beginPath(); fctx.moveTo(...P(0, 0.0102)); fctx.quadraticCurveTo(...P(m * 0.012, 0.0102), ...P(m * 0.0215, 0.0085)); fctx.lineTo(...P(m * 0.0235, 0.0105));
+          fctx.lineTo(...P(m * 0.0205, 0.0055)); fctx.quadraticCurveTo(...P(m * 0.012, 0.0067), ...P(0, 0.0067)); fctx.closePath(); fctx.fill();
+          fctx.beginPath(); fctx.moveTo(...P(m * 0.0207, 0.0072)); fctx.quadraticCurveTo(...P(m * 0.0205, -0.003), ...P(m * 0.0165, -0.011)); fctx.quadraticCurveTo(...P(m * 0.0182, -0.002), ...P(m * 0.0182, 0.0062)); fctx.closePath(); fctx.fill(); } },
       o: () => { const { x, y } = MOUTHP; ell(x, y - 0.004, 0.009, 0.011, MOUTH); line(0.003); fctx.stroke(); },
       cat: () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
       frown: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.013), py(y - 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.013), py(y - 0.006)); fctx.stroke(); },
