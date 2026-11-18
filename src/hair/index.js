@@ -37,6 +37,8 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // as triangles, not in the hair's field: on the game's 13.6 mm grid a strand this thin on a small head (0.69) came out in pieces. A flat
   // ribbon (rings of the locks' lens) along a curve through AHOGE, its root 2 cm inside the hair, sharp at the tip; joined to the hair in index.js
   const AHOGE = [[0, -0.02, -0.02], [0.002, 0.025, -0.012], [0.006, 0.058, 0.004], [0.012, 0.072, 0.032], [0.016, 0.062, 0.058], [0.018, 0.044, 0.068]];   // head space before ahogeDir; y from the hair's top
+  // ahogeCurl: a smaller strand bending as it rises and curling round at the tip, its point turned back down (シルヴィ's design sheet)
+  const AHOGE_CURL = [[0, -0.02, -0.016], [0, 0.012, -0.02], [0, 0.042, -0.012], [0, 0.062, 0.01], [0, 0.066, 0.036], [0, 0.054, 0.058], [0, 0.034, 0.062], [0, 0.022, 0.05]];
   const LENS = [[-1, 0], [-0.55, 1], [0.55, 1], [1, 0], [0.55, -1], [-0.55, -1]];   // across the curl's plane, through it
   /** The ahoge's triangles { pos, nor, idx } (toBody: head space → the mesh's), or null when the style has none. 6 x 12 rings and the tip. */
   function ahogeMesh(pick, toBody = (x, y, z) => [x, y, z], { K = 12, W = 0.016, FLAT = 0.45 } = {}) {
@@ -44,7 +46,7 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     const S = OPT.hair.sculpt.ahogeSize ?? 1, top = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D), side = [cd, 0, -sd];   // 0 = forward, 90 = toward the character's left
     const LEAN = (OPT.hair.sculpt.ahogeLean ?? 0) * deg, ct = Math.cos(LEAN), st = Math.sin(LEAN);   // ahogeLean tips it over toward its curl, about the root
-    const Q = AHOGE.map(([x, y0, z0]) => [x, y0 * ct - z0 * st, z0 * ct + y0 * st]).map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), n = Q.length;
+    const Q = (OPT.hair.sculpt.ahogeCurl ? AHOGE_CURL : AHOGE).map(([x, y0, z0]) => [x, y0 * ct - z0 * st, z0 * ct + y0 * st]).map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S, (-x * sd + z * cd) * S]), n = Q.length;
     const at = (i) => Q[Math.max(0, Math.min(n - 1, i))], ext = (i) => i < 0 ? Q[0].map((v, k) => 2 * v - Q[1][k]) : i >= n ? Q[n - 1].map((v, k) => 2 * v - Q[n - 2][k]) : at(i);
     const cr = (i, t) => { const a = ext(i - 1), b = at(i), c = at(i + 1), d = ext(i + 2), t2 = t * t, t3 = t2 * t;   // Catmull-Rom
       return b.map((_, k) => 0.5 * (2 * b[k] + (c[k] - a[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * t3)); };

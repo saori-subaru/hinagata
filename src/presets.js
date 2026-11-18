@@ -204,7 +204,7 @@ export const CHARACTERS = {
           { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
-          ahogeLean: 25,   // tipped over toward its curl (upright it stood like an antenna on the taller head)
+          ahogeCurl: true, ahogeSize: 0.85,   // small and curled round as on her design sheet
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
           // bands cut aslant to a point (lockBand), each from its own place on the head (lockRootSpread 1: their edges follow the head's

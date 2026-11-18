@@ -911,6 +911,7 @@ export const DEFAULTS = {
       "ahogeSize": 1.15,
       "ahogeDir": 90,
       "ahogeLean": 0,
+      "ahogeCurl": false,
       "long": {
         "locks": true,
         "hug": false,
