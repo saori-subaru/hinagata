@@ -45,23 +45,15 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   // とじ目の上まつげ: 中心線(3次ベジエ)を太さ w0→w1 でふくらませた塗り + 目じりの跳ね。arch 1 = ∩(笑う)、-1 = ∪(閉じる)
   const closedLid = (arch) => {
     const { x: cx, y: cy } = EYE, k = LAY.eyeSize, P = (x, y) => [px(cx + x * k), py(cy + y * k)];
-    const o = arch > 0 ? -0.006 : 0, A = [-0.035, -0.004 * arch + o], B = [-0.016, 0.021 * arch + o], C = [0.024, 0.021 * arch + o], D = [0.045, arch > 0 ? -0.012 : 0.004];
+    const o = arch > 0 ? -0.006 : -0.01, A = [-0.035, -0.004 * arch + o], B = [-0.016, 0.021 * arch + o], C = [0.024, 0.021 * arch + o], D = [0.045, arch > 0 ? -0.012 : 0.004 + o];
     const at = (t) => { const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t; return [a * A[0] + b * B[0] + c * C[0] + d * D[0], a * A[1] + b * B[1] + c * C[1] + d * D[1]]; };
     const N = 24, top = [], bot = [];
     for (let i = 0; i <= N; i++) { const t = i / N, [x, y] = at(t), [x1, y1] = at(Math.min(1, t + 0.01)), [x0, y0] = at(Math.max(0, t - 0.01)), dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy), w = (0.0025 + 0.0105 * t ** 1.3) / 2;
       top.push([x - dy / l * w, y + dx / l * w]); bot.push([x + dy / l * w, y - dx / l * w]); }
     fctx.beginPath(); fctx.moveTo(...P(...top[0])); for (const p of top) fctx.lineTo(...P(...p));
-    const flick = arch > 0 ? [[0.056, -0.022], [0.044, -0.018]] : [[0.058, 0.010], [0.046, -0.002]];   // 目じりの跳ね(あき目の翼と同じ向きで外へ)
+    const flick = arch > 0 ? [[0.056, -0.022], [0.044, -0.018]] : [[0.058, -0.004], [0.046, -0.014]];   // 目じりの跳ね(あき目の翼と同じ向きで外へ)
     fctx.lineTo(...P(...flick[0])); fctx.lineTo(...P(...flick[1]));
     for (let i = N; i >= 0; i--) fctx.lineTo(...P(...bot[i])); fctx.closePath(); fctx.fillStyle = "#3a2830"; fctx.fill();
-    { const L = (t) => { const [x, y] = at(t); return P(x, y + 0.014 + 0.004 * t); };   // 二重の線(あき目と同じ色・太さ、まぶたに沿って上に)
-      line(0.0028, "#c98c80"); fctx.lineWidth *= k; fctx.beginPath();
-      if (arch > 0) { fctx.moveTo(...L(0.3)); for (let i = 1; i <= 12; i++) fctx.lineTo(...L(0.3 + 0.55 * i / 12)); }
-      else { fctx.moveTo(...P(-0.012, 0.024)); fctx.quadraticCurveTo(...P(0.014, 0.033), ...P(0.036, 0.02)); }   // ∪ に沿わせると内側にもう1本のまぶたに見える: あき目の二重と同じ ∩ を低く
-      fctx.stroke(); fctx.fillStyle = "#3a2830"; }
-    if (arch < 0) for (const [x, y, ex, ey] of [[0.03, -0.006, 0.036, -0.019], [0.039, -0.003, 0.048, -0.013]]) {   // 閉じた目じりの下向きのまつげ2本(根元が太いとげ)
-      const nx = -(ey - y), ny = ex - x, l = Math.hypot(nx, ny), w = 0.0022 / l;
-      fctx.beginPath(); fctx.moveTo(...P(x + nx * w, y + ny * w)); fctx.lineTo(...P(ex, ey)); fctx.lineTo(...P(x - nx * w, y - ny * w)); fctx.closePath(); fctx.fill(); }
   };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
   const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, eyeClosed: { src: OPT.face.images.eyeClosed?.src ?? null, w: OPT.face.images.eyeClosed?.width ?? 0, dx: OPT.face.images.eyeClosed?.dx ?? 0.004, dy: OPT.face.images.eyeClosed?.dy ?? 0.004 }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
@@ -178,7 +170,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       },
       // とじ目は あき目(round)と同じ大きさ・同じ上まつげの描き方: 目頭は細く目じりへ太く、目じりで外へ跳ねる。LAY.eyeSize で一緒に大きくなる
       happy: () => closedLid(1),    // にこっ(∩): まん中が上がり、目じりの跳ねは下へ
-      closed: () => closedLid(-1),  // まばたき・すやすや(∪): まん中が下がり、目じりに下向きのまつげ
+      closed: () => closedLid(-1),  // まばたき・すやすや(∪): まん中が下がり、低め
       surprised: (m) => { const { x, y } = EYE; ell(x, y, 0.027, 0.04, "#fff"); line(0.003); fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(0.027), pu(0.04), 0, 0, Math.PI * 2); fctx.stroke();
         ell(x, y - 0.002, 0.012, 0.016, INK); ell(x - 0.004, y + 0.004, 0.004, 0.005, "#fff"); lash(m, x, y + 0.04, 0.027, 0.012); },
       glare: (m) => { const { x, y } = EYE, rx = 0.03, ry = 0.041; fctx.save(); fctx.beginPath(); fctx.rect(0, py(y + 0.006), faceCanvas.width, faceCanvas.height); fctx.clip();
