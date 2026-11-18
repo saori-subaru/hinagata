@@ -111,7 +111,8 @@ export const DEFAULTS = {
       "bustX": null,
       "hand": {
         "slim": null,
-        "fingers": null
+        "fingers": null,
+        "rings": true
       },
       "waist": {
         "y": 0.555,

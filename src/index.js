@@ -16,7 +16,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch, isArmBone, adultFit, earBlades } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone, adultFit, earBlades, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP } from "./hair/locks.js";
@@ -227,7 +227,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
     if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h), null, bone1, only, soft);
     const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
-    return EB ? joined(rec, EB, EB.under) : rec;
+    if (EB) rec = joined(rec, EB, EB.under);
+    // (not under gloves or gauntlets: their meshes follow the hand at their own cells, and the fingers came through)
+    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf) : null;
+    return FT ? joined(rec, FT, FT.under) : rec;
   }
   function joined(rec, EB, under, bone1, only, soft) {
     const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
