@@ -237,12 +237,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
-      // たて長の目のにっこり: a low arch of the thick lash, its outer end split in two, a short stroke for the lid over it
+      // たて長の目のにっこり: a low arch of the thick lash, its outer end split in two, a thin line over it from the top toward the inner corner
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
         fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        line(0.0018, "#8f7f8ab0"); fctx.beginPath(); mv(0.008, 0.013); qc(0.024, 0.017, 0.039, 0.006); fctx.stroke();   // a short stroke for the lid
+        line(0.0018, "#3f3a52"); fctx.beginPath(); mv(0.004, 0.0125); qc(-0.016, 0.014, -0.036, 0.0); fctx.stroke();   // a thin lash line from the top toward the inner corner
         fctx.restore();
       },
     },
