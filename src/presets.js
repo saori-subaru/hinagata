@@ -187,6 +187,9 @@ export const CHARACTERS = {
 };
 // シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
+  // hair a shade darker than her skin, as on her design sheet (as pale as the skin, the bangs read as a bare forehead), and the ring a light
+  // highlight (the automatic ring is never lighter than 0.85: on pale hair a skin-colored band across the bangs)
+  o.colors.hair = "#e6dcd1";
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
   o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
@@ -195,7 +198,7 @@ export const CHARACTERS = {
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
-        paint: { inner: 0.3 },
+        paint: { inner: 0.3, ring: { color: "#fffaf4" } },
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
         // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
