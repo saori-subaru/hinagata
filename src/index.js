@@ -229,7 +229,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
     if (EB) rec = joined(rec, EB, EB.under);
     // (not under gloves or gauntlets: their meshes follow the hand at their own cells, and the fingers came through)
-    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf) : null;
+    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf, LITE ? { N: 6, DS: 0.009 } : { N: 8, DS: 0.006 }) : null;   // (they are joined after the thinning: fewer rings at lite, or the fingers were half the body's triangles)
     return FT ? joined(rec, FT, FT.under) : rec;
   }
   function joined(rec, EB, under, bone1, only, soft) {

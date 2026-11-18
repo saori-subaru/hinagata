@@ -692,7 +692,7 @@ export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   //
  *  the finger's own radius, buried. The rings start BACK inside the palm, D0 under its surface and coming up over it in 3 mm (as the blades do:
  *  an end standing out of the surface showed its outline's inside), so the seam with the body's own coarse mesh is on the flat of the hand,
  *  not between the knuckles. under: the body's own triangles there (they go). A fist (a weapon held) is left as it is. */
-export function fingerTubes(P, sdf, { N = 10, DS = 0.005, D0 = 0.0004, BACK = 0.008 } = {}) {
+export function fingerTubes(P, sdf, { N = 8, DS = 0.006, D0 = 0.0004, BACK = 0.008 } = {}) {
   const pos = [], nor = [], idx = [], unders = [], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   for (const s of ["L", "R"]) {
     const fingers = ["finger0", "finger1", "finger2", "finger3", "thumb"].map((n) => [P[`${n}.${s}`], n === "thumb" ? null : P[`fingerTip${n.slice(6)}.${s}`]].filter(Boolean)
@@ -723,7 +723,7 @@ export function fingerTubes(P, sdf, { N = 10, DS = 0.005, D0 = 0.0004, BACK = 0.
           else { const e = over(q)[1].map((v, k) => v - b[k]), ea = dot(e, ax), e1 = e.map((v, k) => v - ax[k] * ea), el = Math.hypot(...e1) || 1, dn = dot(d, e1) / el, w = d.map((v, k) => v - e1[k] / el * dn), wl = Math.hypot(...w);
             if (wl > 0.15) { const wd = w.map((v) => v / wl), h = hit(q, wd, l); if (h != null) { q = q.map((v, k) => v + wd[k] * h); u = h; } } } }
         const n = u == null ? d : grad4(g, q[0], q[1], q[2], 0.0005); pos.push(q[0], q[1], q[2]); nor.push(n[0], n[1], n[2]); };
-      const ts = []; for (let t = -BACK; t < total; t += DS) ts.push(t); for (const k of [0, 0.4, 0.7, 0.9]) ts.push(total + rT * k);
+      const ts = []; for (let t = -BACK; t < total; t += DS) ts.push(t); for (const k of DS > 0.007 ? [0, 0.55, 0.88] : [0, 0.4, 0.7, 0.9]) ts.push(total + rT * k);
       for (const t of ts) { const [m, U, V, r, ax] = ring(t); for (let j = 0; j < N; j++) { const f = 2 * Math.PI * j / N; put(m, U.map((v, k) => v * Math.cos(f) + V[k] * Math.sin(f)), r, ax); } }
       put(last.a.map((v, k) => v + last.d[k] * last.L), last.d, rT, last.d);   // the tip
       const S = ts.length - 1, tip = pos.length / 3 - 1, Vx = (i, j) => v0 + i * N + (j % N), i0 = idx.length;
