@@ -584,9 +584,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
-      const write = mode !== "all", test = mode === "none" || (mode === "front" && HAIR_BACK.includes(k));
-      if (f.userData.hairStencil !== write) { Object.assign(f, { stencilWrite: write, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = write; }
-      if (o.userData.hairStencil !== test) { Object.assign(o, { stencilWrite: test, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = test; }
+      // hair.tail.outline: the tails mark their own pixels (2), so their line shows where they lie over the other hair, and the other hair's over them; between their own locks there is none
+      const ref = k === "tails" && OPT.hair.tail?.outline ? 2 : 1, write = mode !== "all", test = mode === "none" || (mode === "front" && HAIR_BACK.includes(k)), fk = write ? ref : 0, ok = test ? ref : 0;
+      if (f.userData.hairStencil !== fk) { Object.assign(f, { stencilWrite: write, stencilRef: ref, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); f.userData.hairStencil = fk; }
+      if (o.userData.hairStencil !== ok) { Object.assign(o, { stencilWrite: test, stencilRef: ref, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp }); o.userData.hairStencil = ok; }
       x.o.renderOrder = test ? 1 : 0; }
   }
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)

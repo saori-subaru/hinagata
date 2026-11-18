@@ -8,6 +8,7 @@ export { PART_LABELS, EXPRESSIONS, DRAWN_PREFIX, partIds, expressionId };
 
 // Eyes that blink (the closed eye is drawn for a moment)
 const BLINKS0 = ["round", "sparkle", "classic", "surprised", "glare", "sanpaku", "lidded", "tall", "image"];
+const SHUT = { tall: "tallClosed" };   // an eye's own closed eye, drawn while it blinks (the others: "closed")
 
 // Iris colors from one base color: a darker top, the base, two lighter bands toward the bottom (the default's hand-picked steps, as offsets in HSL)
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -227,6 +228,15 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.02, 0.06); qc(0.002, 0.065, 0.026, 0.056); fctx.stroke();   // the lid's crease
         fctx.restore();
       },
+      // たて長の目のとじ目 (シルヴィ's design sheet): the lash as a thick bar low in the eye (where the lids meet), sagging a little and
+      // fullest in the middle, its outer end split in two; the lid's crease over its inner part
+      tallClosed: () => {
+        const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y));
+        fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
+        fctx.beginPath(); mv(-0.037, -0.011); qc(0.008, -0.0185, 0.05, -0.011); ln(0.057, -0.0095); ln(0.0505, -0.0165); ln(0.056, -0.0225); qc(0.008, -0.04, -0.036, -0.022); ln(-0.032, -0.016); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
+        fctx.restore();
+      },
     },
     brows: {
       image: () => imgPart("brow", BROW.x, BROW.y),
@@ -296,7 +306,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
     drawBlush();
     // blinking: the closed eye drawn as its own entry (face.images.eyeClosed) whatever the open eye is, else the code's line
-    for (const slot of SLOTS) { const shut = slot === "eyes" && blinking && BLINKS.has(sel.eyes), name = shut ? (PART_IMG.eyeClosed.img ? "imageClosed" : "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
+    for (const slot of SLOTS) { const shut = slot === "eyes" && blinking && BLINKS.has(sel.eyes), name = shut ? (PART_IMG.eyeClosed.img ? "imageClosed" : SHUT[sel.eyes] ?? "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       const other = slot === "eyes" && !shut ? otherEye(name) : null;   // the other eye's own picture, if this eye has one
       const own = slot === "brows" && BROWS; if (own) { fctx = BROWS.ctx; fctx.setTransform(1, 0, 0, 1, 0, 0); fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height); fctx.translate(0, pu(BROWS.up)); }
       if (SIDED[slot]) for (const m of [1, -1]) { if (m < 0 && other) { imgPart(other, -(EYE.x + 2 * PART_IMG[other].dx), EYE.y); continue; }   // (placed at the mirrored point: imgPart adds dx)

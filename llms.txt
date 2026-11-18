@@ -86,7 +86,7 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); r
 ```
 - three.js 0.160.0 (the import map above). Light it like a toon character: a HemisphereLight and a DirectionalLight (the shading is cel-style).
 - Inside the hair only the bangs draw lines between their locks; the back hair and tails keep only their outer edge (`outline.hairInner`:
-  "front", default; "all" / "none"). That uses the stencil buffer, so keep the renderer's (`new THREE.WebGLRenderer({ stencil: true })`: the default in 0.160, not after 0.163). Without
+  "front", default; "all" / "none"; `hair.tail.outline: true` gives a tail its own line over the other hair). That uses the stencil buffer, so keep the renderer's (`new THREE.WebGLRenderer({ stencil: true })`: the default in 0.160, not after 0.163). Without
   one the lines inside the hair simply show.
 - Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world (an adult about 1.7 m).

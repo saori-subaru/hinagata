@@ -23,7 +23,7 @@ export const CHARACTERS = {
           chin: { k: 0.024, sharp: 0.1 },
           cheekTrim: { depth: 0 },
           cheekFill: { depth: 0.004 },
-          ears: { elf: { on: true, length: 0.255, width: 0.05, angle: -20 } },
+          ears: { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } },   // short, level and a little back, as on her design sheet: their tips show beside the hair
         },
       },
       outfit: {   // (2026-11-17, from Saori's design sheet: a hooded capelet closed with two buttons, cuffs, a petticoat, strapped boots)
@@ -46,12 +46,17 @@ export const CHARACTERS = {
         { kind: "cross", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.034, color: "#66907d", mirror: true, lift: 0.0138 },
       ],
       hair: {
-        tail: { kind: "side", y: 1.18, count: 4, width: 0.07, spread: 1.0, waves: 0.5, tiers: 3, tierFlick: 0.025, tie: { size: 1.6 } },   // the tie as big and as high as on her design sheet (measured against the eyes)
+        // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
+        // with its own outline over the other hair (without it, the same color, it read as part of the head)
+        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
         // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
         // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
-        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
+        // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
+        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
+          { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
+          { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
@@ -75,22 +80,22 @@ export const CHARACTERS = {
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
-            // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
-            // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes.
-            // Behind the ears (2, 9 and the inner 13, 14, 20, 21) longer and flicked out: the sides flare at the jaw while the nape hugs (her design sheet)
+            // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
+            // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
+            // (2, 9) they hang to the jaw
             edits: [
-              { i: 0, dy: -0.0922, da: 0.46 },
-              { i: 1, dy: -0.01, da: -3.67 },
-              { i: 2, dy: -0.03, da: -5.05, fl: 0.012 },
-              { i: 9, dy: -0.03, da: 5.05, fl: 0.012 },
-              { i: 10, dy: -0.01, da: 3.67 },
-              { i: 11, dy: -0.0922, da: -0.46 },
-              { i: 13, dy: -0.012, fl: 0.012 },
-              { i: 14, dy: -0.001, fl: 0.012 },
-              { i: 20, dy: -0.001, fl: 0.012 },
-              { i: 21, dy: -0.012, fl: 0.012 },
-              { i: 26, dy: 0.0251, da: 11.34 },
-              { i: 27, dy: 0.012, da: -15.16 },
+              { i: 0, da: 0.46 },
+              { i: 1, dy: 0.03, da: -3.67, fl: -0.006 },
+              { i: 2, dy: 0.02, da: -5.05, fl: -0.004 },
+              { i: 9, dy: 0.02, da: 5.05, fl: -0.004 },
+              { i: 10, dy: 0.03, da: 3.67, fl: -0.006 },
+              { i: 11, da: -0.46 },
+              { i: 12, dy: 0.05 },
+              { i: 13, dy: 0.09 },
+              { i: 14, dy: 0.01 },
+              { i: 20, dy: 0.01 },
+              { i: 21, dy: 0.09 },
+              { i: 22, dy: 0.05 },
             ],
             stiff: 2.7,
           },

@@ -201,7 +201,7 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
- * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side) }.
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
 export function drawnLocks(list, { toRoot, N = 16 }) {
@@ -216,7 +216,8 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1 });
+      const tp = Math.min(1, Math.max(0, d.taper ?? 0));   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : undefined });
     }
   }
   return out;
@@ -226,7 +227,7 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
  * Tails (hair.tail, 2026-10-05, Saori: side tails, twin tails, ponytails): a bundle of locks from a tie on the head. Each lock leaves the tie
  * outward (o: away from the head, a little up), arcs over and falls, the tips fanning out; then it is pushed out of the head and the body.
  * T: { count, length, volume (the bundle's radius at the tie, m), width, thick, lift (how far it stands out before falling), spread, stiff,
- *      size (×: the bundle and each lock's width together, how thick the tail looks) }
+ *      size (×: the bundle and each lock's width together, how thick the tail looks), flare (m: the tips fanned out from the head) }
  * anchors: [{ p, o }] the ties (root space, rest) and their outward directions / coll, ell: as for the other locks (colliders(), the head)
  */
 export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
@@ -239,15 +240,16 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
     const dirOf = (i) => { const a = i * 2.39996 + 0.3; return [0, 1, 2].map((k) => u[k] * Math.cos(a) + v[k] * Math.sin(a)); };   // spread over the bundle's cross-section (golden angle)
     // tiers: the locks end in TN steps, each TIER_STEP of the length shorter, the ones furthest out from the head shortest, so the steps
     // show on the tail's outer edge (spread over the bundle, the short ones' tips were lost inside it)
-    const TN = Math.max(1, Math.round(T.tiers ?? 1)), tierOf = new Array(n).fill(0);
-    if (TN > 1) [...Array(n).keys()].map((i) => [Math.sqrt((i + 0.5) / n) * (dirOf(i)[0] * o[0] + dirOf(i)[2] * o[2]) / ul, i]).sort((p, q) => q[0] - p[0]).forEach(([, i], k) => { tierOf[i] = TN - 1 - Math.floor(k * TN / n); });
+    const TN = Math.max(1, Math.round(T.tiers ?? 1)), tierOf = new Array(n).fill(0), outOf = new Array(n).fill(0), FLARE = T.flare ?? 0;
+    if (TN > 1 || FLARE) [...Array(n).keys()].map((i) => [Math.sqrt((i + 0.5) / n) * (dirOf(i)[0] * o[0] + dirOf(i)[2] * o[2]) / ul, i]).sort((p, q) => q[0] - p[0]).forEach(([, i], k) => { if (TN > 1) tierOf[i] = TN - 1 - Math.floor(k * TN / n); outOf[i] = n > 1 ? 1 - k / (n - 1) : 1; });
     for (let i = 0; i < n; i++) {
       const r = Math.sqrt((i + 0.5) / n), dir = dirOf(i), tier = tierOf[i];
       const len = T.length * (1 - tier * TIER_STEP) * ((0.82 + 0.3 * hash(i)) * (1 - GA) + (1.02 - 0.2 * r * r) * GA), lift = T.lift * (0.8 + 0.4 * hash(i + 7)), fan = (T.spread ?? 1.5) * VOL * r;
       const sh = [o[0] / ul, 0, o[2] / ul].map((x) => x * VOL * TIER_OUT * tier);   // a shorter step hangs further out, over the longer ones (shingles), so its tips show on the edge
       const root = p.map((x, k) => x + dir[k] * VOL * r * 0.45), tipIn = VOL * r * 0.45 * GA * (TN > 1 ? 1 - tier / (TN - 1) : 1);   // tipIn: back toward the bundle's middle at the tip (not a short step's: its tip stays on the outer edge)
+      const fo = [o[0] / ul, 0, o[2] / ul].map((x) => x * FLARE * outOf[i]);   // flare (m): the tips fan out from the head, the outermost lock by all of it, the innermost hanging straight
       const B = [root, root.map((x, k) => x + o[k] * lift * 1.6 + (k === 1 ? 0.015 : 0)),   // a cubic Bezier: out from the tie, over, and down
-        root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 + sh[k] * 0.6 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) + sh[k] - (k === 1 ? len : 0))];
+        root.map((x, k) => x + o[k] * lift * 1.3 + dir[k] * fan * 0.5 + sh[k] * 0.6 + fo[k] * 0.4 - (k === 1 ? len * 0.45 : 0)), root.map((x, k) => x + o[k] * lift * 0.7 + dir[k] * (fan * (1 - GA) - tipIn) + sh[k] + fo[k] - (k === 1 ? len : 0))];
       const P = []; for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; P.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
       if (T.wave) { const ol = Math.hypot(o[0], o[2]) || 1, wd = [o[0] / ol, 0, o[2] / ol], ph = 0.4 * (hash(i + 11) - 0.5);   // wave (m): the bundle snakes out and in from the head as it falls, all its locks together (2026-10-05, Saori: Nahida's tail)
         P.forEach((q, j) => { const t = j / (N - 1), e = T.wave * Math.sin(2 * Math.PI * (T.waves ?? 1.5) * t + ph) * sstep(0.1, 0.4, t); for (let k = 0; k < 3; k++) q[k] += wd[k] * e; }); }

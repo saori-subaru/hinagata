@@ -767,6 +767,8 @@ export const DEFAULTS = {
       "waves": 1.5,
       "tiers": 1,
       "tierFlick": 0,
+      "flare": 0,
+      "outline": false,
       "tie": {
         "on": true,
         "color": "#c94a4a",
