@@ -163,13 +163,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null, make = null, bells = null) {   // make: a part made directly as triangles ({ pos, nor, idx }), not from a distance
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
+    // the fingers' rings (body/index.js fingerTubes; not under gloves or gauntlets: their meshes follow the hand at their own cells, and the
+    // fingers came through). The body's own fingers go BEFORE the thinning: thinned with them, long triangles bridged the dips between the
+    // knuckles and stood out over the rings as stray lines. The rings are joined after it (fewer at lite: they were half the body's triangles)
+    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf, LITE ? { N: 6, DS: 0.009 } : { N: 8, DS: 0.006 }) : null;
+    if (w && FT) rec = without(rec, FT.under);
     if (w && MS) { rec = simplified(rec, name); }   // a worker builds full meshes; they are thinned here (with their skin weights)
-    const sk = { bone1, only, soft, bells };   // (skin weights for what withParts joins)
+    const sk = { bone1, only, soft, bells, FT };   // (skin weights for what withParts joins)
     if (w) fresh[name] = rec = withParts(name, rec, sk);
     if (!rec && make) { const r = make(); const { si, sw } = skinOf(r.pos, weightsAt, BI, bone1, only, soft); rec = fresh[name] = { ...r, si, sw }; time = { sample: 0, project: 0 }; }
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
+      if (FT) ({ pos, nor, idx } = without({ pos, nor, idx }, FT.under));
       if (MS) ({ pos, nor, idx } = simplified({ pos, nor, idx }, name));
       const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only, soft);
       rec = fresh[name] = withParts(name, { pos, nor, idx, si, sw }, sk);
@@ -223,14 +229,23 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   // made apart and joined to their part: the elf ears' blades (rings on the body's surface, body/index.js earBlades; the body's own triangles
   // under them go), the ahoge (hair/index.js ahogeMesh, on the head bone) and bell sleeves (sheets, sdf/sheet.js; the shirt's spec)
-  function withParts(name, rec, { bone1, only, soft, bells } = {}) {
+  function withParts(name, rec, { bone1, only, soft, bells, FT } = {}) {
     if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
     if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h), null, bone1, only, soft);
     const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
     if (EB) rec = joined(rec, EB, EB.under);
-    // (not under gloves or gauntlets: their meshes follow the hand at their own cells, and the fingers came through)
-    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf, LITE ? { N: 6, DS: 0.009 } : { N: 8, DS: 0.006 }) : null;   // (they are joined after the thinning: fewer rings at lite, or the fingers were half the body's triangles)
-    return FT ? joined(rec, FT, FT.under) : rec;
+    return FT ? joined(rec, FT, null) : rec;
+  }
+  // a mesh without the triangles whose three corners are all under(x, y, z)
+  function without(rec, under) {
+    const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
+    for (let v = 0; v < n; v++) drop[v] = under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
+    for (let t = 0; t < idx.length; t += 3) if (!(drop[idx[t]] && drop[idx[t + 1]] && drop[idx[t + 2]])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
+    let m = 0; for (const v of kept) if (map[v] < 0) map[v] = m++;
+    const P2 = new Float32Array(m * 3), N2 = new Float32Array(m * 3), SI = si ? new si.constructor(m * 4) : null, SW = sw ? new Float32Array(m * 4) : null;
+    for (let v = 0; v < n; v++) { const u = map[v]; if (u < 0) continue; for (let c = 0; c < 3; c++) { P2[u * 3 + c] = pos[v * 3 + c]; N2[u * 3 + c] = nor[v * 3 + c]; } if (SI) for (let c = 0; c < 4; c++) { SI[u * 4 + c] = si[v * 4 + c]; SW[u * 4 + c] = sw[v * 4 + c]; } }
+    const I = Uint32Array.from(kept, (v) => map[v]);
+    return SI ? { pos: P2, nor: N2, idx: I, si: SI, sw: SW } : { pos: P2, nor: N2, idx: I };
   }
   function joined(rec, EB, under, bone1, only, soft) {
     const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
