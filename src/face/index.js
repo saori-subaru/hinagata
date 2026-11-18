@@ -242,7 +242,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
         fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
-        line(0.0018, "#3f3a52"); fctx.beginPath(); mv(0.004, 0.0125); qc(-0.016, 0.014, -0.036, 0.0); fctx.stroke();   // a thin lash line from the top toward the inner corner
+        line(0.0018, "#8f7f8ab0"); fctx.beginPath(); mv(0.004, 0.0125); qc(-0.016, 0.014, -0.036, 0.0); fctx.stroke();   // a thin lid-colored line from the top toward the inner corner
         fctx.restore();
       },
     },
@@ -309,7 +309,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     if (B.cheeks.on) for (const m of [1, -1]) soft(m * B.cheeks.x, B.cheeks.y, B.cheeks.size, 0.68, B.cheeks.color, B.cheeks.strength);
     const n = B.cheeks.on ? B.cheeks.hatch ?? 0 : 0;   // thin upright strokes over the blush (a pencil drawing's cheeks), longest in the middle
     if (n) for (const m of [1, -1]) { const { x, y, size: r } = B.cheeks; line(0.0011, B.cheeks.hatchColor ?? "#e07a8a");
-      for (let i = 0; i < n; i++) { const u = (i + 0.5) / n * 2 - 1, h = r * 0.62 * Math.sqrt(1 - u * u) * (0.8 + 0.2 * Math.cos(i * 2.3)), X = m * x + u * r * 0.8; fctx.beginPath(); fctx.moveTo(px(X + 0.001), py(y + h)); fctx.lineTo(px(X - 0.001), py(y - h)); fctx.stroke(); } }
+      for (let i = 0; i < n; i++) { const u = (i + 0.5) / n * 2 - 1, h = r * 0.62 * Math.sqrt(1 - u * u) * (0.8 + 0.2 * Math.cos(i * 2.3)), X = m * x + u * r * 0.8;
+        // broken like a pencil stroke: each line in 2–3 pieces with small gaps, placed by the line's index (the same every redraw)
+        const k = 2 + (i % 2), g = 0.12 + 0.06 * Math.sin(i * 1.7); for (let j = 0; j < k; j++) { const t0 = j / k + (j ? g / k : 0), t1 = (j + 1) / k - (j < k - 1 ? g / k : 0), Y = (t) => y + h - 2 * h * t, Xt = (t) => X + 0.001 - 0.002 * t;
+          fctx.beginPath(); fctx.moveTo(px(Xt(t0)), py(Y(t0))); fctx.lineTo(px(Xt(t1)), py(Y(t1))); fctx.stroke(); } } }
     if (B.nose.on) soft(0, 0.929 + OPT.body.sculpt.nose.lift - FACE.dy, B.nose.size, 0.85, B.nose.color, B.nose.strength);   // 鼻先(頭の座標。body/index.js の鼻の先端と同じ高さ)
   }
   for (const { id } of DRAWN) {   // a part not drawn for this expression falls back to the ふつう picture
