@@ -213,8 +213,11 @@ export const CHARACTERS = {
             tips: [
               [-81.52, 0.887, 0.69, 0.33, null, 6],
               [-59.948, 0.918, 0.5, 0, null, 5.5],
-              [-54, 0.9215, null, null, null, -9.9, 0, 0, 0.58, 0, -0.5],   // outside the eye, hooking in to the cheek
-              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.32],   // over the eye: a narrow lock flowing out, to the lash
+              [-54, 0.9215, null, null, null, -9.9, 0, 0, 1.229, 0, -0.5],   // outside the eye, hooking in to the cheek
+              // the other side's 40.6 lock mirrored: without it the forehead showed between the locks up to the hairline, unoutlined (a bald patch from a quarter view).
+              // A lock is as wide as the gap to its neighbours: the widths beside it (1.229, 0.48) keep those two as wide as they were
+              [-40.6, 1.008, null, null, null, 10, 0.002, 0, 0.606, 0, 0.7],
+              [-25.6, 1.031, null, null, null, 7, 0.002, 0, 0.48, 0, 1],   // over the eye: a narrow lock flowing out, to the lash, lying against the middle blade's edge (lean 1, as 26.1 does)
               [-0.4, 1.007, null, null, null, 4.4, -0.004, 0, 0.42, 0, -0.67],   // under the middle one, its point showing below it
               [11.35, 1.004, 0.8, 0.04, "c", 0, 0.004, 0, 1.38, 0, -0.75],   // the middle: a wide blade, its point beside the far eye's inner corner
               [26.1, 1.023, 0.8, 0, "c", -6.6, 0, 0, 0.35, 0, -1],   // from the middle one's edge out over the eye
