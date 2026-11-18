@@ -237,11 +237,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         line(0.0016, "#8f7f8a90"); fctx.beginPath(); mv(-0.032, 0.002); qc(-0.018, 0.001, -0.003, -0.001); fctx.stroke();
         fctx.restore();
       },
-      // たて長の目のにっこり: the same thick lash as an arch drooping to the outer corner (タレ目), low at the inner corner, its outer end split in two
+      // たて長の目のにっこり: the same thick lash as an arch drooping to the outer corner (タレ目), the inner end running out flat (no hook down), its outer end split in two
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.04, -0.009); bz(-0.022, 0.006, 0.024, 0.03, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); bz(0.022, 0.007, -0.016, -0.005, -0.034, -0.016); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        fctx.beginPath(); mv(-0.042, 0.004); bz(-0.015, 0.011, 0.024, 0.026, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); bz(0.022, 0.005, -0.012, 0.0, -0.04, -0.002); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
         fctx.restore();
       },
     },
