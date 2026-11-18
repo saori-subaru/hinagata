@@ -196,10 +196,10 @@ export const CHARACTERS = {
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3 },
-        // the sidelocks: from under the bangs' edge straight down along the cheeks, curving in a little under the jaw (her design sheet; head space).
-        // Rooted further back, they came out from under the side locks' hem and looked cut off. stiff 1: a run blew them back level with the ears
+        // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
+        // straight down along the cheeks, curving in a little under the jaw (head space)
         // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
-        drawn: [{ pts: [[0.12, 1.11, 0.14], [0.15, 1.03, 0.13], [0.172, 0.94, 0.115], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
+        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
           { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {

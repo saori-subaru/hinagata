@@ -241,7 +241,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       tallHappy: () => {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
-        fctx.beginPath(); mv(-0.04, -0.004); qc(-0.004, 0.034, 0.049, -0.024); ln(0.057, -0.026); ln(0.05, -0.031); ln(0.052, -0.039); qc(-0.002, 0.008, -0.034, -0.011); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
+        fctx.beginPath(); mv(-0.04, -0.009); qc(0.001, 0.037, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.003, 0.011, -0.034, -0.016); fctx.closePath(); fctx.fillStyle = "#3f3a52"; fctx.fill();
         fctx.restore();
       },
     },
