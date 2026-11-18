@@ -13,7 +13,7 @@ export const CHARACTERS = {
       colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#4f957a" },
       body: {
         proportion: { legs: 1.65, torso: 1.3, arms: 1.45 },   // arms: made when the tall default was 1.45
-        head: { scale: 0.69, depth: 0.92 },
+        head: { scale: 0.69, depth: 0.92, crown: 1.2 },   // the top of the head as high over the eyes as on her design sheet
         torso: { chest: 0.92, belly: 0.6, waist: 0.026, hips: 0.92, bust: 0.77, butt: 0.96, back: 0.56 },
         thickness: { upperArm: 0.77, forearm: 0.74, thigh: 0.6, thighTop: 0.61, calf: 0.6 },
         knees: { blush: { on: true }, line: { on: true } },   // pink knees with the kneecap's line, as on her sheet
