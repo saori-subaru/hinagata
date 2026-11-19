@@ -209,23 +209,32 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
- * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper }.
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
+ * fromWhorl (with W = { d, r, surf, center, rootW }, hair.sculpt.whorl on): a path over the head from the whorl to the stroke's first point
+ * goes before it, the lock narrow at the whorl and full from that point (else a wing drawn behind the ear stood out of the head like a horn) }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
-export function drawnLocks(list, { toRoot, N = 16 }) {
+export function drawnLocks(list, { toRoot, N = 16, W = null }) {
   const out = [];
   for (const d of list ?? []) {
     if (!d?.pts || d.pts.length < 2) continue;
     for (const m of d.mirror ? [1, -1] : [1]) {
-      const P = d.pts.map(([x, y, z]) => [x * m, y, z]), acc = [0];
+      let P = d.pts.map(([x, y, z]) => [x * m, y, z]), t0 = 0; const acc = [0];
+      if (d.fromWhorl && W) { const c = W.center, e0 = P[0].map((v, k) => v - c[k]), r0 = Math.hypot(...e0), u0 = e0.map((v) => v / r0), h0 = r0 - surfaceAlong(W.surf, c, u0), off = 0.009, pre = [];   // (off: over the back's locks)
+        for (let q = 0; q < 8; q++) { const t = q / 8, u = W.d.map((v, k) => v * (1 - t) + u0[k] * t), ul = Math.hypot(...u), e = u.map((v) => v / ul), at = surfaceAlong(W.surf, c, e) + off + (h0 - off) * sstep(0.5, 1, t);   // (between the two the chord's directions, along the surface; lifting to the stroke's start over the last half)
+          pre.push(e.map((v, k) => c[k] + v * at)); }
+        P = [...pre, ...P]; }
       for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
-      const L = acc.at(-1); if (L < 0.01) continue;
+      const L = acc.at(-1); if (L < 0.01) continue; if (d.fromWhorl && W) t0 = acc[8] / L;
       const pts = []; let j = 0;
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      const tp = Math.min(1, Math.max(0, d.taper ?? 0));   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : undefined });
+      const tp = Math.min(1, Math.max(0, d.taper ?? 0)), p1 = tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : width;   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
+      // from the whorl: narrow there and flat over the head (as thick as the stroke, a round wing's 4.5 cm lay on the head as a lump), full at the stroke's start
+      const prof = t0 ? (t) => t < t0 ? W.rootW + (1 - W.rootW) * sstep(0, t0, t) : p1((t - t0) / (1 - t0)) : tp ? p1 : undefined, fl = Math.min(1, 0.15 / (d.thick ?? 0.3));
+      const tprof = t0 ? (t) => fl + (1 - fl) * sstep(0.7 * t0, t0, t) : undefined;
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof, tprof });
     }
   }
   return out;
@@ -309,8 +318,12 @@ export const width = (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.m
 // band (0..1): the lock keeps its width further down and narrows to its point later (0: from its middle, a spike; 1: a band cut to a point at its end)
 export const widthFor = (band) => { if (!(band > 0)) return width; const p = 3 + 6 * Math.min(1, band); return (t) => (1 + 0.25 * Math.sin(Math.PI * t)) * Math.pow(Math.max(0, 1 - Math.pow(t, p)), 0.8); };
 
-function resample(P, n) {   // n points spaced evenly along the polyline P, its ends kept
-  const L = [0]; for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
+// n points spaced evenly along the polyline P, its ends kept. bend > 0: closer where it turns (each link counts its length plus bend × the
+// whole length × its ends' turns, radians, half each): a lock from the whorl in 5 points lost the flick at its tip between two of them
+function resample(P, n, bend = 0) {
+  const sl = [], tu = [0]; for (let i = 1; i < P.length; i++) sl.push(Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
+  for (let i = 1; i + 1 < P.length; i++) { const a = P[i].map((v, c) => v - P[i - 1][c]), b = P[i + 1].map((v, c) => P[i + 1][c] - P[i][c]); tu.push(Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / ((sl[i - 1] * sl[i]) || 1))))); } tu.push(0);
+  const Lt = sl.reduce((a, b) => a + b, 0), L = [0]; for (let i = 1; i < P.length; i++) L.push(L[i - 1] + sl[i - 1] + bend * Lt * 0.5 * (tu[i - 1] + tu[i]));
   const out = []; let k = 0; for (let q = 0; q < n; q++) { const d = L.at(-1) * q / (n - 1); while (k < P.length - 2 && L[k + 1] < d) k++; const t = (d - L[k]) / ((L[k + 1] - L[k]) || 1); out.push(P[k].map((v, c) => v + (P[k + 1][c] - v) * t)); }
   return out;
 }
@@ -350,8 +363,8 @@ export function colliders(J, BI, sdf) {
 // rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
-  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points) }));
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points, bendPts) }));
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
@@ -466,7 +479,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
         const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.tprof ? s.tprof(t) : 1) * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const tl = w * ht * bulge + (s.tilt ? s.tilt * u * hw : 0);   // tilt: across the lock, one edge up and the other down (bangLocks' shingle)
           const x = cx + ax * (u * hw + cu) + ox * tl, y = cy + ay * (u * hw + cu) + oy * tl, z = cz + az * (u * hw + cu) + oz * tl;

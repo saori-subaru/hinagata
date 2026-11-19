@@ -670,7 +670,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
-    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, uvAt: ringUV, rigid: OPT.hair.rigid ?? 0, points: OPT.hair.lockPoints ?? 0, oneShade: OPT.hair.paint.oneShade ?? 0, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), U); x.m.material = x.wrap(x.m.material); x.sim = sim; return x; };
+    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, uvAt: ringUV, rigid: OPT.hair.rigid ?? 0, points: OPT.hair.lockPoints ?? 0, bendPts: WHORL ? 0.3 : 0, oneShade: OPT.hair.paint.oneShade ?? 0, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), U); x.m.material = x.wrap(x.m.material); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
@@ -720,7 +720,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { ...whorlOf().whorl, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
