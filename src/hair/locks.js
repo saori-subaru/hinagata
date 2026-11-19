@@ -168,7 +168,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       if (WH) { const td = tip.map((v, q) => v - center[q]), dd = td[0] * WH.d[0] + td[1] * WH.d[1] + td[2] * WH.d[2], tg = td.map((v, q) => v - WH.d[q] * dd), tl = Math.hypot(...tg) || 1;   // off the whorl toward its tip
         rd = WH.d.map((v, q) => v + tg[q] / tl * WH.r); const rl = Math.hypot(...rd); rd = rd.map((v) => v / rl); }
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
-      let reach = 0, last = null; const shW = shWof(tipA);
+      let reach = 0, last = null;
       const thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
       const upper = 1.15 * Math.hypot(...tip.map((v, m) => v - root[m])), share = upper / (upper + hang);   // the points spread over the whole length
       for (let q = 0; q < N; q++) { const t = q / (N - 1);
@@ -176,7 +176,8 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
         if (t <= share || !hang) { const tu = hang ? t / share : t, p = root.map((v, m) => v + (tip0[m] - v) * tu + (tip[m] - tip0[m]) * swk(tu)), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
           const off = 0.5 * w / sx * thick * prof(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
           px = center[0] + u[0] * at; py = center[1] + u[1] * at; pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
-          if (WH && py > center[1]) {} else if (SH) { reach = Math.max(reach, hr); const want = hr + (reach - hr) * (SH.hang ?? 0) + flareAt(py) * shW, k = want / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; }
+          if (WH && py > center[1]) {} else if (SH) {   // on the shape at the height it was headed for (pushed onto the head along the ray from its middle, it rose up the neck: short locks, short flicks)
+            const q = leave(p[1], Math.atan2(px, pz - center[2]) - A0), qh = Math.hypot(q[0], q[2] - center[2]) || 1, k = (qh + Math.max(0.002, off)) / qh; px = q[0] * k; py = q[1]; pz = center[2] + (q[2] - center[2]) * k; }
           else if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
           last = [px, py, pz]; }
         else { const th = (t - share) / (1 - share), gt = 0.7 * Math.sin(0.5 * Math.PI * th); px = last[0] + (mid[0] - last[0]) * gt; pz = last[2] + (mid[2] - last[2]) * gt; py = last[1] - (last[1] - tipY) * th;   // hanging down, the clump's locks gathering into one tuft (else they hung apart, a row of strings)
