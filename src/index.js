@@ -615,7 +615,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
-  // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (backup/mottle has the code)
+  // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (commit 119beb1 has the code)
   const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
   // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
   // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
