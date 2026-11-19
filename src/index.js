@@ -10,6 +10,7 @@ import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
+import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
@@ -33,6 +34,7 @@ export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABE
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
+export { encodeBake, decodeBake };   // a baked character's file (bake.js)
 export { CHARACTERS } from "./presets.js";   // ready-made characters (presets.js): createAvatar(CHARACTERS.sylvie.file)
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
@@ -66,6 +68,8 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *             spare: false (default) — armor and the bodysuit that aren't worn are built only when put on (setWorn); true builds them now (an editor),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
+ *             baked: a baked character (avatar.bake()'s ArrayBuffer, or a URL of it) — its meshes are used instead of building when it is of
+ *               this recipe's shape, this quality and this engine; otherwise the character is built as without it (avatar.baked says which),
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             workers: true (default) — build the parts in a few Web Workers at once (body and hair together, then the clothes);
  *                      the same mesh as on the main thread. Falls back to the main thread when workers can't start,
@@ -79,7 +83,7 @@ function shapeOnly(OPT) {
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
-export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, baked = null, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -124,11 +128,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const sheetK = LITE ? 2 : 1;   // the cloth sheets' cells times this (parts.js sheetCell): never thinned, at lite they were most of the triangles; trims ripple a little up close
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK, ONE) : null;
-  const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
+  const cacheKey = hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK, ONE);
+  // settings.baked (bake.js): this build's meshes from a file. Its key is the cache's: another recipe, quality or engine is built as without it
+  const bake = baked ? await openBake(baked) : null, bakeHit = bake?.key === cacheKey;
+  if (baked && bake && !bakeHit) console.warn("Hinagata: the baked character is of another recipe, quality or engine; building it.");
+  const hit = bakeHit ? bake.parts : useCache ? await cacheGet(cacheKey) : null, fresh = {};
   // armor and the bodysuit that aren't worn are not built now (a game waited for armor nobody wore as long as for the clothes; the suit is
   // a whole body of triangles): built when put on (setWorn), here on the main thread. settings.spare builds them anyway (the editor:
   // everything ready to put on at once). What the cache has comes anyway (it costs nothing)
+  const built = {};   // what this build made (fresh, as it was when the build ended), for avatar.bake()
   const LATER = new Set([...(!spare && !OPT.outfit.armor.on ? ARMOR : []), ...(!spare && !OPT.outfit.suit?.on ? ["suit"] : [])].filter((k) => !hit?.[k]));
   let building = true;
 
@@ -1119,6 +1127,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       return K.toRoot(...K.center.map((v, i) => v + d[i] * t)); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
+    /** This build's meshes as a file (ArrayBuffer) for createAvatar(recipe, { baked }): the same recipe at the same quality comes without building.
+     *  What was changed after the build (setHair, setWorn) is not in it. */
+    bake() { return encodeBake({ key: cacheKey, parts: { ...(hit ?? {}), ...built } }); },
+    baked: bakeHit,   // true: the meshes came from settings.baked
     async exportGLB() {
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       const outs = []; root.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
@@ -1137,7 +1149,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   };
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
-  building = false;
+  building = false; Object.assign(built, fresh);
   if (useCache && Object.keys(fresh).length) cachePut(cacheKey, fresh);   // not awaited: storing happens after the avatar is already on screen
   return avatar;
 }

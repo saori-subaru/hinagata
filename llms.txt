@@ -100,6 +100,10 @@ simulated on the CPU every frame. Budget for both:
   character is small on the screen, and not at all when it is off the screen. Without it they are simulated in full every frame:
   about 5 ms a character, 10–13 with a skirt or long hair, 25–30 with a dress, a cape and long hair (a 2.8 GHz cloud CPU). `avatar.detail`
   says what the last update did; `{ detail: "full" | "half" | "low" | "off" }` sets it yourself.
+- A character that doesn't change in the game: bake it once (`const file = avatar.bake()`, an ArrayBuffer: save it beside the recipe), then
+  `createAvatar(recipe, { quality, baked: file or its URL })` takes the meshes from it instead of building them (about a third of the time;
+  the hair's locks are still made). Colors may differ; another shape (clothes, body, hair), quality or engine version doesn't match and is
+  built as usual, with a console warning: `avatar.baked` says which. Bake again after updating the engine.
 - `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, cloth without thickness at its edges, about half the build
   time: crowds, small characters, phones), "fine" (the sharpest shapes, e.g. a nose tip, at about the triangles of
   "game", but about 2.5x as long to build the first time; the default for `body.adult`) or "high" (6.8 mm cells unthinned, 2–3x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.
