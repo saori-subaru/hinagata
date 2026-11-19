@@ -68,13 +68,17 @@ export function ringLocks(L, { cap, center, coll, ellipsoid, bottom, hugY = null
     const len = Math.max(0.05, (root[1] - bottom(th)) * (1 + (L.vary ?? 0.12) * (rnd() - 0.5)) + 0.04 - (E.dy ?? 0));
     const w = (L.width ?? 0.075) * (0.85 + 0.3 * rnd()) * (layer ? 1.15 : 1) * (E.w ?? 1);
     specs.push({ root, len, w, thick: (L.thick ?? 0.3) * (E.th ?? 1), layer, curl: (rnd() - 0.5) * 0.04, rise: true, fl: (L.flick ?? 0) + (E.fl ?? 0), hold: layer ? INNER_HOLD : 1, rigid: layer ? INNER_RIGID : 1,   // rise: it gets its thickness gently (no ridge at the root)
-      group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45, hugW: sstep(0.2, 0.7, -Math.cos(th)) });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
+      group: `ring${Math.min(2, Math.floor(u * 3))}`, cohere: L.cohere ?? 0.45, hugW: sstep(0.2, 0.7, -Math.cos(th)), th });   // the left, the back and the right swing each as one (createLocks; 2026-10-07)
   }
   // flick (m): from the middle down the locks curve away from the head and up (> 0) or in under it (< 0), kept out of the head and the body
   const keepOut = (p, i) => { const r = 0.004; pushOutEllipsoid(p, ellipsoid.c, ellipsoid.r, r); for (const c of coll) pushOutSphere(p, c.c, c.r + r); };
   // hugY / innerHugY (the inner layer): the locks lie on the head down to there, fully at the back, not at all at the sides (hugW): the nape
   // hugs while the sides keep standing out (hugged all round, the sides came in and the hair's outline shrank to a ball)
-  return specs.map((s) => { const hy = s.layer ? innerHugY : hugY; let pts = drape(s, coll, ellipsoid, N, hy == null ? null : hy + (1 - s.hugW) * Math.max(0, s.root[1] - hy));
+  // crown (0..1, the root's width): locks rooted near the whorl (ph near 90) start down the head's meridian (dropped straight from there they
+  // slid off sideways) and widen from a narrow root over their first 40% (as wide at the whorl, they piled up there and parted lower down)
+  const C = L.crown > 0 ? L.crown : 0, cp = C ? (t) => width(t) * (C + (1 - C) * sstep(0, 0.4, t)) : null;
+  return specs.map((s) => { const hy = s.layer ? innerHugY : hugY; let pts = drape(s, coll, ellipsoid, N, hy == null ? null : hy + (1 - s.hugW) * Math.max(0, s.root[1] - hy), C ? s.th : null);
+    if (cp) s.prof = cp;
     if (s.fl) pts = bendLock(pts, s.fl, { center, keepOut });
     return { ...s, pts }; });
 }
@@ -127,7 +131,7 @@ export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
  */
 export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
   const N = B.tips.some((t) => t[7]) ? 14 : N0;   // a flick needs the points for its curve (every lock of the mesh has as many)
-  const prof = widthFor(B.lockBand ?? 0);   // lockBand: how late the locks narrow to their points
+  const RW = B.lockRootW ?? 1, prof0 = widthFor(B.lockBand ?? 0), prof = RW < 1 ? (t) => prof0(t) * (RW + (1 - RW) * sstep(0, 0.4, t)) : prof0;   // lockBand: how late the locks narrow to their points; lockRootW: the root's width (rooted at the whorl, lockRoot near 90)
   const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk, fl, wd, wv, ln]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0, fl: fl ?? 0, wd: wd ?? 1, wv: wv ?? 0, ln: ln ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
   const HY = B.lockHangY ?? 0.86;   // below this (head space) a tuft hangs straight down: off the head, over the shoulders and the chest
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
@@ -174,7 +178,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
         const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
       for (let q = 0; q < N; q++) pts[q] = toRoot(...pts[q]);
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, prof: B.lockBand ? prof : undefined, lean: tp.ln, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
+      out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, prof: B.lockBand || RW < 1 ? prof : undefined, lean: tp.ln, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
         front: hang > 0.02 ? 0.9 : 0, frontFrom: share, hang: hang > 0.02 });   // and turns its flat side to the front where it hangs (createLocks): a tuft beside the face hung edge-on to the view, thin as a string
     }
   });
@@ -279,9 +283,12 @@ export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   
 // hugY (root space, or null): above this height the lock lies on the head (held onto the ellipsoid, not just kept out of it), so it follows
 // the head's shape, curving in below its widest part, and only hangs free below: the outline of the long block it replaced (2026-10-04,
 // Saori: "it used to follow the head, dent in a little, then fall; now it falls straight from the top")
-function drape(s, coll, ell, N = 12, hugY = null) {
+function drape(s, coll, ell, N = 12, hugY = null, th = null) {   // th: start down the head's meridian at this angle (see ringLocks' crown)
   const seg = s.len / (N - 1), P = [];
-  for (let i = 0; i < N; i++) P.push([s.root[0], s.root[1] - seg * i, s.root[2]]);
+  if (th == null) for (let i = 0; i < N; i++) P.push([s.root[0], s.root[1] - seg * i, s.root[2]]);
+  else { const R = Math.max(...ell.r), ph0 = Math.asin(Math.max(-1, Math.min(1, (s.root[1] - ell.c[1]) / ell.r[1])));
+    for (let i = 0; i < N; i++) { const ph = ph0 - seg * i / R, p = ph > -Math.PI / 2 ? [ell.c[0] + Math.sin(th) * Math.cos(ph) * ell.r[0], ell.c[1] + Math.sin(ph) * ell.r[1], ell.c[2] + Math.cos(th) * Math.cos(ph) * ell.r[2]] : [P[i - 1][0], P[i - 1][1] - seg, P[i - 1][2]];
+      P.push(i ? p : [...s.root]); } }
   const RR = P.map((_, i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003), r = (i) => RR[i];   // once: asked for in every step for every collider, the sine and the power were most of the hair's build
   for (let it = 0; it < 160; it++) {
     for (let i = 2; i < N; i++) P[i][1] -= 0.002;

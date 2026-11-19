@@ -70,7 +70,7 @@ export const CHARACTERS = {
             overlap: 1.44,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
+            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82, ph: [84, 72], crown: 0.3,
             // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
             // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes.
             // Behind the ears (2, 9 and the inner 13, 14, 20, 21) longer and flicked out: the sides flare at the jaw while the nape hugs (her design sheet)
@@ -233,7 +233,8 @@ export const CHARACTERS = {
               [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
               [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
-            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
+            // rooted at the whorl by the ahoge, narrow there (lockRootW), as the back's locks (shortLocks.crown): the hair fans out from one point
+            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 84, lockRootW: 0.35, lockSpan: 14,
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
