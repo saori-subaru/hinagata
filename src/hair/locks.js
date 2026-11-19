@@ -145,7 +145,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
   const shWof = (th) => SH ? (SH.sides ?? 1) + (1 - (SH.sides ?? 1)) * sstep(0.2, 0.7, -Math.cos(th + A0)) : 0;
   const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
     for (let yy = y + 0.03; yy <= center[1]; yy += 0.03) { const q = horiz(yy, th); R = Math.max(R, Math.hypot(q[0], q[2] - center[2])); }
-    if (SH) R = hs + (R - hs) * (1 - (1 - (SH.hang ?? 0)) * sstep(0.2, 0.7, -Math.cos(th + A0))) + flareAt(y) * shWof(th);   // (hang at the back only, hanging straight at the sides: drawn in to the neck there, the outline dented under the ears)
+    if (SH) R = hs + (R - hs) * (SH.hang ?? 0) + flareAt(y) * shWof(th);
     return [Math.sin(th + A0) * R, y, center[2] + Math.cos(th + A0) * R]; };
   T.forEach((tp, i) => {
     const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
