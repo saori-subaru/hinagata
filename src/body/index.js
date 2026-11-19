@@ -328,7 +328,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`earTip.${s}`] = { t: 3, k: EL.k, bone: "head", bx0: mid[0], by0: mid[1], bz0: mid[2], br: L * 0.6 + W + CV * L, blade: { s0, a, bu, L, W, FL, CV },
         f: (x, y, z) => { const d = [x - s0[0], y - s0[1], z - s0[2]], t = Math.min(1, Math.max(0, (d[0] * a[0] + d[1] * a[1] + d[2] * a[2]) / L));
           const q = [0, 1, 2].map((i) => d[i] - a[i] * t * L - bu[i] * CV * L * t * t), qa = q[0] * a[0] + q[1] * a[1] + q[2] * a[2], qw = q[0] * bn[0] + q[1] * bn[1] + q[2] * bn[2];
-          const qb = Math.sqrt(Math.max(0, q[0] * q[0] + q[1] * q[1] + q[2] * q[2] - qa * qa - qw * qw)), r = W * (1 - Math.pow(t, 1.3)) + 0.0015;   // a leaf: widest at the ear, to a point
+          const qb = Math.sqrt(Math.max(0, q[0] * q[0] + q[1] * q[1] + q[2] * q[2] - qa * qa - qw * qw)), r = W * (1 - t) + 0.0015;   // a triangle: straight edges from the ear to the point
           return (Math.hypot(qa, qb, qw / FL) - r) * FL * 0.9; } }; }
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
@@ -657,7 +657,7 @@ export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   //
   for (const s of ["L", "R"]) {
     const e = P[`earTip.${s}`]; if (!e?.blade) continue;
     const { s0, a, bu, L, W, FL, CV } = e.blade, bn = [a[1] * bu[2] - a[2] * bu[1], a[2] * bu[0] - a[0] * bu[2], a[0] * bu[1] - a[1] * bu[0]];
-    const along = (q) => ((q[0] - s0[0]) * a[0] + (q[1] - s0[1]) * a[1] + (q[2] - s0[2]) * a[2]) / L, rAt = (t) => W * (1 - Math.pow(t, 1.3)) + 0.0015;
+    const along = (q) => ((q[0] - s0[0]) * a[0] + (q[1] - s0[1]) * a[1] + (q[2] - s0[2]) * a[2]) / L, rAt = (t) => W * (1 - t) + 0.0015;
     const mid = (t) => s0.map((v, i) => v + a[i] * t * L + bu[i] * CV * L * t * t);   // the blade's middle line (head space), as its distance has it
     // a ray from the section's middle at t toward its ellipse's point at angle f (base space): [start, unit direction, the ellipse's length]
     const ray = (t, f) => { const c = mid(t), r = rAt(t), b = fromH(...c), d = fromH(...c.map((v, i) => v + r * (bu[i] * Math.cos(f) + bn[i] * FL * Math.sin(f)))).map((v, i) => v - b[i]), l = Math.hypot(...d); return [b, d.map((v) => v / l), l]; };
@@ -668,6 +668,7 @@ export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   //
     // the root: the first section clear of the head (every ray meets the surface about where the ellipse says)
     let TS = 1; for (let t = 0.1; t < 0.8 && TS === 1; t += 0.02) { let ok = true; for (let j = 0; j < N && ok; j++) { const R = ray(t, 2 * Math.PI * j / N), u = hit(sdf, R); ok = u != null && u < R[2] * 1.25 + 0.001; } if (ok) TS = t + 0.02; }
     if (TS >= 0.8) continue;
+    TS = Math.max(0.05, TS - 0.16);   // start the rings back inside the head: from TS, the grid's coarse root stood as a step before the blade (a cone stuck on)
     const TR = 0.06, g = (x, y, z) => sdf(x, y, z) - D0 * (2 * sstep(TS, TS + TR, along(toH(x, y, z))) - 1), v0 = pos.length / 3;
     const put = (p) => { const n = grad4(g, p[0], p[1], p[2], 0.0005); pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); };
     for (let i = 0; i <= S; i++) { const t = TS + (1 - TS) * (1 - Math.pow(1 - i / S, 1.5));   // closer together toward the tip
