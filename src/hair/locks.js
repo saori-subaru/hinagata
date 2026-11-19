@@ -234,7 +234,8 @@ export function drawnLocks(list, { toRoot, N = 16 }) {
  * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hug, from,
  * band, ridge, rootWidth, wide, endWidth, shade, stiff, mirror, spikes: [{ y | at, length, out, up, width, side, ridge }] }]
  * (head space; schema.js hair.tufts). whorl: [x, z], where they grow from, from the top's middle. surf / center / toRoot / sx: as bangLocks.
- * cols: the points across a tuft (more when one has more points than fit)
+ * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
+ * spike (-1: the tuft itself), the mirrored copy (m -1)
  */
 export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], N = 9, cols = 7 }) {
   const deg = Math.PI / 180, out = [], L = (list ?? []).filter((d) => Array.isArray(d?.to)), M = Math.max(cols, ...L.map((d) => 2 * (d.tips?.length ?? 1) + 1));
@@ -247,9 +248,9 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
   // a tuft or a spike as createLocks takes it: H its points (head space), TK its thickness at each (m, head space), CV how sharply the hair
   // turns across it there (1/m, head space), point: the share of its length it thins to its end over
   // NR (a spike): which way its thickness goes at each point (head space; a tuft's is the head's out)
-  const put = (H, K, { w, TH, prof, TK, CV, point, ridge, shade, stiff, NR = null }) => { const pts = H.map((P) => toRoot(...P)); let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+  const put = (H, K, { w, TH, prof, TK, CV, point, ridge, shade, stiff, NR = null, src }) => { const pts = H.map((P) => toRoot(...P)); let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
     const nr = NR?.map((n, q) => { const b = toRoot(H[q][0] + n[0] * 0.01, H[q][1] + n[1] * 0.01, H[q][2] + n[2] * 0.01); return b.map((v, k) => (v - pts[q][k]) / 0.01); });   // (root space; its length: the head's scale that way)
-    out.push({ root: pts[0], pts, len, w: w * sx, thick: TH / w, layer: 0, curl: 0, rise: true, stiff, prof, curv: CV.map((v) => v / sx), tk: TK.map((v, q) => v * (nr ? Math.hypot(...nr[q]) : sx)), nrm: nr?.map(norm), point, under: Math.min(UNDER, 0.006 / TH), shade,   // (under: a thick block's underside hardly bulges: it lies on the hair)
+    out.push({ root: pts[0], pts, len, w: w * sx, thick: TH / w, layer: 0, curl: 0, rise: true, stiff, prof, curv: CV.map((v) => v / sx), tk: TK.map((v, q) => v * (nr ? Math.hypot(...nr[q]) : sx)), nrm: nr?.map(norm), point, under: Math.min(UNDER, 0.006 / TH), shade, src,   // (under: a thick block's underside hardly bulges: it lies on the hair)
       cols: { u: K.map((c) => c[0]), e: K.map((c) => c[1]), d: shape(K, ridge), t0: Math.max(0.1, Math.min(0.45, Math.min(...K.map((c) => c[1])) - 0.1)) } }); };
   const TS = [];   // the tufts as built (the spikes grow out of them, and stay over them all)
   const even = (e) => { const K = []; for (let j = 0; j < M; j++) K.push([-1 + 2 * j / (M - 1), e]); return K; };
@@ -282,7 +283,7 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
       return Math.min(0.9 / hw, Math.max(0, 2 * drop / Math.max(1e-6, hw * hw - drop * drop))) * (1 - FO[q]); });   // (a round head: the distance drop at hw to the side is of a circle of radius (hw² - drop²) / 2 drop)
     for (let q = 1; q + 1 < N; q++) CV[q] = 0.25 * CV[q - 1] + 0.5 * CV[q] + 0.25 * CV[q + 1];
     const TK = U.map((u) => TH * (TOP + (1 - TOP) * girth(u[1])));   // thick round the head's widest part, thin on top of it (as lift)
-    put(H, K, { w, TH, prof, TK, CV, point, ridge: clamp(d.ridge ?? 0.15, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1 });
+    put(H, K, { w, TH, prof, TK, CV, point, ridge: clamp(d.ridge ?? 0.15, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1, src: { i: list.indexOf(d), k: -1, m } });
     TS.push({ d, m, H, U, TK, CV, K, prof, w, point, RD: clamp(d.ridge ?? 0.15, 0, 1), T0: Math.max(0.1, Math.min(0.45, Math.min(...K.map((c) => c[1])) - 0.1)) });
   }
   // the tufts' tops, as createLocks builds them: t's at s along it, u across it (-1..1). Its thickness there (null past that column's end),
@@ -310,7 +311,7 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
   for (const T of TS) { const { d, m, H, w, prof } = T; if (!d.spikes?.length) continue;
     let HL = 0; for (let q = 1; q < N; q++) HL += Math.hypot(H[q][0] - H[q - 1][0], H[q][1] - H[q - 1][1], H[q][2] - H[q - 1][2]);
     const sAtY = (y) => { for (let q = N - 1; q > 0; q--) if ((H[q - 1][1] - y) * (H[q][1] - y) <= 0 && H[q - 1][1] > H[q][1]) return (q - 1 + (H[q - 1][1] - y) / ((H[q - 1][1] - H[q][1]) || 1)) / (N - 1); return 0.6; };
-    for (const sp of d.spikes) { const so = sp.out ?? 0.07, ua = clamp(sp.up ?? 12, -60, 60) * deg, ty = so * Math.tan(ua), sw = sp.width ?? clamp(0.45 * w, 0.08, 0.12);
+    for (const [sk, sp] of d.spikes.entries()) { const so = sp.out ?? 0.07, ua = clamp(sp.up ?? 12, -60, 60) * deg, ty = so * Math.tan(ua), sw = sp.width ?? clamp(0.45 * w, 0.08, 0.12);
       const at = clamp(sp.y != null ? sAtY(sp.y - ty) : sp.at ?? 0.6, 0.15, 1), ln = clamp((sp.length ?? 0.16) / (HL || 1), 0.05, at - 0.03);
       const sd = Array.isArray(sp.side) ? sp.side : [sp.side ?? 0, sp.side ?? 0], u0 = -clamp(sd[0] ?? 0, -1, 1) * m * 0.8, u1 = -clamp(sd[1] ?? 0, -1, 1) * m * 0.8;   // (side: + toward the right as seen from outside, the root up)
       // its base at t along it: the tuft's top there, and its middle sunk to where the tuft's top is at its two edges (the tuft is round
@@ -332,7 +333,7 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
         if (q && q < N - 1) { const need = Math.min(LEAVE * c0 * t, 0.02), ud = buried(S) + need; if (ud > 0) { const n = (bs ?? B0).n; for (let k = 0; k < 3; k++) S[k] += n[k] * ud; } }
         const G = bs ? bs.p : mix(B0.p, Q, (t - tb) / (1 - tb)), v = S.map((x, k) => x - G[k]), th = Math.hypot(v[0], v[1], v[2]);
         Hs.push(G); TKs.push(th); NR.push(th > 1e-4 ? v.map((x) => x / th) : NR[q - 1] ?? A0.n); }
-      put(Hs, even(1), { w: sw, TH: 0.06, prof: sprof, TK: TKs, CV: Hs.map(() => 0), point: 0.75, ridge: clamp(sp.ridge ?? 0.8, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1, NR }); }
+      put(Hs, even(1), { w: sw, TH: 0.06, prof: sprof, TK: TKs, CV: Hs.map(() => 0), point: 0.75, ridge: clamp(sp.ridge ?? 0.8, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1, NR, src: { i: list.indexOf(d), k: sk, m } }); }
   }
   return out;
 }

@@ -163,6 +163,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   /** a mesh's points where they were made, at the base proportions (the paint, the culling under the clothes and the jaw shadow read them) */
   const basePos = (g) => g.userData.basePos ?? g.attributes.position.array;
   const { root, bone, skeleton, HIPS0 } = makeSkeleton({ J: Jr, PARENT, BONES });
+  // ⛔ mesh.bind(skeleton) alone takes the bones as they stand for the skeleton's rest (three: calculateInverses). A part made later, in
+  // mid-motion (setTufts, setBangs, the face's layer…), moved every part's rest to that pose: only the first part bound sets it
+  let BIND = null; const bindTo = (m) => { if (BIND) m.bind(skeleton, BIND); else { m.bind(skeleton); BIND = m.bindMatrix.clone(); } };
 
   lap("shapes");
   // shape → skinned mesh
@@ -269,9 +272,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
     if (soft) addSoftNormals(soft, geo);
-    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); m.bind(skeleton);
+    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); bindTo(m);
     const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
-    const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); o.bind(skeleton);
+    const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); bindTo(o);
     return { m, o, on: true };
   }
 
@@ -643,7 +646,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
   const LOCK_PARTS = ["locks", "bangs", "drawn", "tufts", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
-  let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
+  let bangKitMemo = null, tailAnchors = [], tuftSpots = [];   // tailAnchors: where the tails are tied now (avatar.tailTies) / tuftSpots: where the tufts and their spikes end (avatar.tuftSpots)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
@@ -652,6 +655,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none", tuftsOn = which.includes("tufts") && hairKit.tuftsOn();
     if (which.includes("tails") && !tailsOn) tailAnchors = [];
+    if (which.includes("tufts") && !tuftsOn) tuftSpots = [];
     if (!longOn && !shortOn && !bangsOn && !drawnOn && !tailsOn && !tuftsOn) return out;
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
@@ -702,7 +706,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
-    if (tuftsOn) { const W = OPT.hair.whorl ?? {}; out.tufts = part(tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], N: LITE ? 7 : 9 }), { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 }); }
+    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
+      out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 }); }
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
@@ -794,11 +799,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
-    faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); bindTo(faceLayer);
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
-    browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
+    browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); bindTo(browLayer);
   }
   buildFaceLayer();
 
@@ -1135,6 +1140,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (parts.tufts) { for (const m of [parts.tufts.m, parts.tufts.o]) { root.remove(m); m.geometry.dispose(); } delete parts.tufts; }
       const x = makeLocks(["tufts"]).tufts; if (x) { parts.tufts = x; x.on = on; x.m.visible = x.o.visible = vis; } hairGrad();
     },
+    /** Where the tufts and their spikes end (avatar space, rest pose): [{ i, k, m, p }] (i: the tuft in options.hair.tufts, k: its spike or -1 for
+     *  the tuft's own tip, m: -1 the mirrored copy), [] without tufts. For an editor's handles. */
+    tuftSpots() { return tuftSpots.map((s) => ({ ...s, p: [...s.p] })); },
+    /** A point on the hair at an angle round the head (degrees, as a tuft's to[0]) and a height (head space): where a tuft's tip would be. */
+    tuftTipAt(angle, y) { const K = bangKit(), a = angle * Math.PI / 180, c = [0, y, K.center[2]], d = [Math.sin(a), 0, Math.cos(a)], t = surfaceAlong(K.surf, c, d) + 0.01; return K.toRoot(c[0] + d[0] * t, y, c[2] + d[2] * t); },
     setDrawnHair(list) {
       OPT.hair.drawn = structuredClone(list ?? []);
       const on = parts.hair.on, vis = parts.hair.m.visible;
