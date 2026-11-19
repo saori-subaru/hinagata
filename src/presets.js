@@ -124,13 +124,14 @@ export const CHARACTERS = {
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
-        head: { scale: 0.84, width: 0.94 },
+        head: { scale: 0.84, depth: 0.92 },
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.74, thighTop: 0.74, calf: 0.74 },
         joints: { footX: 0.13, kneeX: 0.118 },
-        // ⛔ the head's and face's shape is Saori's, not the sheet's (profile: a dip under the nose seen from the side, "アステルの顔をこれにするといいかも").
-        // A narrower jaw, a sharper chin and a shallower head toward the sheet read as a skull (Saori: "顔の形が骸骨みたい")
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
+        // ⛔ the head's and face's shape is シルヴィ's, value for value, and so is the eyes' place (face.layout below: it places the sockets), not the
+        // sheet's (Saori: "顔の形が骸骨みたい" → "シルヴィと同じにして"). Toward the sheet (a narrower jaw, a sharper chin, a shallower head, the
+        // eyes lower) it read as a skull, and so did the engine's own cheeks (trimmed at the sides)
+        sculpt: { neck: { width: 0.75 }, cheeks: { y: 0.94, height: 0.14 }, chin: { k: 0.024, sharp: 0.1 }, cheekTrim: { depth: 0 }, cheekFill: { depth: 0.004 } },
       },
       hair: {
         bangs: "nendo", back: "short", nape: "hang", ahoge: true,   // ⛔ nape: back "short" given alone reads as the lying locks (options.js readHair): the hanging ones' flick and hug then do nothing
@@ -150,18 +151,18 @@ export const CHARACTERS = {
           ahogeCurl: true, ahogeDir: 110, ahogeSize: 1.5, ahogeX: -0.085, ahogeZ: 0.06,   // off the top's middle, toward his right and the front
           // the bangs: few wide locks to sharp points (lockSpan 30: a tuft stays one lock). Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean].
           // The forehead shows between the lock outside his right eye (-42, its point at its inner edge) and the middle's two points;
-          // his left eye's outer half is under the lock at 40
+          // his left eye's outer half is under the lock at 40. The tips' heights go with the eyes' (the middle's points at the eyes' middle)
           nendo: {
             lockSpan: 30, lockBand: 0.1, overlap: 1.3,
             tips: [
               [-84, 0.885, 0.69, 0.33, null, 6, 0, 0, 1.3],
-              [-62, 0.93],
-              [-42, 0.917, null, null, null, 0, 0, 0, 0.85, 0, -0.6],
-              [-4, 0.964, 0.8, 0.04, "c", 0, 0, 0, 0.75],
-              [8, 0.952, 0.8, 0, "c"],
-              [22, 0.995],
-              [40, 0.923, null, null, null, 0, 0, 0, 1, 0, -0.5],
-              [62, 0.94],
+              [-62, 0.963],
+              [-42, 0.95, null, null, null, 0, 0, 0, 0.85, 0, -0.6],
+              [-4, 0.997, 0.8, 0.04, "c", 0, 0, 0, 0.75],
+              [8, 0.985, 0.8, 0, "c"],
+              [22, 1.028],
+              [40, 0.956, null, null, null, 0, 0, 0, 1, 0, -0.5],
+              [62, 0.973],
               [84, 0.885, 0.66, -0.33, null, -8, 0, 0, 1.3],
             ],
           },
@@ -171,9 +172,9 @@ export const CHARACTERS = {
       face: {   // his own pictures (the code's eyes have no lash this thick); the brows show over the bangs, as on the sheet
         parts: { eyes: "image", brows: "thin", mouth: "image" },
         images: { eye: { src: ASTEL_EYE, dx: 0, dy: 0 }, eyeClosed: { src: ASTEL_EYE_CLOSED, dx: 0, dy: 0 }, mouth: { src: ASTEL_MOUTH } },
-        layout: { eyeX: 0.0865, eyeY: 0.965, browX: 0.125, browY: 1.071, mouthY: 0.872 },
+        layout: { eyeX: 0.088, browX: 0.125, browY: 1.104 },   // the eyes and the mouth where シルヴィ's are (⛔ above); the brows as far over the eyes as on the sheet
         browsOverHair: true,
-        blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.912 } },
+        blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
         drawn: [
           { id: "happy", name: "にっこり", eye: ASTEL_EYE_HAPPY, brow: null, mouth: ASTEL_MOUTH_HAPPY, cheeks: "none", blink: false },
