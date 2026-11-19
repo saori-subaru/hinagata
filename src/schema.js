@@ -53,10 +53,6 @@ const MAIN = [
   ["shading.rim.color", L("リムライトの色", "Rim color"), { when: { "shading.rim.on": true }, apply: "setRim" }],
   ["shading.rim.width", L("リムライトの幅", "Rim width"), { when: { "shading.rim.on": true }, min: 0.05, max: 1, step: 0.01, apply: "setRim" }],
   ["shading.rim.strength", L("リムライトの強さ", "Rim strength"), { when: { "shading.rim.on": true }, min: 0, max: 1.5, step: 0.01, apply: "setRim" }],
-  ["shading.mottle.on", L("色むら", "Mottled color"), { apply: "setMottle", help: L("水彩のように塗りの濃さと色みをゆらす", "the fills uneven in depth and tint, like watercolor") }],
-  ["shading.mottle.strength", L("色むらの強さ", "Mottle strength"), { when: { "shading.mottle.on": true }, min: 0, max: 1.5, step: 0.01, apply: "setMottle" }],
-  ["shading.mottle.size", L("むらの大きさ", "Mottle size"), { when: { "shading.mottle.on": true }, min: 0.3, max: 3, step: 0.05, apply: "setMottle" }],
-  ["shading.mottle.grain", L("紙のざらつき", "Paper grain"), { when: { "shading.mottle.on": true }, min: 0, max: 1.5, step: 0.01, apply: "setMottle", help: L("画面に貼りつく細かい粒(キャラの上だけ)", "a fine grain fixed to the screen (on the character only)") }],
 
   // body
   ["body.sculpt.ears.elf.on", L("とがった耳(エルフ耳)", "Pointed (elf) ears"), { section: L("耳", "Ears") }],

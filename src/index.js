@@ -614,30 +614,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
-  // mottled color (shading.mottle): blotches of depth and tint laid in the mesh's own space (they stay on the surface as it moves; the hair's
-  // locks, whose vertices the wind moves, drift a little), and a fine grain fixed to the screen like paper. Hooked in as the rim light is.
-  // ⛔ kept faint: blotches with a sharper edge (smoothstep 0.32–0.68) at 0.8 read as dappled sunlight (2026-11-19, Saori: 「木漏れ日の中みたい」)
-  const MO = OPT.shading.mottle ?? {}, MOT = { motOn: { value: MO.on ? 1 : 0 }, motStrength: { value: MO.strength ?? 0.6 }, motSize: { value: MO.size ?? 1 }, motGrain: { value: MO.grain ?? 0.5 } };
-  let motUsed = !!MO.on;
-  const MOT_GLSL = `uniform float motOn, motStrength, motSize, motGrain;
-varying vec3 vMotP;
-float motH(vec3 p) { p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-float motN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(motH(i), motH(i + vec3(1, 0, 0)), f.x), mix(motH(i + vec3(0, 1, 0)), motH(i + vec3(1, 1, 0)), f.x), f.y), mix(mix(motH(i + vec3(0, 0, 1)), motH(i + vec3(1, 0, 1)), f.x), mix(motH(i + vec3(0, 1, 1)), motH(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
-`;
-  function withMottle(m) {
-    if (!m || m.userData.mottle || !(m.isMeshToonMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial || m.isMeshBasicMaterial)) return;
-    const prev = m.onBeforeCompile, key = m.customProgramCacheKey(); m.userData.mottle = true;
-    m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); Object.assign(sh.uniforms, MOT);
-      sh.vertexShader = "varying vec3 vMotP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vMotP = position;");
-      sh.fragmentShader = MOT_GLSL + sh.fragmentShader.replace("#include <opaque_fragment>",
-        `{ vec3 q = vMotP * 9.0 / motSize; float a = smoothstep(0.2, 0.8, motN(q) * 0.65 + motN(q * 2.7 + 5.0) * 0.35) - 0.5, b = smoothstep(0.2, 0.8, motN(q * 0.6 + 31.0)) - 0.5, g = motH(vec3(floor(gl_FragCoord.xy / 1.5), 3.0)) - 0.5;
-  vec3 mc = outgoingLight * (1.0 + motStrength * 0.42 * a) * (1.0 + motStrength * 0.12 * b * vec3(1.0, 0.1, -0.9));   // (the tint as a share of the color: added, it turned dark colors blue and orange)
-  mc *= 1.0 + motGrain * 0.16 * g; outgoingLight = mix(outgoingLight, max(mc, 0.0), motOn); }
-#include <opaque_fragment>`); };
-    m.customProgramCacheKey = () => "mot|" + key; m.needsUpdate = true;
-  }
-  function mottles() { if (!motUsed) return; for (const x of Object.values(parts)) if (x?.m) withMottle(x.m.material); if (faceLayer) withMottle(faceLayer.material); }
+  // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
+  // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (backup/mottle has the code)
   const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
   // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
   // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
@@ -902,7 +880,7 @@ float motN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f
     update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
-      syncCover(); hairLines(); traceLines(); rims(); mottles();
+      syncCover(); hairLines(); traceLines(); rims();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
       if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
@@ -1050,12 +1028,6 @@ float motN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f
       const R = OPT.shading.rim ??= {}; Object.assign(R, Object.fromEntries(Object.entries({ on, color, width, strength }).filter(([, v]) => v !== undefined)));
       RIM.rimOn.value = R.on ? 1 : 0; if (R.color) RIM.rimColor.value.set(R.color); if (R.width != null) RIM.rimWidth.value = R.width; if (R.strength != null) RIM.rimStrength.value = R.strength;
       if (R.on) { rimUsed = true; rims(); }
-    },
-    /** Mottled color (instant): { on, strength, size (1 = blotches about a hand wide), grain (the paper's grain) }. Kept in options.shading.mottle. */
-    setMottle({ on, strength, size, grain } = {}) {
-      const M = OPT.shading.mottle ??= {}; Object.assign(M, Object.fromEntries(Object.entries({ on, strength, size, grain }).filter(([, v]) => v !== undefined)));
-      MOT.motOn.value = M.on ? 1 : 0; if (M.strength != null) MOT.motStrength.value = M.strength; if (M.size != null) MOT.motSize.value = M.size; if (M.grain != null) MOT.motGrain.value = M.grain;
-      if (M.on) { motUsed = true; mottles(); }
     },
     setShading(s) {
       const { style = OPT.shading.style, bands = OPT.shading.bands, soften = OPT.shading.soften } = typeof s === "string" ? { style: s } : s;
