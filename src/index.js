@@ -817,19 +817,34 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null;
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); holeLayer.bind(skeleton); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
     browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
+  // ⏳ the mouth's inside (face.mouth3d, a try): a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone.
+  // Drawn after everything solid, without the depth test (the head's own skin is in front of them), only where the mouth's hole marked the
+  // pixels (face/index.js HOLE), one over the other in this order. Unlit: plain colors, as the mouth's picture was
+  if (face.HOLE) { const M3 = OPT.face.mouth3d, g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
+    const yc = face.MOUTHP.y + face.FACE.dy - 0.006; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
+    const piece = (geo, c, r, color, order, side = THREE.FrontSide) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) P.setXYZ(i, ...HTr.fromHead(c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]));
+      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFuncMask: 2, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
+      m.renderOrder = order; m.frustumCulled = false; g.add(m); };
+    const D = M3.depth ?? 1;
+    piece(new THREE.SphereGeometry(1, 20, 14), [0, yc - 0.002, zs - 0.012 * D], [0.044, 0.036, 0.03 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);
+    piece(new THREE.SphereGeometry(1, 14, 10), [0, yc + 0.002, zs - 0.034 * D], [0.011, 0.009, 0.006], M3.throat ?? "#7d2a40", 5);
+    piece(new THREE.SphereGeometry(1, 16, 12), [0, yc - 0.016, zs - 0.017 * D], [0.016, 0.0065, 0.017], M3.tongue ?? "#ee8798", 6);
+    if (M3.teeth) piece(new THREE.BoxGeometry(2, 2, 2), [0, yc + 0.0125, zs - 0.007], [0.013, 0.0035, 0.002], "#ffffff", 7);
+    bone.head.add(g); }
 
   lap("faceLayer");
   // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index

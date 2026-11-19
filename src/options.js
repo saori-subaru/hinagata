@@ -1030,6 +1030,11 @@ export const DEFAULTS = {
     "noseColor": null,
     "noseSize": 1,
     "openSize": 1,
+    "mouth3d": {
+      "on": false,
+      "depth": 1,
+      "teeth": false
+    },
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,
