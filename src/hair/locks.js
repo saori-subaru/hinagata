@@ -177,7 +177,10 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       // flick (the row's 8th value, m): from its middle (or where it starts to hang) the lock curves out and up (> 0) or in (< 0: along the
       // forehead, the cheek, the jaw: it stays 2 mm over whatever it meets, so it follows the face)
       if (tp.fl) { const keepOut = (p) => { const hx = p[0], hz = p[2] - center[2], h = Math.hypot(hx, hz) || 1, floor = surfaceAlong(surf, [0, p[1], center[2]], [hx / h, 0, hz / h]) + 0.002 + 0.25 * w * thick; if (h < floor) { p[0] = hx / h * floor; p[2] = center[2] + hz / h * floor; } };
-        const B2 = bendLock(pts, tp.fl, { center, keepOut, from: hang ? share + (1 - share) * 0.45 : 0.5 }); pts.splice(0, N, ...B2); }
+        // from the whorl: where it passes below the head's widest part, where it leaves the head (from its middle it was still on the skull's
+        // curve over the top, and a flick there curled in at the ear)
+        let from = hang ? share + (1 - share) * 0.45 : 0.5; if (WH) { const q = pts.findIndex((p) => p[1] < center[1]); if (q > 0) from = Math.min(q, N - 3) / (N - 1); }
+        const B2 = bendLock(pts, tp.fl, { center, keepOut, from }); pts.splice(0, N, ...B2); }
       for (let q = 0; q < N; q++) pts[q] = toRoot(...pts[q]);
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       out.push({ root: pts[0], pts, len, w, thick, layer: 0, curl: 0, rise: true, prof: B.lockBand || RW < 1 ? prof : undefined, lean: tp.ln, stiff: hang > 0.02 ? Math.max(0.15, 0.06 / hang) : 1,   // a tuft hanging long is softer: it swings like long hair
