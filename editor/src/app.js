@@ -109,6 +109,7 @@ function applyInstant(av, p, v) {
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
+    case "setTufts": if (k[1] === "tufts") av.setTufts(structuredClone(v)); else av.setTufts(null, { [last]: v }); return true;
     case "setAccessories": av.setAccessories(structuredClone(v)); return true;
     case "setExpressions": av.setExpressions(structuredClone(v)); return true;
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests

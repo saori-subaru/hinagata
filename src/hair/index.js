@@ -67,7 +67,7 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     const put = (p, nv) => { pos.push(...toBody(...p)); nor.push(...toN(p, nv)); };
     for (let r = 0; r < K; r++) {
       const s = r / K, c = along(s), T = norm(along(Math.min(1, s + 0.01)).map((v, k) => v - along(Math.max(0, s - 0.01))[k]));
-      const U = norm(cross(T, side)), V = cross(U, T), w = W * S * Math.pow(1 - s * s, 0.7), b = w * FLAT;   // wide through the arc, then sharp
+      const U = norm(cross(T, side)), V = cross(U, T), w = W * S * (OPT.hair.sculpt.ahogeWidth ?? 1) * Math.pow(1 - s * s, 0.7), b = w * FLAT;   // wide through the arc, then sharp
       for (const [ax, th] of LENS) put(c.map((v, k) => v + w * ax * U[k] + b * th * V[k]), norm(U.map((u, k) => ax * u / w + th * V[k] / b)));
     }
     const tip = along(1); put(tip, norm(tip.map((v, k) => v - along(0.99)[k])));
@@ -200,9 +200,10 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
   const backAsLocks = (pick) => (["short", "hang", "bob", "flip"].includes(pick.back) && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
   const shellOf = (pick) => bangsAsLocks(pick) && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null ? OPT.hair.sculpt.lockShell : SHELL;   // the block's thickness
+  const tuftsOn = () => (OPT.hair.tufts ?? []).some((d) => Array.isArray(d?.to));   // tufts (hair/locks.js tuftLocks) lie over the block
   const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), sh = shellOf(pick), thin = sh !== SHELL;
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
-    if (L) o = underLocks(o); if (thin) o = { ...o, shell: sh };
+    if (L || (pick.bangs === "none" && tuftsOn())) o = underLocks(o); if (thin) o = { ...o, shell: sh };   // tufts with no bangs under them: the same thin hairline between them
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, ahogeMesh };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh };
 }

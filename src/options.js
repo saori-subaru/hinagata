@@ -752,6 +752,12 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "tufts": [],
+    "whorl": {
+      "x": 0,
+      "z": 0,
+      "stiff": 4
+    },
     "gradient": {
       "on": false,
       "color": "#7cc47f",
@@ -921,6 +927,7 @@ export const DEFAULTS = {
       "shell": 0.036,
       "lockShell": 0.016,
       "ahogeSize": 1.15,
+      "ahogeWidth": 1,
       "ahogeDir": 90,
       "ahogeLean": 0,
       "ahogeX": 0,
