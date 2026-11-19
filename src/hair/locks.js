@@ -282,7 +282,7 @@ export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   
 function drape(s, coll, ell, N = 12, hugY = null) {
   const seg = s.len / (N - 1), P = [];
   for (let i = 0; i < N; i++) P.push([s.root[0], s.root[1] - seg * i, s.root[2]]);
-  const r = (i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003;
+  const RR = P.map((_, i) => 0.5 * s.w * s.thick * width(i / (N - 1)) + 0.003), r = (i) => RR[i];   // once: asked for in every step for every collider, the sine and the power were most of the hair's build
   for (let it = 0; it < 160; it++) {
     for (let i = 2; i < N; i++) P[i][1] -= 0.002;
     for (let k = 0; k < 3; k++) {
