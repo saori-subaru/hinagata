@@ -286,7 +286,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const SNOTCH = BOOTS && (OPT.outfit.shoes.notch ?? 0) > 0 ? (() => { const D = OPT.outfit.shoes.notch, k = D / Math.max(0.003, (OPT.outfit.shoes.notchWidth ?? 0.024) / 2), kn = Math.hypot(1, k);
     const axis = ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], t = (TOP - a[1]) / (b[1] - a[1]); return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]; });
     return (x, y, z) => { const c = axis[x >= 0 ? 0 : 1]; if (z < c[1]) return -1; return (y - (TOP - TILT * z - D) - k * Math.abs(x - c[0])) / kn; }; })() : null;
-  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? 0.006 * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
+  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF ? (OPT.outfit.shoes.cuffOut ?? 0.006) * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
     let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; };
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
@@ -335,16 +335,24 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const sk = SKIRT ? (y) => { const d = SK_Y0 - y, m = 0.02 + SK.pleatDepth; return [SK_AX + (d > 0 ? SK.flare * d : d) + m, SK_AZ + (d > 0 ? SK.flare * 0.8 * d : d) + m + Math.abs(SK_ZC)]; } : null;
     const smax = (a, b, k = 0.02) => -smin(-a, -b, k);
     // the upper arm's outer side at a height (rest pose): its axis, and 7.5 cm round it (the arm, a sleeve, the cape's offset) across the slant
-    const UA = J["upperArm.L"], LA = J["lowerArm.L"], armK = (LA[0] - UA[0]) / Math.max(0.05, UA[1] - LA[1]), armX = (y) => UA[0] + armK * (UA[1] - y) + 0.075 * Math.hypot(1, armK);
+    const UA = J["upperArm.L"], LA = J["lowerArm.L"], armK = (LA[0] - UA[0]) / Math.max(0.05, UA[1] - LA[1]), HAND_Y = J["hand.L"][1];
+    // cape.over "body" (アステル's long cloak): its sides hang from the shoulders, a little out (as arms hang), not along the rest pose's arms;
+    // the arms push it out as they rise (cloth.js colliders) and it rides on the body alone (parts.js). Over the arms, a cloak down to the
+    // knees was half on the arms and half on the hips, and folded over itself between them when the arms came down
+    const OVER_BODY = CLOSED && CA.over === "body", armS = OVER_BODY ? Math.min(armK, 0.21) : armK;
+    const torso = OVER_BODY ? blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", "butt"), [-0.4, 0.3, -0.3], [0.4, 0.95, 0.3]) : null;
+    const armX = (y) => UA[0] + armS * (UA[1] - Math.max(y, HAND_Y)) + 0.075 * Math.hypot(1, armS);   // (under the hands a long cape's sides hang straight: the slope run on made a tent)
     const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0;
     const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x))) : 0);   // the collar a little higher at the back
     const hemY = (z) => CA.hem + TILT * z;
-    const opening = (x, y, z) => Math.max((Math.abs(x) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, 0.02 - z);   // < 0 in the front's opening
+    // cape.sideEdge: under the opening the sides end this far forward of the body's middle (behind it, アステル's cloak: the arms hang in front of the cape)
+    const SE = CA.sideEdge ?? 0.02;
+    const opening = (x, y, z) => Math.max((Math.abs(x) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, SE - z);   // < 0 in the front's opening
     // the cape's outside before its cuts (S): the cone, and the body pushed out
     const outside = (x, y, z, B = bodySdf) => {
       const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax1 = ax0 + CA.flare * 0.6 * drop, ax0_ = CLOSED ? smax(ax1, armX(y), 0.03) : ax1, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
       const q = Math.hypot(x / ax, z / az), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
-      const mantle = CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);
+      const mantle = OVER_BODY ? torso(x, y, z) - off : CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);   // (over the body: not round the arms, which stand out of its sides in the rest pose)
       return smin(cone, mantle, k); };
     // cape.neckOpen (シルヴィ): the neckline cut low and wide (the clothes' shoulders show inside it): level round the body, a little
     // higher behind, neckOpen out from the neck at its sides; closed, it dips in front to the closure's ends (XF, at cape.close).
@@ -433,10 +441,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const S = outside(x, y, z, B), d = Math.max(S, -(S + CA.thick), cutOf(x, y, z));
       return hood ? smin(d, hood.layer(x, y, z, S), 0.004) : d; };
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
-    f.lo = [-w, Math.min(CA.hem, hemY(-d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];
+    f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z);
-    f.closed = CLOSED;
+    f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
     f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
     // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
     // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)
@@ -453,6 +461,21 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // and the shoes and soles never within 4 mm of the middle: on the adult type's close feet (3 cm apart) two sneakers, pushed out 2 cm, met
   // there in one mesh and tore apart walking
   const apart = (f) => (x, y, z) => Math.max(f(x, y, z), 0.004 - Math.abs(x));
+  // for the garment parts (src/garments):
+  // legsSdf(hem, off): pants cut at their own hem, off (m) off the body, whatever the outfit's own pants are (shorts under a skirt or a dress)
+  const legsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn", "thighOut"), CROTCH]);
+  const legsSdf = (hem, off = PANTS_OFF) => (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - off, legsMask(x, y, z) - 0.054, y - (PANTS_TOP - PANTS_TILT * z), hem - y);
+  // outerSdf: the outside of what is worn round the torso (< 0 inside): the shirt without its bells, the skirt under its top, the pants (a belt lies on it)
+  const outerSdf = (x, y, z, B = bodySdf) => Math.min(B(x, y, z), OPT.outfit.shirt.on !== false || OPT.outfit.dress?.on ? shirtSdf(x, y, z, B, true) : 1,
+    SKIRT ? Math.max(skirtOuter(x, y, z, B), y - skirtTop(z)) : OPT.outfit.pants.on !== false ? pantsShape(x, y, z, B) : 1);
+  // sleeveEnd(side): a long or bell sleeve's end round the forearm, or null: { out(x, y, z): < 0 inside the sleeve's outer side there,
+  // up(x, y, z): how far up the sleeve from its end (m; a bell's slanted opening followed), lo, hi: a box round it grown by r }
+  const sleeveEnd = LONG ? (side, r = 0.06) => { const A = ARMS[side === "L" ? 0 : 1], F = blend(pick("foreArm", "foreBulge").filter((q) => Math.sign(q.bx0) === A.side));
+    const R = 0.05 + 1.6 * BELL + r, e = A.Lf + 0.03 + 0.7 * R, ends = [[A.fx + 0.2 * A.Lf * A.gx, A.fy + 0.2 * A.Lf * A.gy, A.fz + 0.2 * A.Lf * A.gz], [A.fx + e * A.gx, A.fy + e * A.gy, A.fz + e * A.gz]];
+    const along = (x, y, z) => { const t = (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz; return [t, (x - A.fx - t * A.gx) * A.dx + (y - A.fy - t * A.gy) * A.dy + (z - A.fz - t * A.gz) * A.dz]; };
+    return { out: BELL ? (x, y, z) => bellAt(x, y, z, A)[0] : (x, y, z) => F(x, y, z) - 0.014,
+      up: BELL ? (x, y, z) => { const [t, s] = along(x, y, z); return (A.Lf + 0.01 + 0.7 * Math.max(0, s) - t) / (s > 0 ? 1.22 : 1); } : (x, y, z) => A.Lf - 0.012 - along(x, y, z)[0],
+      lo: [0, 1, 2].map((k) => Math.min(ends[0][k], ends[1][k]) - R), hi: [0, 1, 2].map((k) => Math.max(ends[0][k], ends[1][k]) + R) }; } : () => null;
   return { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
-    garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)) }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
+    garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)), legsSdf, outerSdf, sleeveEnd }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

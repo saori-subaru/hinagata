@@ -4,12 +4,12 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, ball, ribbon (a bow with tails), button, anchor, cross (an X),
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), button, anchor, cross (an X),
 // tassel and tab (hanging down from where they are put), buckle (a frame), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
@@ -35,6 +35,14 @@ const SHAPES = {
     const c = new THREE.SphereGeometry(0.13, 10, 8); c.scale(1, 1, 0.7); c.translate(0, 0, 0.14); parts.push(c); return merge(parts); },
   star: () => { const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, r = i % 2 ? 0.21 : 0.5; s[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); }
     const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
+  // a four-pointed star cut in facets (for アステル's clasp): a ridge from the raised middle to each point, the lower point a little longer.
+  // Its facets keep their own normals (flat): each point reads as a light half and a dark one
+  star4: () => { const T = [[0, 0.5], [0.46, 0], [0, -0.56], [-0.46, 0]], V = 0.14, R = 0.045, TOP = 0.21, ring = [];
+    T.forEach(([x, y], i) => { const [nx, ny] = T[(i + 1) % 4]; ring.push([x, y], [Math.sign(x + nx) * V, Math.sign(y + ny) * V]); });   // point, valley, point, …
+    const P = [], tri = (a, b, c) => P.push(...a, ...b, ...c);
+    for (let i = 0; i < 8; i++) { const a = ring[i], b = ring[(i + 1) % 8];
+      tri([0, 0, TOP], [...b, R], [...a, R]); tri([...a, R], [...b, R], [...b, 0]); tri([...a, R], [...b, 0], [...a, 0]); tri([0, 0, 0], [...a, 0], [...b, 0]); }   // a facet, its rim, the back
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals(); return g; },
   ball: () => { const g = new THREE.SphereGeometry(0.5, 16, 12); g.translate(0, 0, 0.42); return g; },
   // a bow (2026-10-07, for a 超絶美少女's hair): two loops puffed out and swept back a little, a knot, two tails with V-cut ends.
   // Cloth, so its normals are smoothed (the leaf's facets would show on its soft curves)

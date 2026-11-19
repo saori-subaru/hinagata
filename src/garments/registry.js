@@ -14,10 +14,12 @@
 //                                   in src/schema.js MAIN: min, max, step, options, nullable, type, when (paths relative to path start with "."), help)
 //   built: (O) => O.on,             (optional) built only when this is true (it goes into the cache's key); default: O.on
 //   build(ctx) → state | null       the shapes (a distance function, a band's value...) from ctx: { OPT, O (its options), P, J, bodySdf, shirtSdf,
-//                                   slope (y → how many times a base height is stretched there) }
+//                                   slope (y → how many times a base height is stretched there), legsSdf(hem, off) (pants with their own hem),
+//                                   outerSdf (the clothes' outside round the torso), sleeveEnd(side) (a long or bell sleeve's end: out, up, lo, hi) }
 //   spec(state, { OPT, H, B, ax, ay, kit, none }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js)
 //   outline: 0.003, soft: true,     the outline's width (m at outline.width 1); shading by softened normals
 //   thin: null | "cloth" | "keep",  how the "fine" and "lite" builds thin it: as the body / as cloth (less) / not at all
+//   wrist: (O, OPT) => m,           (optional) how far it stands out round the wrists (a cuff): a cape's cloth keeps that far off the forearm's end
 //   bands: { value: (state) => (x, y, z) => t, ranges: (O) => [[lo, hi, color], ...] }   (optional) colored bands painted by a value per vertex
 //                                   (materials.js withBands; base positions): a collar's line, a cuff. Their options change instantly (setBands)
 // })

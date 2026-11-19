@@ -45,13 +45,14 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     if (!pick.ahoge) return null;
     const S = OPT.hair.sculpt.ahogeSize ?? 1, top0 = Math.min(OPT.body.sculpt.crown.y, SK.y + SK.height) + (shellOf(pick) || 0.02);   // standing on hair this thick
     // ... or lower, where the hair's top really is: a crown cut with a wide blend rounds the top off below crown.y, and the strand stood in the air over it
-    let top = top0; { const f = hairSdfOf(pick); let lo = top0 - 0.12, hi = top0 + 0.02; if (f(0, lo, 0) < 0 && f(0, hi, 0) > 0) { for (let k = 0; k < 24; k++) { const m = 0.5 * (lo + hi); if (f(0, m, 0) < 0) lo = m; else hi = m; } top = Math.min(top0, lo + 0.012); } }
+    const AX = OPT.hair.sculpt.ahogeX ?? 0, AZ = OPT.hair.sculpt.ahogeZ ?? 0;   // where it grows, from the top's middle (head space: x toward the character's left, z forward)
+    let top = top0; { const f = hairSdfOf(pick); let lo = top0 - 0.12, hi = top0 + 0.02; if (f(AX, lo, AZ) < 0 && f(AX, hi, AZ) > 0) { for (let k = 0; k < 24; k++) { const m = 0.5 * (lo + hi); if (f(AX, m, AZ) < 0) lo = m; else hi = m; } top = Math.min(top0, lo + 0.012); } }
     const D = (OPT.hair.sculpt.ahogeDir ?? 0) * deg, cd = Math.cos(D), sd = Math.sin(D), side = [cd, 0, -sd];   // 0 = forward, 90 = toward the character's left
     const CRN = OPT.body.head.crown ?? 1;   // the head above the brows is stretched by body.head.crown after this: undone here, or a taller head stood the strand upright
     const LEAN = (OPT.hair.sculpt.ahogeLean ?? 0) * deg, ct = Math.cos(LEAN), st = Math.sin(LEAN), A0 = OPT.hair.sculpt.ahogeCurl ? AHOGE_CURL : AHOGE, pz = A0[0][2];
     // ahogeLean tips it over toward its curl about where it leaves the hair (y 0); the root then goes straight down into the hair, or it shows beside the stem
     const lean = A0.map(([x, y0, z0]) => [x, y0 * ct - (z0 - pz) * st, pz + (z0 - pz) * ct + y0 * st]); if (LEAN) lean[0] = [lean[1][0], lean[1][1] - 0.04, lean[1][2]];
-    const Q = lean.map(([x, y, z]) => [(x * cd + z * sd) * S, top + y * S / CRN, (-x * sd + z * cd) * S]), n = Q.length;
+    const Q = lean.map(([x, y, z]) => [AX + (x * cd + z * sd) * S, top + y * S / CRN, AZ + (-x * sd + z * cd) * S]), n = Q.length;
     const at = (i) => Q[Math.max(0, Math.min(n - 1, i))], ext = (i) => i < 0 ? Q[0].map((v, k) => 2 * v - Q[1][k]) : i >= n ? Q[n - 1].map((v, k) => 2 * v - Q[n - 2][k]) : at(i);
     const cr = (i, t) => { const a = ext(i - 1), b = at(i), c = at(i + 1), d = ext(i + 2), t2 = t * t, t3 = t2 * t;   // Catmull-Rom
       return b.map((_, k) => 0.5 * (2 * b[k] + (c[k] - a[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * t3)); };

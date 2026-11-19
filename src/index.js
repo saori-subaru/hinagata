@@ -517,7 +517,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
   if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
-  const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
+  // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)
+  const WRIST = Math.max(0, ...PARTS.map((p) => p.wrist && garments[p.name] ? p.wrist(partOptions(OPT, p), OPT) : 0));
+  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST]].map(([a, b, r, pa, pb]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
   // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts.
