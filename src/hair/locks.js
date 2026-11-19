@@ -21,7 +21,7 @@ const RIGID_HOLD = 0.03, RIGID_VDAMP = 0.6;
 export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
 const TIER_STEP = 0.25, TIER_OUT = 0.3;   // hair.tail.tiers: each step of the tail's tips this share of its length shorter than the next
 // rigid hanging locks: the inner layer held 4x as firmly and kept whole, so a run lifts the outer one over hair, not over the block (its smooth dome, as pale as the skin, read as a bald head)
-const INNER_HOLD = 4, INNER_RIGID = 2;
+export const INNER_HOLD = 4, INNER_RIGID = 2;
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
@@ -127,7 +127,7 @@ export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
  * a little puff in the middle. surf: the hair under the bangs and the head (distance, head space) / center: the head's center (head space)
  */
 export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
-  const N = B.tips.some((t) => t[7]) ? 14 : N0;   // a flick needs the points for its curve (every lock of the mesh has as many)
+  const N = B.N ?? (B.tips.some((t) => t[7]) ? 14 : N0);   // a flick needs the points for its curve (every lock of the mesh has as many; B.N: two calls into one mesh)
   const RW = B.lockRootW ?? 1, prof0 = widthFor(B.lockBand ?? 0), prof = RW < 1 ? (t) => prof0(t) * (RW + (1 - RW) * sstep(0, 0.4, t)) : prof0;   // lockBand: how late the locks narrow to their points; lockRootW: the root's width (rooted at the whorl)
   const deg = Math.PI / 180, T = B.tips.map(([a, y, , , , sw, tk, fl, wd, wv, ln]) => ({ a: a * deg, y, sw: (sw ?? 0) * deg, tk: tk ?? 0, fl: fl ?? 0, wd: wd ?? 1, wv: wv ?? 0, ln: ln ?? 0 })).sort((p, q) => p.a - q.a), span = (B.span ?? 92) * deg;
   const HY = B.lockHangY ?? 0.86;   // below this (head space) a tuft hangs straight down: off the head, over the shoulders and the chest

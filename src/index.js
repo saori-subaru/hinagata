@@ -20,7 +20,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP } from "./hair/locks.js";
+import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -681,12 +681,21 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
         out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10, hugY: hugOf(BL) }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }
       else if (WHORL && hairPick.back === "hang") {   // from the whorl: the back's locks are made as the bangs' are, one lock per row around the back (-span..span from 180), each as wide as its share
-        const B = hairKit.BACKS.short, n = Math.max(3, Math.round(SL.count ?? 13)), span = SL.span ?? 115, tips = [];
-        for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0), th = (180 + a) * Math.PI / 180;
-          tips.push([a, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
-        const specs = bangLocks({ tips, span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockHangY: SL.hangY ?? 0.86, lockRootW: WHORL.rootW, aOff: 180, noFront: true, ...whorlOf() }, bangKit());
+        const B = hairKit.BACKS.short, n = Math.max(3, Math.round(SL.count ?? 13)), span = SL.span ?? 115, tips = [], hem = (a) => B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos((180 + a) * Math.PI / 180))) - (SL.below ?? 0.02);
+        for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0);
+          tips.push([a, hem(a) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
+        const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };
+        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, ...whorlOf() }, bangKit());
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
+        // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy }): a layer under the outer one, rooted where it is
+        // hidden under it, lying down the head and the nape without a flick, shaded darker (layer 1): where the outer locks flick out, hair shows
+        // under them, not the neck (a gap from the side)
+        // (span: round the back only; by the ears a lock along the head ran out over the elf ear and hung from its tip)
+        const IN = SL.inner; if (IN?.on) { const m = Math.max(2, Math.round(IN.count ?? 8)), sp1 = IN.span ?? 70, it = [];
+          for (let i = 0; i < m; i++) { const a = -sp1 + 2 * sp1 * (i + 0.5) / m; it.push([a, hem(a) + (IN.dy ?? 0.01), null, null, null, 0, 0, 0, 1, 0, 0]); }
+          for (const sp of bangLocks({ ...kit, span: sp1, tips: it, lockThick: IN.thick ?? 0.08, puff: 0, lockRoot: IN.root ?? 20, lockRootSpread: 1, shingle: 0 }, bangKit()))
+            specs.push(Object.assign(sp, { stiff: 1, layer: 1, hold: INNER_HOLD, rigid: INNER_RIGID })); }
         out.locks = part(specs, { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 }); }
       else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
         out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8, hugY: hugOf(SL), innerHugY: SL.innerHug ? HTr.fromHead(0, SL.innerHug, 0)[1] : hugOf(SL) }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
