@@ -128,8 +128,8 @@ export const CHARACTERS = {
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.74, thighTop: 0.74, calf: 0.74 },
         joints: { footX: 0.13, kneeX: 0.118 },
-        // 🚧 the head's and face's shape is シルヴィ's for now, value for value, and so is the eyes' place (face.layout below: it places the sockets):
-        // the sheet's face is not made yet. The first try (jaw, chin, head depth, lower eyes) was fitted from the front alone and was nothing like it
+        // the head's and face's shape is シルヴィ's, value for value, and so is the eyes' place (face.layout below: it places the sockets too).
+        // Heights measured off the sheet's flat front view don't hold on the head: eyeY 0.965, measured so, sat far under the sheet's in the editor's view
         sculpt: { neck: { width: 0.75 }, cheeks: { y: 0.94, height: 0.14 }, chin: { k: 0.024, sharp: 0.1 }, cheekTrim: { depth: 0 }, cheekFill: { depth: 0.004 } },
       },
       hair: {
@@ -171,7 +171,7 @@ export const CHARACTERS = {
       face: {   // his own pictures (the code's eyes have no lash this thick); the brows show over the bangs, as on the sheet
         parts: { eyes: "image", brows: "thin", mouth: "image" },
         images: { eye: { src: ASTEL_EYE, dx: 0, dy: 0 }, eyeClosed: { src: ASTEL_EYE_CLOSED, dx: 0, dy: 0 }, mouth: { src: ASTEL_MOUTH } },
-        layout: { eyeX: 0.088, browX: 0.125, browY: 1.104 },   // the eyes and the mouth where シルヴィ's are (🚧 above); the brows as far over the eyes as on the sheet
+        layout: { eyeX: 0.088, browX: 0.125, browY: 1.104 },   // the eyes and the mouth where シルヴィ's are (Saori: this height is the sheet's); the brows as far over the eyes as on the sheet
         browsOverHair: true,
         blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
