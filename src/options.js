@@ -330,7 +330,8 @@ export const DEFAULTS = {
           "back": 25,
           "flat": 0.5,
           "curve": 0.25,
-          "k": 0.012
+          "k": 0.012,
+          "round": 0.62
         },
         "turn": 0,
         "blend": 0.02,

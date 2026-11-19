@@ -300,7 +300,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const EL = OPT.body.sculpt.ears.elf, ELF = !!EL?.on;
     // ear size. Elf ears: the round ear is smaller (0.62), inside the blade's root, which starts lower: the round ear stood out under the blade
     // (2026-10-07, Saori: "エルフ耳が耳に尖りを被せただけで、下の丸い耳が見えちゃってる"); its line and shade (EARS) shrink with it
-    const ES = OPT.body.sculpt.ears.scale * (ELF ? 0.62 : 1);
+    const ES = OPT.body.sculpt.ears.scale * (ELF ? EL.round ?? 0.62 : 1);   // (elf.round: smaller, its bottom no longer stands out under the blade's lower edge with a notch between; on シルヴィ v2 0.3 is clean, 0.45 left holes at the blade's root: try a value in a picture)
     // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
     const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
     if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }

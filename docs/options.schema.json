@@ -4545,6 +4545,25 @@
     "en": "ears › elf"
    }
   },
+  "body.sculpt.ears.elf.round": {
+   "path": "body.sculpt.ears.elf.round",
+   "type": "number",
+   "default": 0.62,
+   "label": {
+    "en": "ears › elf › round"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.31,
+   "max": 0.93,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "ears › elf"
+   }
+  },
   "body.sculpt.ears.turn": {
    "path": "body.sculpt.ears.turn",
    "type": "number",
