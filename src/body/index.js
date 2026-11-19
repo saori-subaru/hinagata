@@ -678,8 +678,8 @@ export function earBlades(P, HT, sdf, { N = 6, S = 6, D0 = 0.0004 } = {}) {   //
     const tip = pos.length / 3 - 1, V = (i, j) => v0 + i * N + (j % N), i0 = idx.length;
     for (let i = 0; i < S; i++) for (let j = 0; j < N; j++) idx.push(V(i, j), V(i + 1, j), V(i + 1, j + 1), V(i, j), V(i + 1, j + 1), V(i, j + 1));
     for (let j = 0; j < N; j++) idx.push(V(S, j), tip, V(S, j + 1));
-    { const [A, B, Cc] = [idx[i0], idx[i0 + 1], idx[i0 + 2]].map((v) => pos.slice(v * 3, v * 3 + 3)), u = B.map((v, k) => v - A[k]), w = Cc.map((v, k) => v - A[k]);   // wound to face along the normals
-      const fn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], n = nor.slice(idx[i0] * 3, idx[i0] * 3 + 3);
+    { const iw = i0 + (S - 1) * N * 6, [A, B, Cc] = [idx[iw], idx[iw + 1], idx[iw + 2]].map((v) => pos.slice(v * 3, v * 3 + 3)), u = B.map((v, k) => v - A[k]), w = Cc.map((v, k) => v - A[k]);   // wound to face along the normals (read at the last ring: the first is inside the head, its normals the head's)
+      const fn = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]], n = nor.slice(idx[iw] * 3, idx[iw] * 3 + 3);
       if (fn[0] * n[0] + fn[1] * n[1] + fn[2] * n[2] < 0) for (let k = i0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; } }
     unders.push((x, y, z) => { const q = toH(x, y, z); return along(q) > TS + TR + 0.03 && e.f(q[0], q[1], q[2]) < 0.002; });
   }

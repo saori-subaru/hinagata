@@ -270,7 +270,8 @@ export const CHARACTERS = {
   CHARACTERS.sylvie2 = { name: { ja: "シルヴィ v2", en: "Sylvie v2" }, about: { ja: "設定画に寄せたシルヴィ", en: "Sylvie as on her design sheet" }, file: { hinagata: 3, name: "シルヴィ v2", options: o } }; }
 // シルヴィ v2 外形 (an experiment beside v2): the back's outline set first (shortLocks.shape) and the locks laid on it, instead of flicks lock by lock
 { const o = structuredClone(CHARACTERS.sylvie2.file.options), SL = o.hair.sculpt.shortLocks;
-  SL.inner = { on: false };
+  // two layers of many narrow locks under the outer one, shorter and jagged: the many short tips at her sheet's hem from the side
+  SL.inner = [{ on: true, count: 21, span: 110, dy: 0.06, jag: 0.035, flick: 0.03, flare: 0.9, thick: 0.12, root: 40 }, { on: true, count: 15, span: 95, dy: 0.03, jag: 0.03, flick: 0.02, flare: 0.55, thick: 0.1 }];
   SL.shape = { hang: 0.75, flare: [[1.0, 0], [0.9, 0.005], [0.8, 0.02], [0.74, 0.032]], sides: 0.7 };   // (hang 0.4 tucked the hem in to the nape: no flick showed)
   // the hem jagged by turns (her sheet's) and the tips flicked out unevenly over the shape (v2's flicks), the two behind her right ear the wing
   const FL = [0.014, 0.022, 0.008, 0.018, 0.01, 0.02, 0.012, 0.02, 0.009, 0, 0, 0.016, 0.021], DY = [0, -0.03, 0.02, -0.01, 0.025, -0.03, 0, -0.025, 0.02, 0, 0, -0.02, 0.015];
