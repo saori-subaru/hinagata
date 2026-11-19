@@ -70,7 +70,7 @@ export const CHARACTERS = {
             overlap: 1.44,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82, ph: [84, 72], crown: 0.3,
+            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
             // the left side mirrors the right. 1 and 10 hang over the elf ears and stop there (a lock passes through an ear: a long one buried
             // the ear's root in hair); 0 and 11, before the ears, reach the chin. A flick on them (fl 0.02) stuck out over the ears as spikes.
             // Behind the ears (2, 9 and the inner 13, 14, 20, 21) longer and flicked out: the sides flare at the jaw while the nape hugs (her design sheet)
@@ -214,6 +214,7 @@ export const CHARACTERS = {
           { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
+          lockShell: 0.004,   // the block under the locks only a skin of hair color: the locks themselves make the shape (at 0.016 they lay on a helmet)
           ahogeCurl: true, ahogeSize: 1.05,   // small and curled round as on her design sheet
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
@@ -238,6 +239,7 @@ export const CHARACTERS = {
           },
           shortLocks: {
             count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
+            ph: [84, 72], crown: 0.3,   // rooted at the whorl, narrow there (see nendo.lockRootW)
             // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
             // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
             // (2, 9) they hang to the jaw
