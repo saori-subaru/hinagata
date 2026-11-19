@@ -133,39 +133,46 @@ export const CHARACTERS = {
         sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
       },
       hair: {
-        bangs: "nendo", back: "short", nape: "hang", ahoge: true,   // ⛔ nape: back "short" given alone reads as the lying locks (options.js readHair): the hanging ones' flick and hug then do nothing
+        // tufts (hair.tufts): on his sheet the hair is few big leaves from a whorl over his right brow, standing off the head at the sides and
+        // flicking out (locks lay flat on the head). The block is the hair under them
+        bangs: "none", back: "short", backForm: "block", ahoge: true,
         gradient: { on: true, color: "#c6a48e", start: 0.6, soft: 0.4 },
-        // the spikes standing out of the hair: cones (thick 1: round, so they read as a point from every side) at the sides and the back
-        // (head space; +x his left). Uneven, as on the sheet: his left's upper and middle, his right's, the back's
-        drawn: [
-          { pts: [[0.2, 1.21, -0.03], [0.27, 1.19, -0.045], [0.33, 1.172, -0.06]], width: 0.13, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[0.21, 1.09, -0.04], [0.275, 1.05, -0.05], [0.33, 1.017, -0.06]], width: 0.12, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[-0.2, 1.165, -0.03], [-0.28, 1.14, -0.045], [-0.352, 1.118, -0.06]], width: 0.15, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[-0.22, 1.02, -0.04], [-0.28, 0.98, -0.05], [-0.33, 0.947, -0.06]], width: 0.11, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[0.04, 1.25, -0.2], [0.05, 1.22, -0.3], [0.06, 1.19, -0.38]], width: 0.14, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[-0.05, 1.1, -0.22], [-0.06, 1.065, -0.31], [-0.07, 1.03, -0.39]], width: 0.13, thick: 1, stiff: 3, taper: 1 },
+        paint: { inner: 0.25 },   // the block a shade darker where it shows between the tufts
+        whorl: { x: -0.07, z: 0.1 },
+        tufts: [   // to: [round the head (degrees, 0 = front, + his left), the tip's height (head space)]; widths and lifts in m
+          // under the others, in shadow: along the nape and behind the ears, from their own roots at the back (thin: thicker they came through the leaves over them)
+          { to: [180, 0.885], from: [0, -0.29], width: 0.2, thick: 0.008, tips: [0.9, 1, 0.8], notch: 0.15, hug: 1, shade: 0.6 },
+          { to: [140, 0.9], from: [0.17, -0.22], width: 0.18, thick: 0.008, tips: [1, 0.8, 0.92], notch: 0.15, hug: 1, shade: 0.6 },
+          { to: [-140, 0.9], from: [-0.17, -0.22], width: 0.18, thick: 0.008, tips: [0.92, 0.8, 1], notch: 0.15, hug: 1, shade: 0.6 },
+          { to: [103, 0.96], from: [0.22, -0.08], width: 0.17, thick: 0.008, tips: [0.8, 1, 0.88], notch: 0.15, hug: 0.6, shade: 0.6 },
+          { to: [-103, 0.96], from: [-0.22, -0.08], width: 0.17, thick: 0.008, tips: [0.88, 1, 0.8], notch: 0.15, hug: 0.6, shade: 0.6 },
+          // the back: leaves down to the nape, lying close (his head is deeper than the sheet's: lifted, the back stood out further still)
+          { to: [-150, 0.97], width: 0.16, band: 0.2, lift: 0.01 },
+          { to: [155, 0.97], width: 0.2, band: 0.2, lift: 0.01 },
+          { to: [125, 0.99], width: 0.2, band: 0.3, lift: 0.015 },
+          { to: [178, 0.94], width: 0.24, band: 0.2, lift: 0.012 },
+          // short ones over them, their tips flicking out: the spikes of his outline from the side and the back
+          { to: [-168, 1.07], width: 0.22, band: 0.35, out: 0.1, lift: 0.015 },
+          { to: [172, 1.19], width: 0.22, band: 0.35, out: 0.1, lift: 0.02 },
+          { to: [-140, 1.15], width: 0.2, band: 0.35, out: 0.06, lift: 0.02 },
+          { to: [145, 1.2], width: 0.2, band: 0.35, out: 0.06, lift: 0.02 },
+          // the sides: a wide fan over each ear, and the spikes that stand out beside the brows from the front (his left has two)
+          { to: [-88, 0.985], width: 0.2, tips: [0.82, 1], notch: 0.06, endWidth: 0.8, lift: 0.045 },
+          { to: [90, 0.97], width: 0.22, tips: [1, 0.8, 0.9], notch: 0.06, endWidth: 0.8, lift: 0.045 },
+          { to: [105, 1.05], width: 0.18, band: 0.35, out: 0.075, lift: 0.05 },
+          { to: [-95, 1.14], width: 0.17, band: 0.35, out: 0.085, lift: 0.055 },
+          { to: [100, 1.2], width: 0.18, band: 0.35, out: 0.075, lift: 0.055 },
+          // the front: a leaf outside each eye (the forehead shows between his right one and the middle), the sidelocks to the cheeks, and
+          // over them the middle blade, its three points between the eyes at their height
+          { to: [-40, 1.0], width: 0.085, band: 0.15, lift: 0.045 },
+          { to: [35, 1.0], width: 0.12, band: 0.15, lift: 0.045 },
+          { to: [-60, 0.93], width: 0.16, tips: [1, 0.86], notch: 0.07, endWidth: 0.75, lift: 0.04 },
+          { to: [62, 0.945], width: 0.17, tips: [0.84, 1], notch: 0.06, endWidth: 0.8, lift: 0.04 },
+          { to: [8, 0.985], width: 0.19, tips: [0.94, 0.99, 1], notch: 0.09, endWidth: 0.8, lift: 0.065 },   // (the bangs stand well off the forehead on his sheet's side view)
         ],
         sculpt: {
-          shell: 0.04, square: 0.8,
-          ahogeCurl: true, ahogeDir: 110, ahogeSize: 1.5, ahogeX: -0.085, ahogeZ: 0.06,   // off the top's middle, toward his right and the front
-          // the bangs: few wide locks to sharp points (lockSpan 30: a tuft stays one lock). Rows: [angle, tip height, , , group, sweep, thickness, flick, width, wave, lean].
-          // The forehead shows between the lock outside his right eye (-42, its point at its inner edge) and the middle's two points;
-          // his left eye's outer half is under the lock at 40. The tips' heights go with the eyes' (the middle's points at the eyes' middle)
-          nendo: {
-            lockSpan: 30, lockBand: 0.1, overlap: 1.3,
-            tips: [
-              [-84, 0.885, 0.69, 0.33, null, 6, 0, 0, 1.3],
-              [-62, 0.963],
-              [-42, 0.95, null, null, null, 0, 0, 0, 0.85, 0, -0.6],
-              [-4, 0.997, 0.8, 0.04, "c", 0, 0, 0, 0.75],
-              [8, 0.985, 0.8, 0, "c"],
-              [22, 1.028],
-              [40, 0.956, null, null, null, 0, 0, 0, 1, 0, -0.5],
-              [62, 0.973],
-              [84, 0.885, 0.66, -0.33, null, -8, 0, 0, 1.3],
-            ],
-          },
-          shortLocks: { count: 11, width: 0.1, thick: 0.28, below: 0.025, flick: 0.008, vary: 0.22, hug: 0.95, innerHug: 0.84 },   // the nape covered, the tips a little out
+          shell: 0.022, square: 0.8,   // a thin block: the tufts are the hair's thickness (0.04 under them stood the top of his head 3 cm too high)
+          ahogeCurl: true, ahogeLean: -20, ahogeDir: 125, ahogeSize: 1.5, ahogeWidth: 2, ahogeX: -0.07, ahogeZ: 0.08,   // a thick horn at the whorl, its point toward his left and the back
         },
       },
       face: {   // his own pictures (the code's eyes have no lash this thick); the brows show over the bangs, as on the sheet
