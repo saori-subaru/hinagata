@@ -243,7 +243,7 @@ export const CHARACTERS = {
             edits: [{ i: 0, fl: 0.014 }, { i: 1, fl: 0.022, dy: -0.015 }, { i: 2, fl: 0.008, dy: 0.01 }, { i: 3, fl: 0.018 }, { i: 4, fl: 0.01, dy: -0.015 }, { i: 5, fl: 0.02, dy: 0.01 },
               { i: 6, fl: 0.012 }, { i: 7, fl: 0.02, dy: -0.015 }, { i: 8, fl: 0.009, dy: 0.01 }, { i: 9, fl: 0.018, w: 1.25 }, { i: 10, fl: 0.022, w: 1.25, dy: 0.02 },
               { i: 11, fl: 0.016, dy: 0.01 }, { i: 12, fl: 0.021 }],
-            inner: { on: true },   // hair under the flicked hem, down the nape (from the side the neck showed under it)
+            inner: { on: true, dy: 0.08 },   // hair under the flicked hem, down the nape (from the side the neck showed under it); ending above the outer tips (as long, it filled the hem's gaps into a level line from behind)
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },
