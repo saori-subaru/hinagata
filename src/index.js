@@ -695,7 +695,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (bangsOn) {
       // the hime cut in locks (2026-10-07, Saori: "姫カットの毛束タイプ"): the same locks from its own tips (a straight fringe, side locks to the
       // cheeks), each ending square instead of in a point (HIME_END)
-      const HIME = hairPick.bangs === "hime", B0 = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo, B = WHORL ? { ...B0, lockRootW: B0.lockRootW ?? WHORL.rootW, ...whorlOf() } : B0;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
+      const HIME = hairPick.bangs === "hime", B0 = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo, B = WHORL ? { ...B0, lockRootW: B0.lockRootW ?? WHORL.rootW, puff: WHORL.puff ?? 0.004, ...whorlOf() } : B0;   // (puff: the bangs' own 1.2 cm, over the forehead from their old roots, peaks over the crown from the whorl: a hump in front)   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
       const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE(), bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
       if (HIME) for (const sp of specs) { sp.prof = HIME_END; sp.blunt = 0.06; }
       const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
