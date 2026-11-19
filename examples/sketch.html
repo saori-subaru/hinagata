@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hinagata — 手描き風</title>
+<style>
+html, body { margin: 0; height: 100%; background: #fbfaf6; font: 13px sans-serif; } canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#ui { position: fixed; left: 8px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 6px 10px; background: #fffc; border-radius: 8px; }
+#ui label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <label>ゆらぎ <input id="wobble" type="range" min="0" max="3" step="0.1" value="1.2"></label>
+  <label>線の太さ <input id="width" type="range" min="0.6" max="2.5" step="0.1" value="0.7"></label>
+  <label><input id="tone" type="checkbox" checked> 影トーン</label>
+  <label><input id="keep" type="checkbox"> 色を残す</label>
+  <label><input id="boil" type="checkbox"> 線を揺らす</label>
+  <label><input id="move" type="checkbox"> 歩く</label>
+</div>
+<script type="module">
+// 手描き風の試作: 色・法線・奥行きを別々に描き、後段で境目を拾って線にする(?who=sylvie で初代)。
+// 線は取る位置をノイズでずらして揺らし、少しずれた薄い二本目を重ねて下描きの重ね線に見せる。
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { createAvatar, CHARACTERS } from "../src/index.js";
+
+const Q = new URLSearchParams(location.search), $ = (id) => document.getElementById(id);
+const renderer = new THREE.WebGLRenderer({ canvas: $("c"), antialias: false, preserveDrawingBuffer: true });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 20); camera.position.set(1.1, 1.25, 4.2);
+const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 0.92, 0); controls.update();
+scene.add(new THREE.AmbientLight(0xffffff, 3));
+
+// 色の面は陰なし(flat)で描く: トゥーンの陰の境目まで線に拾わないため。輪郭線の殻も切る(線は後段が引く)
+const file = structuredClone(CHARACTERS[Q.get("who") ?? "sylvie2"].file);
+file.options.shading = { ...file.options.shading, style: "flat" }; file.options.outline = { ...file.options.outline, on: false };
+const avatar = await createAvatar(file);
+avatar.update(0, { instant: true });
+avatar.object.scale.setScalar(1.7 / new THREE.Box3().setFromObject(avatar.object).getSize(new THREE.Vector3()).y);
+scene.add(avatar.object);
+
+const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+const normalRT = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthTexture: new THREE.DepthTexture(1, 1) });
+const normalMat = new THREE.MeshNormalMaterial();
+
+const post = new THREE.ShaderMaterial({
+  uniforms: { tColor: { value: colorRT.texture }, tNormal: { value: normalRT.texture }, tDepth: { value: normalRT.depthTexture }, res: { value: new THREE.Vector2() },
+    near: { value: camera.near }, far: { value: camera.far }, seed: { value: 0 }, wobble: { value: 1.2 }, lineW: { value: 0.7 }, tone: { value: 1 }, keep: { value: 0 },
+    light: { value: new THREE.Vector3(-0.55, 0.6, 0.58).normalize() } },   // 視点空間の光(左上手前から)
+  vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+  fragmentShader: `
+    varying vec2 vUv; uniform sampler2D tColor, tNormal, tDepth; uniform vec2 res; uniform float near, far, seed, wobble, lineW, tone, keep; uniform vec3 light;
+    float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+    float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+    // 手の震え: 大きなうねりと細かい震えの重ね(単位 px、-1..1 くらい)
+    vec2 warp(vec2 px, float s) { return vec2(vn(px / 46.0 + s) + 0.16 * vn(px / 13.0 + s * 1.7), vn(px / 46.0 + s + 31.7) + 0.16 * vn(px / 13.0 + s * 1.7 + 9.2)) * 1.7 - 1.0; }
+    float lin(vec2 uv) { float z = texture2D(tDepth, uv).x * 2.0 - 1.0; return 2.0 * near * far / (far + near - z * (far - near)); }
+    vec3 nrm(vec2 uv) { vec4 t = texture2D(tNormal, uv); return t.a < 0.5 ? vec3(0.0) : t.xyz * 2.0 - 1.0; }
+    // 境目の濃さ: x = 外形(奥行きの段差)、y = 折れ目(法線の向きの差)、z = 色の境目
+    vec3 edges(vec2 uv, float w) { vec2 d = w / res; vec2 a = uv - d, b = uv + d, c = uv + vec2(-d.x, d.y), e = uv + vec2(d.x, -d.y);
+      float za = lin(a), zb = lin(b), zc = lin(c), ze = lin(e); vec3 n = nrm(uv);
+      // 視線に寝た面は隣との奥行きの差が大きい: そこを段差と見なさないよう、面の向きで閾値を上げる
+      float dz = (abs(za - zb) + abs(zc - ze)) / min(min(za, zb), min(zc, ze)) * clamp(n.z, 0.12, 1.0);
+      float dn = length(nrm(a) - nrm(b)) + length(nrm(c) - nrm(e));
+      float dc = length(texture2D(tColor, a).rgb - texture2D(tColor, b).rgb) + length(texture2D(tColor, c).rgb - texture2D(tColor, e).rgb);
+      return vec3(smoothstep(0.004, 0.009, dz), smoothstep(0.85, 1.35, dn), smoothstep(0.10, 0.22, dc)); }
+    float stroke(vec2 px, float s, float w) { vec2 uv = (px + warp(px, s) * 3.2 * wobble * res.y / 1000.0) / res; vec3 e = edges(uv, w);
+      float press = vn(px / 70.0 + s * 3.1), skip = smoothstep(0.22, 0.42, vn(px / 34.0 + s * 5.3));   // 筆圧のむらと、弱い線の途切れ
+      return max(e.x * (0.72 + 0.28 * press), max(e.y, e.z) * skip * (0.5 + 0.4 * press)); }
+    void main() { vec2 px = vUv * res; float k = res.y / 1000.0;
+      float ink = max(stroke(px, seed, lineW * k), 0.3 * stroke(px + 1.2 * k, seed + 17.0, lineW * k * 0.7));
+      vec2 uv = (px + warp(px, seed + 4.0) * 2.0 * wobble * k) / res;
+      vec4 col = texture2D(tColor, uv); vec3 n = nrm(uv); float on = step(0.5, texture2D(tNormal, uv).a);
+      ink = max(ink, on * smoothstep(0.16, 0.05, dot(col.rgb, vec3(0.3, 0.6, 0.1))) * 0.92);   // 元から黒い所(瞳・まつ毛)はベタ
+      vec3 paper = vec3(0.985, 0.98, 0.962) - 0.018 * hash(floor(px / (1.5 * k)));
+      vec3 base = mix(paper, mix(paper, pow(col.rgb, vec3(0.4545)), 0.62), keep * on);
+      float shade = on * tone * smoothstep(0.2, 0.14, dot(n, light));
+      base *= mix(1.0, 0.8, shade);
+      float grain = 0.82 + 0.18 * hash(floor(px / k) + seed);
+      gl_FragColor = vec4(mix(base, vec3(0.16, 0.15, 0.18), clamp(ink * grain, 0.0, 1.0)), 1.0); }`,
+  depthTest: false, depthWrite: false });
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post), quadScene = new THREE.Scene(), quadCam = new THREE.Camera(); quad.frustumCulled = false; quadScene.add(quad);
+
+const resize = () => { const dpr = Math.min(devicePixelRatio, 2), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  renderer.setPixelRatio(dpr); renderer.setSize(innerWidth, innerHeight, false); colorRT.setSize(w, h); normalRT.setSize(w, h); post.uniforms.res.value.set(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix(); };
+addEventListener("resize", resize); resize();
+
+const U = post.uniforms;
+$("wobble").oninput = (e) => { U.wobble.value = +e.target.value; }; $("width").oninput = (e) => { U.lineW.value = +e.target.value; };
+$("tone").onchange = (e) => { U.tone.value = +e.target.checked; }; $("keep").onchange = (e) => { U.keep.value = +e.target.checked; };
+$("move").onchange = (e) => { e.target.checked ? avatar.play("walk") : avatar.stop?.(); };
+for (const [k, v] of Q) { const el = $(k); if (!el) continue; if (el.type === "checkbox") el.checked = v !== "0"; else el.value = v; el.dispatchEvent(new Event(el.type === "checkbox" ? "change" : "input")); }
+
+const clock = new THREE.Clock(); let t = 0;
+renderer.setAnimationLoop(() => { const dt = clock.getDelta(); t += dt; avatar.update(dt, { camera });
+  if ($("boil").checked) U.seed.value = Math.floor(t * 8);   // 1秒に8枚ぶん描き直した線
+  renderer.setRenderTarget(colorRT); renderer.setClearColor(0xffffff, 1); renderer.render(scene, camera);
+  scene.overrideMaterial = normalMat; renderer.setRenderTarget(normalRT); renderer.setClearColor(0x000000, 0); renderer.render(scene, camera); scene.overrideMaterial = null;
+  renderer.setRenderTarget(null); renderer.render(quadScene, quadCam); window.READY = true; });
+</script>
+</body>
+</html>
