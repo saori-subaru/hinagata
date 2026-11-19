@@ -131,7 +131,8 @@ export const CHARACTERS = {
           long: { count: 16, bottom: 0.725 },
         },
       },
-      face: { parts: { eyes: "image", brows: "image", mouth: "image" } },
+      face: { parts: { eyes: "image", brows: "image", mouth: "image" }, lashTrace: 0.8 },
+      outline: { trace: 0.75 },
     } },
   },
   lumina: {
@@ -190,6 +191,7 @@ export const CHARACTERS = {
   // hair a shade darker than her skin, as on her design sheet (as pale as the skin, the forehead between the bangs and the hair over it read as
   // one bare patch), and the ring a light highlight (the automatic ring is never lighter than 0.85: on pale hair a skin-colored band across the bangs)
   o.colors.hair = "#f4ece3";
+  o.outline = { trace: 0.75 };
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
   o.body.sculpt.crown = { y: 1.34, blend: 0.14 };   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
   o.body.sculpt.hand = { slim: 1, fingers: 0.7 };   // her sheet's hands: slender, tapering, the fingers together (fingers 0.7: a child's, not the adult hand's 0.55)
@@ -259,7 +261,7 @@ export const CHARACTERS = {
       face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 9 }, nose: { on: false } },
         parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
-        noseColor: "#c98a8090", noseSize: 0.65, openSize: 1.3, lashHatch: true,   // the knees' line's color (body.knees.line), see-through; a small dot
+        noseColor: "#c98a8090", noseSize: 0.65, openSize: 1.3, lashHatch: true, lashTrace: 0.8,   // the knees' line's color (body.knees.line), see-through; a small dot
         browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
         eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
         layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },

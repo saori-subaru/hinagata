@@ -609,6 +609,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
+  // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
+  const TR = { c: new THREE.Color(), ink: new THREE.Color(), hsl: {} };
+  function traceLines() {
+    const t = OPT.outline.trace ?? 0;
+    for (const k in parts) { const x = parts[k], b = (x?.toonMat ?? x?.m?.material)?.color; if (!b || !x.o) continue;
+      const key = t ? b.getHex() + OPT.outline.color + t : OPT.outline.color; if (x.o.userData.trace === key) continue; x.o.userData.trace = key;
+      TR.ink.set(OPT.outline.color); if (t) { b.getHSL(TR.hsl, THREE.SRGBColorSpace); TR.c.setHSL(TR.hsl.h, Math.min(TR.hsl.s, 0.42), TR.hsl.l * 0.4, THREE.SRGBColorSpace); TR.ink.lerp(TR.c, t); }
+      x.o.material.color.copy(TR.ink); }
+  }
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
@@ -862,7 +872,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
-      syncCover(); hairLines(); rims();
+      syncCover(); hairLines(); traceLines(); rims();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
       if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
@@ -978,6 +988,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
       if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
+      else if (hair && OPT.face.lashTrace) avatar.drawFace();   // the lashes follow the hair's color
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { OPT.outfit[k].color = c; if (!(DR && (k === "pants" || k === "shirt"))) parts[k].m.material.color.set(c); }
       if (dress !== undefined) OPT.outfit.dress.color = dress;   // null: the shirt's color
@@ -994,10 +1005,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setBands(ch = {}) { for (const [p, v] of Object.entries(ch)) { const k = p.split("."); let o = OPT; for (const q of k.slice(0, -1)) o = o[q] ??= {}; o[k.at(-1)] = v; } paintBands(); },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
-    /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
-    setOutline({ on, width, color, hairInner } = {}) {
-      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner }).filter(([, v]) => v !== undefined))); hairLines();
-      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+    /** Outline (instant, no rebuild): { on, width (1 = default), color, trace (0–1: each part's line in its own color, darkened) }. Some art styles want none: { on: false }. */
+    setOutline({ on, width, color, hairInner, trace } = {}) {
+      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner, trace }).filter(([, v]) => v !== undefined))); hairLines();
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+      traceLines();
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
      *  bands 2 (light / shadow) or 3 (with a mid tone), soften 0.. how far the shading normals are smoothed (0 = the mesh's own, 1 = default). Keeps the current colors. */
