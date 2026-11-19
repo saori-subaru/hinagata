@@ -134,11 +134,18 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
   // aOff (degrees): the rows' angles are from there (the back's locks from the whorl: 180, so the rows run -span..span as the bangs' do).
   // whorl { d: unit direction from center (head space), r: the roots' ring around it (radians) }: every lock rooted there (see hair.sculpt.whorl)
   const A0 = (B.aOff ?? 0) * deg, WH = B.whorl, PART = (B.part ?? 0) * deg;
+  // shape { hang, flare: [[y, m], …], sides } (the back's from the whorl): the hair's outline set first, the locks laid on it. Below the head's
+  // widest part a lock stands off the head and the nape by hang (0: along them, 1: hanging straight from the widest part) plus flare at that
+  // height (head space, m), the flare × sides at the sides (else flicks lock by lock set the outline, and it would not come out as wanted)
+  const SH = B.shape, FL = SH?.flare ?? [], flareAt = (y) => { if (!FL.length) return 0; if (y >= FL[0][0]) return FL[0][1]; for (let i = 1; i < FL.length; i++) if (y >= FL[i][0]) { const [y0, m0] = FL[i - 1], [y1, m1] = FL[i]; return m0 + (m1 - m0) * (y0 - y) / (y0 - y1); } return FL.at(-1)[1]; };
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th + A0), 0, Math.cos(th + A0)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
   // where a tuft leaves the head to hang: at its height, but no closer in than the head is anywhere above it (at the sides HY is below the
   // jaw, and the surface there is the neck: a side tuft hung from the neck, as narrow as the neck's radius made it, a row of strings)
-  const leave = (y, th) => { const p = horiz(y, th); if (y > HY) return p; let R = Math.hypot(p[0], p[2] - center[2]);
+  // (with a shape: on the shape at that height, so the tips and the locks' widths follow it, not the neck under it)
+  const shWof = (th) => SH ? (SH.sides ?? 1) + (1 - (SH.sides ?? 1)) * sstep(0.2, 0.7, -Math.cos(th + A0)) : 0;
+  const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
     for (let yy = y + 0.03; yy <= center[1]; yy += 0.03) { const q = horiz(yy, th); R = Math.max(R, Math.hypot(q[0], q[2] - center[2])); }
+    if (SH) R = hs + (R - hs) * (SH.hang ?? 0) + flareAt(y) * shWof(th);
     return [Math.sin(th + A0) * R, y, center[2] + Math.cos(th + A0) * R]; };
   T.forEach((tp, i) => {
     const gl = i > 0 ? tp.a - T[i - 1].a : 2 * (tp.a + span), gr = i + 1 < T.length ? T[i + 1].a - tp.a : 2 * (span - tp.a), half = 0.5 * Math.max(Math.min(gl, gr) * 1.2, Math.max(gl, gr) * 0.8);   // half the clump's angle
@@ -161,7 +168,7 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
       if (WH) { const td = tip.map((v, q) => v - center[q]), dd = td[0] * WH.d[0] + td[1] * WH.d[1] + td[2] * WH.d[2], tg = td.map((v, q) => v - WH.d[q] * dd), tl = Math.hypot(...tg) || 1;   // off the whorl toward its tip
         rd = WH.d.map((v, q) => v + tg[q] / tl * WH.r); const rl = Math.hypot(...rd); rd = rd.map((v) => v / rl); }
       const rt = surfaceAlong(surf, center, rd), root = rd.map((v, q) => center[q] + v * (rt - 0.006));
-      let reach = 0, last = null;
+      let reach = 0, last = null; const shW = shWof(tipA);
       const thick = (B.lockThick ?? 0.22) + tp.tk * 6, puff = B.puff ?? 0.012, pts = [];
       const upper = 1.15 * Math.hypot(...tip.map((v, m) => v - root[m])), share = upper / (upper + hang);   // the points spread over the whole length
       for (let q = 0; q < N; q++) { const t = q / (N - 1);
@@ -169,7 +176,8 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
         if (t <= share || !hang) { const tu = hang ? t / share : t, p = root.map((v, m) => v + (tip0[m] - v) * tu + (tip[m] - tip0[m]) * swk(tu)), d = p.map((v, m) => v - center[m]), dl = Math.hypot(...d), u = d.map((v) => v / dl);
           const off = 0.5 * w / sx * thick * prof(t) + 0.002 + puff * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.004 * (1 - Math.abs(f)), at = surfaceAlong(surf, center, u) + rise(t, off);   // along the surface (the root a little inside the hair); the middle of a clump on top
           px = center[0] + u[0] * at; py = center[1] + u[1] * at; pz = center[2] + u[2] * at; const hr = Math.hypot(px, pz - center[2]);
-          if (WH && py > center[1]) {} else if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
+          if (WH && py > center[1]) {} else if (SH) { reach = Math.max(reach, hr); const want = hr + (reach - hr) * (SH.hang ?? 0) + flareAt(py) * shW, k = want / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; }
+          else if (hr < reach) { const k = reach / (hr || 1); px *= k; pz = center[2] + (pz - center[2]) * k; } else reach = hr;   // below the head's widest part the lock hangs down instead of tucking in under it (a tuft ending low wrapped under the head into a lump below the ear)
           last = [px, py, pz]; }
         else { const th = (t - share) / (1 - share), gt = 0.7 * Math.sin(0.5 * Math.PI * th); px = last[0] + (mid[0] - last[0]) * gt; pz = last[2] + (mid[2] - last[2]) * gt; py = last[1] - (last[1] - tipY) * th;   // hanging down, the clump's locks gathering into one tuft (else they hung apart, a row of strings)
           if (tp.wv) { const nx = Math.sin(tp.a + A0), nz = Math.cos(tp.a + A0) + 0.9, nl = Math.hypot(nx, nz), e = tp.wv * Math.sin(2 * Math.PI * (B.waves ?? 1.5) * th) * sstep(0, 0.3, th); px += nz / nl * e; pz -= nx / nl * e; } }   // wave (the row's 10th value, m): the hanging part snakes side to side across its flat side

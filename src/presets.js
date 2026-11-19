@@ -268,6 +268,13 @@ export const CHARACTERS = {
       },
   });
   CHARACTERS.sylvie2 = { name: { ja: "シルヴィ v2", en: "Sylvie v2" }, about: { ja: "設定画に寄せたシルヴィ", en: "Sylvie as on her design sheet" }, file: { hinagata: 3, name: "シルヴィ v2", options: o } }; }
+// シルヴィ v2 外形 (an experiment beside v2): the back's outline set first (shortLocks.shape) and the locks laid on it, instead of flicks lock by lock
+{ const o = structuredClone(CHARACTERS.sylvie2.file.options), SL = o.hair.sculpt.shortLocks;
+  SL.inner = { on: false };
+  SL.shape = { hang: 0.4, flare: [[1.0, 0], [0.92, 0.01], [0.82, 0.03], [0.76, 0.05]], sides: 0.7 };
+  // the hem jagged by turns (her sheet's), the two behind her right ear the wing
+  SL.edits = [0, -0.03, 0.02, -0.01, 0.025, -0.03, 0, -0.025, 0.02].map((dy, i) => ({ i, dy })).concat(SL.edits.filter((e) => e.i === 9 || e.i === 10), [{ i: 11, dy: -0.02 }, { i: 12, dy: 0.015 }]);
+  CHARACTERS.sylvie2s = { name: { ja: "シルヴィ v2 外形", en: "Sylvie v2 (outline)" }, about: { ja: "後ろ髪の外形を先に決めたシルヴィ v2(試し)", en: "Sylvie v2 with the back hair's outline set first (a try)" }, file: { hinagata: 3, name: "シルヴィ v2 外形", options: o } }; }
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
 // 6 heads on the adult body (body.adult), made 2026-10-08/09 beside a Genshin character's picture and her three views, then Saori's VRoid

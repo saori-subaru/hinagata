@@ -684,8 +684,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const B = hairKit.BACKS.short, n = Math.max(3, Math.round(SL.count ?? 13)), span = SL.span ?? 115, tips = [], hem = (a) => B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos((180 + a) * Math.PI / 180))) - (SL.below ?? 0.02);
         for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0);
           tips.push([a, hem(a) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
-        const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };
-        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, ...whorlOf() }, bangKit());
+        const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.shape ? 0.3 : SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };   // (with a shape nothing hangs: the shape says where the hem goes)
+        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
         // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy }): a layer under the outer one, rooted where it is
