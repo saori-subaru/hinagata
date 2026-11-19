@@ -209,11 +209,7 @@ export const CHARACTERS = {
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
-        // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side, their points turning up;
-        // each from the whorl over the head (fromWhorl: as a cone alone it stood out of the head like a horn)
-        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
-          { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.025, -0.099], [-0.32, 0.995, -0.103], [-0.365, 0.985, -0.105], [-0.395, 0.997, -0.106]], width: 0.09, thick: 1, stiff: 3, taper: 1, fromWhorl: true },
-          { pts: [[-0.19, 1.0, -0.135], [-0.245, 0.957, -0.155], [-0.29, 0.932, -0.172], [-0.325, 0.938, -0.183]], width: 0.08, thick: 0.8, stiff: 3, taper: 1, fromWhorl: true }],
+        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
         sculpt: {
           // every lock from the whorl behind the ahoge, laid like roof tiles away from the part down the middle; no block under them (the
           // locks make the head's shape; on a 1.6 cm block they lay over a helmet). lockShell: the locks lie on the skull, not 1.6 cm over it
@@ -240,7 +236,10 @@ export const CHARACTERS = {
             overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
           },
           shortLocks: {
-            count: 13, width: 0.09, thick: 0.15, below: 0.03, flick: 0.01,   // from the whorl (hair.sculpt.whorl): one lock right behind, across from the part
+            count: 13, width: 0.09, thick: 0.15, below: 0.03,   // from the whorl (hair.sculpt.whorl): one lock right behind, across from the part
+            // the wing on her right (the tail is on her left): the two locks behind the ear flick out from below the head's widest part, their
+            // points turning up (drawn cones standing out from behind the ear read as horns)
+            edits: [{ i: 9, fl: 0.018, w: 1.25 }, { i: 10, fl: 0.022, w: 1.25, dy: 0.02 }],
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },

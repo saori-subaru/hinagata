@@ -212,32 +212,23 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
- * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
- * fromWhorl (with W = { d, r, surf, center, rootW }, hair.sculpt.whorl on): a path over the head from the whorl to the stroke's first point
- * goes before it, the lock narrow at the whorl and full from that point (else a wing drawn behind the ear stood out of the head like a horn) }.
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
-export function drawnLocks(list, { toRoot, N = 16, W = null }) {
+export function drawnLocks(list, { toRoot, N = 16 }) {
   const out = [];
   for (const d of list ?? []) {
     if (!d?.pts || d.pts.length < 2) continue;
     for (const m of d.mirror ? [1, -1] : [1]) {
-      let P = d.pts.map(([x, y, z]) => [x * m, y, z]), t0 = 0; const acc = [0];
-      if (d.fromWhorl && W) { const c = W.center, e0 = P[0].map((v, k) => v - c[k]), r0 = Math.hypot(...e0), u0 = e0.map((v) => v / r0), h0 = r0 - surfaceAlong(W.surf, c, u0), off = 0.009, pre = [];   // (off: over the back's locks)
-        for (let q = 0; q < 8; q++) { const t = q / 8, u = W.d.map((v, k) => v * (1 - t) + u0[k] * t), ul = Math.hypot(...u), e = u.map((v) => v / ul), at = surfaceAlong(W.surf, c, e) + off + (h0 - off) * sstep(0.5, 1, t);   // (between the two the chord's directions, along the surface; lifting to the stroke's start over the last half)
-          pre.push(e.map((v, k) => c[k] + v * at)); }
-        P = [...pre, ...P]; }
+      const P = d.pts.map(([x, y, z]) => [x * m, y, z]), acc = [0];
       for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
-      const L = acc.at(-1); if (L < 0.01) continue; if (d.fromWhorl && W) t0 = acc[8] / L;
+      const L = acc.at(-1); if (L < 0.01) continue;
       const pts = []; let j = 0;
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      const tp = Math.min(1, Math.max(0, d.taper ?? 0)), p1 = tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : width;   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
-      // from the whorl: narrow there and flat over the head (as thick as the stroke, a round wing's 4.5 cm lay on the head as a lump), full at the stroke's start
-      const prof = t0 ? (t) => t < t0 ? W.rootW + (1 - W.rootW) * sstep(0, t0, t) : p1((t - t0) / (1 - t0)) : tp ? p1 : undefined, fl = Math.min(1, 0.15 / (d.thick ?? 0.3));
-      const tprof = t0 ? (t) => fl + (1 - fl) * sstep(0.7 * t0, t0, t) : undefined;
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof, tprof });
+      const tp = Math.min(1, Math.max(0, d.taper ?? 0));   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : undefined });
     }
   }
   return out;
@@ -469,7 +460,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
     const e = Mi.elements;
     const toRest = (out, o, x, y, z, dir) => { if (dir) { out[o] = e[0] * x + e[4] * y + e[8] * z; out[o + 1] = e[1] * x + e[5] * y + e[9] * z; out[o + 2] = e[2] * x + e[6] * y + e[10] * z; }
       else { out[o] = e[0] * x + e[4] * y + e[8] * z + e[12]; out[o + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; out[o + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; } };
-    for (let l = 0; l < NL; l++) { const s = specs[l], b0 = l * N * 3;
+    for (let l = 0; l < NL; l++) { const s = specs[l], b0 = l * N * 3; let px = 0, py = 0, pz = 0;   // p: the last ring's "out"
       const at = (i) => Math.min(N - 1, Math.max(0, i)) * 3 + b0;
       for (let i = 0; i + 1 < N; i++) for (let k = 0; k < SB; k++) { const t = k / SB, r = i * SB + k, p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2), t2 = t * t, t3 = t2 * t;
         for (let q = 0; q < 3; q++) { const a = X[p0 + q], b = X[p1 + q], c = X[p2 + q], d = X[p3 + q];
@@ -480,9 +471,14 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         let dx = Dd[r * 3], dy = Dd[r * 3 + 1], dz = Dd[r * 3 + 2]; const dl = Math.hypot(dx, dy, dz) || 1; dx /= dl; dy /= dl; dz /= dl;
         let [ox, oy, oz] = outward(cx, cy, cz, M); const rl = Math.hypot(ox, oy, oz) || 1, rx = ox / rl, ry = oy / rl, rz = oz / rl;   // the hair's "out" as it is: the shading's, at oneShade
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
-        const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; const ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;   // out: across the lock's direction
+        const o0 = Math.hypot(ox, oy, oz) || 1, od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; let ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;
+        // where the lock runs (almost) along "out" (a wing or a flick standing out from the head), "out" across it is undefined and the lock
+        // twisted there: the last ring's carried over instead (turned square to this ring's direction)
+        if (r > 0 && ol / o0 < 0.6) { const pd = px * dx + py * dy + pz * dz, qx = px - dx * pd, qy = py - dy * pd, qz = pz - dz * pd, ql = Math.hypot(qx, qy, qz);
+          if (ql > 1e-6) { const w = sstep(0.25, 0.6, ol / o0); ox = ox * w + qx / ql * (1 - w); oy = oy * w + qy / ql * (1 - w); oz = oz * w + qz / ql * (1 - w); ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol; } }
+        px = ox; py = oy; pz = oz;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.tprof ? s.tprof(t) : 1) * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
           const tl = w * ht * bulge + (s.tilt ? s.tilt * u * hw : 0);   // tilt: across the lock, one edge up and the other down (bangLocks' shingle)
           const x = cx + ax * (u * hw + cu) + ox * tl, y = cy + ay * (u * hw + cu) + oy * tl, z = cz + az * (u * hw + cu) + oz * tl;
