@@ -205,7 +205,7 @@ export const CHARACTERS = {
         // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
-        rigid: 0.5, lockPoints: 7,   // 7, not 5: the tips' curl came out as one fold between two points
+        rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
@@ -238,13 +238,13 @@ export const CHARACTERS = {
           },
           shortLocks: {
             count: 13, width: 0.09, thick: 0.15, below: 0.03,   // from the whorl (hair.sculpt.whorl): one lock right behind, across from the part
-            hug: 1, curlFrom: 0.65,   // down the head and the nape, only the tips flicking (hanging straight from the head's widest part, the neck showed under them from the side)
             // the wing on her right (the tail is on her left): the two locks behind the ear flick out from below the head's widest part, their
             // points turning up (drawn cones standing out from behind the ear read as horns)
             // the rest flick out unevenly (as her sheet's hem: tips each its own way), a little longer or shorter by turns
-            edits: [{ i: 0, fl: 0.018 }, { i: 1, fl: 0.029, dy: -0.015 }, { i: 2, fl: 0.01, dy: 0.01 }, { i: 3, fl: 0.023 }, { i: 4, fl: 0.013, dy: -0.015 }, { i: 5, fl: 0.026, dy: 0.01 },
-              { i: 6, fl: 0.016 }, { i: 7, fl: 0.026, dy: -0.015 }, { i: 8, fl: 0.012, dy: 0.01 }, { i: 9, fl: 0.018, w: 1.25, cf: 0.5 }, { i: 10, fl: 0.022, w: 1.25, dy: 0.02, cf: 0.5 },
-              { i: 11, fl: 0.021, dy: 0.01 }, { i: 12, fl: 0.027 }],
+            edits: [{ i: 0, fl: 0.014 }, { i: 1, fl: 0.022, dy: -0.015 }, { i: 2, fl: 0.008, dy: 0.01 }, { i: 3, fl: 0.018 }, { i: 4, fl: 0.01, dy: -0.015 }, { i: 5, fl: 0.02, dy: 0.01 },
+              { i: 6, fl: 0.012 }, { i: 7, fl: 0.02, dy: -0.015 }, { i: 8, fl: 0.009, dy: 0.01 }, { i: 9, fl: 0.018, w: 1.25 }, { i: 10, fl: 0.022, w: 1.25, dy: 0.02 },
+              { i: 11, fl: 0.016, dy: 0.01 }, { i: 12, fl: 0.021 }],
+            inner: { on: true, dy: 0.08 },   // hair under the flicked hem, down the nape (from the side the neck showed under it); ending above the outer tips (as long, it filled the hem's gaps into a level line from behind)
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },
