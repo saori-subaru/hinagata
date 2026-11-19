@@ -146,23 +146,25 @@ export const CHARACTERS = {
           { to: [-140, 0.9], from: [-0.17, -0.22], width: 0.18, thick: 0.012, tips: [0.92, 0.8, 1], notch: 0.15, hug: 1, shade: 0.6 },
           { to: [103, 0.96], from: [0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.8, 1, 0.88], notch: 0.15, hug: 0.6, shade: 0.6 },
           { to: [-103, 0.96], from: [-0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.88, 1, 0.8], notch: 0.15, hug: 0.6, shade: 0.6 },
-          // the back: thinner (his head is deeper than the sheet's: as thick as the sides, the back stood out further still); their spikes
-          // are his outline's from the side
-          { to: [-150, 0.97], width: 0.2, thick: 0.025, spikes: [{ y: 1.1 }] },
-          { to: [150, 0.97], width: 0.22, thick: 0.025, spikes: [{ y: 1.2 }] },
-          { to: [178, 0.94], width: 0.24, thick: 0.025, spikes: [{ y: 1.06, out: 0.07 }] },
-          { to: [-125, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.12 }] },
-          { to: [122, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.08 }] },
-          // the sides: a thick fan over each ear, the spikes beside the brows from the front growing out of it (his left has two)
-          { to: [-90, 0.985], width: 0.22, thick: 0.05, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.14, thick: 0.06 }] },
-          { to: [92, 0.97], width: 0.24, thick: 0.05, tips: [1, 0.8, 0.9], notch: 0.06, endWidth: 0.8, spikes: [{ y: 1.17, thick: 0.06 }, { y: 1.05, thick: 0.06 }] },
+          // the back: thinner (his head is deeper than the sheet's: as thick as the sides, the back stood out further still). The spikes at
+          // its corners are the sheet's flicks at the back's outline, from the back and from the side; none straight back (from behind it
+          // pointed at the eye: a stud)
+          { to: [-150, 0.97], width: 0.2, thick: 0.025 },
+          { to: [150, 0.97], width: 0.22, thick: 0.025, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }] },
+          { to: [178, 0.94], width: 0.24, thick: 0.025 },
+          { to: [-125, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.09, out: 0.08 }] },
+          { to: [122, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.1 }] },
+          // the sides: a thick fan over each ear, and the flicks beside the brows from the front growing out of it: his right one and the
+          // end under it flared out (up: below level), his left two, running a little toward the back (side)
+          { to: [-90, 0.985], width: 0.22, thick: 0.06, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.145, length: 0.18, out: 0.085, width: 0.12 }, { y: 0.995, length: 0.13, out: 0.05, up: -40, width: 0.1 }] },
+          { to: [92, 0.97], width: 0.24, thick: 0.05, tips: [1, 0.8, 0.9], notch: 0.06, endWidth: 0.8, spikes: [{ y: 1.2, length: 0.18, out: 0.08, width: 0.12, side: [-0.4, 0.4] }, { y: 1.04, out: 0.08, up: 5, width: 0.12, side: [-0.3, 0.5] }] },
           // the front: a block outside each eye (the forehead shows between his right one and the middle), the sidelocks to the cheeks, and
-          // the middle blade, its three points between the eyes at their height
-          { to: [-40, 1.0], width: 0.09, thick: 0.03 },
-          { to: [35, 1.0], width: 0.12, thick: 0.035 },
+          // the middle blade, its three points between the eyes at their height. Thick: on the sheet the fringe stands well off the forehead
+          { to: [-40, 1.0], width: 0.09, thick: 0.04 },
+          { to: [35, 1.0], width: 0.12, thick: 0.045 },
           { to: [-60, 0.93], width: 0.16, thick: 0.04, tips: [1, 0.86], notch: 0.07, endWidth: 0.75 },
           { to: [62, 0.945], width: 0.17, thick: 0.04, tips: [0.84, 1], notch: 0.06, endWidth: 0.8 },
-          { to: [8, 0.985], width: 0.19, thick: 0.045, tips: [0.94, 0.99, 1], notch: 0.09, endWidth: 0.8 },
+          { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.94, 0.99, 1], notch: 0.09, endWidth: 0.8 },
         ],
         sculpt: {
           shell: 0.022, square: 0.8,   // a thin block: the tufts are the hair's thickness (0.04 under them stood the top of his head 3 cm too high)
