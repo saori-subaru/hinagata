@@ -688,13 +688,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
-        // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy, jag, flick, flare: of the shape's }, or a list of them): a layer under the outer one, rooted where it is
+        // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy }): a layer under the outer one, rooted where it is
         // hidden under it, lying down the head and the nape without a flick, shaded darker (layer 1): where the outer locks flick out, hair shows
         // under them, not the neck (a gap from the side)
         // (span: round the back only; by the ears a lock along the head ran out over the elf ear and hung from its tip)
-        for (const IN of [].concat(SL.inner ?? [])) if (IN?.on) { const m = Math.max(2, Math.round(IN.count ?? 8)), sp1 = IN.span ?? 70, it = [];
-          for (let i = 0; i < m; i++) { const a = -sp1 + 2 * sp1 * (i + 0.5) / m; it.push([a, hem(a) + (IN.dy ?? 0.01) + (IN.jag ?? 0) * [0, 1, -0.6, 0.5, -1, 0.3][i % 6], null, null, null, 0, 0, (IN.flick ?? 0) * [1, 0.5, 0.9, 0.3, 0.7][i % 5], 1, 0, 0]); }
-          for (const sp of bangLocks({ ...kit, span: sp1, tips: it, lockThick: IN.thick ?? 0.08, puff: 0, lockRoot: IN.root ?? 20, lockRootSpread: 1, shingle: 0, shape: SL.shape && IN.flare != null ? { ...SL.shape, flare: SL.shape.flare.map(([y, m]) => [y, m * IN.flare]) } : null }, bangKit()))
+        const IN = SL.inner; if (IN?.on) { const m = Math.max(2, Math.round(IN.count ?? 8)), sp1 = IN.span ?? 70, it = [];
+          for (let i = 0; i < m; i++) { const a = -sp1 + 2 * sp1 * (i + 0.5) / m; it.push([a, hem(a) + (IN.dy ?? 0.01), null, null, null, 0, 0, 0, 1, 0, 0]); }
+          for (const sp of bangLocks({ ...kit, span: sp1, tips: it, lockThick: IN.thick ?? 0.08, puff: 0, lockRoot: IN.root ?? 20, lockRootSpread: 1, shingle: 0 }, bangKit()))
             specs.push(Object.assign(sp, { stiff: 1, layer: 1, hold: INNER_HOLD, rigid: INNER_RIGID })); }
         out.locks = part(specs, { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 }); }
       else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
