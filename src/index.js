@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
-import { sheetsMesh, setOneSided } from "./sdf/sheet.js";
+import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
@@ -57,7 +57,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built at 4.5 mm cells, then thinned to 7 % (meshoptimizer; the face kept as
  *              built, skirts and capes at most 10.5 mm and 0.45 of their thickness, not thinned): about the triangles of "game" (fewer than
- *              "high" by half), the sharpest shapes (a nose tip; an elf ear's blade is made apart, sharp at any quality), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15%, lighter hair locks and cloth sheets at twice the cells, about a third to a
+ *              "high" by half), the sharpest shapes (a nose tip; an elf ear's blade is made apart, sharp at any quality), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15%, lighter hair locks and cloth sheets at twice the cells and one-sided (no thickness at their edges), about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
@@ -95,7 +95,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // about a fifth (meshoptimizer): the vertices "game" has, the look of "high" (the thinning keeps the triangles where the surface turns
   // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the
   // tennis: 3.5 s → 9.9 s), and a game's players wait for that; so "game" stays the fast one.
-  // "lite": the game's cells thinned to 15%, lighter hair locks and the cloth sheets at twice the cells, about a fifth of those vertices; the same look at a game's distance
+  // "lite": the game's cells thinned to 15%, lighter hair locks and the cloth sheets at twice the cells and one-sided (ONE), about a fifth of those vertices; the same look at a game's distance
   // the adult body (body.adult) is "fine" unless asked otherwise (2026-10-08, Saori agreed): its slim arms (2.4 cm radius) came out ridged like a
   // spring on the game's 1.36 cm cells and its toes' gaps didn't show; fine thins back to about as many triangles (the body 1.3 → 1.5 万)
   // Then "fine" itself at 4.5 mm cells thinned to 7 % (2026-10-09; Saori: "うん、それでお願い", "それがいい"): on the small 6-head head the nose
@@ -120,11 +120,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the fine quality's cloth: the game's, not thinned (thinned, its uneven triangles drew broken lines over a seated lap): the sheets at the
   // game's cells (parts.js sheetCell), a skirt still meshed as a distance at the coarser grid's cloth cells
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
+  const ONE = debug.oneSide ?? LITE;   // the cloth sheets as their outer side alone, drawn double-sided (sdf/sheet.js `one`): half their triangles; the edges lose their thickness (debug.oneSide: true / false at any quality, to compare)
   const sheetK = LITE ? 2 : 1;   // the cloth sheets' cells times this (parts.js sheetCell): never thinned, at lite they were most of the triangles; trims ripple a little up close
   // meshes remembered from an earlier visit (same options, same generator code)
-  setOneSided(debug.oneSide);
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK) : null;
+  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK, ONE) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
   // armor and the bodysuit that aren't worn are not built now (a game waited for armor nobody wore as long as for the clothes; the suit is
   // a whole body of triangles): built when put on (setWorn), here on the main thread. settings.spare builds them anyway (the editor:
@@ -232,7 +232,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // under them go), the ahoge (hair/index.js ahogeMesh, on the head bone) and bell sleeves (sheets, sdf/sheet.js; the shirt's spec)
   function withParts(name, rec, { bone1, only, soft, bells, FT } = {}) {
     if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
-    if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h), null, bone1, only, soft);
+    if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h, bells.one), null, bone1, only, soft);
     const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
     if (EB) rec = joined(rec, EB, EB.under);
     return FT ? joined(rec, FT, null) : rec;
@@ -466,7 +466,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
-  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);
+  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, one: ONE, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
@@ -501,7 +501,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
-  if (debug.oneSide) for (const k of ["cape", "pants", "shirt"]) parts[k].m.material.side = THREE.DoubleSide;
+  if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,

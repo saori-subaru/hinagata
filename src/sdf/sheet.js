@@ -5,9 +5,6 @@
 // outer one: cloth.js moves the outer side and carries the inner along), and a rounded rim along the cut. Pure math, no three.js.
 import { surfaceNets } from "./mesh.js";
 
-// ⏳trial (one-sided cloth): only the outer side, no inner side and no rim; drawn double-sided (index.js debug.oneSide)
-let ONE = false; export const setOneSided = (v) => { ONE = !!v; };
-
 // value and gradient from 4 samples (a tetrahedron), not normalized: [gx, gy, gz, value]
 function g4(f, x, y, z, e = 0.0008) {
   const a = f(x + e, y - e, z - e), b = f(x - e, y - e, z + e), c = f(x - e, y + e, z - e), d = f(x + e, y + e, z + e), k = 1 / (4 * e);
@@ -23,8 +20,9 @@ function onto(f, p, n = 3, lim = 0.03) { for (let i = 0; i < n; i++) { const g =
  * only (where the body's grid is read far off the body it is blocky: the points are put on o itself); tk: its thickness, a number or
  * (x, y, z) → (the inner side at o = -tk); cut(x, y, z): < 0 where the cloth is; smooth: rounds of averaging the push directions (0) }. lo, hi: a box holding the cloth; h: the middle's cells.
  * Returns { pos, nor, idx } (Float32Array, Float32Array, Uint32Array): the outer side, the inner side and the rim along the cut.
+ * one (the lite quality): the outer side alone, to be drawn double-sided, and along the cut a lip of no width for the outline (below).
  */
-export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h) {
+export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h, one = false) {
   const T = typeof tk === "function" ? tk : () => tk, mid = (x, y, z) => o(x, y, z) + T(x, y, z) / 2;
   // the middle and, past the cut, two cells more (cut away below: there it ends in the cells' steps)
   const r = surfaceNets((x, y, z) => Math.max(mid(x, y, z), cut(x, y, z) - 2 * h), lo, hi, h, { proj: 2, fast: (x, y, z) => Math.max(of(x, y, z) + T(x, y, z) / 2, cut(x, y, z) - 2 * h) });
@@ -74,15 +72,22 @@ export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h) {
   if (smooth) { const nb = Array.from({ length: nm }, () => new Set()); for (let t = 0; t < I.length; t += 3) for (let k = 0; k < 3; k++) { const a = I[t + k], b = I[t + (k + 1) % 3]; nb[a].add(b); nb[b].add(a); }
     for (let it = 0; it < smooth; it++) { const M2 = new Float64Array(nm * 3); for (let v = 0; v < nm; v++) { let x = NN[v * 3], y = NN[v * 3 + 1], z = NN[v * 3 + 2]; for (const u of nb[v]) { x += NN[u * 3]; y += NN[u * 3 + 1]; z += NN[u * 3 + 2]; } M2.set(unit([x, y, z]), v * 3); } NN = M2; } }
   for (let v = 0; v < nm; v++) {
-    const p = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]], n0 = [NN[v * 3], NN[v * 3 + 1], NN[v * 3 + 2]], t0 = T(p[0], p[1], p[2]), q = side(o, p, n0, 1, t0), w = side(inner, p, n0, -1, t0);
-    set(v, q, unit(g4(o, q[0], q[1], q[2]))); const g = unit(g4(o, w[0], w[1], w[2])); set(nm + v, w, [-g[0], -g[1], -g[2]]);
+    const p = [P[v * 3], P[v * 3 + 1], P[v * 3 + 2]], n0 = [NN[v * 3], NN[v * 3 + 1], NN[v * 3 + 2]], t0 = T(p[0], p[1], p[2]), q = side(o, p, n0, 1, t0);
+    set(v, q, unit(g4(o, q[0], q[1], q[2])));
+    if (!one) { const w = side(inner, p, n0, -1, t0), g = unit(g4(o, w[0], w[1], w[2])); set(nm + v, w, [-g[0], -g[1], -g[2]]); }
     const ri = rimOf.get(v); if (ri == null) continue;
     // the rim: 2 mm out from the middle, the way the cut grows along the sheet (nearly square: rounded by half the thickness it stood under a
     // skirt's hem as a band of its own, in the petticoat's color, with its own outline under it)
     const n = unit(g4(mid, p[0], p[1], p[2])), gc = g4(cut, p[0], p[1], p[2]), dn = gc[0] * n[0] + gc[1] * n[1] + gc[2] * n[2], d = unit([gc[0] - dn * n[0], gc[1] - dn * n[1], gc[2] - dn * n[2]]), s = Math.min(0.002, T(p[0], p[1], p[2]) / 2);
-    set(ri, [p[0] + d[0] * s, p[1] + d[1] * s, p[2] + d[2] * s], d);
+    if (one) set(ri - nm, q, d); else set(ri, [p[0] + d[0] * s, p[1] + d[1] * s, p[2] + d[2] * s], d);
   }
-  if (ONE) return { pos: pos.slice(0, nm * 3), nor: nor.slice(0, nm * 3), idx: Uint32Array.from(I) };
+  // one side: each edge point once more where it is, its normal out along the sheet (d). The cloth's own triangles there have no area; the
+  // outline's (pushed out along the normals) open into a facet under the edge, wound to be its back: without it a hem has no line
+  if (one) { const L = [...I], at = (i, k) => pos[i * 3 + k] + nor[i * 3 + k];
+    for (const [a, b] of edges) { const la = rimOf.get(a) - nm, lb = rimOf.get(b) - nm, u = [0, 1, 2].map((k) => at(b, k) - at(a, k)), w = [0, 1, 2].map((k) => at(lb, k) - at(a, k));
+      const f = (u[1] * w[2] - u[2] * w[1]) * (nor[a * 3] + nor[la * 3]) + (u[2] * w[0] - u[0] * w[2]) * (nor[a * 3 + 1] + nor[la * 3 + 1]) + (u[0] * w[1] - u[1] * w[0]) * (nor[a * 3 + 2] + nor[la * 3 + 2]);
+      if (f < 0) L.push(a, b, lb, a, lb, la); else L.push(a, lb, b, a, la, lb); }
+    return { pos: pos.slice(0, (nm + nr) * 3), nor: nor.slice(0, (nm + nr) * 3), idx: Uint32Array.from(L) }; }
   const idx = [];
   for (let t = 0; t < I.length; t += 3) idx.push(I[t], I[t + 1], I[t + 2], nm + I[t], nm + I[t + 2], nm + I[t + 1]);
   const face = (a, b, c, n) => { const ux = pos[b * 3] - pos[a * 3], uy = pos[b * 3 + 1] - pos[a * 3 + 1], uz = pos[b * 3 + 2] - pos[a * 3 + 2], wx = pos[c * 3] - pos[a * 3], wy = pos[c * 3 + 1] - pos[a * 3 + 1], wz = pos[c * 3 + 2] - pos[a * 3 + 2];
@@ -101,6 +106,6 @@ export function joinMeshes(list) {
 }
 /** Sheets ({ o, tk, cut, lo?, hi?, h?: their cells at most }) made and joined: each in its own box or lo..hi, grown by its cells' margin
  *  (the cut's two cells and one more). */
-export function sheetsMesh(sheets, lo, hi, h) {
-  return joinMeshes(sheets.map((s) => { const c = Math.min(h, s.h ?? h), g = 3 * c; return sheetMesh(s, (s.lo ?? lo).map((v) => v - g), (s.hi ?? hi).map((v) => v + g), c); }));
+export function sheetsMesh(sheets, lo, hi, h, one = false) {
+  return joinMeshes(sheets.map((s) => { const c = Math.min(h, s.h ?? h), g = 3 * c; return sheetMesh(s, (s.lo ?? lo).map((v) => v - g), (s.hi ?? hi).map((v) => v + g), c, one); }));
 }
