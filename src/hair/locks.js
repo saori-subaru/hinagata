@@ -212,23 +212,29 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
- * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper }.
+ * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
+ * fromWhorl (with W = { d, surf, center, rootW }, hair.sculpt.whorl on): a path from the whorl over the head, under the other locks, to the
+ * stroke's first point goes before it, narrow at the whorl and full from that point (a sidelock drawn from the temple showed its root's stub) }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
-export function drawnLocks(list, { toRoot, N = 16 }) {
+export function drawnLocks(list, { toRoot, N = 16, W = null }) {
   const out = [];
   for (const d of list ?? []) {
     if (!d?.pts || d.pts.length < 2) continue;
     for (const m of d.mirror ? [1, -1] : [1]) {
-      const P = d.pts.map(([x, y, z]) => [x * m, y, z]), acc = [0];
+      let P = d.pts.map(([x, y, z]) => [x * m, y, z]), t0 = 0; const acc = [0];
+      if (d.fromWhorl && W) { const c = W.center, e0 = P[0].map((v, k) => v - c[k]), r0 = Math.hypot(...e0), u0 = e0.map((v) => v / r0), h0 = r0 - surfaceAlong(W.surf, c, u0), pre = [];
+        for (let q = 0; q < 8; q++) { const t = q / 8, u = W.d.map((v, k) => v * (1 - t) + u0[k] * t), ul = Math.hypot(...u), e = u.map((v) => v / ul), at = surfaceAlong(W.surf, c, e) + 0.003 + (h0 - 0.003) * sstep(0.5, 1, t);   // along the surface, lifting to the stroke's start over the last half
+          pre.push(e.map((v, k) => c[k] + v * at)); }
+        P = [...pre, ...P]; }
       for (let i = 1; i < P.length; i++) acc.push(acc[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1], P[i][2] - P[i - 1][2]));
-      const L = acc.at(-1); if (L < 0.01) continue;
+      const L = acc.at(-1); if (L < 0.01) continue; if (d.fromWhorl && W) t0 = acc[8] / L;
       const pts = []; let j = 0;
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
-      const tp = Math.min(1, Math.max(0, d.taper ?? 0));   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : undefined });
+      const tp = Math.min(1, Math.max(0, d.taper ?? 0)), p1 = tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : width;   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: t0 ? (t) => t < t0 ? W.rootW + (1 - W.rootW) * sstep(0, t0, t) : p1((t - t0) / (1 - t0)) : tp ? p1 : undefined });
     }
   }
   return out;

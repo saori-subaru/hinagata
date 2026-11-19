@@ -729,7 +729,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();

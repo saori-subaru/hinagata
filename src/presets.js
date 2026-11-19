@@ -209,7 +209,8 @@ export const CHARACTERS = {
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
-        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true }],
+        // (v2: from the whorl under the bangs, out from under them by the temple: rooted at the temple it showed its root's stub above the ear)
+        drawn: [{ pts: [[0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true, fromWhorl: true }],
         sculpt: {
           // every lock from the whorl behind the ahoge, laid like roof tiles away from the part down the middle; no block under them (the
           // locks make the head's shape; on a 1.6 cm block they lay over a helmet). lockShell: the locks lie on the skull, not 1.6 cm over it
