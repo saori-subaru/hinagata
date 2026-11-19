@@ -91,6 +91,9 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); r
 - Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world (an adult about 1.7 m).
 - A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).
+- A hand-drawn look (ink lines, watercolor, hatching, paper) as one post-process pass, the engine untouched: examples/sketch.js
+  (`createSketch(renderer).render(scene, camera)` in place of `renderer.render`), shown at https://hinagata.pages.dev/examples/sketch.html.
+  Its paper and strokes are fixed to the screen: for stills, they slide over a moving character.
 
 ## Keep it fast
 
