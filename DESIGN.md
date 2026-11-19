@@ -1159,4 +1159,5 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - `hair.back: "short"` written without `hair.nape` reads as the lying locks (options.js readHair): `shortLocks`' flick, hug and edits then do nothing. Write `nape: "hang"`.
 - Face pictures (`face.images`, `face.drawn`) are drawn at their own pixels, 2560 per head unit; with `dx`, `dy` 0 the picture's middle is the eye's point (`layout.eyeX`, `eyeY`). `face.lashTrace` lifts a picture's darks: leave it 0 for pictures with their own colors.
 - A front print (`texture.mode "front"`) is in built metres from the front and fades toward the sides: the garment's own color is what shows there and behind.
+- ⛔ アステル's head and face keep their own shape (`head.width` 0.94, `sculpt.neck.width` 0.8, `sculpt.mouth.profile` 2), not the sheet's: a narrower jaw (`jaw.width`), a sharper chin (`chin.sharp`) and a shallower head (`head.depth`) toward the sheet read as a skull, the mouth jutting in profile. Only the face's parts (pictures, `face.layout`) follow the sheet.
 - Not done: the cloak's hem in angular folds (the sheet's), a capelet over raised arms (banzai: its cloth tears into streaks, シルヴィ's too).

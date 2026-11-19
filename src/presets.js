@@ -124,11 +124,13 @@ export const CHARACTERS = {
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
-        head: { scale: 0.84, depth: 0.88 },
+        head: { scale: 0.84, width: 0.94 },
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.74, thighTop: 0.74, calf: 0.74 },
         joints: { footX: 0.13, kneeX: 0.118 },
-        sculpt: { jaw: { width: 0.095 }, chin: { sharp: 0.15 } },
+        // ⛔ the head's and face's shape is Saori's, not the sheet's (profile: a dip under the nose seen from the side, "アステルの顔をこれにするといいかも").
+        // A narrower jaw, a sharper chin and a shallower head toward the sheet read as a skull (Saori: "顔の形が骸骨みたい")
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
       },
       hair: {
         bangs: "nendo", back: "short", nape: "hang", ahoge: true,   // ⛔ nape: back "short" given alone reads as the lying locks (options.js readHair): the hanging ones' flick and hug then do nothing
