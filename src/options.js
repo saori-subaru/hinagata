@@ -744,6 +744,7 @@ export const DEFAULTS = {
         "color": null,
         "strength": 0.5,
         "shade": 0,
+        "shadeHue": -30,
         "center": 0.95,
         "width": 0.05,
         "zig": 0.07,

@@ -248,6 +248,7 @@ const MAIN = [
   ["hair.paint.ring.color", L("天使の輪の色", "Ring color"), { when: { "hair.paint.ring.on": true },  nullable: true, section: L("塗り", "Paint"), help: L("null = 髪の色から自動", "null = from the hair color") }],
   ["hair.paint.ring.strength", L("天使の輪の濃さ", "Ring strength"), { when: { "hair.paint.ring.on": true }, min: 0, max: 1, step: 0.01, section: L("塗り", "Paint") }],
   ["hair.paint.ring.shade", L("輪の下の濃い色", "Shade under the ring"), { when: { "hair.paint.ring.on": true }, min: 0, max: 1, step: 0.01, section: L("塗り", "Paint"), help: L("輪の下に少し濃い色を乗せ、下へぼかす(艶が出る)", "a darker tone under the ring, fading downward (a glossier look)") }],
+  ["hair.paint.ring.shadeHue", L("濃い色の色相ずらし", "Shade hue shift"), { when: { "hair.paint.ring.on": true }, min: -60, max: 60, step: 1, section: L("塗り", "Paint"), help: L("度。マイナス = 赤寄り(金髪ならオレンジ)、プラス = 緑・青寄り", "degrees. below 0 = toward red (a blonde's shade orange), above = toward green and blue") }],
   ["hair.paint.inner", L("内側の影", "Inner shade"), { min: 0, max: 0.6, step: 0.01, section: L("塗り", "Paint"), help: L("後ろ髪の毛束の下(後頭部の下側)を暗くする。毛束が捲れても下が地肌や刈り上げに見えない", "darkens the hair under the back locks (the head's low back): lifted, they show shade, not a bald patch or an undercut") }],
   ["hair.paint.oneShade", L("毛束の影をひとつにまとめる", "Locks shade as one"), { min: 0, max: 1, step: 0.05, section: L("塗り", "Paint"), help: L("0 = 毛束ごとに陰が付く。1 = 髪全体がひとつの丸みとして陰になり、影の縁がなめらかになる", "0 = each lock has its own shade. 1 = the hair shades as one round volume, its shadow's edge smooth") }],
 

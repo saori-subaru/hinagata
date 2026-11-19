@@ -440,9 +440,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // new material (2026-10-07, Saori: the bangs lost their gradient. Switching the shading left only the hair's block with it)
   const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
   GRAD.bangs = { ...GRAD.hair, on: { value: bangsGrad(OPT.hair.gradient) } };
-  // ring.shade: under the band the hair a tone darker and deeper, fading out downward, so the band reads as a shine on glossy hair.
+  // ring.shade: under the band the hair a tone darker and deeper, its hue turned by ring.shadeHue (degrees; below 0: toward red, a blonde's
+  // shade orange), fading out downward, so the band reads as a shine on glossy hair.
   // ⛔ the band broken into strokes or dabs was tried and dropped (2026-11-19, Saori: scattered they read as spots, in a row as a broken ring)
-  const ringShade = (R) => R.shade ? `{ float g = step(hi, th) * (1.0 - smoothstep(hi, hi + 0.42, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.6), diffuseColor.rgb, 0.45), ${glf(R.shade)} * g); }` : "";
+  const ringShade = (R) => R.shade ? `{ float g = step(hi, th) * (1.0 - smoothstep(hi, hi + 0.42, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); vec3 sc = diffuseColor.rgb * mix(vec3(0.6), diffuseColor.rgb, 0.45), ax = vec3(0.57735); float ha = ${glf((R.shadeHue ?? -30) * Math.PI / 180)};
+      diffuseColor.rgb = mix(diffuseColor.rgb, max(sc * cos(ha) + cross(ax, sc) * sin(ha) + ax * dot(ax, sc) * (1.0 - cos(ha)), 0.0), ${glf(R.shade)} * g); }` : "";
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c), IN = hairKit.backAsLocks(hairPick) ? (HP.inner ?? 0) : 0;
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
@@ -458,6 +460,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line));
     diffuseColor.rgb *= 1.0 - ${glf(IN)} * smoothstep(1.0, 1.6, th) * (1.0 - smoothstep(-0.5, 0.0, cos(ph))); }`); };   // inner: the block's low back, under the back locks, darker (lifted on a run, its pale dome read as a bald head or an undercut)
+    const key = m.customProgramCacheKey(); m.customProgramCacheKey = () => "hair|" + JSON.stringify([St, R, LU, IN, rc.getHex()]) + key;   // (as the ring's key below)
     return withGrad(withShadeN(m), GRAD.hair); };
   // the angel ring on hair made of locks (2026-10-07, Saori: "ふさタイプの髪だと天使の輪がほぼみえない"): it was painted on the block only, which
   // lies thin under the locks. The locks carry it too, by where each of their points was when they were made (hairUV, as the block's)
@@ -470,7 +473,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   { float ph = vHair.x, th = vHair.y, z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0, lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
     float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${ringShade(R)}
     diffuseColor.rgb = mix(diffuseColor.rgb, ringColor, ${glf(R.strength)} * ring); }`); };
-    m.customProgramCacheKey = () => "ring|" + key; return m; };
+    m.customProgramCacheKey = () => "ring|" + JSON.stringify(R) + key; return m; };   // (the ring's numbers are written into the shader: without them in the key, two avatars on a page shared the first one's)
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
 
   // build every mesh
