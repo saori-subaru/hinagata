@@ -1,5 +1,10 @@
 # 宿題 (TODO)
 
+## アステルを設定画どおりに作り直す（ブランチ claude/funny-mccarthy-ndg4fm、⏳サオリの確認待ち）
+- 済み: 約3.6頭身、フード付きの赤いマント(肩から垂らす cape.over "body")と星の留め具(star4)、白と青のチュニック(前の柄は絵)、ベルト(outfit.belt)、下の短パン(outfit.shorts)、折り返しの袖口(outfit.cuffs)、折り返しのブーツ、目と口は設定画から描いた絵、表情4つ。使い方は DESIGN.md "アステル's design sheet"。
+- 🚧 まだ: マントのすそのギザギザ(設定画は角ばった折り目)、チュニックの背中(今は青一色。設定画に背中の絵が無い)、横髪の跳ねは円すいの房(設定画は平たい束)。
+- 🚧 クラウドのセッションでは jsdelivr に出られず `node tools/thin-check.mjs` が止まる。今回は three を npm で入れ、同じページを Playwright で開いて CDN を手元に差し替えて通した。道具に手元の three を使う口を足すとよい。
+
 ## 髪の形と揺れ（main に入った）
 - ✅ 形を保つ房（hair.rigid / lockPoints）、後ろ髪を頭に沿わせる（shortLocks.hug / innerHug）、テールの段（tail.tiers / tierFlick）、内側の影（paint.inner）。シルヴィに入れた。
 - ✅ 前髪: 帯のまま下りて先だけ斜めに切れる房（nendo.lockBand、ふさの行の11番目 lean = 毛先の寄り）を足し、シルヴィの前髪を三面図の房に合わせた。エディタの前髪ツールに「毛先の寄り」のつまみあり。

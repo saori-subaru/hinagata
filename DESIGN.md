@@ -1146,3 +1146,17 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - `hair.drawn[].taper` (0–1): the lock narrows evenly from its root to its point (a cone), not full to its middle. `hair.tail.flare` (m): the tips fan out from the head, the outermost lock by all of it, the innermost hanging straight (tailLocks).
 - `hair.tail.outline`: the tails mark their own pixels (stencil 2, the other hair 1; index.js hairLines), so their line shows where they lie over the other hair and none between their own locks. Without it a tail close to the head, in the same color, read as part of the head.
 - Keep a part's box more than a cell beyond its surface: the mesher (surface nets) makes no faces between a box's first two grid layers, so a surface nearer the box's side is left open. The shoes' box (parts.js foot0) starts 2 cm under the floor, and soles reach 7 mm under it, below the socks' (at the game's cells boots had no bottom: the foot showed through).
+
+## アステル's design sheet: the parts it needed
+
+- A dress (or a skirt) is the outfit's pants part: nothing is worn under it. `outfit.shorts` (garments/shorts.js) is pants with their own hem (clothes `legsSdf`) for under one; its hem must be below the crotch for the legs to show apart.
+- `outfit.belt` (garments/belt.js): a ring made directly along the clothes' outside at its height (clothes `outerSdf`: the shirt, a skirt under its top, the pants), its width in built metres. Put a dress's `waist` a little over it and `cinch` at it. The buckle is the accessory `buckle` (offsets from the bone's joint, as built).
+- `outfit.cuffs` (garments/cuffs.js): a sheet round a long or bell sleeve's end (clothes `sleeveEnd`), on the forearm alone. Its `wrist` widens the cape's forearm colliders (index.js WRIST), only for a character wearing it.
+- `cape.over: "body"` (a long cloak): the sides hang from the shoulders (armX at the slope of hanging arms, the mantle the torso without the arms) and the cape rides on the body alone; the arms push it out (cloth colliders). Over the arms (`"arms"`, the capelet), a cape down to the knees is half on the upper arms and half on the hips and folds over itself between them when the arms come down: black streaks at the hips.
+- `cape.sideEdge` (0.02): where the sides end in front under the opening; behind 0 the arms hang in front of the cape. A hem falling toward the front (`tilt` < 0) is lowest at those corners; the cape's box takes the hem at both ends.
+- The feet's boxes (parts.js foot0, FX, FZ) grow with `body.proportion.feet` over 1.1: at 1.4 a boot's toe was cut off. Up to 1.1 they are as they were (a bigger box moves the cells of every character's shoes).
+- `shoes.cuffOut`, `hair.sculpt.ahogeX` / `ahogeZ`, the accessory `star4` (flat facets: its own normals per face), `dress.hem` to 0.46 (0.44: the hip joints).
+- `hair.back: "short"` written without `hair.nape` reads as the lying locks (options.js readHair): `shortLocks`' flick, hug and edits then do nothing. Write `nape: "hang"`.
+- Face pictures (`face.images`, `face.drawn`) are drawn at their own pixels, 2560 per head unit; with `dx`, `dy` 0 the picture's middle is the eye's point (`layout.eyeX`, `eyeY`). `face.lashTrace` lifts a picture's darks: leave it 0 for pictures with their own colors.
+- A front print (`texture.mode "front"`) is in built metres from the front and fades toward the sides: the garment's own color is what shows there and behind.
+- Not done: the cloak's hem in angular folds (the sheet's), a capelet over raised arms (banzai: its cloth tears into streaks, シルヴィ's too).
