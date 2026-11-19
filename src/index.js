@@ -440,10 +440,22 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // new material (2026-10-07, Saori: the bangs lost their gradient. Switching the shading left only the hair's block with it)
   const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
   GRAD.bangs = { ...GRAD.hair, on: { value: bangsGrad(OPT.hair.gradient) } };
+  // hair.paint.ring.style "dabs": instead of the band, short strokes down the hair in three rows all round the head, each at its own height
+  // and length, some left out (an illustration's highlights). ph, th: hairUV / n: strokes round the head / w: their length
+  const DABS = `float hairDabs(float ph, float th, float n, float w) { float s = 0.0;
+  for (int r = 0; r < 3; r++) { float fr = float(r), u = ph * n / 6.2832 + fr * 0.37, i = floor(u), h1 = fract(sin(i * 12.9898 + fr * 78.233) * 43758.5453), h2 = fract(h1 * 57.31), h3 = fract(h1 * 113.7);
+    float x = (fract(u) - 0.5 + (h3 - 0.5) * 0.4) / (0.13 + 0.12 * h2), y = (th - (0.55 + 0.38 * fr + (h2 - 0.5) * 0.24)) / (w * (1.4 + 2.2 * h3));
+    s = max(s, step(h1, 0.62) * (1.0 - smoothstep(0.8, 1.0, abs(x) + y * y))); }
+  return s; }
+float lockDabs(vec2 lk, float th, float w) { float s = 0.0;   // on a lock: one or two leaf-shaped strokes along it, off its middle, or none
+  for (int r = 0; r < 2; r++) { float fr = float(r), h = fract(lk.y * (57.31 + 31.7 * fr)), x = (lk.x - (fract(h * 17.1) - 0.5) * 0.7) / 0.4, y = (th - (0.6 + 0.55 * fr + (h - 0.5) * 0.36)) / (w * (1.6 + 2.6 * fract(h * 91.3)));
+    s = max(s, step(fract(h * 7.7), 0.72) * (1.0 - smoothstep(0.7, 1.0, abs(x) + y * y))); }
+  return s; }
+`, dabsOf = (R) => R.style === "dabs" ? `ring = hairDabs(ph, th, ${glf(R.teeth)}, ${glf(R.width)});` : "";
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c), IN = hairKit.backAsLocks(hairPick) ? (HP.inner ?? 0) : 0;
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
-      sh.fragmentShader = "varying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+      sh.fragmentShader = "varying vec2 vHair;\n" + DABS + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, N = ${glf(St.count)};
     float s = ph * N / 6.2832 + ${glf(LU?.amp ? LU.twist * St.count / LU.count : 0)} * th * sin(ph) + ${glf(St.wobble)} * sin(th * 9.0 + ph * 2.0) + 0.25 * sin(ph * N * 0.37 + 1.3);   // strand lines: around the head, wavering a little, sweeping back with the hair's bundles (lumps)
     float id = floor(s), f = fract(s), k = fract(sin(id * 12.9898) * 43758.5453);                                   // k: a random value per strand (strength / length)
@@ -451,7 +463,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     float ring = 0.0;
     if (${R.on ? "true" : "false"}) { float z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0;                 // the ring's lower edge zigzags
       float lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
-      ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); }
+      ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${dabsOf(R)} }
     if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line));
     diffuseColor.rgb *= 1.0 - ${glf(IN)} * smoothstep(1.0, 1.6, th) * (1.0 - smoothstep(-0.5, 0.0, cos(ph))); }`); };   // inner: the block's low back, under the back locks, darker (lifted on a run, its pale dome read as a bald head or an undercut)
@@ -462,10 +474,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   ringColor(OPT.colors.hair);
   const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on) return m; const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.ringColor = RING.color;
-      sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
-      sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+      sh.vertexShader = "attribute vec2 hairUV, lockX;\nvarying vec2 vHair, vLock;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV; vLock = lockX;");
+      sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair, vLock;\n" + DABS + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0, lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
-    float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4);
+    float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${R.style === "dabs" ? `ring = lockDabs(vLock, th, ${glf(R.width)});` : ""}
     diffuseColor.rgb = mix(diffuseColor.rgb, ringColor, ${glf(R.strength)} * ring); }`); };
     m.customProgramCacheKey = () => "ring|" + key; return m; };
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
@@ -624,8 +636,8 @@ float motN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); Object.assign(sh.uniforms, MOT);
       sh.vertexShader = "varying vec3 vMotP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vMotP = position;");
       sh.fragmentShader = MOT_GLSL + sh.fragmentShader.replace("#include <opaque_fragment>",
-        `{ vec3 q = vMotP * 11.0 / motSize; float a = motN(q) * 0.65 + motN(q * 2.7 + 5.0) * 0.35 - 0.5, b = motN(q * 0.6 + 31.0) - 0.5, g = motH(vec3(floor(gl_FragCoord.xy / 1.5), 3.0)) - 0.5;
-  vec3 mc = outgoingLight * (1.0 + motStrength * 0.34 * a) + motStrength * 0.07 * b * vec3(1.0, 0.1, -0.9); mc *= 1.0 + motGrain * 0.16 * g; outgoingLight = mix(outgoingLight, max(mc, 0.0), motOn); }
+        `{ vec3 q = vMotP * 7.0 / motSize; float a = motN(q) * 0.65 + motN(q * 2.7 + 5.0) * 0.35 - 0.5, b = motN(q * 0.6 + 31.0) - 0.5, g = motH(vec3(floor(gl_FragCoord.xy / 1.5), 3.0)) - 0.5;
+  vec3 mc = outgoingLight * (1.0 + motStrength * 0.8 * a) + motStrength * 0.16 * b * vec3(1.0, 0.1, -0.9); mc *= 1.0 + motGrain * 0.3 * g; outgoingLight = mix(outgoingLight, max(mc, 0.0), motOn); }
 #include <opaque_fragment>`); };
     m.customProgramCacheKey = () => "mot|" + key; m.needsUpdate = true;
   }

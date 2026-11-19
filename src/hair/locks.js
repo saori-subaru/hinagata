@@ -372,6 +372,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       for (let k = 0; k < RG.length; k++) { const v = l * VPL + r * RG.length + k; U[v * 2] = uv[0]; U[v * 2 + 1] = uv[1]; } }
     g.setAttribute("hairUV", new THREE.BufferAttribute(U, 2)); }
   const si = new Uint16Array(NV * 4), sw = new Float32Array(NV * 4); for (let v = 0; v < NV; v++) { si[v * 4] = head; sw[v * 4] = 1; }
+  // lockX: [across the lock (-1 … 1, its cross-section's), a random value per lock], for strokes painted along single locks (the ring's "dabs")
+  { const L = new Float32Array(NV * 2); for (let v = 0; v < NV; v++) { L[v * 2] = RG[v % RG.length][0]; L[v * 2 + 1] = ((Math.sin((Math.floor(v / VPL) + 1) * 12.9898) * 43758.5453) % 1 + 1) % 1; } g.setAttribute("lockX", new THREE.BufferAttribute(L, 2)); }
   g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
   for (const a of ["position", "normal", "shadeN"]) g.attributes[a].setUsage(THREE.DynamicDrawUsage);
 

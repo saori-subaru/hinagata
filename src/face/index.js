@@ -47,11 +47,14 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     const b = hexRgb(hslHex([(h * k + 0.05 * (1 - k)) * (1 - warm) + 0.02 * warm, Math.min(0.6, Math.max(0.3, s)), 0.24 + 0.16 * warm]));
     return "#" + a.map((v, i) => Math.round((v + (b[i] - v) * t) * 255).toString(16).padStart(2, "0")).join("") + c.slice(7); };
   const ink = () => traced(INK0);
+  // the other lines (brows, lids, mouth) toward the skin's line color (as outline.trace's on the skin), each keeping its own lightness
+  const skinInk = (c) => { const t = OPT.face.lashTrace ?? 0; if (!t) return c; const a = hexRgb(c), [h, s] = rgbHsl(hexRgb(OPT.colors.skin)), b = hexRgb(hslHex([h, Math.min(s, 0.5), Math.max(rgbHsl(a)[2], 0.27)]));
+    return "#" + a.map((v, i) => Math.round((v + (b[i] - v) * t) * 255).toString(16).padStart(2, "0")).join("") + c.slice(7); };
   const LAY = { eyeSize: OPT.face.eyeSize };   // 目の大きさ(コードで描く目)。あとから setLayout で変えられる
   const EYE_COL = irisColors(OPT.colors.eyes);   // 虹彩の色(上の暗い色 → 下の明るい色)。setEyeColor で変えられる
   // 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
   const FL = OPT.face.layout, EYE = { x: FL.eyeX, y: FL.eyeY }, BROW = { x: FL.browX, y: FL.browY }, MOUTHP = { x: 0, y: FL.mouthY }, CHEEK = { x: 0.152, y: 0.955 };   // 顔の絵の上の位置(体の座標)
-  const line = (w, c = ink()) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
+  const line = (w, c = INK0, tr = skinInk) => { fctx.lineWidth = pu(w); fctx.strokeStyle = tr(c); fctx.lineCap = "round"; fctx.lineJoin = "round"; };
   // the lash of the tall eyes on the current path: solid, or (face.lashHatch) a pale opaque fill (the iris must not show through) with short
   // strokes laid along the lash's curve (an arc round the eye: they tilt down toward its ends) and a thin edge, like a pencil drawing's
   const lashFill = (c0 = "#3f3a52") => { const c = traced(c0);
@@ -64,7 +67,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     for (let t = -H; t < W; t += d) { h.moveTo(t, H); h.lineTo(t + H * 0.6, 0); } fctx.lineWidth = pu(0.0011); fctx.strokeStyle = c; fctx.stroke(h); fctx.restore();
     fctx.lineWidth = pu(0.0012); fctx.strokeStyle = c; fctx.lineJoin = "round"; fctx.stroke(); };
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
-  const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
+  const lash = (m, x, y, rx, lift) => { line(0.0075, INK0, traced); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // 描いてもらったパーツの絵(片側ぶん。右側は左右反転して使う)。下絵と切り出しは facekit/(face-template.psd → cut_face_parts.py)。w: 顔の上での横幅(0なら原寸 = 下絵と同じ1px) / dx, dy: 基準点からのずらし
   const PART_IMG = { eye: { src: OPT.face.images.eye.src ?? new URL("../../img/parts/eye.png", import.meta.url).href, w: OPT.face.images.eye.width, dx: OPT.face.images.eye.dx, dy: OPT.face.images.eye.dy }, eyeClosed: { src: OPT.face.images.eyeClosed?.src ?? null, w: OPT.face.images.eyeClosed?.width ?? 0, dx: OPT.face.images.eyeClosed?.dx ?? 0.004, dy: OPT.face.images.eyeClosed?.dy ?? 0.004 }, brow: { src: OPT.face.images.brow.src ?? new URL("../../img/parts/brow.png", import.meta.url).href, w: OPT.face.images.brow.width, dx: OPT.face.images.brow.dx, dy: OPT.face.images.brow.dy }, mouth: { src: OPT.face.images.mouth.src ?? new URL("../../img/parts/mouth.png", import.meta.url).href, w: OPT.face.images.mouth.width, dx: 0, dy: OPT.face.images.mouth.dy },
     nose: { src: OPT.face.images.nose?.src ?? null, w: OPT.face.images.nose?.width ?? 0, dx: 0, dy: OPT.face.images.nose?.dy ?? 0 } };   // nose: no picture unless one is given
@@ -262,7 +265,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
         fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); lashFill();
-        line(0.0018, traced("#3f3a5280")); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
+        line(0.0018, "#3f3a5280", traced); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
         fctx.restore();
       },
     },
