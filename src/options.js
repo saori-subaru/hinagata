@@ -44,7 +44,7 @@ export const DEFAULTS = {
     },
     "mottle": {
       "on": false,
-      "strength": 0.8,
+      "strength": 0.6,
       "size": 1,
       "grain": 0.5
     }

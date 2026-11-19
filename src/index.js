@@ -615,8 +615,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // mottled color (shading.mottle): blotches of depth and tint laid in the mesh's own space (they stay on the surface as it moves; the hair's
-  // locks, whose vertices the wind moves, drift a little), and a fine grain fixed to the screen like paper. Hooked in as the rim light is
-  const MO = OPT.shading.mottle ?? {}, MOT = { motOn: { value: MO.on ? 1 : 0 }, motStrength: { value: MO.strength ?? 0.8 }, motSize: { value: MO.size ?? 1 }, motGrain: { value: MO.grain ?? 0.5 } };
+  // locks, whose vertices the wind moves, drift a little), and a fine grain fixed to the screen like paper. Hooked in as the rim light is.
+  // ⛔ kept faint: blotches with a sharper edge (smoothstep 0.32–0.68) at 0.8 read as dappled sunlight (2026-11-19, Saori: 「木漏れ日の中みたい」)
+  const MO = OPT.shading.mottle ?? {}, MOT = { motOn: { value: MO.on ? 1 : 0 }, motStrength: { value: MO.strength ?? 0.6 }, motSize: { value: MO.size ?? 1 }, motGrain: { value: MO.grain ?? 0.5 } };
   let motUsed = !!MO.on;
   const MOT_GLSL = `uniform float motOn, motStrength, motSize, motGrain;
 varying vec3 vMotP;
@@ -630,9 +631,9 @@ float motN(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); Object.assign(sh.uniforms, MOT);
       sh.vertexShader = "varying vec3 vMotP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vMotP = position;");
       sh.fragmentShader = MOT_GLSL + sh.fragmentShader.replace("#include <opaque_fragment>",
-        `{ vec3 q = vMotP * 7.0 / motSize; float a = smoothstep(0.32, 0.68, motN(q) * 0.65 + motN(q * 2.7 + 5.0) * 0.35) - 0.5, b = smoothstep(0.3, 0.7, motN(q * 0.6 + 31.0)) - 0.5, g = motH(vec3(floor(gl_FragCoord.xy / 1.5), 3.0)) - 0.5;
-  vec3 mc = outgoingLight * (1.0 + motStrength * 0.8 * a) * (1.0 + motStrength * 0.22 * b * vec3(1.0, 0.1, -0.9));   // (the tint as a share of the color: added, it turned dark colors blue and orange)
-  mc *= 1.0 + motGrain * 0.3 * g; outgoingLight = mix(outgoingLight, max(mc, 0.0), motOn); }
+        `{ vec3 q = vMotP * 9.0 / motSize; float a = smoothstep(0.2, 0.8, motN(q) * 0.65 + motN(q * 2.7 + 5.0) * 0.35) - 0.5, b = smoothstep(0.2, 0.8, motN(q * 0.6 + 31.0)) - 0.5, g = motH(vec3(floor(gl_FragCoord.xy / 1.5), 3.0)) - 0.5;
+  vec3 mc = outgoingLight * (1.0 + motStrength * 0.42 * a) * (1.0 + motStrength * 0.12 * b * vec3(1.0, 0.1, -0.9));   // (the tint as a share of the color: added, it turned dark colors blue and orange)
+  mc *= 1.0 + motGrain * 0.16 * g; outgoingLight = mix(outgoingLight, max(mc, 0.0), motOn); }
 #include <opaque_fragment>`); };
     m.customProgramCacheKey = () => "mot|" + key; m.needsUpdate = true;
   }
