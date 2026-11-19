@@ -5,6 +5,9 @@
 // outer one: cloth.js moves the outer side and carries the inner along), and a rounded rim along the cut. Pure math, no three.js.
 import { surfaceNets } from "./mesh.js";
 
+// ⏳trial (one-sided cloth): only the outer side, no inner side and no rim; drawn double-sided (index.js debug.oneSide)
+let ONE = false; export const setOneSided = (v) => { ONE = !!v; };
+
 // value and gradient from 4 samples (a tetrahedron), not normalized: [gx, gy, gz, value]
 function g4(f, x, y, z, e = 0.0008) {
   const a = f(x + e, y - e, z - e), b = f(x - e, y - e, z + e), c = f(x - e, y + e, z - e), d = f(x + e, y + e, z + e), k = 1 / (4 * e);
@@ -79,6 +82,7 @@ export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h) {
     const n = unit(g4(mid, p[0], p[1], p[2])), gc = g4(cut, p[0], p[1], p[2]), dn = gc[0] * n[0] + gc[1] * n[1] + gc[2] * n[2], d = unit([gc[0] - dn * n[0], gc[1] - dn * n[1], gc[2] - dn * n[2]]), s = Math.min(0.002, T(p[0], p[1], p[2]) / 2);
     set(ri, [p[0] + d[0] * s, p[1] + d[1] * s, p[2] + d[2] * s], d);
   }
+  if (ONE) return { pos: pos.slice(0, nm * 3), nor: nor.slice(0, nm * 3), idx: Uint32Array.from(I) };
   const idx = [];
   for (let t = 0; t < I.length; t += 3) idx.push(I[t], I[t + 1], I[t + 2], nm + I[t], nm + I[t + 2], nm + I[t + 1]);
   const face = (a, b, c, n) => { const ux = pos[b * 3] - pos[a * 3], uy = pos[b * 3 + 1] - pos[a * 3 + 1], uz = pos[b * 3 + 2] - pos[a * 3 + 2], wx = pos[c * 3] - pos[a * 3], wy = pos[c * 3 + 1] - pos[a * 3 + 1], wz = pos[c * 3 + 2] - pos[a * 3 + 2];

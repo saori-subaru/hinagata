@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
-import { sheetsMesh } from "./sdf/sheet.js";
+import { sheetsMesh, setOneSided } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
@@ -122,6 +122,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
   const sheetK = LITE ? 2 : 1;   // the cloth sheets' cells times this (parts.js sheetCell): never thinned, at lite they were most of the triangles; trims ripple a little up close
   // meshes remembered from an earlier visit (same options, same generator code)
+  setOneSided(debug.oneSide);
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
   const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK) : null;
   const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
@@ -500,6 +501,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
+  if (debug.oneSide) for (const k of ["cape", "pants", "shirt"]) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
