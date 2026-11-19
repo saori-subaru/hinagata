@@ -399,7 +399,7 @@
   "shading.mottle.strength": {
    "path": "shading.mottle.strength",
    "type": "number",
-   "default": 0.5,
+   "default": 0.8,
    "label": {
     "ja": "色むらの強さ",
     "en": "Mottle strength"
