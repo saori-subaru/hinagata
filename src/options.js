@@ -41,6 +41,12 @@ export const DEFAULTS = {
       "color": "#fff4e0",
       "width": 0.35,
       "strength": 0.5
+    },
+    "mottle": {
+      "on": false,
+      "strength": 0.5,
+      "size": 1,
+      "grain": 0.5
     }
   },
   "body": {

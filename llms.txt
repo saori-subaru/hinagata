@@ -90,6 +90,8 @@ renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); r
   one the lines inside the hair simply show.
 - Colored lines (色トレス): `outline.trace` 0–1 draws each part's line in its own color, darkened, instead of the one `outline.color`
   (instant: `avatar.setOutline({ trace })`); `face.lashTrace` 0–1 pulls the lashes and the face's lines toward the hair's color (drawn image parts: their darks only).
+- Mottled color (色むら): `shading.mottle` { on, strength, size, grain } varies the fills in depth and tint like watercolor, with a paper grain fixed to the screen
+  (instant: `avatar.setMottle({ on, strength, size, grain })`; off by default).
 - Show something while the characters build (a title screen, "loading…"); build several at once with `Promise.all`.
 - `avatar.dispose()` when you drop it. Several avatars at once are fine. Scale `avatar.object` to your world (an adult about 1.7 m).
 - A complete minimal page: https://hinagata.pages.dev/examples/minimal.html (view its source).
