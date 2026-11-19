@@ -83,7 +83,7 @@ export function sheetMesh({ o, of = o, tk, cut, smooth = 0 }, lo, hi, h, one = f
   }
   // one side: each edge point once more where it is, its normal out along the sheet (d). The cloth's own triangles there have no area; the
   // outline's (pushed out along the normals) open into a facet under the edge, wound to be its back: without it a hem has no line
-  if (one) { const L = [...I], at = (i, k) => pos[i * 3 + k] + nor[i * 3 + k];
+  if (one) { const L = [...I], at = (i, k) => pos[i * 3 + k] + 0.004 * nor[i * 3 + k];   // (pushed as far as an outline is: by more, round a bend the normals' own difference decided the winding, and the line was dashed)
     for (const [a, b] of edges) { const la = rimOf.get(a) - nm, lb = rimOf.get(b) - nm, u = [0, 1, 2].map((k) => at(b, k) - at(a, k)), w = [0, 1, 2].map((k) => at(lb, k) - at(a, k));
       const f = (u[1] * w[2] - u[2] * w[1]) * (nor[a * 3] + nor[la * 3]) + (u[2] * w[0] - u[0] * w[2]) * (nor[a * 3 + 1] + nor[la * 3 + 1]) + (u[0] * w[1] - u[1] * w[0]) * (nor[a * 3 + 2] + nor[la * 3 + 2]);
       if (f < 0) L.push(a, b, lb, a, lb, la); else L.push(a, lb, b, a, la, lb); }
