@@ -29,6 +29,7 @@ export const DEFAULTS = {
     "on": true,
     "width": 1,
     "color": "#3a2a3a",
+    "trace": 0,
     "hairInner": "front"
   },
   "shading": {
@@ -736,6 +737,8 @@ export const DEFAULTS = {
         "on": true,
         "color": null,
         "strength": 0.5,
+        "shade": 0,
+        "shadeHue": -30,
         "center": 0.95,
         "width": 0.05,
         "zig": 0.07,
@@ -1027,6 +1030,7 @@ export const DEFAULTS = {
     "noseSize": 1,
     "openSize": 1,
     "lashHatch": false,
+    "lashTrace": 0,
     "browsOverHair": false,
     "parts": {
       "eyes": "round",

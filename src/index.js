@@ -10,6 +10,7 @@ import { sstep, dPrim, blend } from "./sdf/prim.js";
 import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
+import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
@@ -33,6 +34,7 @@ export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABE
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
+export { encodeBake, decodeBake };   // a baked character's file (bake.js)
 export { CHARACTERS } from "./presets.js";   // ready-made characters (presets.js): createAvatar(CHARACTERS.sylvie.file)
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
@@ -57,7 +59,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  * settings: { quality: "game" (default; "fine" for body.adult) | "fine" | "lite" | "high" | "low" — mesh density. "game": 13.6 mm cells, fast to build.
  *              "high": 6.8 mm cells, "low": 9.5 mm. "fine": built at 4.5 mm cells, then thinned to 7 % (meshoptimizer; the face kept as
  *              built, skirts and capes at most 10.5 mm and 0.45 of their thickness, not thinned): about the triangles of "game" (fewer than
- *              "high" by half), the sharpest shapes (a nose tip; an elf ear's blade is made apart, sharp at any quality), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15%, lighter hair locks and cloth sheets at twice the cells, about a third to a
+ *              "high" by half), the sharpest shapes (a nose tip; an elf ear's blade is made apart, sharp at any quality), but about 2.5x as long to build as "game" (cached after). "lite": 13.6 mm cells thinned to 15%, lighter hair locks and cloth sheets at twice the cells and one-sided (no thickness at their edges), about a third to a
  *              fifth of the game's vertices. Without meshoptimizer (offline), "fine" and "lite" build unthinned at 13.6 mm.
  *             cell: a cell size in metres, instead of quality,
  *             simplify: 0..1 — after building, keep this share of the triangles (e.g. 0.1). Uses the "meshoptimizer" package (from the import map, else jsDelivr).
@@ -66,6 +68,8 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  *             spare: false (default) — armor and the bodysuit that aren't worn are built only when put on (setWorn); true builds them now (an editor),
  *             cache: true (default) — remember the built meshes in the browser (IndexedDB); the same options come back instantly next time.
  *                    The key includes the generator's source code, so edits to the sculpt code never return a stale mesh,
+ *             baked: a baked character (avatar.bake()'s ArrayBuffer, or a URL of it) — its meshes are used instead of building when it is of
+ *               this recipe's shape, this quality and this engine; otherwise the character is built as without it (avatar.baked says which),
  *             cull: true (default) — don't draw the body where clothes cover it (follows each garment's visibility),
  *             workers: true (default) — build the parts in a few Web Workers at once (body and hair together, then the clothes);
  *                      the same mesh as on the main thread. Falls back to the main thread when workers can't start,
@@ -79,7 +83,7 @@ function shapeOnly(OPT) {
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
 }
 
-export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, cull = true, workers = true, debug = {} } = {}) {
+export async function createAvatar(options = {}, { quality: qualityAsked, cell = 0, simplify: simplifyAsked, spare = false, cache = true, baked = null, cull = true, workers = true, debug = {} } = {}) {
   await new Promise((r) => setTimeout(r, 0));   // let the page paint (e.g. a "building…" message) before the heavy work
   const TIMES = {}, T00 = performance.now(); let T0p = T00; const lap = (k) => { const t = performance.now(); TIMES[k] = Math.round((TIMES[k] || 0) + t - T0p); T0p = t; };   // where the time goes (avatar.TIMES, ms)
   // the character as the editor saves it, as it is (2026-10-05, Saori: a developer makes a character in the editor and puts it in the game):
@@ -95,7 +99,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // about a fifth (meshoptimizer): the vertices "game" has, the look of "high" (the thinning keeps the triangles where the surface turns
   // and spends few on flat parts, which a coarser grid can't). It was "game" for an hour: building took 3x as long (two players for the
   // tennis: 3.5 s → 9.9 s), and a game's players wait for that; so "game" stays the fast one.
-  // "lite": the game's cells thinned to 15%, lighter hair locks and the cloth sheets at twice the cells, about a fifth of those vertices; the same look at a game's distance
+  // "lite": the game's cells thinned to 15%, lighter hair locks and the cloth sheets at twice the cells and one-sided (ONE), about a fifth of those vertices; the same look at a game's distance
   // the adult body (body.adult) is "fine" unless asked otherwise (2026-10-08, Saori agreed): its slim arms (2.4 cm radius) came out ridged like a
   // spring on the game's 1.36 cm cells and its toes' gaps didn't show; fine thins back to about as many triangles (the body 1.3 → 1.5 万)
   // Then "fine" itself at 4.5 mm cells thinned to 7 % (2026-10-09; Saori: "うん、それでお願い", "それがいい"): on the small 6-head head the nose
@@ -120,14 +124,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the fine quality's cloth: the game's, not thinned (thinned, its uneven triangles drew broken lines over a seated lap): the sheets at the
   // game's cells (parts.js sheetCell), a skirt still meshed as a distance at the coarser grid's cloth cells
   const clothH = FINE && simplify < 1 && simplifyAsked == null ? partClothCell(0.0136) : 0;
+  const ONE = debug.oneSide ?? LITE;   // the cloth sheets as their outer side alone, drawn double-sided (sdf/sheet.js `one`): half their triangles; the edges lose their thickness (debug.oneSide: true / false at any quality, to compare)
   const sheetK = LITE ? 2 : 1;   // the cloth sheets' cells times this (parts.js sheetCell): never thinned, at lite they were most of the triangles; trims ripple a little up close
   // meshes remembered from an earlier visit (same options, same generator code)
   const useCache = cache && !debug.slow && !debug.oldSock && typeof indexedDB !== "undefined";
-  const cacheKey = useCache ? hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK) : null;
-  const hit = useCache ? await cacheGet(cacheKey) : null, fresh = {};
+  const cacheKey = hashKey(await sourceHash(), shapeOnly(OPT), H, simplify, sheetK, ONE);
+  // settings.baked (bake.js): this build's meshes from a file. Its key is the cache's: another recipe, quality or engine is built as without it
+  const bake = baked ? await openBake(baked) : null, bakeHit = bake?.key === cacheKey;
+  if (baked && bake && !bakeHit) console.warn("Hinagata: the baked character is of another recipe, quality or engine; building it.");
+  const hit = bakeHit ? bake.parts : useCache ? await cacheGet(cacheKey) : null, fresh = {};
   // armor and the bodysuit that aren't worn are not built now (a game waited for armor nobody wore as long as for the clothes; the suit is
   // a whole body of triangles): built when put on (setWorn), here on the main thread. settings.spare builds them anyway (the editor:
   // everything ready to put on at once). What the cache has comes anyway (it costs nothing)
+  const built = {};   // what this build made (fresh, as it was when the build ended), for avatar.bake()
   const LATER = new Set([...(!spare && !OPT.outfit.armor.on ? ARMOR : []), ...(!spare && !OPT.outfit.suit?.on ? ["suit"] : [])].filter((k) => !hit?.[k]));
   let building = true;
 
@@ -163,13 +172,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function mesh(name, sdf, lo, hi, h, bone1, only, fast = sdf, soft = null, make = null, bells = null) {   // make: a part made directly as triangles ({ pos, nor, idx }), not from a distance
     const T0 = performance.now(), w = building ? pre[name] : null; let rec = w?.rec ?? (building ? hit?.[name] : null), time = w?.time ?? null;   // made by a worker / remembered (the cache only serves the first build; later rebuilds, e.g. setHair after editing tips, are made fresh)
     mesh.last = w?.grid ?? null;
+    // the fingers' rings (body/index.js fingerTubes; not under gloves or gauntlets: their meshes follow the hand at their own cells, and the
+    // fingers came through). The body's own fingers go BEFORE the thinning: thinned with them, long triangles bridged the dips between the
+    // knuckles and stood out over the rings as stray lines. The rings are joined after it (fewer at lite: they were half the body's triangles)
+    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf, LITE ? { N: 6, DS: 0.009 } : { N: 8, DS: 0.006 }) : null;
+    if (w && FT) rec = without(rec, FT.under);
     if (w && MS) { rec = simplified(rec, name); }   // a worker builds full meshes; they are thinned here (with their skin weights)
-    const sk = { bone1, only, soft, bells };   // (skin weights for what withParts joins)
+    const sk = { bone1, only, soft, bells, FT };   // (skin weights for what withParts joins)
     if (w) fresh[name] = rec = withParts(name, rec, sk);
     if (!rec && make) { const r = make(); const { si, sw } = skinOf(r.pos, weightsAt, BI, bone1, only, soft); rec = fresh[name] = { ...r, si, sw }; time = { sample: 0, project: 0 }; }
     if (!rec) {
       const r = surfaceNets(sdf, lo, hi, h, { fast, band: OPT.quality.band, proj: OPT.quality.project }); mesh.last = r.grid; time = r.time;
       let pos = new Float32Array(r.pos), nor = r.nor, idx = new Uint32Array(r.idx);
+      if (FT) ({ pos, nor, idx } = without({ pos, nor, idx }, FT.under));
       if (MS) ({ pos, nor, idx } = simplified({ pos, nor, idx }, name));
       const { si, sw } = skinOf(pos, weightsAt, BI, bone1, only, soft);
       rec = fresh[name] = withParts(name, { pos, nor, idx, si, sw }, sk);
@@ -223,14 +238,23 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   // made apart and joined to their part: the elf ears' blades (rings on the body's surface, body/index.js earBlades; the body's own triangles
   // under them go), the ahoge (hair/index.js ahogeMesh, on the head bone) and bell sleeves (sheets, sdf/sheet.js; the shirt's spec)
-  function withParts(name, rec, { bone1, only, soft, bells } = {}) {
+  function withParts(name, rec, { bone1, only, soft, bells, FT } = {}) {
     if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
-    if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h), null, bone1, only, soft);
+    if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h, bells.one), null, bone1, only, soft);
     const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
     if (EB) rec = joined(rec, EB, EB.under);
-    // (not under gloves or gauntlets: their meshes follow the hand at their own cells, and the fingers came through)
-    const FT = name === "body" && (OPT.body.sculpt.hand?.rings ?? true) && !OPT.outfit.gloves?.on && !OPT.outfit.armor?.on ? fingerTubes(P, bodySdf) : null;
-    return FT ? joined(rec, FT, FT.under) : rec;
+    return FT ? joined(rec, FT, null) : rec;
+  }
+  // a mesh without the triangles whose three corners are all under(x, y, z)
+  function without(rec, under) {
+    const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
+    for (let v = 0; v < n; v++) drop[v] = under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
+    for (let t = 0; t < idx.length; t += 3) if (!(drop[idx[t]] && drop[idx[t + 1]] && drop[idx[t + 2]])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
+    let m = 0; for (const v of kept) if (map[v] < 0) map[v] = m++;
+    const P2 = new Float32Array(m * 3), N2 = new Float32Array(m * 3), SI = si ? new si.constructor(m * 4) : null, SW = sw ? new Float32Array(m * 4) : null;
+    for (let v = 0; v < n; v++) { const u = map[v]; if (u < 0) continue; for (let c = 0; c < 3; c++) { P2[u * 3 + c] = pos[v * 3 + c]; N2[u * 3 + c] = nor[v * 3 + c]; } if (SI) for (let c = 0; c < 4; c++) { SI[u * 4 + c] = si[v * 4 + c]; SW[u * 4 + c] = sw[v * 4 + c]; } }
+    const I = Uint32Array.from(kept, (v) => map[v]);
+    return SI ? { pos: P2, nor: N2, idx: I, si: SI, sw: SW } : { pos: P2, nor: N2, idx: I };
   }
   function joined(rec, EB, under, bone1, only, soft) {
     const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
@@ -416,6 +440,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // new material (2026-10-07, Saori: the bangs lost their gradient. Switching the shading left only the hair's block with it)
   const bangsGrad = (G) => G?.on && (G.bangs !== false || G.hanging !== false) ? 1 : 0;   // the bangs: the hair's, unless gradient.bangs is off (then only the tufts hanging long with gradient.hanging: their locks' grad, makeLocks)
   GRAD.bangs = { ...GRAD.hair, on: { value: bangsGrad(OPT.hair.gradient) } };
+  // ring.shade: under the band the hair a tone darker and deeper, its hue turned by ring.shadeHue (degrees; below 0: toward red, a blonde's
+  // shade orange), fading out downward, so the band reads as a shine on glossy hair.
+  // ⛔ the band broken into strokes or dabs was tried and dropped (2026-11-19, Saori: scattered they read as spots, in a row as a broken ring)
+  const ringShade = (R) => R.shade ? `{ float g = step(hi, th) * (1.0 - smoothstep(hi, hi + 0.42, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); vec3 sc = diffuseColor.rgb * mix(vec3(0.6), diffuseColor.rgb, 0.45), ax = vec3(0.57735); float ha = ${glf((R.shadeHue ?? -30) * Math.PI / 180)};
+      diffuseColor.rgb = mix(diffuseColor.rgb, max(sc * cos(ha) + cross(ax, sc) * sin(ha) + ax * dot(ax, sc) * (1.0 - cos(ha)), 0.0), ${glf(R.shade)} * g); }` : "";
   const hairMat = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile, HP = OPT.hair.paint, St = HP.strands, R = HP.ring, LU = OPT.hair.sculpt.lumps, rc = R.color ? new THREE.Color(R.color) : ringOf(c), IN = hairKit.backAsLocks(hairPick) ? (HP.inner ?? 0) : 0;
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
@@ -424,13 +453,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     float s = ph * N / 6.2832 + ${glf(LU?.amp ? LU.twist * St.count / LU.count : 0)} * th * sin(ph) + ${glf(St.wobble)} * sin(th * 9.0 + ph * 2.0) + 0.25 * sin(ph * N * 0.37 + 1.3);   // strand lines: around the head, wavering a little, sweeping back with the hair's bundles (lumps)
     float id = floor(s), f = fract(s), k = fract(sin(id * 12.9898) * 43758.5453);                                   // k: a random value per strand (strength / length)
     float line = (1.0 - smoothstep(0.0, ${glf(St.width)}, min(f, 1.0 - f))) * smoothstep(${glf(St.start)}, ${glf(St.start)} + 0.35, th) * step(0.25, k);
-    float ring = 0.0;
+    float ring = 0.0, hi = 9.0;
     if (${R.on ? "true" : "false"}) { float z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0;                 // the ring's lower edge zigzags
-      float lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
-      ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); }
+      float lo = ${glf(R.center)} - ${glf(R.width)}; hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
+      ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${ringShade(R)} }
     if (${St.on ? "true" : "false"}) diffuseColor.rgb *= 1.0 - ${glf(St.strength)} * line * (0.6 + 0.4 * k);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(rc.r)}, ${glf(rc.g)}, ${glf(rc.b)}), ${glf(R.strength)} * ring * (1.0 - line));
     diffuseColor.rgb *= 1.0 - ${glf(IN)} * smoothstep(1.0, 1.6, th) * (1.0 - smoothstep(-0.5, 0.0, cos(ph))); }`); };   // inner: the block's low back, under the back locks, darker (lifted on a run, its pale dome read as a bald head or an undercut)
+    const key = m.customProgramCacheKey(); m.customProgramCacheKey = () => "hair|" + JSON.stringify([St, R, LU, IN, rc.getHex()]) + key;   // (as the ring's key below)
     return withGrad(withShadeN(m), GRAD.hair); };
   // the angel ring on hair made of locks (2026-10-07, Saori: "ふさタイプの髪だと天使の輪がほぼみえない"): it was painted on the block only, which
   // lies thin under the locks. The locks carry it too, by where each of their points was when they were made (hairUV, as the block's)
@@ -441,16 +471,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0, lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
-    float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4);
+    float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${ringShade(R)}
     diffuseColor.rgb = mix(diffuseColor.rgb, ringColor, ${glf(R.strength)} * ring); }`); };
-    m.customProgramCacheKey = () => "ring|" + key; return m; };
+    m.customProgramCacheKey = () => "ring|" + JSON.stringify(R) + key; return m; };   // (the ring's numbers are written into the shader: without them in the key, two avatars on a page shared the first one's)
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
 
   // build every mesh
   const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
-  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);
+  const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, one: ONE, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);
     if (later) delete fresh[name]; return g; };   // (an empty stand-in never goes to the cache)   // the part table (parts.js) is shared with the workers
   parts.body = skinned(meshPart("body"), OPT.colors.skin, 0.005, "body"); if (mesh.last) bodyAt = gridSampler(mesh.last, bodySdf);   // (from the cache there is no grid: the clothes then read the body itself)
   lap("meshBody");
@@ -485,6 +515,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
+  if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   const armCols = (s) => [["upperArm", "lowerArm", 0.042], ["lowerArm", "hand", 0.036]].map(([a, b, r]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + CM + CA.thick, rb: r + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
@@ -583,7 +614,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
+  // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
+  // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (commit 119beb1 has the code)
   const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
+  // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
+  const TR = { c: new THREE.Color(), ink: new THREE.Color(), hsl: {} };
+  function traceLines() {
+    const t = OPT.outline.trace ?? 0;
+    for (const k in parts) { const x = parts[k], b = (x?.toonMat ?? x?.m?.material)?.color; if (!b || !x.o) continue;
+      const key = t ? b.getHex() + OPT.outline.color + t : OPT.outline.color; if (x.o.userData.trace === key) continue; x.o.userData.trace = key;
+      TR.ink.set(OPT.outline.color); if (t) { b.getHSL(TR.hsl, THREE.SRGBColorSpace); TR.c.setHSL(TR.hsl.h, Math.min(TR.hsl.s, 0.42), TR.hsl.l * 0.4, THREE.SRGBColorSpace); TR.ink.lerp(TR.c, t); }
+      x.o.material.color.copy(TR.ink); }
+  }
   function hairLines() {
     const v = OPT.outline.hairInner, mode = v === true ? "all" : v === false ? "none" : v ?? "front";
     for (const k of HAIR_FILL) { const x = parts[k]; if (!x) continue; const f = x.m.material, o = x.o.material;
@@ -837,7 +880,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
-      syncCover(); hairLines(); rims();
+      syncCover(); hairLines(); traceLines(); rims();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
       if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
@@ -953,6 +996,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
       if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
+      else if (hair && OPT.face.lashTrace) avatar.drawFace();   // the lashes follow the hair's color
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
       for (const [k, c] of Object.entries({ shirt, pants, shoes, socks })) if (c) { OPT.outfit[k].color = c; if (!(DR && (k === "pants" || k === "shirt"))) parts[k].m.material.color.set(c); }
       if (dress !== undefined) OPT.outfit.dress.color = dress;   // null: the shirt's color
@@ -969,10 +1013,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setBands(ch = {}) { for (const [p, v] of Object.entries(ch)) { const k = p.split("."); let o = OPT; for (const q of k.slice(0, -1)) o = o[q] ??= {}; o[k.at(-1)] = v; } paintBands(); },
     /** Put garments on or take them off (instant): { shirt, pants, socks, shoes } as true / false. Kept in options.outfit.*.on. */
     setWorn(worn = {}) { for (const [g, on] of Object.entries(worn)) { if (!GARMENTS[g]) throw new Error(`Unknown garment "${g}". Available: ${Object.keys(GARMENTS).join(", ")}`); wear(g, !!on); } },
-    /** Outline (instant, no rebuild): { on, width (1 = default), color }. Some art styles want none: { on: false }. */
-    setOutline({ on, width, color, hairInner } = {}) {
-      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner }).filter(([, v]) => v !== undefined))); hairLines();
-      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+    /** Outline (instant, no rebuild): { on, width (1 = default), color, trace (0–1: each part's line in its own color, darkened) }. Some art styles want none: { on: false }. */
+    setOutline({ on, width, color, hairInner, trace } = {}) {
+      Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner, trace }).filter(([, v]) => v !== undefined))); hairLines();
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+      traceLines();
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
      *  bands 2 (light / shadow) or 3 (with a mid tone), soften 0.. how far the shading normals are smoothed (0 = the mesh's own, 1 = default). Keeps the current colors. */
@@ -1102,6 +1147,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       return K.toRoot(...K.center.map((v, i) => v + d[i] * t)); },
 
     /** GLB of the avatar in the A-pose (outlines left out). */
+    /** This build's meshes as a file (ArrayBuffer) for createAvatar(recipe, { baked }): the same recipe at the same quality comes without building.
+     *  What was changed after the build (setHair, setWorn) is not in it. */
+    bake() { return encodeBake({ key: cacheKey, parts: { ...(hit ?? {}), ...built } }); },
+    baked: bakeHit,   // true: the meshes came from settings.baked
     async exportGLB() {
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
       const outs = []; root.traverse((o) => { if (o.userData.outline && o.visible) { o.visible = false; outs.push(o); } });
@@ -1120,7 +1169,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   };
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
-  building = false;
+  building = false; Object.assign(built, fresh);
   if (useCache && Object.keys(fresh).length) cachePut(cacheKey, fresh);   // not awaited: storing happens after the avatar is already on screen
   return avatar;
 }

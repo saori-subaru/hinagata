@@ -158,7 +158,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       NA[a] += nx; NA[a + 1] += ny; NA[a + 2] += nz; NA[b] += nx; NA[b + 1] += ny; NA[b + 2] += nz; NA[c] += nx; NA[c + 1] += ny; NA[c + 2] += nz; }
     // where the cloth sits where the skinning put it, keep the built mesh's smooth normal (the mesh's own faces shade a little bumpier: a dark band
     // showed on the standing skirt); where the cloth was moved off (over a thigh), its own faces' normal, blended over 2 mm - 1 cm
-    for (let i = 0; i < NA.length; i += 3) { if (!MOV[i / 3]) continue; const l = Math.sqrt(NA[i] * NA[i] + NA[i + 1] * NA[i + 1] + NA[i + 2] * NA[i + 2]) || 1, dev = Math.sqrt((X[i] - T[i]) ** 2 + (X[i + 1] - T[i + 1]) ** 2 + (X[i + 2] - T[i + 2]) ** 2), k = sstep(0.002, 0.01, dev);
+    for (let i = 0; i < NA.length; i += 3) { if (!MOV[i / 3]) continue; const l0 = Math.sqrt(NA[i] * NA[i] + NA[i + 1] * NA[i + 1] + NA[i + 2] * NA[i + 2]), l = l0 || 1, dev = Math.sqrt((X[i] - T[i]) ** 2 + (X[i + 1] - T[i + 1]) ** 2 + (X[i + 2] - T[i + 2]) ** 2), k = l0 < 1e-9 ? 0 : sstep(0.002, 0.01, dev);   // (no faces with an area: a one-sided sheet's edge points, sdf/sheet.js; they keep the built normal, which is the outline's facet)
       const tl = Math.sqrt(TN[i] * TN[i] + TN[i + 1] * TN[i + 1] + TN[i + 2] * TN[i + 2]) || 1;
       let x = TN[i] / tl + (NA[i] / l - TN[i] / tl) * k, y = TN[i + 1] / tl + (NA[i + 1] / l - TN[i + 1] / tl) * k, z = TN[i + 2] / tl + (NA[i + 2] / l - TN[i + 2] / tl) * k; const m = Math.sqrt(x * x + y * y + z * z) || 1;
       NA[i] = x / m; NA[i + 1] = y / m; NA[i + 2] = z / m; }

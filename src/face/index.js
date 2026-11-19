@@ -41,22 +41,33 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
   const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
-  const INK = "#3a2632", MOUTH = "#b8475e";
+  const INK0 = "#3a2632", MOUTH = "#b8475e";
+  // face.lashTrace: the ink toward a dark of the hair's color (warm: a pale or grey hair still gives a brown), by its amount
+  const traced = (c, warm = 0) => { const t = OPT.face.lashTrace ?? 0; if (!t) return c; const a = hexRgb(c), [h, s] = rgbHsl(hexRgb(OPT.colors.hair)), k = Math.min(1, s / 0.2);
+    const b = hexRgb(hslHex([(h * k + 0.05 * (1 - k)) * (1 - warm) + 0.02 * warm, Math.min(0.6, Math.max(0.3, s)), 0.24 + 0.16 * warm]));
+    return "#" + a.map((v, i) => Math.round((v + (b[i] - v) * t) * 255).toString(16).padStart(2, "0")).join("") + c.slice(7); };
+  const ink = () => traced(INK0);
+  // the other lines (brows, lids, mouth) toward the skin's line color (as outline.trace's on the skin), each keeping its own lightness
+  const skinInk = (c) => { const t = OPT.face.lashTrace ?? 0; if (!t) return c; const a = hexRgb(c), [h, s] = rgbHsl(hexRgb(OPT.colors.skin)), b = hexRgb(hslHex([h, Math.min(s, 0.5), Math.max(rgbHsl(a)[2], 0.27)]));
+    return "#" + a.map((v, i) => Math.round((v + (b[i] - v) * t) * 255).toString(16).padStart(2, "0")).join("") + c.slice(7); };
   const LAY = { eyeSize: OPT.face.eyeSize };   // 目の大きさ(コードで描く目)。あとから setLayout で変えられる
   const EYE_COL = irisColors(OPT.colors.eyes);   // 虹彩の色(上の暗い色 → 下の明るい色)。setEyeColor で変えられる
   // 目・眉・ほっぺはキャラの左側(+x)を描き、右側は左右反転して写す
   const FL = OPT.face.layout, EYE = { x: FL.eyeX, y: FL.eyeY }, BROW = { x: FL.browX, y: FL.browY }, MOUTHP = { x: 0, y: FL.mouthY }, CHEEK = { x: 0.152, y: 0.955 };   // 顔の絵の上の位置(体の座標)
-  const line = (w, c = INK) => { fctx.lineWidth = pu(w); fctx.strokeStyle = c; fctx.lineCap = "round"; fctx.lineJoin = "round"; };
+  const line = (w, c = INK0, tr = skinInk) => { fctx.lineWidth = pu(w); fctx.strokeStyle = tr(c); fctx.lineCap = "round"; fctx.lineJoin = "round"; };
   // the lash of the tall eyes on the current path: solid, or (face.lashHatch) a pale opaque fill (the iris must not show through) with short
   // strokes laid along the lash's curve (an arc round the eye: they tilt down toward its ends) and a thin edge, like a pencil drawing's
-  const lashFill = (c = "#3f3a52") => { if (!OPT.face.lashHatch) { fctx.fillStyle = c; fctx.fill(); return; }
+  const lashFill = (c0 = "#3f3a52") => { const c = traced(c0);
+    if (!OPT.face.lashHatch) { fctx.fillStyle = c;   // lashTrace: redder and lighter toward the outer corner
+      if (OPT.face.lashTrace) { const g = fctx.createLinearGradient(px(EYE.x), 0, px(EYE.x + 0.064 * LAY.eyeSize), 0); g.addColorStop(0, c); g.addColorStop(1, traced(c0, 1)); fctx.fillStyle = g; }
+      fctx.fill(); return; }
     // the ground is opaque (a half-tint of c over skin) so the iris under the lash can't show through
     const half = "#" + hexRgb(c).map((v, i) => Math.round((v + [0.95, 0.86, 0.84][i]) / 2 * 255).toString(16).padStart(2, "0")).join("");
     fctx.fillStyle = half; fctx.fill(); fctx.save(); fctx.clip(); const h = new Path2D(), W = fctx.canvas.width, H = fctx.canvas.height, d = pu(0.0034);
     for (let t = -H; t < W; t += d) { h.moveTo(t, H); h.lineTo(t + H * 0.6, 0); } fctx.lineWidth = pu(0.0011); fctx.strokeStyle = c; fctx.stroke(h); fctx.restore();
     fctx.lineWidth = pu(0.0012); fctx.strokeStyle = c; fctx.lineJoin = "round"; fctx.stroke(); };
   const ell = (x, y, rx, ry, fill) => { fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(rx), pu(ry), 0, 0, Math.PI * 2); fctx.fillStyle = fill; fctx.fill(); };
-  const lash = (m, x, y, rx, lift) => { line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
+  const lash = (m, x, y, rx, lift) => { line(0.0075, INK0, traced); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.05), py(y - 0.004)); fctx.quadraticCurveTo(px(x), py(y + lift), px(x + m * rx * 1.15), py(y - 0.002)); fctx.lineTo(px(x + m * rx * 1.35), py(y + 0.006)); fctx.stroke(); };
   // とじ目の上まつげ: 中心線(3次ベジエ)を太さ w0→w1 でふくらませた塗り + 目じりの跳ね。arch 1 = ∩(笑う)、-1 = ∪(閉じる)
   const closedLid = (arch) => {
     const { x: cx, y: cy } = EYE, k = LAY.eyeSize, P = (x, y) => [px(cx + x * k), py(cy + y * k)];
@@ -81,7 +92,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const DRAWN = (OPT.face.drawn ?? []).filter((d) => d && d.id != null), BLINKS = new Set([...BLINKS0, ...DRAWN.filter((d) => d.blink !== false).map((d) => DRAWN_PREFIX + d.id)]);
   for (const d of DRAWN) for (const k of ["eye", "eyeL", "brow", "mouth"]) PART_IMG[`${k}@${d.id}`] = { ...PART_IMG[k], src: d[k] ?? null };
   for (const k in PART_IMG) { if (!PART_IMG[k].src) continue; const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { PART_IMG[k].img = im; onImage?.(k); }; im.src = PART_IMG[k].src; }
-  const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(p.img, px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
+  const TINT = new Map();   // drawn part → [ink, canvas]: its darks lifted to the traced ink ("lighten"), its own alpha kept
+  const tinted = (img) => { const c = ink(); if (c === INK0) return img; const hit = TINT.get(img); if (hit?.[0] === c) return hit[1];
+    const cv = document.createElement("canvas"), x = cv.getContext("2d"); cv.width = img.width; cv.height = img.height; x.drawImage(img, 0, 0); x.globalCompositeOperation = "lighten"; x.fillStyle = c; x.fillRect(0, 0, cv.width, cv.height);
+    x.globalCompositeOperation = "destination-in"; x.drawImage(img, 0, 0); TINT.set(img, [c, cv]); return cv; };
+  const imgPart = (k, x, y) => { const p = PART_IMG[k]; if (!p.img) return; const w = p.w ? pu(p.w) : p.img.width, h = w * p.img.height / p.img.width; fctx.drawImage(tinted(p.img), px(x + p.dx) - w / 2, py(y + p.dy) - h / 2, w, h); };   // 基準点に絵の真ん中を合わせる
   const imgOr = (keys, x, y) => { const k = keys.find((q) => PART_IMG[q]?.img); if (k) imgPart(k, x, y); return !!k; };   // the first of these pictures that is loaded
   const PARTS = {
     eyes: {
@@ -187,7 +202,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       happy: () => closedLid(1),    // にこっ(∩): まん中が上がり、目じりの跳ねは下へ
       closed: () => closedLid(-1),  // まばたき・すやすや(∪): まん中が下がり、低め
       surprised: (m) => { const { x, y } = EYE; ell(x, y, 0.027, 0.04, "#fff"); line(0.003); fctx.beginPath(); fctx.ellipse(px(x), py(y), pu(0.027), pu(0.04), 0, 0, Math.PI * 2); fctx.stroke();
-        ell(x, y - 0.002, 0.012, 0.016, INK); ell(x - 0.004, y + 0.004, 0.004, 0.005, "#fff"); lash(m, x, y + 0.04, 0.027, 0.012); },
+        ell(x, y - 0.002, 0.012, 0.016, ink()); ell(x - 0.004, y + 0.004, 0.004, 0.005, "#fff"); lash(m, x, y + 0.04, 0.027, 0.012); },
       glare: (m) => { const { x, y } = EYE, rx = 0.03, ry = 0.041; fctx.save(); fctx.beginPath(); fctx.rect(0, py(y + 0.006), faceCanvas.width, faceCanvas.height); fctx.clip();
         ell(x, y, rx, ry, "#3a2632"); ell(x + 0.012, y - 0.016, 0.0045, 0.0045, "#ffffffd8"); fctx.restore();
         line(0.0075); fctx.beginPath(); fctx.moveTo(px(x - m * rx * 1.1), py(y + 0.006)); fctx.lineTo(px(x + m * rx * 1.25), py(y + 0.008)); fctx.stroke(); },
@@ -263,7 +278,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
         const { x: cx, y: cy } = EYE, P = (x, y) => [px(cx + x), py(cy + y)], mv = (x, y) => fctx.moveTo(...P(x, y)), ln = (x, y) => fctx.lineTo(...P(x, y)), qc = (a, b, x, y) => fctx.quadraticCurveTo(...P(a, b), ...P(x, y)), bz = (a, b, c, d, x, y) => fctx.bezierCurveTo(...P(a, b), ...P(c, d), ...P(x, y));
         fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(LAY.eyeSize, LAY.eyeSize); fctx.translate(-px(cx), -py(cy));
         fctx.beginPath(); mv(-0.04, -0.012); qc(0.003, 0.022, 0.0495, -0.015); ln(0.0575, -0.016); ln(0.0505, -0.022); ln(0.053, -0.03); qc(0.004, -0.003, -0.034, -0.017); fctx.closePath(); lashFill();
-        line(0.0018, "#3f3a5280"); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
+        line(0.0018, "#3f3a5280", traced); fctx.beginPath(); mv(0.006, 0.0115); qc(-0.01, 0.0125, -0.024, 0.0055); fctx.stroke();   // a thin line of the lash color, half see-through, from the top toward the inner corner
         fctx.restore();
       },
     },
