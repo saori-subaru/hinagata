@@ -13153,43 +13153,6 @@
     "en": "Paint"
    }
   },
-  "hair.paint.ring.style": {
-   "path": "hair.paint.ring.style",
-   "type": "enum",
-   "default": "band",
-   "label": {
-    "ja": "ツヤの入れ方",
-    "en": "Highlight style"
-   },
-   "group": "hair",
-   "tier": "main",
-   "cost": "paint",
-   "apply": null,
-   "options": [
-    {
-     "value": "band",
-     "label": {
-      "ja": "輪(ぐるっと一周)",
-      "en": "Ring (a band)"
-     }
-    },
-    {
-     "value": "dabs",
-     "label": {
-      "ja": "ちょんちょん(短い筆あと)",
-      "en": "Dabs (short strokes)"
-     }
-    }
-   ],
-   "order": 201,
-   "section": {
-    "ja": "塗り",
-    "en": "Paint"
-   },
-   "when": {
-    "hair.paint.ring.on": true
-   }
-  },
   "hair.paint.ring.color": {
    "path": "hair.paint.ring.color",
    "type": "color",
@@ -13202,7 +13165,7 @@
    "tier": "main",
    "cost": "paint",
    "apply": null,
-   "order": 202,
+   "order": 201,
    "nullable": true,
    "section": {
     "ja": "塗り",
@@ -13231,10 +13194,38 @@
    "min": 0,
    "max": 1,
    "step": 0.01,
+   "order": 202,
+   "section": {
+    "ja": "塗り",
+    "en": "Paint"
+   },
+   "when": {
+    "hair.paint.ring.on": true
+   }
+  },
+  "hair.paint.ring.shade": {
+   "path": "hair.paint.ring.shade",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "輪の下の濃い色",
+    "en": "Shade under the ring"
+   },
+   "group": "hair",
+   "tier": "main",
+   "cost": "paint",
+   "apply": null,
+   "min": 0,
+   "max": 1,
+   "step": 0.01,
    "order": 203,
    "section": {
     "ja": "塗り",
     "en": "Paint"
+   },
+   "help": {
+    "ja": "輪の下に少し濃い色を乗せ、下へぼかす(艶が出る)",
+    "en": "a darker tone under the ring, fading downward (a glossier look)"
    },
    "when": {
     "hair.paint.ring.on": true

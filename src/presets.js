@@ -123,7 +123,7 @@ export const CHARACTERS = {
       },
       hair: {
         gradient: { on: true, color: "#eec9a0" },
-        paint: { ring: { style: "dabs", strength: 0.8 } },   // 🚧 trying the look out on him
+        paint: { ring: { shade: 0.5 } },   // 🚧 trying the look out on him
         tail: { kind: "pony", y: 0.95, length: 0.62, lift: 0.1, size: 0.5, wave: 0.016, tie: { on: false } },
         ahoge: false,
         sculpt: {
@@ -206,7 +206,7 @@ export const CHARACTERS = {
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
         tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
         rigid: 0.5, lockPoints: 5,
-        paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", style: "dabs", strength: 0.9 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
+        paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
         // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)

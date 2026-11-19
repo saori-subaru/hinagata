@@ -741,9 +741,9 @@ export const DEFAULTS = {
       },
       "ring": {
         "on": true,
-        "style": "band",
         "color": null,
         "strength": 0.5,
+        "shade": 0,
         "center": 0.95,
         "width": 0.05,
         "zig": 0.07,
