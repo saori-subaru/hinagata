@@ -214,7 +214,9 @@ export const CHARACTERS = {
           { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
           { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
         sculpt: {
-          lockShell: 0.004,   // the block under the locks only a skin of hair color: the locks themselves make the shape (at 0.016 they lay on a helmet)
+          // every lock from the whorl behind the ahoge, laid like roof tiles away from the part down the middle; no block under them (the
+          // locks make the head's shape; on a 1.6 cm block they lay over a helmet). lockShell: the locks lie on the skull, not 1.6 cm over it
+          whorl: { on: true, th: 180, ph: 78 }, lockShell: 0.004,
           ahogeCurl: true, ahogeSize: 1.05,   // small and curled round as on her design sheet
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
@@ -234,29 +236,10 @@ export const CHARACTERS = {
               [56, 0.91, 0.5, 0, null, 16.2, 0, 0, 0.57, 0, 0.5],   // outside the eye, hooking in to the cheek
               [84, 0.87, 0.66, -0.33, null, -12.5],
             ],
-            // rooted at the whorl by the ahoge, narrow there (lockRootW), as the back's locks (shortLocks.crown): the hair fans out from one point
-            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 84, lockRootW: 0.35, lockSpan: 14,
+            overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
-            ph: [84, 72], crown: 0.3,   // rooted at the whorl, narrow there (see nendo.lockRootW)
-            // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
-            // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
-            // (2, 9) they hang to the jaw
-            edits: [
-              { i: 0, da: 0.46 },
-              { i: 1, dy: 0.03, da: -3.67, fl: -0.006 },
-              { i: 2, dy: 0.02, da: -5.05, fl: -0.004 },
-              { i: 9, dy: 0.02, da: 5.05, fl: -0.004 },
-              { i: 10, dy: 0.03, da: 3.67, fl: -0.006 },
-              { i: 11, da: -0.46 },
-              { i: 12, dy: 0.05 },
-              { i: 13, dy: 0.09 },
-              { i: 14, dy: 0.01 },
-              { i: 20, dy: 0.01 },
-              { i: 21, dy: 0.09 },
-              { i: 22, dy: 0.05 },
-            ],
+            count: 13, width: 0.09, thick: 0.15, below: 0.03, flick: 0.01,   // from the whorl (hair.sculpt.whorl): one lock right behind, across from the part
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },
