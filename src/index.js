@@ -688,6 +688,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
+        // fork (shortLocks.fork { n, short }; an edit's fk: 0 leaves a lock whole): each tip split in two points, the shorter one by turns left and right
+        if (SL.fork) specs.forEach((sp, i) => { if ((SL.edits ?? []).find((e) => e?.i === i)?.fk !== 0) sp.fork = { n: SL.fork.n ?? 3, short: SL.fork.short ?? 1, side: i % 2 ? 1 : -1 }; });
         // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy }): a layer under the outer one, rooted where it is
         // hidden under it, lying down the head and the nape without a flick, shaded darker (layer 1): where the outer locks flick out, hair shows
         // under them, not the neck (a gap from the side)

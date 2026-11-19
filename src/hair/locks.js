@@ -391,7 +391,9 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   // the mesh
   const pos = new Float32Array(NV * 3), nor = new Float32Array(NV * 3), shn = new Float32Array(NV * 3), idx = [];
   for (let l = 0; l < NL; l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RG.length; k++) {
-    const a = l * VPL + r * RG.length + k, b = l * VPL + r * RG.length + (k + 1) % RG.length, c = a + RG.length, d = b + RG.length; idx.push(a, b, c, b, d, c); }
+    const a = l * VPL + r * RG.length + k, b = l * VPL + r * RG.length + (k + 1) % RG.length, c = a + RG.length, d = b + RG.length, F = lite ? null : specs[l].fork;
+    if (F && r >= ringsPer - F.n && Math.abs(RG[k][0]) < 0.99 && Math.abs(RG[(k + 1) % RG.length][0]) < 0.99) idx.push(a, a, a, a, a, a);   // a fork's notch: no face between the teeth (kept as empty triangles: the count per lock stays)
+    else idx.push(a, b, c, b, d, c); }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
@@ -494,11 +496,21 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         px = ox; py = oy; pz = oz;   // out: across the lock's direction
         const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
         const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
-        for (let k = 0; k < RG.length; k++) { const [u, w] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w > 0 ? 1 : 0.6;   // the outer face rounder than the inner
-          const tl = w * ht * bulge + (s.tilt ? s.tilt * u * hw : 0);   // tilt: across the lock, one edge up and the other down (bangLocks' shingle)
-          const x = cx + ax * (u * hw + cu) + ox * tl, y = cy + ay * (u * hw + cu) + oy * tl, z = cz + az * (u * hw + cu) + oz * tl;
+        // fork (spec.fork { n: rings, short: rings the shorter tooth ends early, side: which }): the tip split in two points. Over the last n rings
+        // the face's middle closes to a notch one ring in, then its two sides run apart, each to its edge's point: two flat teeth (the faces
+        // between them are emptied where the triangles are listed). Their normals lie across, so the outline goes round each tooth. Not at lite (no points to spare)
+        const FK = lite ? null : s.fork, fr = FK ? r - (ringsPer - 1 - FK.n) : 0, fhw = FK && fr > 0 ? 0.5 * s.w * (s.prof ?? width)((ringsPer - 1 - FK.n) / (ringsPer - 1)) : 0;
+        for (let k = 0; k < RG.length; k++) { const [u0, w0] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w0 > 0 ? 1 : 0.6;   // the outer face rounder than the inner
+          let u = u0, w = w0, hwk = hw, fn = 0;   // fn: a tooth's point, its normal across (toward the notch or outward)
+          if (fr > 0) { const mid = Math.abs(u0) < 0.99;
+            const end = FK.n - (u0 * FK.side > 0 ? FK.short : 0);
+            if (fr > end) { const o = v - RG.length * 3; for (let q = 0; q < 3; q++) { pos[v + q] = pos[o + q]; nor[v + q] = nor[o + q]; shn[v + q] = shn[o + q]; } continue; }
+            hwk = fhw; const sg = Math.sign(u0), f = Math.max(0, (fr - 1) / Math.max(1, end - 1)); w = 0; u = mid ? sg * 0.6 * f : sg * (1 - 0.4 * f); fn = mid ? -sg : sg; }
+          const tl = w * ht * bulge + (s.tilt ? s.tilt * u * hwk : 0);   // tilt: across the lock, one edge up and the other down (bangLocks' shingle)
+          const x = cx + ax * (u * hwk + cu) + ox * tl, y = cy + ay * (u * hwk + cu) + oy * tl, z = cz + az * (u * hwk + cu) + oz * tl;
           toRest(pos, v, x, y, z, false);
-          let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w; const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
+          let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w;
+          if (fn) { nx = ax * fn + ox * w0 * 0.6; ny = ay * fn + oy * w0 * 0.6; nz = az * fn + oz * w0 * 0.6; } const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
           toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
           const io = s.layer ? 0.1 + 0.5 * oneShade : 0.6, own = OWN * (1 - 0.75 * oneShade), qx = ox + (rx - ox) * oneShade, qy = oy + (ry - oy) * oneShade, qz = oz + (rz - oz) * oneShade;
           const sx = qx * io + nx / nl * own, sy = qy * io + ny / nl * own, sz = qz * io + nz / nl * own, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks.
