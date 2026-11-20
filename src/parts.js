@@ -106,7 +106,10 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
     case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
     // the box reaches the socks' top (2026-10-07: it stopped at 0.17, so socks over 0.17 were cut there, though the slider went to 0.3; the
     // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
-    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [FX, Math.max(0.17, top + 0.02), FZ], h: H * 0.7, only: sided(top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/, 0.07) }; }
+    // tights (over the crotch) follow the hips and the spine too, as the body there does: on the legs' bones alone the crotch parted from the
+    // body running, the skin through a short's notch
+    case "socks": { const top = OPT.outfit.socks.top, TIGHTS = top > (OPT.body.joints.hipY ?? 0.44) - 0.05;
+      return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [FX, Math.max(0.17, top + 0.02), FZ], h: H * 0.7, only: sided(TIGHTS ? /^(foot|lowerLeg|upperLeg|hips|spine)/ : top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/, 0.07) }; }
   }
   // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
   const GP = partNamed(name);
