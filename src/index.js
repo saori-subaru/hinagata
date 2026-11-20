@@ -539,8 +539,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)
-  const WRIST = Math.max(0, ...PARTS.map((p) => p.wrist && garments[p.name] ? p.wrist(partOptions(OPT, p), OPT) : 0));
-  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST]].map(([a, b, r, pa, pb]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
+  // (a bell sleeve itself, without cuffs, as the cuffs reckon it: the cape went through Sylvie's bells with her fists under the chin)
+  const BELLW = OPT.outfit.shirt.sleeve === "bell" && (OPT.outfit.shirt.on !== false || OPT.outfit.dress?.on) ? 0.006 + 1.3 * (OPT.outfit.shirt.bell ?? 0.06) : 0;
+  const WRIST = Math.max(BELLW, ...PARTS.map((p) => p.wrist && garments[p.name] ? p.wrist(partOptions(OPT, p), OPT) : 0));
+  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST]].map(([a, b, r, pa, pb]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true, last: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
     bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
   // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts.

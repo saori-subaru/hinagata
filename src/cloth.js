@@ -20,7 +20,8 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
  *  thigh: a thigh's piece (the skirt's front goes over it when it turns up). outward: the cloth goes round it on the side away from the body's
  *  middle line (an arm swinging back pushes a cape back; pushed the nearest way, the cape slipped in front of the arm and it poked through);
  *  "back": only the back of the skirt, and only while the leg is behind the body (a leg kicked back keeps a long skirt behind it; sitting,
- *  the shins are in front and the nearest way keeps the skirt off them as before). 
+ *  the shins are in front and the nearest way keeps the skirt off them as before). last: pushed out once more after the cloth's last word
+ *  (the arms under a cape: raised, the cape near the pinned collar was pulled back into the shoulder).
  *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
  *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
  *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind).
@@ -115,18 +116,20 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   // A walking thigh (up to ~30°) is left to the plain push: there "up across it" points forward and flipped the skirt's inner side out
   const UP = (c) => { const bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], L = Math.hypot(bx, by, bz), ay = by / L; if (Math.abs(ay) > 0.57) return null;
     const ux = -bx / L * ay, uy = 1 - ay * ay, uz = -bz / L * ay, ul = Math.hypot(ux, uy, uz); return [ux / ul, uy / ul, uz / ul]; };
-  function collide(C, seat) {
+  const LAST = COL.some((c) => c.last);
+  function collide(C, seat, lastOnly = false) {
     const U = C.map((c) => c[8] ? UP(c) : null), BX = C.map((c) => { const r = Math.max(c[6], c[7]); return [Math.min(c[0], c[3]) - r, Math.max(c[0], c[3]) + r, Math.min(c[1], c[4]) - r, Math.max(c[1], c[4]) + r, Math.min(c[2], c[5]) - r, Math.max(c[2], c[5]) + r]; });   // each capsule's box (most points are far from most capsules)
-    for (let v = 0; v < n; v++) { if (!W[v]) continue; const i = v * 3; let x = X[i], y = X[i + 1], z = X[i + 2];
+    for (let v = 0; v < n; v++) { if (!W[v] && !(lastOnly && OUT[v])) continue; const i = v * 3; let x = X[i], y = X[i + 1], z = X[i + 2];   // (last: the pinned collar too gives way to a raised arm; it is put back on its target next frame)
       for (let ci = 0; ci < C.length; ci++) {   // push out of each capsule (radius changes along it)
-        const B = BX[ci]; if (x < B[0] || x > B[1] || y < B[2] || y > B[3] || z < B[4] || z > B[5]) continue;
+        if (lastOnly && !COL[ci].last) continue; const B = BX[ci]; if (x < B[0] || x > B[1] || y < B[2] || y > B[3] || z < B[4] || z > B[5]) continue;
         const c = C[ci], bx = c[3] - c[0], by = c[4] - c[1], bz = c[5] - c[2], L2 = bx * bx + by * by + bz * bz, t = Math.min(1, Math.max(0, ((x - c[0]) * bx + (y - c[1]) * by + (z - c[2]) * bz) / L2));
         const px = c[0] + bx * t, py = c[1] + by * t, pz = c[2] + bz * t, r = (c[6] + (c[7] - c[6]) * t) * KEEP[v * NC + ci]; let dx = x - px, dy = y - py, dz = z - pz; const d2 = dx * dx + dy * dy + dz * dz;
         if (d2 >= r * r || d2 < 1e-12) continue; const d = Math.sqrt(d2);
         // a thigh turned up (sitting): the front of the skirt goes over it, not under (pushed the nearest way, the part under the thigh tucked
         // beneath it and the thigh showed through a hole). The back of the skirt stays under (you sit on it)
         const u = U[ci]; if (u && FR[v]) { const s = dx * u[0] + dy * u[1] + dz * u[2]; if (s < 0) { dx -= 2 * s * u[0]; dy -= 2 * s * u[1]; dz -= 2 * s * u[2]; } }
-        if (c[9] === 1 || (c[9] === 2 && !FR[v] && pz < -0.02)) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
+        if (!lastOnly && (c[9] === 1 || (c[9] === 2 && !FR[v] && pz < -0.02))) {   // (the last pass the nearest way: round the arm's far side, the collar by the neck went to the outside of a raised arm)
+          const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
         const k = r / d; x = px + dx * k; y = py + dy * k; z = pz + dz * k; }
       if (y < 0.003) y = 0.003;   // the floor
       if (seat && z < seat.front && Math.abs(x) < 0.2 && y < seat.y && y > seat.y - 0.06) y = seat.y;   // the chair's seat (the part of it under the bottom)
@@ -203,7 +206,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
     for (let i = 0; i < X.length; i++) { const v = (i / 3) | 0, vel = (X[i] - P[i]) * keep; P[i] = X[i]; let x = X[i] + vel; x += (T[i] - x) * AS[v]; X[i] = W[v] ? x : T[i]; }
     for (let k = 0; k < iters; k++) { let t0 = now(); edges(); PROF.edges += now() - t0; t0 = now(); collide(C, seat); PROF.collide += now() - t0; }
     { const t0 = now(); for (let k = 0; k < EXTRA; k++) edges(); PROF.edges += now() - t0; }   // the cloth gets the last word: a heel kicked up behind caught a few hem points and the collision, last, left them pulled out of the hem in a thin spike (2026-10-05, Saori: "布が伸びて千切れそう")
-    { const t0 = now(); if (BD) collideBody(); PROF.collide += now() - t0; }   // the body's surface: once, after the rounds (it only nudges)
+    { const t0 = now(); if (LAST) collide(C, seat, true); if (BD) collideBody(); PROF.collide += now() - t0; }   // the body's surface: once, after the rounds (it only nudges)
     for (let v = 0; v < n; v++) { const u = NE[v]; if (u < 0) continue; for (let q = 0; q < 3; q++) X[v * 3 + q] = X[u * 3 + q] + T[v * 3 + q] - T[u * 3 + q]; }   // the inner side rides on the outer
   }
   return {
