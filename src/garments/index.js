@@ -3,4 +3,7 @@ import "./sailor.js";
 import "./gloves.js";
 import "./strings.js";
 import "./headband.js";
+import "./shorts.js";
+import "./belt.js";
+import "./cuffs.js";
 export * from "./registry.js";

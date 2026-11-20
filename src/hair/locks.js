@@ -28,6 +28,11 @@ const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how 
 // the head's speed up or down (smoothed) pushes the locks out from the head's middle line while it falls (the air from below spreads them,
 // more toward the tips) and in against the head and the body while it rises: across, not up and down (they bobbed like jelly)
 const SPREAD_OUT = 0.35, SPREAD_IN = 0.07, SPREAD_V0 = 0.6, SPREAD_V = 0.8, SPREAD_K = 0.1, SPREAD_BACK = 4;   // the tip spread out / drawn in (for the lock's length: a short lock lying on the head hardly moves); the speed (m/s) under which nothing happens (a run's bobbing) and over it for all of it; how firmly they follow; how fast it goes back (/s)
+// a tuft (tuftLocks): its underside bulges at most this share of its top / on top of the head it is this share as thick / how thick along it
+// (to nothing over the last `point` of its length, straight: with its width, a point with flat sides)
+const UNDER = 0.45, TOP = 0.35, tuftThick = (t, point) => sstep(0, 0.22, t) * Math.pow(Math.min(1, Math.max(0, (1 - t) / point)), 0.8);
+const LEAVE = 0.2, SPIKE_TIP = 32;   // a spike's ridge leaves the tuft at this slope (a three-sided point from all its base, not a thorn out of the tuft's side) / the angle of its point (degrees)
+const girth = (uy) => sstep(0.8, 0.25, uy);   // 0 on top of the head … 1 round its widest part and below (uy: how far up a direction from the head's middle points)
 const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
@@ -250,6 +255,116 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
 }
 
 /**
+ * Tufts (options.hair.tufts): few big blocks of hair from the whorl, each lying on the hair to where its tip ends (the other locks are
+ * ribbons, flat on the head). Wide (the mesh bends round the head: createLocks' cols and curv), solid from the hair out (thick), its end a
+ * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hug, from,
+ * band, ridge, rootWidth, wide, endWidth, shade, stiff, mirror, spikes: [{ y | at, length, out, up, width, side, ridge }] }]
+ * (head space; schema.js hair.tufts). whorl: [x, z], where they grow from, from the top's middle. surf / center / toRoot / sx: as bangLocks.
+ * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
+ * spike (-1: the tuft itself), the mirrored copy (m -1)
+ */
+export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], N = 9, cols = 7 }) {
+  const deg = Math.PI / 180, out = [], L = (list ?? []).filter((d) => Array.isArray(d?.to)), M = Math.max(cols, ...L.map((d) => 2 * (d.tips?.length ?? 1) + 1));
+  const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  const over = (x, z) => { let lo = center[1], hi = center[1] + 0.6; for (let k = 0; k < 30; k++) { const m = 0.5 * (lo + hi); if (surf(x, m, z) < 0) lo = m; else hi = m; } return [x, lo, z]; };   // the hair's top straight over (x, z)
+  const horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th), 0, Math.cos(th)], t = surfaceAlong(surf, c, d); return [d[0] * t, y, c[2] + d[2] * t]; };
+  // across a tuft: a rounded block, or (ridge 1) a roof coming to a ridge along its middle: with the end's point a three-sided spike
+  const shape = (K, ridge) => K.map((c) => { const u = c[0]; return Math.pow(Math.max(0, 1 - u * u), 0.6) * (1 - ridge) + (1 - Math.abs(u)) * ridge; });
+  // a tuft or a spike as createLocks takes it: H its points (head space), TK its thickness at each (m, head space), CV how sharply the hair
+  // turns across it there (1/m, head space), point: the share of its length it thins to its end over
+  // NR (a spike): which way its thickness goes at each point (head space; a tuft's is the head's out)
+  const put = (H, K, { w, TH, prof, TK, CV, point, ridge, shade, stiff, NR = null, src }) => { const pts = H.map((P) => toRoot(...P)); let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
+    const nr = NR?.map((n, q) => { const b = toRoot(H[q][0] + n[0] * 0.01, H[q][1] + n[1] * 0.01, H[q][2] + n[2] * 0.01); return b.map((v, k) => (v - pts[q][k]) / 0.01); });   // (root space; its length: the head's scale that way)
+    out.push({ root: pts[0], pts, len, w: w * sx, thick: TH / w, layer: 0, curl: 0, rise: true, stiff, prof, curv: CV.map((v) => v / sx), tk: TK.map((v, q) => v * (nr ? Math.hypot(...nr[q]) : sx)), nrm: nr?.map(norm), point, under: Math.min(UNDER, 0.006 / TH), shade, src,   // (under: a thick block's underside hardly bulges: it lies on the hair)
+      cols: { u: K.map((c) => c[0]), e: K.map((c) => c[1]), d: shape(K, ridge), t0: Math.max(0.1, Math.min(0.45, Math.min(...K.map((c) => c[1])) - 0.1)) } }); };
+  const TS = [];   // the tufts as built (the spikes grow out of them, and stay over them all)
+  const even = (e) => { const K = []; for (let j = 0; j < M; j++) K.push([-1 + 2 * j / (M - 1), e]); return K; };
+  for (const d of L) for (const m of d.mirror ? [1, -1] : [1]) {
+    // the points of its end, across it from the left as seen from outside, the root up (u runs the other way: reversed), and the columns:
+    // the edges, each point and the cuts between them, the rest on the flanks
+    const tips = (d.tips?.length ? d.tips : [1]).map((v) => clamp(v, 0.3, 1)), n = tips.length; if (m > 0) tips.reverse();
+    const notch = d.notch ?? 0.14, edge = d.edge ?? notch * 1.3; let K = [];
+    if (n === 1) K = even(tips[0]);
+    else { K.push([-1, tips[0] - edge]); for (let k = 0; k < n; k++) { K.push([-1 + (2 * k + 1) / n, tips[k]]); if (k + 1 < n) K.push([-1 + (2 * k + 2) / n, Math.min(tips[k], tips[k + 1]) - notch]); } K.push([1, tips[n - 1] - edge]); }
+    for (let side = 0; K.length < M; side ^= 1) { let b = 0, w = 0; for (let i = 0; i + 1 < K.length; i++) { const g = K[i + 1][0] - K[i][0]; if (g > w + 1e-9 || (side && g > w - 1e-9)) { w = g; b = i; } } K.splice(b + 1, 0, [0.5 * (K[b][0] + K[b + 1][0]), Math.min(K[b][1], K[b + 1][1]) + 0.38 * Math.abs(K[b][1] - K[b + 1][1])]); }   // (halfway across a flank a little short of halfway along: the points sharp, the cuts rounded)
+    // its width along it: narrow where it leaves the whorl, full by `wide`, then straight to one point over the last `point` of its length
+    // (band: how late; a block with a point, not a leaf) or wide to its cut end
+    const rootW = d.rootWidth ?? 0.25, wide = d.wide ?? 0.45, band = clamp(d.band ?? 0.5, 0, 1), endW = d.endWidth ?? 0.6, point = n === 1 ? 0.75 - 0.5 * band : clamp(notch + 0.12, 0.15, 0.4);
+    const prof = (s) => (rootW + (1 - rootW) * sstep(0, wide, s)) * (n === 1 ? (s < 1 - point ? 1 : Math.pow(Math.max(0, (1 - s) / point), 0.9)) : 1 - (1 - endW) * s * s * s);
+    const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg;
+    const a = d.to[0] * m * deg, R0 = d.from ? over(d.from[0] * m, d.from[1]) : over(whorl[0], whorl[1]), rd = norm(R0.map((v, q) => v - center[q]));
+    let H, U, F, FO;   // the points (head space), their directions from the head's middle, the hair under each, how far each has left the hair (0..1)
+    const path = (yt) => { const td = norm(horiz(yt, a).map((v, q) => v - center[q])), om = Math.acos(clamp(rd[0] * td[0] + rd[1] * td[1] + rd[2] * td[2], -1, 1)), so = Math.sin(om) || 1; let reach = 0; H = []; U = []; F = []; FO = [];
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), k0 = Math.sin((1 - t) * om) / so, k1 = Math.sin(t * om) / so, b = bow * Math.sin(Math.PI * t), cb = Math.cos(b), sb = Math.sin(b);
+        let u = norm(rd.map((v, i) => v * k0 + td[i] * k1)); if (b) u = [u[0] * cb + u[2] * sb, u[1], -u[0] * sb + u[2] * cb];   // bow: its middle swung round the head
+        const sAt = surfaceAlong(surf, center, u), fo = t > 0.5 ? ((t - 0.5) / 0.5) ** 2 : 0, at = sAt + rise(t, base + lift * girth(u[1])) + outT * fo, P = center.map((v, i) => v + u[i] * at);
+        // under the head's widest part it hangs straight down, not in under the head (hug 1: it follows the head in to the nape)
+        let free = fo; if (u[1] < 0.3) { const hr = Math.hypot(P[0], P[2] - center[2]) || 1; if (hr < reach) { const k = 1 + (reach / hr - 1) * (1 - hug); free = Math.max(free, Math.min(1, (k - 1) * hr / 0.03)); P[0] *= k; P[2] = center[2] + (P[2] - center[2]) * k; } else reach = hr; }
+        H.push(P); U.push(u); F.push(center.map((v, i) => v + u[i] * sAt)); FO.push(free); } };
+    { let yt = d.to[1]; for (let it = 0; it < 4; it++) { path(yt); yt += d.to[1] - H[N - 1][1]; } }   // its tip at the height asked (what stands it off the hair also carries it down)
+    // how sharply the hair under it turns across it (1/m): the mesh's edges go down round the head by this; flat where it has left the hair
+    const CV = H.map((P, q) => { const T = norm((H[Math.min(N - 1, q + 1)]).map((v, i) => v - H[Math.max(0, q - 1)][i])), ac = norm(cross(T, U[q])), hw = Math.max(0.02, 0.5 * w * prof(q / (N - 1)));
+      const drop = 0.5 * (surf(F[q][0] + ac[0] * hw, F[q][1] + ac[1] * hw, F[q][2] + ac[2] * hw) + surf(F[q][0] - ac[0] * hw, F[q][1] - ac[1] * hw, F[q][2] - ac[2] * hw));
+      return Math.min(0.9 / hw, Math.max(0, 2 * drop / Math.max(1e-6, hw * hw - drop * drop))) * (1 - FO[q]); });   // (a round head: the distance drop at hw to the side is of a circle of radius (hw² - drop²) / 2 drop)
+    for (let q = 1; q + 1 < N; q++) CV[q] = 0.25 * CV[q - 1] + 0.5 * CV[q] + 0.25 * CV[q + 1];
+    const TK = U.map((u) => TH * (TOP + (1 - TOP) * girth(u[1])));   // thick round the head's widest part, thin on top of it (as lift)
+    put(H, K, { w, TH, prof, TK, CV, point, ridge: clamp(d.ridge ?? 0.15, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1, src: { i: list.indexOf(d), k: -1, m } });
+    TS.push({ d, m, H, U, TK, CV, K, prof, w, point, RD: clamp(d.ridge ?? 0.15, 0, 1), T0: Math.max(0.1, Math.min(0.45, Math.min(...K.map((c) => c[1])) - 0.1)) });
+  }
+  // the tufts' tops, as createLocks builds them: t's at s along it, u across it (-1..1). Its thickness there (null past that column's end),
+  // the place and which way it faces, and how far under the highest top a point is (negative: over them all)
+  const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+  const frame = (t, i, fr) => { const C = mix(t.H[i], t.H[i + 1], fr), T = norm(t.H[i + 1].map((v, k) => v - t.H[i][k])), o0 = norm(mix(t.U[i], t.U[i + 1], fr)), od = dot(o0, T), o = norm(o0.map((v, k) => v - T[k] * od)); return { C, o, ac: cross(T, o) }; };
+  const thickAt = (t, s, u, i, fr, whole = false) => { const K = t.K; let j = 0; while (j + 2 < K.length && K[j + 1][0] < u) j++; const e = whole ? Math.max(...K.map((c) => c[1])) : K[j][1] + (K[j + 1][1] - K[j][1]) * clamp((u - K[j][0]) / ((K[j + 1][0] - K[j][0]) || 1), 0, 1); if (s > e) return null;
+    return (t.TK[i] + (t.TK[i + 1] - t.TK[i]) * fr) * tuftThick(s <= t.T0 ? s : t.T0 + (s - t.T0) * (1 - t.T0) / Math.max(1e-3, e - t.T0), t.point) * shape([[u]], t.RD)[0]; };
+  const topAt = (t, s, u) => { const f = clamp(s, 0, 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), fr = f - i, { C, o, ac } = frame(t, i, fr), x = u * 0.5 * t.w * t.prof(s), h = thickAt(t, s, u, i, fr, true) ?? 0,   // (whole: as if its end were not cut into points: over a cut, a spike's base went down into it and its point came short)
+    kap = t.CV[i] + (t.CV[i + 1] - t.CV[i]) * fr, ph = clamp(kap * x, -1.5, 1.5), sn = Math.sin(ph), cs = Math.cos(ph);
+    const xa = (kap > 1e-3 ? sn / kap : x) + h * sn, xo = h * cs - (kap > 1e-3 ? (1 - cs) / kap : 0);
+    return { p: C.map((v, k) => v + ac[k] * xa + o[k] * xo), n: norm(o.map((v, k) => v * cs + ac[k] * sn)) }; };
+  const buried = (P) => { let best = -1;
+    for (const t of TS) { let bi = -1, bf = 0, bd = (0.5 * t.w + 0.12) ** 2;
+      for (let i = 0; i + 1 < N; i++) { const a = t.H[i], ab = t.H[i + 1].map((v, k) => v - a[k]), g = clamp(dot(P.map((v, k) => v - a[k]), ab) / (dot(ab, ab) || 1), 0, 1), dd = Math.hypot(P[0] - a[0] - ab[0] * g, P[1] - a[1] - ab[1] * g, P[2] - a[2] - ab[2] * g) ** 2; if (dd < bd) { bd = dd; bi = i; bf = g; } }
+      if (bi < 0 || (!bi && bf <= 0) || (bi === N - 2 && bf >= 1)) continue; const sv = (bi + bf) / (N - 1),   // (nearest one of its ends: past it, not over it)
+        { C, o, ac } = frame(t, bi, bf), x = dot(P.map((v, k) => v - C[k]), ac), hw = 0.5 * t.w * t.prof(sv); if (hw < 1e-4 || Math.abs(x) >= hw) continue;
+      const kap = t.CV[bi] + (t.CV[bi + 1] - t.CV[bi]) * bf, ph = kap > 1e-3 ? Math.asin(clamp(kap * x, -0.95, 0.95)) : 0, u = kap > 1e-3 ? ph / (kap * hw) : x / hw; if (Math.abs(u) > 1) continue;
+      const h = thickAt(t, sv, u, bi, bf); if (h != null) best = Math.max(best, h * Math.cos(ph) - (kap > 1e-3 ? (1 - Math.cos(ph)) / kap : 0) - dot(P.map((v, k) => v - C[k]), o)); }
+    return best; };
+  // spikes: bent three-sided points growing out of a tuft. A spike's base lies on the tuft's top, `length` up it from where it leaves
+  // (y: its point's height, or at: 0..1 along the tuft), as wide as `width`; its ridge goes from the base's upper end to the point, `out`
+  // off the tuft, bending upward on its way: a flick (a ridge following the head down bends downward). Its underside goes from the base's
+  // lower end up to the point by `up` degrees. side: where across the tuft (a pair: from .. to)
+  for (const T of TS) { const { d, m, H, w, prof } = T; if (!d.spikes?.length) continue;
+    let HL = 0; for (let q = 1; q < N; q++) HL += Math.hypot(H[q][0] - H[q - 1][0], H[q][1] - H[q - 1][1], H[q][2] - H[q - 1][2]);
+    const sAtY = (y) => { for (let q = N - 1; q > 0; q--) if ((H[q - 1][1] - y) * (H[q][1] - y) <= 0 && H[q - 1][1] > H[q][1]) return (q - 1 + (H[q - 1][1] - y) / ((H[q - 1][1] - H[q][1]) || 1)) / (N - 1); return 0.6; };
+    for (const [sk, sp] of d.spikes.entries()) { const so = sp.out ?? 0.07, ua = clamp(sp.up ?? 12, -60, 60) * deg, ty = so * Math.tan(ua), sw = sp.width ?? clamp(0.45 * w, 0.08, 0.12);
+      const at = clamp(sp.y != null ? sAtY(sp.y - ty) : sp.at ?? 0.6, 0.15, 1), ln = clamp((sp.length ?? 0.16) / (HL || 1), 0.05, at - 0.03);
+      const sd = Array.isArray(sp.side) ? sp.side : [sp.side ?? 0, sp.side ?? 0], u0 = -clamp(sd[0] ?? 0, -1, 1) * m * 0.8, u1 = -clamp(sd[1] ?? 0, -1, 1) * m * 0.8;   // (side: + toward the right as seen from outside, the root up)
+      // its base at t along it: the tuft's top there, and its middle sunk to where the tuft's top is at its two edges (the tuft is round
+      // across and the base flat: neither edge stands off it)
+      const base = (t, hw) => { const sv = at - ln * (1 - t), u = u0 + (u1 - u0) * t, du = hw / Math.max(1e-3, 0.5 * w * prof(sv)), c = topAt(T, sv, u); let sink = 0;
+        for (const e of [-1, 1]) { const p = topAt(T, sv, clamp(u + e * du, -1, 1)).p; sink = Math.max(sink, (c.p[0] - p[0]) * c.n[0] + (c.p[1] - p[1]) * c.n[1] + (c.p[2] - p[2]) * c.n[2]); }
+        return { top: c.p, n: c.n, p: c.p.map((v, k) => v - c.n[k] * (sink + 0.004)) }; };
+      const A0 = base(0, 0), B0 = base(1, 0), TA = norm(norm(base(0.1, 0).top.map((v, k) => v - A0.top[k])).map((v, k) => v + A0.n[k] * LEAVE)), TB = norm(B0.top.map((v, k) => v - base(0.9, 0).top[k]));
+      // its point: off the tuft where the base ends, and as far round the head as the base runs (side: [from, to])
+      let nh = [B0.n[0], 0, B0.n[2]]; if (Math.hypot(nh[0], nh[2]) < 0.2) nh = [TB[0], 0, TB[2]]; nh = norm(nh); const pv = [nh[2], 0, -nh[0]], be = Math.asin(clamp(dot(TB, pv), -0.9, 0.9)), dh = nh.map((v, k) => v * Math.cos(be) + pv[k] * Math.sin(be));
+      const A = A0.top.map((v, k) => v - A0.n[k] * 0.002), Q = [B0.top[0] + dh[0] * so, sp.y ?? B0.top[1] + ty, B0.top[2] + dh[2] * so], c0 = Math.hypot(Q[0] - A[0], Q[1] - A[1], Q[2] - A[2]);
+      const tb = ln * HL / (ln * HL + Math.hypot(Q[0] - B0.p[0], Q[1] - B0.p[1], Q[2] - B0.p[2])), sprof = (t) => t < tb ? 0.3 + 0.7 * sstep(0, tb, t) : Math.pow(Math.max(0, (1 - t) / (1 - tb)), 0.9);   // tb: the share of it over its base / widest where the base ends
+      // the ridge: a curve from along the tuft (leaving it at LEAVE) to the point, coming down to it SPIKE_TIP steeper than the underside
+      // comes up. It clears the tufts' tops by what it has risen so far (its own tuft's round top as the base crosses it, a thicker
+      // neighbour's lying over the base): a ridge passing under them came out in rags
+      const el = ua - SPIKE_TIP * deg, D1 = [dh[0] * Math.cos(el), Math.sin(el), dh[2] * Math.cos(el)], B1 = A.map((v, k) => v + TA[k] * 0.4 * c0), B2 = Q.map((v, k) => v - D1[k] * 0.4 * c0);
+      const Hs = [], NR = [], TKs = [];
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), a = (1 - t) ** 3, b = 3 * (1 - t) ** 2 * t, c = 3 * (1 - t) * t * t, e = t ** 3, S = A.map((v, k) => v * a + B1[k] * b + B2[k] * c + Q[k] * e), bs = t < tb ? base(t / tb, 0.5 * sw * sprof(t)) : null;
+        if (q && q < N - 1) { const need = Math.min(LEAVE * c0 * t, 0.02), ud = buried(S) + need; if (ud > 0) { const n = (bs ?? B0).n; for (let k = 0; k < 3; k++) S[k] += n[k] * ud; } }
+        const G = bs ? bs.p : mix(B0.p, Q, (t - tb) / (1 - tb)), v = S.map((x, k) => x - G[k]), th = Math.hypot(v[0], v[1], v[2]);
+        Hs.push(G); TKs.push(th); NR.push(th > 1e-4 ? v.map((x) => x / th) : NR[q - 1] ?? A0.n); }
+      put(Hs, even(1), { w: sw, TH: 0.06, prof: sprof, TK: TKs, CV: Hs.map(() => 0), point: 0.75, ridge: clamp(sp.ridge ?? 0.8, 0, 1), shade: clamp(d.shade ?? 0, 0, 1), stiff: d.stiff ?? 1, NR, src: { i: list.indexOf(d), k: sk, m } }); }
+  }
+  return out;
+}
+
+/**
  * Tails (hair.tail, 2026-10-05, Saori: side tails, twin tails, ponytails): a bundle of locks from a tie on the head. Each lock leaves the tie
  * outward (o: away from the head, a little up), arcs over and falls, the tips fanning out; then it is pushed out of the head and the body.
  * T: { count, length, volume (the bundle's radius at the tie, m), width, thick, lift (how far it stands out before falling), spread, stiff,
@@ -373,9 +488,13 @@ export function colliders(J, BI, sdf) {
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
 export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
-  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => ({ ...s, pts: resample(s.pts, points, bendPts) }));
+  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => { if (!s.curv) return { ...s, pts: resample(s.pts, points, bendPts) }; const Q = resample(s.pts.map((p, i) => [...p, s.curv[i], s.tk[i], ...(s.nrm?.[i] ?? [])]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), curv: Q.map((p) => p[3]), tk: Q.map((p) => p[4]), nrm: s.nrm && Q.map((p) => p.slice(5, 8)) }; });
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
-  const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RG.length, NV = NL * VPL;
+  // tufts (tuftLocks: every spec of the part has cols): a ring is M points across the top and M - 2 back along the underside; column c of
+  // ring r is at sv along the tuft (the columns end one by one: the points of its cut end)
+  const TM = specs[0]?.cols ? specs[0].cols.u.length : 0, RN = TM ? 2 * TM - 2 : RG.length, colOf = (k) => k < TM ? k : 2 * TM - 2 - k;
+  const N = specs[0]?.pts.length ?? 0, NL = specs.length, NP = NL * N, ringsPer = (N - 1) * SB + 1, VPL = ringsPer * RN, NV = NL * VPL;
+  const svOf = (s, r, k) => { const t = r / (ringsPer - 1), e = s.cols.e[colOf(k)], T0 = s.cols.t0; return t <= T0 ? t : T0 + (t - T0) * (e - T0) / (1 - T0); };   // (the columns run together to t0, then each to its own end)
   const R = new Float32Array(NP * 3), X = new Float32Array(NP * 3), P = new Float32Array(NP * 3), T = new Float32Array(NP * 3), K = new Float32Array(NP), RAD = new Float32Array(NP), SEG = new Float32Array(NP);   // SEG[p]: the link from point p - 1 to p
   specs.forEach((s, l) => { s.pts.forEach((p, i) => { R.set(p, (l * N + i) * 3); const t = i / (N - 1); K[l * N + i] = (0.012 + 0.45 * (1 - t) ** 3) * stiff * (s.stiff ?? 1); RAD[l * N + i] = 0.5 * s.w * s.thick * (s.prof ?? width)(t) + 0.003;
     if (i) SEG[l * N + i] = Math.hypot(p[0] - s.pts[i - 1][0], p[1] - s.pts[i - 1][1], p[2] - s.pts[i - 1][2]); }); });
@@ -390,18 +509,18 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
       FN[i * 3] = o[0] / l; FN[i * 3 + 1] = o[1] / l; FN[i * 3 + 2] = o[2] / l; FD[i] = (o[0] * x + o[1] * y + o[2] * z) / l - slack; } }
   // the mesh
   const pos = new Float32Array(NV * 3), nor = new Float32Array(NV * 3), shn = new Float32Array(NV * 3), idx = [];
-  for (let l = 0; l < NL; l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RG.length; k++) {
-    const a = l * VPL + r * RG.length + k, b = l * VPL + r * RG.length + (k + 1) % RG.length, c = a + RG.length, d = b + RG.length, F = lite ? null : specs[l].fork;
+  for (let l = 0; l < NL; l++) for (let r = 0; r + 1 < ringsPer; r++) for (let k = 0; k < RN; k++) {
+    const a = l * VPL + r * RN + k, b = l * VPL + r * RN + (k + 1) % RN, c = a + RN, d = b + RN, F = lite || TM ? null : specs[l].fork;
     if (F && r >= ringsPer - F.n && Math.abs(RG[k][0]) < 0.99 && Math.abs(RG[(k + 1) % RG.length][0]) < 0.99) idx.push(a, a, a, a, a, a);   // a fork's notch: no face between the teeth (kept as empty triangles: the count per lock stays)
     else idx.push(a, b, c, b, d, c); }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); g.setAttribute("shadeN", new THREE.BufferAttribute(shn, 3));
   g.setIndex(idx);
-  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) gt[v] = Math.floor((v % VPL) / RG.length) / (ringsPer - 1) * (specs[Math.floor(v / VPL)].grad ?? 1); g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
+  { const gt = new Float32Array(NV); for (let v = 0; v < NV; v++) { const s = specs[Math.floor(v / VPL)], r = Math.floor((v % VPL) / RN); gt[v] = (TM ? svOf(s, r, v % RN) : r / (ringsPer - 1)) * (s.grad ?? 1); } g.setAttribute("gradT", new THREE.BufferAttribute(gt, 1)); }   // along the lock: 0 at the root, 1 at the tip (a gradient, materials.js withGrad); a spec's grad 0 leaves it out
   if (uvAt) { const U = new Float32Array(NV * 2);   // per ring: the point along the rest chain at its share of the lock (the mesh isn't made yet: it comes with the first update)
-    for (let l = 0; l < NL; l++) for (let r = 0; r < ringsPer; r++) { const f = r / (ringsPer - 1) * (N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i, a = specs[l].pts[i], b = specs[l].pts[i + 1];
-      const uv = uvAt(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
-      for (let k = 0; k < RG.length; k++) { const v = l * VPL + r * RG.length + k; U[v * 2] = uv[0]; U[v * 2 + 1] = uv[1]; } }
+    for (let l = 0; l < NL; l++) for (let r = 0; r < ringsPer; r++) for (let k = 0; k < RN; k++) { if (k && !TM) { const v = l * VPL + r * RN + k; U[v * 2] = U[v * 2 - 2]; U[v * 2 + 1] = U[v * 2 - 1]; continue; }
+      const f = (TM ? svOf(specs[l], r, k) : r / (ringsPer - 1)) * (N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i, a = specs[l].pts[i], b = specs[l].pts[i + 1];
+      const uv = uvAt(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t), v = l * VPL + r * RN + k; U[v * 2] = uv[0]; U[v * 2 + 1] = uv[1]; }
     g.setAttribute("hairUV", new THREE.BufferAttribute(U, 2)); }
   const si = new Uint16Array(NV * 4), sw = new Float32Array(NV * 4); for (let v = 0; v < NV; v++) { si[v * 4] = head; sw[v * 4] = 1; }
   g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
@@ -473,6 +592,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
   }
   // the mesh from the chain: rings along a Catmull-Rom curve through the points, each a flat lens across the lock, facing out
   const C = new Float32Array(ringsPer * 3), Dd = new Float32Array(ringsPer * 3);
+  const FR = TM ? new Float32Array(ringsPer * 12) : null, WP = TM ? new Float32Array(VPL * 3) : null;   // a tuft's rings (the middle's point, out, across, the head's out) / its vertices (world)
   function mesh() {
     const e = Mi.elements;
     const toRest = (out, o, x, y, z, dir) => { if (dir) { out[o] = e[0] * x + e[4] * y + e[8] * z; out[o + 1] = e[1] * x + e[5] * y + e[9] * z; out[o + 2] = e[2] * x + e[6] * y + e[10] * z; }
@@ -488,13 +608,18 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         let dx = Dd[r * 3], dy = Dd[r * 3 + 1], dz = Dd[r * 3 + 2]; const dl = Math.hypot(dx, dy, dz) || 1; dx /= dl; dy /= dl; dz /= dl;
         let [ox, oy, oz] = outward(cx, cy, cz, M); const rl = Math.hypot(ox, oy, oz) || 1, rx = ox / rl, ry = oy / rl, rz = oz / rl;   // the hair's "out" as it is: the shading's, at oneShade
         if (s.front) { const fw = s.front * sstep(s.frontFrom - 0.08, s.frontFrom + 0.12, t), ol0 = Math.hypot(ox, oy, oz) || 1, me = M.elements; ox = ox / ol0 + me[8] * fw; oy = oy / ol0 + me[9] * fw; oz = oz / ol0 + me[10] * fw; }   // front: the flat side turned toward the head's front (a hanging bang tuft)
-        const o0 = Math.hypot(ox, oy, oz) || 1, od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; let ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;
+        const o0 = Math.hypot(ox, oy, oz) || 1; let ol;
+        if (s.nrm) { const f = Math.min(N - 1.000001, r / SB), i = Math.floor(f), a = s.nrm[i], b = s.nrm[i + 1], nx = a[0] + (b[0] - a[0]) * (f - i), ny = a[1] + (b[1] - a[1]) * (f - i), nz = a[2] + (b[2] - a[2]) * (f - i), me = M.elements;   // a spike: its own out, with the head (it turns off the head, and the head's out runs along it there: no "across" to take from it)
+          ox = me[0] * nx + me[4] * ny + me[8] * nz; oy = me[1] * nx + me[5] * ny + me[9] * nz; oz = me[2] * nx + me[6] * ny + me[10] * nz; }
+        else { const od = ox * dx + oy * dy + oz * dz; ox -= dx * od; oy -= dy * od; oz -= dz * od; }   // out: across the lock's direction
+        ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol;
         // where the lock runs (almost) along "out" (a wing or a flick standing out from the head), "out" across it is undefined and the lock
         // twisted there: the last ring's carried over instead (turned square to this ring's direction)
-        if (r > 0 && ol / o0 < 0.6) { const pd = px * dx + py * dy + pz * dz, qx = px - dx * pd, qy = py - dy * pd, qz = pz - dz * pd, ql = Math.hypot(qx, qy, qz);
+        if (!s.nrm && r > 0 && ol / o0 < 0.6) { const pd = px * dx + py * dy + pz * dz, qx = px - dx * pd, qy = py - dy * pd, qz = pz - dz * pd, ql = Math.hypot(qx, qy, qz);
           if (ql > 1e-6) { const w = sstep(0.25, 0.6, ol / o0); ox = ox * w + qx / ql * (1 - w); oy = oy * w + qy / ql * (1 - w); oz = oz * w + qz / ql * (1 - w); ol = Math.hypot(ox, oy, oz) || 1; ox /= ol; oy /= ol; oz /= ol; } }
-        px = ox; py = oy; pz = oz;   // out: across the lock's direction
-        const ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox;   // across
+        px = ox; py = oy; pz = oz;
+        let ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox; if (s.nrm) { const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al; }   // across
+        if (TM) { const F = r * 12; FR[F] = cx; FR[F + 1] = cy; FR[F + 2] = cz; FR[F + 3] = ox; FR[F + 4] = oy; FR[F + 5] = oz; FR[F + 6] = ax; FR[F + 7] = ay; FR[F + 8] = az; FR[F + 9] = rx; FR[F + 10] = ry; FR[F + 11] = rz; continue; }
         const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         // fork (spec.fork { n: rings, short: rings the shorter tooth ends early, side: which }): the tip split in two points. Over the last n rings
         // the face's middle closes to a notch one ring in, then its two sides run apart, each to its edge's point: two flat teeth (the faces
@@ -515,7 +640,29 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
           const io = s.layer ? 0.1 + 0.5 * oneShade : 0.6, own = OWN * (1 - 0.75 * oneShade), qx = ox + (rx - ox) * oneShade, qy = oy + (ry - oy) * oneShade, qz = oz + (rz - oz) * oneShade;
           const sx = qx * io + nx / nl * own, sy = qy * io + ny / nl * own, sz = qz * io + nz / nl * own, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks.
           // oneShade 1: the "out" of the head, not the one squared to each lock's run, and little of the lock's own round: one shadow with a smooth edge (each lock split light and dark at its own height: a stepped, patchy shadow)
-          toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } } }
+          toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } }
+      if (!TM) continue;
+      // a tuft: each column at its own place along it (sv), between the rings there. The edges go down round the head (curv), the top is a
+      // dome and the underside a shallower one; normals from the mesh itself
+      const cu = s.cols.u, dm = s.cols.d, cv = s.curv, R1 = ringsPer - 1, own = OWN * (1 - 0.75 * oneShade);
+      for (let r = 0; r < ringsPer; r++) { const tt = s.nrm ? 1 : tuftThick(r / R1, s.point);   // (a spike: as thick as its points say, from its base to its ridge)
+        for (let k = 0; k < RN; k++) { const c = colOf(k), sv = svOf(s, r, k), f = sv * R1, i0 = Math.min(R1 - 1, Math.floor(f)), fr = f - i0, A = i0 * 12, B = A + 12, gq = sv * (N - 1), j0 = Math.min(N - 2, Math.floor(gq));
+          const x = cu[c] * 0.5 * s.w * s.prof(sv), th = (s.tk[j0] + (s.tk[j0 + 1] - s.tk[j0]) * (gq - j0)) * tt, h = (k < TM ? th : -s.under * th) * dm[c], kap = cv[j0] + (cv[j0 + 1] - cv[j0]) * (gq - j0), ph = Math.max(-1.5, Math.min(1.5, kap * x)), w = (r * RN + k) * 3;
+          const sn = Math.sin(ph), cs = Math.cos(ph), xa = (kap > 1e-3 ? sn / kap : x) + h * sn, xo = h * cs - (kap > 1e-3 ? (1 - cs) / kap : 0);   // round a cylinder of that curvature: x along its arc, h out from it
+          for (let q = 0; q < 3; q++) WP[w + q] = FR[A + q] + (FR[B + q] - FR[A + q]) * fr + (FR[A + 6 + q] + (FR[B + 6 + q] - FR[A + 6 + q]) * fr) * xa + (FR[A + 3 + q] + (FR[B + 3 + q] - FR[A + 3 + q]) * fr) * xo; } }
+      for (let r = 0; r < ringsPer; r++) for (let k = 0; k < RN; k++) { const w = (r * RN + k) * 3, v = (l * VPL + r * RN + k) * 3, kp = (r * RN + (k + 1) % RN) * 3, km = (r * RN + (k + RN - 1) % RN) * 3, rp = (Math.min(R1, r + 1) * RN + k) * 3, rm = (Math.max(0, r - 1) * RN + k) * 3, F = r * 12, top = k < TM;
+        const ux = WP[kp] - WP[km], uy = WP[kp + 1] - WP[km + 1], uz = WP[kp + 2] - WP[km + 2], vx = WP[rp] - WP[rm], vy = WP[rp + 1] - WP[rm + 1], vz = WP[rp + 2] - WP[rm + 2];
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        let nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) { const sg = top ? 1 : -1; nx = FR[F + 3] * sg; ny = FR[F + 4] * sg; nz = FR[F + 5] * sg; nl = 1; } nx /= nl; ny /= nl; nz /= nl;
+        // ⛔ the cut end's own row alone points out along the tuft (the outline's shell then ends beyond the points). Leaning the rows before
+        // it that way too put the shell in the tuft's own faces there: dark streaks fanning out of every point
+        const vl = r === R1 && !s.nrm ? Math.hypot(vx, vy, vz) : 0;   // (not a spike's: it may point at the eye, and the shell's end beyond its point was a black dot on it)
+        toRest(pos, v, WP[w], WP[w + 1], WP[w + 2], false); if (vl > 1e-9) toRest(nor, v, vx / vl, vy / vl, vz / vl, true); else toRest(nor, v, nx, ny, nz, true);
+        // shading: the top as the other locks' (the hair's out and a share of its own round); the underside by its own normal (it faces away from the light)
+        let sx = nx, sy = ny, sz = nz; if (top) { const o = s.nrm ? 1 : oneShade, w = s.nrm ? own * 0.4 : own; sx = (FR[F + 3] + (FR[F + 9] - FR[F + 3]) * o) * 0.6 + nx * w; sy = (FR[F + 4] + (FR[F + 10] - FR[F + 4]) * o) * 0.6 + ny * w; sz = (FR[F + 5] + (FR[F + 11] - FR[F + 5]) * o) * 0.6 + nz * w; }   // (a spike: the head's out, as the tuft it grows out of: it is that tuft's hair, not a thing set on it)
+        let sl = Math.hypot(sx, sy, sz) || 1; sx /= sl; sy /= sl; sz /= sl;
+        if (s.shade) { sx *= 1 - s.shade; sy = sy * (1 - s.shade) - s.shade; sz *= 1 - s.shade; sl = Math.hypot(sx, sy, sz) || 1; sx /= sl; sy /= sl; sz /= sl; }   // shade: turned down, away from the light (a tuft under the others, in their shadow)
+        toRest(shn, v, sx, sy, sz, true); } }
     for (const a of ["position", "normal", "shadeN"]) g.attributes[a].needsUpdate = true;
     g.computeBoundingSphere();
   }

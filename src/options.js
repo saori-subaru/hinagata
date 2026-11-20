@@ -537,8 +537,10 @@ export const DEFAULTS = {
       "sway": 1,
       "air": 0.8,
       "front": "open",
+      "over": "arms",
       "close": 0.7,
       "open": 0.6,
+      "sideEdge": 0.02,
       "tilt": 0,
       "hood": false,
       "hoodRim": true,
@@ -688,6 +690,7 @@ export const DEFAULTS = {
       "bootHeight": 0.21,
       "heelAngle": 24,
       "cuff": 0,
+      "cuffOut": 0.006,
       "cuffColor": null,
       "straps": 0,
       "strapColor": "#f4f1ea",
@@ -750,6 +753,12 @@ export const DEFAULTS = {
     },
     "bangs": "nendo",
     "drawn": [],
+    "tufts": [],
+    "whorl": {
+      "x": 0,
+      "z": 0,
+      "stiff": 4
+    },
     "gradient": {
       "on": false,
       "color": "#7cc47f",
@@ -921,8 +930,11 @@ export const DEFAULTS = {
       "shell": 0.036,
       "lockShell": 0.016,
       "ahogeSize": 1.15,
+      "ahogeWidth": 1,
       "ahogeDir": 90,
       "ahogeLean": 0,
+      "ahogeX": 0,
+      "ahogeZ": 0,
       "ahogeCurl": false,
       "long": {
         "locks": true,

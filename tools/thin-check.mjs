@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The thinning check, in one command (2026-10-06): run it after changing the engine (above all the thinning, the cells, the body's shape).
 //
-//   node tools/thin-check.mjs [--out dir] [--only case] [--runs full,s0.15] [--chrome path] [--keep]
+//   node tools/thin-check.mjs [--out dir] [--only case] [--runs full,s0.15] [--chrome path] [--npm node_modules] [--keep]
 //
 // Serves the repository on 127.0.0.1, opens tools/thin-check.html in headless Chrome (or Edge) and waits for it: the bodies built unthinned
 // and thinned ("game", "lite", simplify 0.15), cut across to measure their depth front to back. Writes thin-check.png (front and side
@@ -16,6 +16,9 @@ import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2), opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args.splice(i, 2)[1] : d; }, flag = (k) => { const i = args.indexOf(k); return i >= 0 ? !!args.splice(i, 1) : false; };
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), OUT = path.resolve(opt("--out", "thin-check-out")), ONLY = opt("--only", ""), RUNS = opt("--runs", ""), KEEP = flag("--keep");
+// --npm: a node_modules folder holding three and meshoptimizer (npm install three@0.160.0 meshoptimizer@1), served in the CDN's place where
+// jsdelivr can't be reached (a cloud session: the page waited for it forever)
+const NPM0 = opt("--npm", ""), NPM = NPM0 && path.resolve(NPM0);
 const CHROMES = [opt("--chrome", ""), process.env.CHROME,
   "C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"].filter(Boolean);
@@ -25,16 +28,18 @@ if (!CHROME) { console.error("no Chrome found: pass --chrome path"); process.exi
 // the repository, as files (only under ROOT)
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".css": "text/css" };
 const server = http.createServer((req, res) => {
-  const p = path.join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
-  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404).end(); return; }
-  res.writeHead(200, { "Content-Type": TYPES[path.extname(p)] || "application/octet-stream" }); fs.createReadStream(p).pipe(res);
+  const u = decodeURIComponent(new URL(req.url, "http://x").pathname), own = NPM && u.startsWith("/__npm/"), base = own ? NPM : ROOT, p = path.join(base, own ? u.slice(7) : u);
+  if (!p.startsWith(base) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404).end(); return; }
+  res.writeHead(200, { "Content-Type": TYPES[path.extname(p)] || "application/octet-stream" });
+  if (NPM && !own && p.endsWith(".html")) res.end(fs.readFileSync(p, "utf8").replace(/https:\/\/cdn\.jsdelivr\.net\/npm\/(@?[^@\/"]+)@[^\/"]+\//g, "/__npm/$1/"));   // the page's import map: the CDN's packages from here
+  else fs.createReadStream(p).pipe(res);
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const PAGE = `http://127.0.0.1:${server.address().port}/tools/thin-check.html?${ONLY ? `only=${encodeURIComponent(ONLY)}` : ""}${RUNS ? `&runs=${encodeURIComponent(RUNS)}` : ""}`;
 
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "hinagata-thin-"));
 const chrome = spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check",
-  "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--window-size=1200,900", "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
+  "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--window-size=1200,900", ...(process.getuid?.() === 0 ? ["--no-sandbox"] : []), "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
 // done: close the browser through DevTools (Edge's first process exits at once and its browser goes on in others, which killing it left
 // running: 2026-10-10, a dozen headless Edge processes holding the profile), then remove the profile
 let closeBrowser = null;

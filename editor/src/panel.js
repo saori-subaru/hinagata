@@ -27,7 +27,7 @@ const fmt = (v, step) => { const d = Math.max(0, Math.min(5, -Math.floor(Math.lo
 let uid = 0;
 
 /**
- * ctx: { store, quality, onQuality(q), onImage(path), onTemplate(kind), onReadTemplate(), bangs (editor/src/bangs.js), draw (draw.js), hairs (my hairstyles, app.js) }
+ * ctx: { store, quality, onQuality(q), onImage(path), onTemplate(kind), onReadTemplate(), bangs (editor/src/bangs.js), tufts (tufts.js), draw (draw.js), hairs (my hairstyles, app.js) }
  */
 export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   const { store } = ctx;
@@ -38,7 +38,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   // time, and none once something else is touched, another tab or another value (2026-10-07, Saori: they stayed on after moving on).
   // Stopped quietly (no redraw here: a slider being dragged would lose its grip); the panel redraws when the change lands
   let quiet = false;
-  const TOOLS = () => [ctx.bangs, ctx.backs, ctx.ties, ctx.draw, ctx.paint, ctx.acc].filter(Boolean);
+  const TOOLS = () => [ctx.bangs, ctx.tufts, ctx.backs, ctx.ties, ctx.draw, ctx.paint, ctx.acc].filter(Boolean);
   const toolOn = (T) => T.on ?? (T.state.on || T.state.move);
   function stopTools(keep) { quiet = true; try { for (const T of TOOLS()) if (T !== keep && toolOn(T)) { T.toggle(false); T.toggleMove?.(false); } } finally { quiet = false; } }
   const set = (changes, commit = true) => { stopTools(); store.set(changes, { commit }); };
@@ -237,6 +237,23 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return { head, kids };
   }
+  // the tufts from the whorl and their spikes (editor/src/tufts.js): the switch, adding / removing, and the picked one's own values
+  function tuftsBlock() {
+    const T = ctx.tufts; if (!T) return null; const S = T.selected;
+    const head = [h("h2", {}, t("tuftTitle")), T.count ? h("span", { class: "cost" }, t("tuftN", T.count, T.spikes)) : null], kids = [h("div", { class: "chips" }, toolChip(T))];
+    if (!T.on) return { head, kids };
+    kids.push(h("div", { class: T.count ? "help" : "note" }, t(T.count ? "tuftHelp" : "tuftNone")),
+      h("div", { class: "chips" }, h("button", { class: "btn small", type: "button", onclick: () => T.addTuft() }, t("tuftAdd")), h("button", { class: "btn small", type: "button", disabled: !S, onclick: () => T.addSpike() }, t("spikeAdd")),
+        h("button", { class: "btn small ghost", type: "button", disabled: !S, onclick: () => T.remove() }, t(S && S.k >= 0 ? "spikeDel" : "tuftDel"))));
+    if (!S) { if (T.count) kids.push(h("div", { class: "note" }, t("tuftPick"))); }
+    else for (const [k, key, min, max, step] of T.sliders) {
+      const id = `f${uid++}`, v = T.value(k), num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
+      const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
+      rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
+      rng.addEventListener("change", () => T.setValue(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) T.setValue(k, +num.value); });
+      kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
+    return { head, kids };
+  }
   // painting on the character (editor/src/paint.js): the pen and the eraser, each a button of its own (2026-10-07, Saori: the eraser did
   // nothing until 「キャラに描く」 was on too); pressing the one in use puts it down
   function paintBlock() {
@@ -371,7 +388,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     if (tab === "outfit") { for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
     if (tab === "hair") {
       let prev = secEl.get("Style");   // a tool without its section stands after the one before it (the bangs' after the style)
-      for (const [b, sec] of [[bangsBlock(), "Bang tufts"], [backsBlock(), "Back locks"], [tiesBlock(), "Tails"]]) {
+      for (const [b, sec] of [[bangsBlock(), "Bang tufts"], [tuftsBlock(), null], [backsBlock(), "Back locks"], [tiesBlock(), "Tails"]]) {   // (the whorl's tufts have no section of sliders: always a section of their own)
         const el = secEl.get(sec);
         if (el) { if (b) el.append(...b.kids); prev = el; }
         else if (b) { const own = h("div", { class: "sec" }, h("div", { class: "sec-h" }, b.head), b.kids); if (prev) prev.after(own); else panelEl.append(own); prev = own; }

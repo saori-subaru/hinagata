@@ -6,6 +6,7 @@ import { createStore, loadLibrary, saveLibrary, addChar, recipeOf, recipeIn, com
 import { createViewport, VIEW_NAMES, BACKGROUNDS } from "./viewport.js";
 import { createPanel } from "./panel.js";
 import { createBangTool } from "./bangs.js";
+import { createTuftTool } from "./tufts.js";
 import { createDrawTool } from "./draw.js";
 import { createBackTool } from "./backs.js";
 import { createTieTool } from "./ties.js";
@@ -55,7 +56,7 @@ ref.load(cur.id);
 let building = false, again = false, ver = 0, refineT = 0, quick = false, refining = false;   // quick: the avatar shown is the quick build   // ver: counts the recipe's changes (a refined build made from an older one is dropped)
 let shownFace = null;   // the expression the face tab is editing, shown instead of the character's own face (panel: ctx.showFace)
 const faceParts = () => { const p = store.get("face.parts"); return { eyes: p.eyes, brows: p.brows, mouth: p.mouth, cheeks: p.cheeks }; };
-const show = (av, ms) => { av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, ms); };
+const show = (av, ms) => { av.play(POSES[vp.motion.pose] ? vp.motion.pose : "idle"); if (shownFace) av.setFace(shownFace); vp.setAvatar(av); bangs.attach(av); tufts.attach(av); draw.attach(av); backs.attach(av); ties.attach(av); paint.attach(av); acc.attach(av); showStats(av, ms); };
 // "fine": a quick "game" build right away, then the fine one 0.8 s after the last change, in the background; it is shown only if nothing
 // changed meanwhile (else it waits for the next rest). A recipe built fine before comes from the cache at once
 async function rebuild() {
@@ -109,6 +110,7 @@ function applyInstant(av, p, v) {
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
+    case "setTufts": if (k[1] === "tufts") av.setTufts(structuredClone(v)); else av.setTufts(null, { [last]: v }); return true;
     case "setAccessories": av.setAccessories(structuredClone(v)); return true;
     case "setExpressions": av.setExpressions(structuredClone(v)); return true;
     case "setLocks": {   // hair.sculpt.<group>[.lie].<key>. Rebuilding the locks takes up to ~0.7 s (long hair is draped), so while a slider moves they are rebuilt once it rests
@@ -125,13 +127,14 @@ store.subscribe((paths, why) => {
     if (av) { vp.lift(); for (const p of paths) if (SCHEMA[p]?.apply) { try { applyInstant(av, p, store.get(p)); } catch (e) { console.warn(e); } } vp.apply(); }
   }
   if (why !== "set" && paths.some(needsBuild)) rebuild();   // shapes rebuild when the gesture ends (slider released)
-  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); draw.refresh(); setTimeout(() => ties.refresh(), 0); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
+  if (why !== "set" && paths.some((p) => p.startsWith("hair."))) { bangs.refresh(); tufts.refresh(); draw.refresh(); setTimeout(() => ties.refresh(), 0); if (paths.some((p) => !p.endsWith(".edits"))) setTimeout(() => backs.refresh(), 0); }   // the tufts' dots follow the hair
   if (why === "set") { panel.renderFoot(); return; }
   panel.render(); persist(); syncUndo();
 });
 
 // ── inspector ──
 const bangs = createBangTool({ vp, store, onSelect: () => panel.render() });   // moving the bangs' tufts on the face (bangs.js)
+const tufts = createTuftTool({ vp, store, onSelect: () => panel.render() });   // moving the whorl's tufts and their spikes (tufts.js)
 const draw = createDrawTool({ vp, store, onChange: () => panel.render() });   // drawing locks of hair on the character (draw.js)
 const backs = createBackTool({ vp, store, onSelect: () => panel.render() });
 const ties = createTieTool({ vp, store, onChange: () => panel.render() });
@@ -168,7 +171,7 @@ const panel = createPanel({ tabsEl: $("tabs"), panelEl: $("panel"), footEl: $("d
   onReadTemplate: (into = null, put = true) => { tplInto = into === "new" ? NEW : into; drawPut = put; $("fileTpl").click(); },
   onFacePaint: (into = null, put = true) => { drawPut = put; facePaint.open(into); },   // drawing the face parts in the app (facepaint.js). put: false = only redraw it (描いた絵の「編集」)
   showFace: (p) => { shownFace = p; const av = vp.avatar; if (!av) return; vp.lift(); av.setFace(p ?? faceParts()); vp.apply(); },   // the expression the face tab edits, on the avatar (null: its own face)
-  bangs, draw, hairs, myParts, backs, ties, paint, acc,
+  bangs, tufts, draw, hairs, myParts, backs, ties, paint, acc,
 });
 let syncShown = null;   // the sync's state on screen (redrawn in another language)
 // live sync with a recipe file (tools/sync.mjs, sync.js): the file is a character of its own in the library (named after it), switched to

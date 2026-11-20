@@ -36,7 +36,8 @@ const sheetCell = (H, clothH, k) => (clothH ? 0.0136 : H) * 1.2 * k;
 export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, kit, bodyAt = null }) {   // clothH: the skirt's and the cape's cell, if set (the game quality: see index.js); sheetK: the sheets' cells times this (lite)
   // foot0: the feet's box, 2 cm under the floor: the mesher makes no faces between a box's first two layers, and the soles' bottom (3 mm
   // under it) and the socks' fell there at the game's cells: no bottom, the foot seen through the boots from below
-  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, foot0 = [-0.22, -0.02, -0.12];
+  // (feet over 1.1, body.proportion.feet, reach past the box: at 1.4 a boot's toe was cut off at it. Up to 1.1 the box is as it was: growing it moves the cells of every character's shoes)
+  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, FKB = Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1.1), FX = 0.22 + 0.06 * FKB, FZ = 0.14 + 0.12 * FKB, foot0 = [-FX, -0.02, -0.12 - 0.06 * FKB];
   const { x: ax, y: ay } = armReach(OPT);   // longer arms, wider shoulders, bigger hands (body.proportion) reach further: the boxes around the arms grow by it
   switch (name) {
     case "body": return { sdf: bodySdf, lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 1.43, 0.34], h: H };
@@ -61,15 +62,15 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
       const BG = C.capeSdf.bag, bag = () => sheetsMesh([BG.sheet(B, one)], BG.lo, BG.hi, sheetCell(H, clothH, sheetK) / 2, one);   // the hood's bag: a sheet over the cape's (half its cells: its dome is small)
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: C.capeSdf.lo, hi: C.capeSdf.hi, h: clothCell(clothH || partClothCell(H), CA.thick),
         make: () => { const m = sheetsMesh(C.capeSdf.sheets(B), C.capeSdf.lo, C.capeSdf.hi, sheetCell(H, clothH, sheetK), one); return BG ? joinMeshes([m, bag()]) : m; },
-        only: C.capeSdf.closed ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed: over the arms, it goes down with them
+        only: C.capeSdf.overArms ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed over the arms (cape.over "arms"): it goes down with them
     case "hood": { const R = C.capeSdf?.rim;   // the hood's fold along the neckline and its lining (clothes/index.js): 4 mm cells
       if (!R) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: R.sdf, lo: R.lo, hi: R.hi, h: Math.min(0.004, Math.max(H * 0.5, 0.0025)), only: /^(neck|upperChest|chest|shoulder)/ }; }
-    case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [0.22, k === "boots" || k === "heelBoots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, 0.14], h: H * 0.7, only: sided(/^(foot|lowerLeg)/) }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
+    case "shoes": { const k = OPT.outfit.shoes.kind; return { sdf: C.shoeSdf, lo: k === "heels" ? [foot0[0], -0.06, foot0[2]] : foot0, hi: [FX, k === "boots" || k === "heelBoots" ? OPT.outfit.shoes.bootHeight + 0.04 : 0.13, FZ], h: H * 0.7, only: sided(/^(foot|lowerLeg)/) }; }   // heels: the heel reaches below the floor in the rest pose (the foot tilts it up)
     case "laces": return C.lacesSdf ? { sdf: C.lacesSdf, lo: [-0.2, 0.0, -0.03], hi: [0.2, 0.11, 0.1], h: Math.min(H * 0.4, 0.0024), bone1: null, only: sided(/^foot/) }   // thin: their own fine grid
       : { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
-    case "soles": return OPT.outfit.shoes.kind === "heelBoots" ? { sdf: C.soleSdf, lo: [foot0[0], -0.1, foot0[2]], hi: [0.22, 0.04, 0.14], h: H * 0.6, only: sided(/^foot/) }   // heel boots: the heels (below the floor in the rest pose) are the soles'
-      : { sdf: C.soleSdf, lo: foot0, hi: [0.22, Math.max(0.03, (OPT.outfit.shoes.sole ?? 0.02) + 0.01), 0.14], h: H * 0.6, only: sided(/^foot/) };
+    case "soles": return OPT.outfit.shoes.kind === "heelBoots" ? { sdf: C.soleSdf, lo: [foot0[0], -0.1, foot0[2]], hi: [FX, 0.04, FZ], h: H * 0.6, only: sided(/^foot/) }   // heel boots: the heels (below the floor in the rest pose) are the soles'
+      : { sdf: C.soleSdf, lo: foot0, hi: [FX, Math.max(0.03, (OPT.outfit.shoes.sole ?? 0.02) + 0.01), FZ], h: H * 0.6, only: sided(/^foot/) };
     // armor: hard pieces (clothes/armor.js). Each moves with as few bones as it can (the bracers and greaves are rigid on one bone)
     case "armorChest": return C.armor.helmSdf ? { sdf: C.armor.chestSdf, lo: [-0.3, 0.38, -0.26], hi: [0.3, 0.82, 0.28], h: H * 0.8, only: /^(hips|spine|chest|upperChest)/ }
       : { sdf: C.armor.chestSdf, lo: [-0.26, 0.47, -0.22], hi: [0.26, 0.76, 0.26], h: H * 0.8, only: /^(spine|chest|upperChest)/ };
@@ -105,7 +106,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
     case "suit": return { sdf: C.suitSdf, fast: (x, y, z) => C.suitSdf(x, y, z, B), lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 0.86, 0.34], h: H, only: /^(hips|spine|chest|upperChest|neck|shoulder|upperArm|lowerArm|hand|upperLeg|lowerLeg|foot|skirt)/ };   // the full-body suit: the body 2.5 mm out
     // the box reaches the socks' top (2026-10-07: it stopped at 0.17, so socks over 0.17 were cut there, though the slider went to 0.3; the
     // knee is at 0.25 here, before the legs are stretched): over-the-knee socks follow the thighs too
-    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [0.22, Math.max(0.17, top + 0.02), 0.14], h: H * 0.7, only: sided(top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/, 0.07) }; }
+    case "socks": { const top = OPT.outfit.socks.top; return { sdf: C.sockSdf, fast: (x, y, z) => C.sockSdf(x, y, z, B), lo: foot0, hi: [FX, Math.max(0.17, top + 0.02), FZ], h: H * 0.7, only: sided(top > 0.17 ? /^(foot|lowerLeg|upperLeg)/ : /^(foot|lowerLeg)/, 0.07) }; }
   }
   // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
   const GP = partNamed(name);
