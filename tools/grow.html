@@ -38,7 +38,7 @@ async function build(g) {
   av = await createAvatar({ ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
   const L = texParts(av), [lo, hi] = span(L); ref ??= [lo, hi];
   if (hi > lo) for (const A of L) { for (let i = 1; i < A.array.length; i += 3) A.array[i] = ref[0] + (A.array[i] - lo) * (ref[1] - ref[0]) / (hi - lo); A.needsUpdate = true; }
-  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null; window.AV = av;   // (AV: 調べもの用)
+  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null;
   if (frameH == null) { const b = new THREE.Box3().setFromObject(av.object); frameH = (b.max.y - b.min.y); }   // 枠は最初に作った(最大の)形で固定し、背が伸びて見えるように
   if (MOTION) av.play(MOTION, { blend: 0 });
 }
