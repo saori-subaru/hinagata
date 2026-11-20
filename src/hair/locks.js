@@ -257,7 +257,7 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
 /**
  * Tufts (options.hair.tufts): few big blocks of hair from the whorl, each lying on the hair to where its tip ends (the other locks are
  * ribbons, flat on the head). Wide (the mesh bends round the head: createLocks' cols and curv), solid from the hair out (thick), its end a
- * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, hug, from,
+ * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, flick, flickFrom, hug, from,
  * band, ridge, rootWidth, wide, endWidth, shade, stiff, mirror, spikes: [{ y | at, length, out, up, width, side, ridge }] }]
  * (head space; schema.js hair.tufts). whorl: [x, z], where they grow from, from the top's middle. surf / center / toRoot / sx: as bangLocks.
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
@@ -292,7 +292,7 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
     // (band: how late; a block with a point, not a leaf) or wide to its cut end
     const rootW = d.rootWidth ?? 0.25, wide = d.wide ?? 0.45, band = clamp(d.band ?? 0.5, 0, 1), endW = d.endWidth ?? 0.6, point = n === 1 ? 0.75 - 0.5 * band : clamp(notch + 0.12, 0.15, 0.4);
     const prof = (s) => (rootW + (1 - rootW) * sstep(0, wide, s)) * (n === 1 ? (s < 1 - point ? 1 : Math.pow(Math.max(0, (1 - s) / point), 0.9)) : 1 - (1 - endW) * s * s * s);
-    const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg, hook = (d.hook ?? 0) * m * deg;
+    const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg, hook = (d.hook ?? 0) * m * deg, flick = d.flick ?? 0, flickFrom = clamp(d.flickFrom ?? 0.6, 0.2, 0.9);
     const a = d.to[0] * m * deg, R0 = d.from ? over(d.from[0] * m, d.from[1]) : over(whorl[0], whorl[1]), rd = norm(R0.map((v, q) => v - center[q]));
     let H, U, F, FO;   // the points (head space), their directions from the head's middle, the hair under each, how far each has left the hair (0..1)
     const path = (yt) => { const td = norm(horiz(yt, a).map((v, q) => v - center[q])), om = Math.acos(clamp(rd[0] * td[0] + rd[1] * td[1] + rd[2] * td[2], -1, 1)), so = Math.sin(om) || 1; let reach = 0; H = []; U = []; F = []; FO = [];
@@ -303,6 +303,10 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
         let free = fo; if (u[1] < 0.3) { const hr = Math.hypot(P[0], P[2] - center[2]) || 1; if (hr < reach) { const k = 1 + (reach / hr - 1) * (1 - hug); free = Math.max(free, Math.min(1, (k - 1) * hr / 0.03)); P[0] *= k; P[2] = center[2] + (P[2] - center[2]) * k; } else reach = hr; }
         H.push(P); U.push(u); F.push(center.map((v, i) => v + u[i] * sAt)); FO.push(free); } };
     { let yt = d.to[1]; for (let it = 0; it < 4; it++) { path(yt); yt += d.to[1] - H[N - 1][1]; } }   // its tip at the height asked (what stands it off the hair also carries it down)
+    // flick (m, as a lock's: 0.04 turns the tip 150°): from flickFrom along it its end curves out from the head and up (following the head
+    // to its tip it points down however far out it stands: no flicked outline). to's height is the tip's before the flick (fitted after
+    // it, the tuft grew longer by what the flick raised it: a tail)
+    if (flick) { H = bendLock(H, flick, { center, from: flickFrom }); for (let q = Math.round((N - 1) * flickFrom) + 1; q < N; q++) FO[q] = 1; }
     // how sharply the hair under it turns across it (1/m): the mesh's edges go down round the head by this; flat where it has left the hair
     const CV = H.map((P, q) => { const T = norm((H[Math.min(N - 1, q + 1)]).map((v, i) => v - H[Math.max(0, q - 1)][i])), ac = norm(cross(T, U[q])), hw = Math.max(0.02, 0.5 * w * prof(q / (N - 1)));
       const drop = 0.5 * (surf(F[q][0] + ac[0] * hw, F[q][1] + ac[1] * hw, F[q][2] + ac[2] * hw) + surf(F[q][0] - ac[0] * hw, F[q][1] - ac[1] * hw, F[q][2] - ac[2] * hw));
