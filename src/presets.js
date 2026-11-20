@@ -135,8 +135,9 @@ export const CHARACTERS = {
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
-        // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it)
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
+        // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).
+        // chin.taper: the jaw in straight lines to a soft point, as on the sheet (his round jaw didn't match it)
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 0.85 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
@@ -225,7 +226,7 @@ export const CHARACTERS = {
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt
-        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.099], n: [0.35, 0.3, 1], size: 0.12, color: "#d4a878", lift: 0.01, metal: true, outline: 0.005 },   // on the closure, right of the middle as on the sheet (cape.closeX); n fitted to the cloak's round front under it (facing forward its upper left stood off it); lifted onto the collar's two rings, shining as metal
+        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.099], n: [0.35, 0.3, 1], size: 0.12, color: "#d4a878", lift: 0.01, outline: 0.005 },   // on the closure, right of the middle as on the sheet (cape.closeX); n fitted to the cloak's round front under it (facing forward its upper left stood off it); lifted onto the collar's two rings. Not metal: its contrast and glint read hard (the shape's ridge lines are its shine)
         { kind: "pinBuckle", bone: "spine", at: [0, 0.093, 0.119], n: [0, 0, 1], size: 0.085, color: "#d4a878", lift: 0.004 },   // the sheet's: a thin frame, its prong
       ],
     } },

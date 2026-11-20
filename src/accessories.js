@@ -35,14 +35,28 @@ const SHAPES = {
     const c = new THREE.SphereGeometry(0.13, 10, 8); c.scale(1, 1, 0.7); c.translate(0, 0, 0.14); parts.push(c); return merge(parts); },
   star: () => { const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, r = i % 2 ? 0.21 : 0.5; s[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); }
     const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
-  // a four-pointed star cut in facets (for アステル's clasp): a ridge from the raised middle to each point, the lower point a little longer.
-  // Its facets keep their own normals (flat): each point reads as a light half and a dark one
-  star4: () => { const T = [[0, 0.5], [0.46, 0], [0, -0.56], [-0.46, 0]], V = 0.14, R = 0.045, TOP = 0.21, ring = [];
-    T.forEach(([x, y], i) => { const [nx, ny] = T[(i + 1) % 4]; ring.push([x, y], [Math.sign(x + nx) * V, Math.sign(y + ny) * V]); });   // point, valley, point, …
-    const P = [], tri = (a, b, c) => P.push(...a, ...b, ...c);
-    for (let i = 0; i < 8; i++) { const a = ring[i], b = ring[(i + 1) % 8];
-      tri([0, 0, TOP], [...b, R], [...a, R]); tri([...a, R], [...b, R], [...b, 0]); tri([...a, R], [...b, 0], [...a, 0]); tri([0, 0, 0], [...a, 0], [...b, 0]); }   // a facet, its rim, the back
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals(); return g; },
+  // a four-pointed star cut in facets (for アステル's clasp), as on his sheet: about as wide as tall, the lower point longer, fat points with
+  // straight sides into round valleys (sharp valleys read hard; sides curved all along, a sparkle). A ridge from the raised middle to each
+  // point; each facet keeps one normal (flat). Painted as drawn (userData.bands, index.js makeAccessories): the facets facing away from the
+  // upper right darker (the scene's sun lit every facet alike), a thin light line along each ridge (a metal glint lit a whole facet white).
+  // bandT: how far from its facet's ridge (units), + 2 on a dark facet. The back's rim normals lean out: seen face-on the outline had nothing to push out
+  star4: () => { const T = [[0, 0.45], [0.5, 0], [0, -0.55], [-0.5, 0]], V = 0.17, RV = 0.3, R = 0.045, TOP = 0.21, K = 8, W = 0.006, P = [], N = [], B = [];
+    const put = (p, n, b) => { P.push(...p); N.push(...n); B.push(b); }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
+    for (let i = 0; i < 4; i++) { const a = T[i], b = T[(i + 1) % 4], v = [Math.sign(a[0] + b[0]) * V, Math.sign(a[1] + b[1]) * V];
+      // the side from point a to point b (clockwise): straight to RV of the way from the valley's corner, round through it (a quadratic), straight on
+      const f1 = [0, 1].map((m) => v[m] + (a[m] - v[m]) * RV), f2 = [0, 1].map((m) => v[m] + (b[m] - v[m]) * RV), lerp = (p, q, t) => [0, 1].map((m) => p[m] + (q[m] - p[m]) * t);
+      const at = (t) => t < 0.25 ? lerp(a, f1, t * 4) : t > 0.75 ? lerp(f2, b, t * 4 - 3) : ((s) => [0, 1].map((m) => (1 - s) ** 2 * f1[m] + 2 * (1 - s) * s * v[m] + s * s * f2[m]))(t * 2 - 0.5);
+      const dir = (t) => t < 0.25 ? [f1[0] - a[0], f1[1] - a[1]] : t > 0.75 ? [b[0] - f2[0], b[1] - f2[1]] : ((s) => [0, 1].map((m) => (1 - s) * (v[m] - f1[m]) + s * (f2[m] - v[m])))(t * 2 - 0.5);
+      const out = (s) => s === 0 ? unit(a) : s === 2 * K ? unit(b) : ((d) => unit([-d[1], d[0]]))(dir(s / (2 * K)));   // outward: the side's direction turned left (at a point straight out, so the outline closes there)
+      const C = Array.from({ length: 2 * K + 1 }, (_, s) => at(s / (2 * K))), mid = C[K];
+      for (const [tip, s0] of [[a, 0], [b, K]]) {   // point a's facet (to the valley's middle), then point b's
+        const n = unit(cross([tip[0], tip[1], R - TOP], [mid[0], mid[1], R - TOP]).map((x, _, l) => x * Math.sign(l[2]))), L = Math.hypot(...tip), o = n[0] + n[1] < 0 ? 2 : 0, d = (p) => o + Math.abs(tip[0] * p[1] - tip[1] * p[0]) / L;
+        for (let s = s0; s < s0 + K; s++) { put([0, 0, TOP], n, o); put([...C[s + 1], R], n, d(C[s + 1])); put([...C[s], R], n, d(C[s])); } }
+      for (let s = 0; s < 2 * K; s++) { const p = C[s], q = C[s + 1], op = out(s), oq = out(s + 1), np = [...op, 0], nq = [...oq, 0], bp = unit([...op, -0.6]), bq = unit([...oq, -0.6]);
+        put([...p, R], np, -9); put([...q, R], nq, -9); put([...q, 0], nq, -9); put([...p, R], np, -9); put([...q, 0], nq, -9); put([...p, 0], np, -9);   // the rim
+        put([0, 0, 0], [0, 0, -1], -9); put([...p, 0], bp, -9); put([...q, 0], bq, -9); } }   // the back
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3)); g.setAttribute("bandT", new THREE.Float32BufferAttribute(B, 1));
+    g.userData.bands = [[1.5, 9, "dark"], [-1, W, "light"], [1.5, 2 + W, "light"]]; return g; },
   ball: () => { const g = new THREE.SphereGeometry(0.5, 16, 12); g.translate(0, 0, 0.42); return g; },
   // a bow (2026-10-07, for a 超絶美少女's hair): two loops puffed out and swept back a little, a knot, two tails with V-cut ends.
   // Cloth, so its normals are smoothed (the leaf's facets would show on its soft curves)

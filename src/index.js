@@ -820,7 +820,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         // outline (m): its line's width; metal: the armor's shine (stronger bands, a glint: a gold clasp buried in the cloak's folds read flat)
         const key = k ? `acc${i}.${k}` : `acc${i}`, col = it.color ?? "#e8c25a", x = parts[key] = skinned(geo, col, it.outline ?? 0.0025); accKeys.push(key);
-        if (it.metal) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, col); x.metal = true; } }); });
+        if (it.metal) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, col); x.metal = true; }
+        // a shape's own painted tones (accessories.js star4): its bandT's ranges [lo, hi, "dark" | "light"], darker or lighter than its color
+        const SB = geo.userData.bands; if (SB) { const U = bandU(), WHITE = new THREE.Color(1, 1, 1); U.n.value = SB.length;
+          SB.forEach(([lo, hi, tone], j) => { U.lo.value.setComponent(j, lo); U.hi.value.setComponent(j, hi); const c = U[`c${j}`].value.set(col); if (tone === "dark") c.multiplyScalar(0.65); else c.lerp(WHITE, 0.3); });   // (linear: about 0.82 and a light tint on screen)
+          x.wrap = (m) => withBands(m, U); x.m.material = x.wrap(x.m.material); } }); });
   }
   makeAccessories();
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
@@ -1141,7 +1145,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN && !x.sim) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = x.wrap(shadeToon(old.color.getHex())); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) || x.metal ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : (x.wrap ?? ((m) => m))(isMetal(k) || x.metal ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
