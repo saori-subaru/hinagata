@@ -843,6 +843,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
+  // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
+  // opens under the upper lip (a notch: フ), not only a hole drawn on an unmoved face. The body's points move (the face's layers rebuilt over
+  // them), as a shape key would; back to where they were when it closes. Normals kept (the dent is shallow)
+  const OPEN_MOUTHS = new Set(["open", "openSoft"]); let mouthOpen = false, mouthBase = null;
+  function mouthShape(open) {
+    const geo = parts.body.m.geometry, P = geo.attributes.position; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice() }; mouthOpen = false; }
+    if (open === mouthOpen) return; mouthOpen = open; P.array.set(mouthBase.p);
+    if (open) { const M3 = OPT.face.mouth3d, k = OPT.face.openSize ?? 1, y0 = face.MOUTHP.y + face.FACE.dy, yT = y0 + 0.006, yB = y0 - 0.021 * k, D = 0.009 * (M3.depth ?? 1), H = HTr.identity ? null : HTr;
+      const toH = H ? H.toHead : (x, y, z) => [x, y, z], fromH = H ? H.fromHead : (x, y, z) => [x, y, z];
+      for (let i = 0; i < P.count; i++) { const q = toH(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); if (q[2] < 0.05 || q[1] > yT || q[1] < yB - 0.03) continue;
+        const wx = 1 - sstep(0.016 * k, 0.03 * k, Math.abs(q[0])), wy = sstep(yT, yT - 0.006, q[1]) * (1 - sstep(yB, yB - 0.03, q[1])), w = wx * wy; if (!(w > 0)) continue;
+        const r = fromH(q[0], q[1] - 0.003 * w, q[2] - D * w); P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; } }
+    P.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); }
   // ⏳ the mouth's inside (face.mouth3d, a try): a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone.
   // Drawn after everything solid, without the depth test (the head's own skin is in front of them), only where the mouth's hole marked the
   // pixels (face/index.js HOLE), one over the other in this order. Unlit: plain colors, as the mouth's picture was
@@ -1034,7 +1047,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
       avatar.drawFace();
     },
-    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); },
+    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
