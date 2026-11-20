@@ -289,7 +289,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     CUT.crown = plane((x, y, z) => (CR.y + CR.tilt * (CR.pivotZ - z) - y) / Math.hypot(1, CR.tilt), CR.blend); }   // 頭のてっぺんを少しだけ平たく
   // flat back of the head: cut behind z = -backPlane.z, tilted so the plane leans forward at the top (0 = off)
   { const BP = OPT.body.sculpt.backPlane; if (BP.z) CUT.back = cut({ t: 3, k: BP.k, bone: "head", bx0: 0, by0: 0, bz0: 0, br: 1e9, f: (x, y, z) => (z + BP.z - BP.tilt * (y - 1.1)) / Math.hypot(1, BP.tilt) }); }
-  { const NC = { z: 0.15, slope: 3.5, y: 0.89, k: 0.018, ...OPT.body.sculpt.napeCut }; CUT.nape = plane((x, y, z) => (z + NC.z + NC.slope * (y - NC.y)) / (NC.slope === 3.5 ? 3.64 : Math.hypot(1, NC.slope)), NC.k); }   // body.sculpt.napeCut { z, slope, y, k }: a flatter slope from higher up tapers the back of the head in to the neck (a cropped nape; the ball down to the collar has none)   // 後頭部の下は首の手前で内側へ巻き込む(首の後ろとの間にくびれ)
+  { const NC = { z: 0.15, slope: 3.5, y: 0.89, k: 0.018, ...OPT.body.sculpt.napeCut }; CUT.nape = plane((x, y, z) => (z + NC.z + NC.slope * (y - NC.y)) / (NC.slope === 3.5 ? 3.64 : Math.hypot(1, NC.slope)), NC.k);
+    if (NC.round) { const R = NC.round; CUT.nape = cut(E([0, R.y, R.z], [R.rx ?? 0.3, R.r, R.r], "head", R.k ?? 0.03)); } }   // napeCut.round { y, z, r, rx, k }: a round hollow instead, scooped from behind the neck (the plane's taper is a straight line)
+  // body.sculpt.napeCut { z, slope, y, k }: a flatter slope from higher up tapers the back of the head in to the neck (a cropped nape; the ball down to the collar has none)   // 後頭部の下は首の手前で内側へ巻き込む(首の後ろとの間にくびれ)
   for (const [s, m] of [["L", 1], ["R", -1]]) {
     const j = (n) => J[`${n}.${s}`];
     // 耳: 前の縁は頭にぴったり付き、後ろの縁が外へ開いて浮く板。くぼみは前・外を向く(横から見ると前がまっすぐのD字)

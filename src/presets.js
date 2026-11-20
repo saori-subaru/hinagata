@@ -130,7 +130,8 @@ export const CHARACTERS = {
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
+        // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it)
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
@@ -168,7 +169,8 @@ export const CHARACTERS = {
           { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.9, 1, 0.95], notch: 0.09, endWidth: 0.8, hook: -10 },   // its points a little uneven (three alike read as a comb)
         ],
         sculpt: {
-          whorl: { on: true, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
+          whorl: { on: true, crop: { top: 1.0, y: 0.8, side: 0.9, thick: 0.004 } },   // crop: cropped hair on the scooped nape, a thin layer on the skin
+          shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
           backVolume: 0,   // the back of his head 1.8 cm shorter
           ahogeCurl: true, ahogeLean: -20, ahogeDir: 125, ahogeSize: 1.5, ahogeWidth: 2, ahogeX: -0.07, ahogeZ: 0.08,   // a thick horn at the whorl, its point toward his left and the back
         },
