@@ -372,12 +372,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const OVER_BODY = CLOSED && CA.over === "body", armS = OVER_BODY ? Math.min(armK, 0.21) : armK;
     const torso = OVER_BODY ? blendFast(pick("chest", "upperChest", "bust", "belly", "pelvis", "waist", "neck", "trap", "shoulder", "butt"), [-0.4, 0.3, -0.3], [0.4, 0.95, 0.3]) : null;
     const armX = (y) => UA[0] + armS * (UA[1] - Math.max(y, HAND_Y)) + 0.075 * Math.hypot(1, armS);   // (under the hands a long cape's sides hang straight: the slope run on made a tent)
-    const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0;
-    const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x))) : 0);   // the collar a little higher at the back
+    // cape.closeX (m, アステル's): the closure that far toward the character's left, the right side's flap lying over the middle to it
+    const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0, CX = CLOSED ? CA.closeX ?? 0 : 0;
+    const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x - CX))) : 0);   // the collar a little higher at the back
     const hemY = (z) => CA.hem + TILT * z;
     // cape.sideEdge: under the opening the sides end this far forward of the body's middle (behind it, アステル's cloak: the arms hang in front of the cape)
     const SE = CA.sideEdge ?? 0.02;
-    const opening = (x, y, z) => Math.max((Math.abs(x) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, SE - z);   // < 0 in the front's opening
+    const opening = (x, y, z) => Math.max((Math.abs(x - CX) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, SE - z);   // < 0 in the front's opening
     // cape.cowl (アステル's): the hood lying down as a collar standing round the neck, cowl m off it, up to cape.collar at the sides (higher
     // behind) and down to the closure in front, its own rim the roll (no hood's fold). The cape is made round the body and a column round
     // the neck: lying on the shoulders, the hood's neckline and its fold read as a sailor's collar
@@ -400,14 +401,15 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const neck = NO == null ? null : (() => {
       // its height at the sides: going up from inside the shoulder (going down from above, an elf's long ears were found first)
       const xs = NK.ra + NO; let Y = COWL ? CA.collar : J["upperArm.L"][1] - 0.03; while (!COWL && Y < CA.collar + 0.06 && bodySdf(xs, Y, 0) < MID) Y += 0.001;   // (a cowl: as high as the collar)
-      const at = (x, z) => { const nf = Y - 0.12 * z; if (!CLOSED) return nf; const nv = CLOSE + 1.2 * Math.max(0, Math.abs(x) - XF); return nf - sstep(0, 0.05, z) * Math.max(0, nf - nv); };
+      const at = (x, z) => { const nf = Y - 0.12 * z; if (!CLOSED) return nf; const nv = CLOSE + 1.2 * Math.max(0, Math.abs(x - CX) - XF); return nf - sstep(0, 0.05, z) * Math.max(0, nf - nv); };
       // on each ray from the neck's axis (th from the back round to the front, D apart): where the shell's middle is at that height, and the
       // way along the shell there, outward (tr, ty); the rays stop at the closure's end (open: at the cape's front edge)
       const rays = [], D = Math.PI / 360, e = 0.002;
       for (let i = 0; i <= 360; i++) { const th = D * i, sx = Math.sin(th), sz = -Math.cos(th); let p = null;
         for (let t = 0.005; t < 0.35; t += 0.0008) { const x = sx * t, z = zA + sz * t, y = at(x, z); if (capeBody(x, y, z) >= MID) { p = [x, y, z]; break; } }
         if (!p) break;
-        if (CLOSED && th > Math.PI / 2 && p[0] <= XF) { const q = rays.at(-1)?.p; if (q) { const k = (q[0] - XF) / Math.max(1e-6, q[0] - p[0]); rays.push({ ...rays.at(-1), p: q.map((v, j) => v + (p[j] - v) * k) }); } break; }
+        // (a closure off the middle: they stop as far out as it is, both sides alike; nearer it the cut is level, at the dip round it)
+        if (CLOSED && th > Math.PI / 2 && p[0] <= XF + Math.abs(CX)) { const q = rays.at(-1)?.p; if (q) { const k = (q[0] - XF - Math.abs(CX)) / Math.max(1e-6, q[0] - p[0]); rays.push({ ...rays.at(-1), p: q.map((v, j) => v + (p[j] - v) * k) }); } break; }
         if (!CLOSED && p[2] > -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, p[1])) break;
         const nr = (capeBody(p[0] + sx * e, p[1], p[2] + sz * e) - capeBody(p[0] - sx * e, p[1], p[2] - sz * e)), ny = capeBody(p[0], p[1] + e, p[2]) - capeBody(p[0], p[1] - e, p[2]), l = Math.hypot(nr, ny) || 1;
         rays.push({ p, t: Math.hypot(p[0], p[2] - zA), tr: ny / l, ty: -nr / l }); }

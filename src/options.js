@@ -51,6 +51,7 @@ export const DEFAULTS = {
       "arms": 1.17,
       "hands": 1.1,
       "feet": 1,
+      "feetFrom": 0,
       "shoulders": 1
     },
     "head": {
@@ -540,6 +541,7 @@ export const DEFAULTS = {
       "front": "open",
       "over": "arms",
       "close": 0.7,
+      "closeX": 0,
       "open": 0.6,
       "sideEdge": 0.02,
       "tilt": 0,

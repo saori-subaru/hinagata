@@ -418,8 +418,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`toeBox.${s}`] = E([cx, 0.011, z0 + 0.058 * k], [0.05 * hx, 0.015, 0.032 * k], `foot.${s}`, 0.03);
       FOOT_CUT.push(cut(E([cx, 0.068, z0 + 0.085], [0.08, 0.04, 0.06], `foot.${s}`, 0.012))); } }
     // the feet's size (body.proportion.feet, ×; 2026-10-07, Saori: "手や足の大きさもスライダーで変えられるようにしたい"): every part of the foot
-    // grown about the ankle, the sole kept on the floor (shoes are made around them: they grow too)
-    { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, 0];
+    // grown about the ankle, the sole kept on the floor (shoes are made around them: they grow too). feetFrom (m, front to back): the point they
+    // grow from; at the heel they grow forward only (アステル's big boots: grown about the ankle, the heel stood out behind the shaft)
+    { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, OPT.body.proportion?.feetFrom ?? 0];
       const grow = (p) => { if (!p) return; p.cx = O[0] + (p.cx - O[0]) * FK; p.cy = O[1] + (p.cy - O[1]) * FK; p.cz = O[2] + (p.cz - O[2]) * FK; p.rx *= FK; p.ry *= FK; p.rz *= FK; p.k *= FK;
         p.bx0 = p.cx; p.by0 = p.cy; p.bz0 = p.cz; p.br = Math.max(p.rx, p.ry, p.rz); };
       for (const n of ["shoeLast", "foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3", "toeBox"]) grow(P[`${n}.${s}`]);
