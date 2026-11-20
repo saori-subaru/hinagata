@@ -289,8 +289,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const TUBE = BOOTS && !HBOOTS && CUFF > 0 && OPT.outfit.shoes.cuffTube, CW = 0.008;
   let tubes = null;
   const tubeO = (x, y, z) => { const T = tubes[x >= 0 ? 0 : 1], f = (y - T.a[1]) / T.l; return (Math.hypot((x - T.a[0] - T.u[0] * f) / T.rx, (z - T.a[2] - T.u[2] * f) / T.rz) - 1) * T.r; };   // (m) off the tube's middle
-  // how far under the top (m, base): the cuff is painted by it (a tube's outside all of it: across its bottom edge onto the shaft the band's edge was jagged)
-  const shoeTop = (x, y, z) => { const t = TOP - TILT * z - y; return tubes && t > 0 && t < CUFF + 0.01 && tubeO(x, y, z) > -CW / 2 - 0.002 ? Math.min(t, CUFF - 0.004) : t; };
+  // how far under the top (m, base): the cuff is painted by it (a tube's outside all of it: across its bottom edge onto the shaft the band's edge
+  // was jagged; only on the tube: a toe box rising under it took the band's color)
+  const shoeTop = (x, y, z) => { const t = TOP - TILT * z - y; if (!tubes || t <= 0 || t > CUFF) return t; const o = tubeO(x, y, z); return o > -CW / 2 - 0.002 && o < CW / 2 + 0.003 ? Math.min(t, CUFF - 0.004) : t; };
   // boots' straps (shoes.straps, for シルヴィ): up to 2 bands round the shaft under the top, 2.5 mm out (their color: index.js paintBands)
   const STRAPS = BOOTS ? strapRanges(OPT.outfit.shoes) : [], strapIn = (t) => { let v = 0; for (const [a, b] of STRAPS) v = Math.max(v, sstep(a - 0.002, a + 0.002, t) * sstep(b + 0.002, b - 0.002, t)); return v; };
   // shoes.notch (boots, for シルヴィ): a V cut down from the top at the front middle of each shaft (on the leg's axis there; the back half
@@ -401,14 +402,15 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const neck = NO == null ? null : (() => {
       // its height at the sides: going up from inside the shoulder (going down from above, an elf's long ears were found first)
       const xs = NK.ra + NO; let Y = COWL ? CA.collar : J["upperArm.L"][1] - 0.03; while (!COWL && Y < CA.collar + 0.06 && bodySdf(xs, Y, 0) < MID) Y += 0.001;   // (a cowl: as high as the collar)
-      const at = (x, z) => { const nf = Y - 0.12 * z; if (!CLOSED) return nf; const nv = CLOSE + 1.2 * Math.max(0, Math.abs(x - CX) - XF); return nf - sstep(0, 0.05, z) * Math.max(0, nf - nv); };
+      const at = (x, z) => { const nf = Y - 0.12 * z; if (!CLOSED) return nf; const u = x - CX, nv = CLOSE + (u * CX < 0 ? 0.5 : 1.2) * Math.max(0, Math.abs(u) - XF); return nf - sstep(0, 0.05, z) * Math.max(0, nf - nv); };
       // on each ray from the neck's axis (th from the back round to the front, D apart): where the shell's middle is at that height, and the
       // way along the shell there, outward (tr, ty); the rays stop at the closure's end (open: at the cape's front edge)
       const rays = [], D = Math.PI / 360, e = 0.002;
       for (let i = 0; i <= 360; i++) { const th = D * i, sx = Math.sin(th), sz = -Math.cos(th); let p = null;
         for (let t = 0.005; t < 0.35; t += 0.0008) { const x = sx * t, z = zA + sz * t, y = at(x, z); if (capeBody(x, y, z) >= MID) { p = [x, y, z]; break; } }
         if (!p) break;
-        // (a closure off the middle: they stop as far out as it is, both sides alike; nearer it the cut is level, at the dip round it)
+        // (a closure off the middle: they stop as far out as it is, both sides alike; nearer it the cut is level, at the dip, which rises gently
+        // on the side lying over the middle: as steep as the other, that cloth stood up in a corner in front of the throat)
         if (CLOSED && th > Math.PI / 2 && p[0] <= XF + Math.abs(CX)) { const q = rays.at(-1)?.p; if (q) { const k = (q[0] - XF - Math.abs(CX)) / Math.max(1e-6, q[0] - p[0]); rays.push({ ...rays.at(-1), p: q.map((v, j) => v + (p[j] - v) * k) }); } break; }
         if (!CLOSED && p[2] > -0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, p[1])) break;
         const nr = (capeBody(p[0] + sx * e, p[1], p[2] + sz * e) - capeBody(p[0] - sx * e, p[1], p[2] - sz * e)), ny = capeBody(p[0], p[1] + e, p[2]) - capeBody(p[0], p[1] - e, p[2]), l = Math.hypot(nr, ny) || 1;

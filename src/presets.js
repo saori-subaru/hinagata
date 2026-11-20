@@ -128,7 +128,7 @@ export const CHARACTERS = {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
         head: { scale: 0.84, width: 0.94 },
-        proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.06 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
+        proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
@@ -210,7 +210,7 @@ export const CHARACTERS = {
         shorts: { on: true, color: "#606a90", hem: 0.36, flare: 1 },
         socks: { color: "#5a4e55", top: 0.38 },   // tights: up under the shorts
         // the cuff a tube standing off the shaft, a round toe, a heel
-        shoes: { kind: "boots", color: "#7a625b", soleColor: "#d2c8c6", bootHeight: 0.23, offset: 0.017, cuff: 0.08, cuffOut: 0.02, cuffTube: true, toeCap: 0.5, heelBlock: 0.012, cuffColor: "#a98a76" },
+        shoes: { kind: "boots", color: "#7a625b", soleColor: "#d2c8c6", bootHeight: 0.23, offset: 0.017, cuff: 0.08, cuffOut: 0.02, cuffTube: true, toeCap: 0.3, heelBlock: 0.012, cuffColor: "#a98a76" },
         // the cloak: closed at the throat under the star, hanging from the shoulders (over "body": over the arms a cape this long folded
         // over itself when they came down), its sides ending behind the arms (sideEdge) and its hem lowest at those front corners (tilt < 0).
         // Flared out past the hands (at 0.65 its sides ran just behind the fists in the rest pose, through them at -0.02)
@@ -219,7 +219,7 @@ export const CHARACTERS = {
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt
-        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.108], n: [0.25, 0.3, 1], size: 0.12, color: "#d4a878" },   // on the closure, right of the middle as on the sheet (cape.closeX)
+        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.099], n: [0.35, 0.3, 1], size: 0.12, color: "#d4a878" },   // on the closure, right of the middle as on the sheet (cape.closeX); n and depth fitted to the cloak's round front under it (facing forward its upper left stood off it)
         { kind: "buckle", bone: "spine", at: [0, 0.093, 0.119], n: [0, 0, 1], size: 0.095, color: "#d4a878", lift: 0.004 },
       ],
     } },
