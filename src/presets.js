@@ -149,11 +149,13 @@ export const CHARACTERS = {
           // the back: thinner (his head is deeper than the sheet's: as thick as the sides, the back stood out further still). The spikes at
           // its corners are the sheet's flicks at the back's outline, from the back and from the side; none straight back (from behind it
           // pointed at the eye: a stud)
-          { to: [-150, 0.97], width: 0.2, thick: 0.025 },
-          { to: [150, 0.97], width: 0.22, thick: 0.025, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }] },
-          { to: [178, 0.94], width: 0.24, thick: 0.025 },
-          { to: [-125, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.09, out: 0.08 }] },
-          { to: [122, 0.99], width: 0.2, thick: 0.035, spikes: [{ y: 1.1 }] },
+          // out: their tips flick off the head, and a flick turned up low at each back corner: lying on the head to their ends the back was a
+          // smooth ball from the side (the sheet's is a line of flicks)
+          { to: [-150, 0.99], width: 0.2, thick: 0.025, out: 0.06, spikes: [{ y: 1.04, length: 0.14, out: 0.07, up: 20 }] },
+          { to: [150, 0.99], width: 0.22, thick: 0.025, out: 0.06, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }, { y: 1.03, length: 0.14, out: 0.07, up: 20 }] },
+          { to: [178, 0.96], width: 0.24, thick: 0.025, out: 0.055, tips: [0.82, 1, 0.9], notch: 0.12 },
+          { to: [-125, 1.01], width: 0.2, thick: 0.035, out: 0.045, spikes: [{ y: 1.09, out: 0.08 }] },
+          { to: [122, 1.01], width: 0.2, thick: 0.035, out: 0.045, spikes: [{ y: 1.1 }] },
           // the sides: a thick fan over each ear, and the flicks beside the brows from the front growing out of it: his right one and the
           // end under it flared out (up: below level), his left two, running a little toward the back (side)
           { to: [-90, 0.985], width: 0.22, thick: 0.06, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.145, length: 0.18, out: 0.085, width: 0.12 }, { y: 0.995, length: 0.13, out: 0.05, up: -40, width: 0.1 }] },
