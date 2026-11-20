@@ -17,7 +17,7 @@ definePart({ src: import.meta.url,
     ["flare", L("先の広がり", "Flare"), { when: { ".on": true }, min: 0, max: 1, step: 0.02, help: L("手の側ほど太くする", "wider toward the hand") }],
   ],
   // how far it stands out of the forearm's end, a bell sleeve's opening under it too (a cape's cloth keeps off it: index.js)
-  wrist: (O, OPT) => (OPT.outfit.shirt.sleeve === "bell" ? 0.006 + 1.3 * (OPT.outfit.shirt.bell ?? 0.06) : 0) + (O.out ?? 0.008) + 0.012 + (O.flare ?? 0.3) * 0.03,
+  wrist: (O, OPT) => (OPT.outfit.shirt.sleeve === "bell" ? 0.006 + 1.3 * (OPT.outfit.shirt.bell ?? 0.06) + Math.max(0, (OPT.outfit.shirt.sleeveWidth ?? 0) - 0.042) : 0) + (O.out ?? 0.008) + 0.012 + (O.flare ?? 0.3) * 0.03,   // (sleeveWidth: past the bell's own 4.2 cm)
   build({ O, sleeveEnd }) {
     const W = O.width ?? 0.06, OUT = O.out ?? 0.008, FL = (O.flare ?? 0.3) * 0.03, TK = 0.012;
     const sheets = ["L", "R"].map((s) => sleeveEnd(s, OUT + FL + 0.02)).filter(Boolean).map((E) => ({ lo: E.lo, hi: E.hi, tk: TK,

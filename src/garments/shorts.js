@@ -16,9 +16,13 @@ definePart({ src: import.meta.url,
     ["flare", L("すその広がり", "Flare"), { when: { ".on": true }, min: 0, max: 1, step: 0.02, help: L("すそへ向かって脚から離れる(箱形の短パン)", "the legs stand off the thighs toward the hem (boxy shorts)") }],
   ],
   build({ O, legsSdf, bodySdf }) {
-    const HEM = O.hem ?? 0.34, FL = (O.flare ?? 0) * 0.03, core = legsSdf(HEM);
-    // (not across the middle: the two legs would join)
-    return { hem: HEM, sdf: (x, y, z, B = bodySdf) => core(x, y, z, B) - FL * sstep(0.44, HEM, y) * sstep(0.02, 0.07, Math.abs(x)) };
+    const HEM = O.hem ?? 0.34, FL = (O.flare ?? 0) * 0.03, core = legsSdf(-1);
+    if (!FL) return { hem: HEM, sdf: legsSdf(HEM) };
+    // flared, the legs pushed out all round meet between the thighs: there a groove down the middle and the hem notched up, so they read
+    // as two legs pressed together (cut apart, the slit showed the background; flared only outward, the middle hung as one curtain)
+    const TOP = 0.41;
+    return { hem: HEM, sdf: (x, y, z, B = bodySdf) => { const ax = Math.abs(x), m = 1 - sstep(0, 0.012, ax);
+      return Math.max(core(x, y, z, B) - FL * sstep(0.44, HEM, y) + 0.006 * m * sstep(TOP, TOP - 0.03, y), HEM + 0.018 * (1 - sstep(0, 0.025, ax)) - y); } };
   },
   spec: (st, { H, B }) => ({ sdf: st.sdf, fast: (x, y, z) => st.sdf(x, y, z, B), lo: [-0.3, st.hem - 0.03, -0.22], hi: [0.3, 0.56, 0.24], h: H, only: /^(hips|spine|upperLeg|lowerLeg)/ }),
 });

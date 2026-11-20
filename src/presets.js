@@ -129,7 +129,7 @@ export const CHARACTERS = {
       body: {
         head: { scale: 0.84, width: 0.94 },
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
-        thickness: { thigh: 0.74, thighTop: 0.74, calf: 0.74 },
+        thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
@@ -201,22 +201,25 @@ export const CHARACTERS = {
       },
       outfit: {
         // the tunic: a dress to the hip joints, blue (the sleeves, the sides, the back), its white panels printed on the front
-        shirt: { color: "#657096", sleeve: "bell", bell: 0.02, collar: { y: 0.8, notch: 0.03, notchWidth: 0.03 } },
-        dress: { on: true, color: "#657096", waist: 0.575, hem: 0.444, flare: 0.5, pleats: 0, cinch: 0.01, cinchAt: 0.554,
+        shirt: { color: "#657096", sleeve: "bell", bell: 0.004, sleeveWidth: 0.05, collar: { y: 0.8, notch: 0.03, notchWidth: 0.03 } },   // round tubes from the elbow, cut square
+        // its middle panel over the side ones near the hem, the sides hanging lower (sideOut < 0) and all one panel behind
+        dress: { on: true, color: "#657096", waist: 0.575, hem: 0.444, flare: 0.5, pleats: 0, cinch: 0.01, cinchAt: 0.554, sideDrop: 0.015, sideAt: 0.56, sideOut: -0.005, middleBack: false,
           texture: { src: ASTEL_TUNIC, mode: "front", scale: 0.56, y: 0.775 } },
-        cuffs: { on: true, color: "#e4e0e4", width: 0.1, out: 0.003, flare: 0.1 },
+        cuffs: { on: true, color: "#e4e0e4", width: 0.055, out: 0.005, flare: 0 },
         belt: { on: true, color: "#7a625b", y: 0.554, width: 0.062 },
-        shorts: { on: true, color: "#606a90", hem: 0.36, flare: 0.3 },
+        shorts: { on: true, color: "#606a90", hem: 0.36, flare: 1 },
         socks: { color: "#5a4e55", top: 0.38 },   // tights: up under the shorts
-        shoes: { kind: "boots", color: "#7a625b", soleColor: "#d2c8c6", bootHeight: 0.23, offset: 0.017, cuff: 0.08, cuffOut: 0.016, cuffColor: "#a98a76" },
-        // the cloak: closed at the collarbone under the star, hanging from the shoulders (over "body": over the arms a cape this long folded
-        // over itself when they came down), its sides ending behind the arms (sideEdge) and its hem lowest at those front corners (tilt < 0)
-        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.73, open: 1.45, sideEdge: -0.02, hem: 0.225, tilt: -0.3, flare: 0.65, hood: true, hoodSize: 1.3 },
+        // the cuff a tube standing off the shaft, a round toe, a heel
+        shoes: { kind: "boots", color: "#7a625b", soleColor: "#d2c8c6", bootHeight: 0.23, offset: 0.017, cuff: 0.08, cuffOut: 0.02, cuffTube: true, toeCap: 0.5, heelBlock: 0.012, cuffColor: "#a98a76" },
+        // the cloak: closed at the throat under the star, hanging from the shoulders (over "body": over the arms a cape this long folded
+        // over itself when they came down), its sides ending behind the arms (sideEdge) and its hem lowest at those front corners (tilt < 0).
+        // The hood lies down as a cowl standing round the neck (cowl, up to collar)
+        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.755, open: 1.45, sideEdge: -0.02, hem: 0.225, tilt: -0.3, flare: 0.65, hood: true, hoodSize: 1.3, cowl: 0.045, collar: 0.825 },
         weapon: { right: "fist", left: "fist" },
       },
-      accessories: [   // (offsets from the bone's joint, as built) the clasp over the cloak's closure; the buckle on the belt
-        { kind: "star4", bone: "upperChest", at: [0, 0.064, 0.16], n: [0, 0.1, 1], size: 0.12, color: "#d4a878" },
-        { kind: "buckle", bone: "spine", at: [0, 0.093, 0.2], n: [0, 0, 1], size: 0.095, color: "#d4a878", lift: 0.006 },
+      accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt
+        { kind: "star4", bone: "upperChest", at: [0, 0.088, 0.113], n: [0, 0.1, 1], size: 0.12, color: "#d4a878" },
+        { kind: "buckle", bone: "spine", at: [0, 0.093, 0.119], n: [0, 0, 1], size: 0.095, color: "#d4a878", lift: 0.004 },
       ],
     } },
   },
