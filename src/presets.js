@@ -221,7 +221,7 @@ export const CHARACTERS = {
         // over itself when they came down), its sides ending behind the arms (sideEdge) and its hem lowest at those front corners (tilt < 0).
         // Flared out past the hands (at 0.65 its sides ran just behind the fists in the rest pose, through them at -0.02)
         // The hood lies down as a cowl standing round the neck (cowl, up to collar), its top rolled into a thick ring (cowlRoll), as on the sheet
-        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.755, closeX: 0.046, open: 1.45, sideEdge: -0.045, hem: 0.225, tilt: -0.3, flare: 0.9, hood: true, hoodSize: 1.3, cowl: 0.045, cowlRoll: 0.045, collar: 0.825 },
+        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.755, closeX: 0.046, open: 1.45, sideEdge: -0.045, hem: 0.225, tilt: -0.3, flare: 0.9, hood: true, hoodSize: 1.3, cowl: 0.055, cowlRoll: 0.045, collar: 0.825 },
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt

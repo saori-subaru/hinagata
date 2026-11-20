@@ -483,7 +483,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         const g = -0.005 + 0.016 * (1 - sstep(Math.min(1.75, END - 0.25), Math.min(2, END), th)) * sstep(NK.ra - 0.002, NK.ra + 0.008, rN);   // (sunk 5 mm: nothing left)
         const r = neck.ray(x, z), inside = r ? rN - r.t - 0.004 : 0;   // (past the rays it has sunk)
         return Math.max(B - g, -(B + 0.004), neck.at(x, z) - 0.008 - y, y - neck.at(x, z) - 0.055 + 0.3 * Math.max(0, rN - NK.ra), inside); };
-      const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind
+      const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = COWL ? Math.min(0.16 * LS, NK0.ra + COWL + Math.max(CA.thick, CA.cowlRoll ?? 0) / 2) : 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind (with a cowl no wider than its ring: wider, its top corners stood on the shoulders, seen from the front)
       // the bag: inside an ellipse narrowing downward (bagCut < 0), its top bagTop (m) over the cape's outer side: 14 mm at its rim, 52 in the middle (at 22 it lay flat as a print)
       const bagE = (x, y) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)); return Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd); };
       const bagTop = (x, y) => { const e = bagE(x, y); return 0.014 + 0.038 * Math.max(0, 1 - e * e); };
@@ -502,17 +502,51 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         bagTop, bagCut, bagOut, bagY: yT,
         bag: { lo: [-hw - 0.01, yT - hd - 0.01], hi: [hw + 0.01, yT + 0.01] } };
     })() : null;
-    // cape.cowlRoll (m, with the cowl): its top a roll that thick round the neck (the hood rolled into a ring, アステル's sheet), its own part
-    // ("hood", fine cells): an ellipse across the neckline, 1.5 times as tall as thick, its lower part over the cape's cut edge; thinner toward
-    // the closure. (The cowl stood higher alone, or its cloth thicker, was a standing collar: a thin wall, or a flat-topped one)
+    // cape.cowlRoll (m, with the cowl): its top a roll that thick (the hood rolled into a ring, アステル's sheet), its own part ("hood", fine
+    // cells): an ellipse 1.5 times as tall across the neckline itself to both of the closure's ends (round the neck's own circle it sank into the
+    // chest where the neckline comes forward: the cut edge showed). The cowl higher alone, or its cloth thicker, was a standing collar
     const roll = COWL && (CA.cowlRoll ?? 0) > 0 && neck ? (() => {
-      const RA = CA.cowlRoll / 2, RB = RA * 1.5, s0 = (CA.collar - NK0.ay) / NK0.by, xa = NK0.ax + NK0.bx * s0, za = NK0.az + NK0.bz * s0;
-      const RC = NK0.ra + COWL, END = (neck.line.length - 1) * Math.PI / 360;   // RC: round the cowl's middle; END: where the neckline reaches the closure (rad from the back)
-      const sdf = (x, y, z) => { const dx = x - xa, dz = z - za, r = Math.hypot(dx, dz) || 1e-6, th = Math.atan2(Math.abs(dx), -dz), k = 1 - 0.55 * sstep(END - 0.7, END, th);
-        const a = RA * k, b = RB * k, yc = neck.at(xa + dx / r * RC, za + dz / r * RC) + 0.45 * b;
-        return (Math.hypot((r - RC) / a, (y - yc) / b) - 1) * Math.min(a, b); };
-      const R = RC + RA + 0.01;
-      return { sdf, lo: [xa - R, (CA.close ?? 0.7) - 0.04, za - R], hi: [xa + R, CA.collar + 0.04 + 2 * RB, za + R] };
+      const RA = CA.cowlRoll / 2, RB = RA * 1.5, S = Math.sign(CX), D = Math.PI / 360;
+      // each side's line on its own (the neckline's rays are one side's, mirrored, and a closure off the middle makes the sides differ: the path
+      // dropped down the other side's V and jumped back), on to the closure's end; the flap lying over the middle goes on across it to the far end
+      const traceSide = (sg) => { const out = [], over = S !== 0 && sg !== S;
+        for (let i = 0; i <= 360; i++) { const th = D * i, sx = sg * Math.sin(th), sz = -Math.cos(th); let q = null;
+          for (let t = 0.005; t < 0.35; t += 0.0008) { const x = sx * t, z = zA + sz * t, y = neck.at(x, z); if (capeBody(x, y, z) >= MID) { q = [x, y, z]; break; } }
+          if (!q) break; out.push(q);
+          if (over ? th > Math.PI - 0.06 : th > Math.PI / 2 && Math.abs(q[0]) <= XF + Math.abs(CX)) break; }
+        if (over) { const from = out.at(-1)[0], to = CX - S * XF, n = Math.ceil(Math.abs(to - from) / 0.003);
+          for (let i = 1; i <= n; i++) { const x = from + (to - from) * i / n; let z = zA, y = neck.at(x, z); while (z < zA + 0.3 && capeBody(x, y, z) < MID) { z += 0.0008; y = neck.at(x, z); } out.push([x, y, z]); } }
+        return out; };
+      const first = traceSide(S >= 0 ? -1 : 1), raw = [...first.reverse(), ...traceSide(S >= 0 ? 1 : -1).slice(1)];
+      const Ls = [0]; for (let i = 1; i < raw.length; i++) Ls.push(Ls[i - 1] + Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1], raw[i][2] - raw[i - 1][2]));
+      const LT = Ls.at(-1), M = Math.max(8, Math.ceil(LT / 0.005)), P = [];   // evenly along it
+      for (let k = 0, j = 0; k <= M; k++) { const l = LT * k / M; while (j < raw.length - 2 && Ls[j + 1] < l) j++; const f = Math.min(1, (l - Ls[j]) / Math.max(1e-9, Ls[j + 1] - Ls[j])); P.push(raw[j].map((v, m) => v + (raw[j + 1][m] - v) * f)); }
+      // smoothed (the ends kept): where the neckline turns down to the closure it bends tighter than the roll is thick, and the roll folded into itself there in dark creases
+      for (let it = 0; it < 12; it++) { const Q = P.map((q) => q.slice()); for (let i = 1; i < M; i++) for (let m = 0; m < 3; m++) P[i][m] = (Q[i - 1][m] + 2 * Q[i][m] + Q[i + 1][m]) / 4; }
+      // each point's frame: N off the cloth, U across the line toward the cut-off side (from the neck's axis, the frame spun where the line comes
+      // straight out of it near the closure: shards); thinner over 10 cm to each end; the ellipse's middle lifted 0.45 of its height
+      const C = [], NV = [], UV = [], A = [], B = [], e = 0.002, grad = (f, q) => [f(q[0] + e, q[1], q[2]) - f(q[0] - e, q[1], q[2]), f(q[0], q[1] + e, q[2]) - f(q[0], q[1] - e, q[2]), f(q[0], q[1], q[2] + e) - f(q[0], q[1], q[2] - e)];
+      P.forEach((q, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(M, i + 1)]; let T = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...T); T = T.map((v) => v / l);
+        let N = grad(capeBody, q); const d = N[0] * T[0] + N[1] * T[1] + N[2] * T[2]; N = N.map((v, m) => v - d * T[m]); l = Math.hypot(...N) || 1; N = N.map((v) => v / l);
+        let U = [T[1] * N[2] - T[2] * N[1], T[2] * N[0] - T[0] * N[2], T[0] * N[1] - T[1] * N[0]]; const g = grad(neck.cut, q); if (U[0] * g[0] + U[1] * g[1] + U[2] * g[2] < 0) U = U.map((v) => -v);
+        const k = 1 - 0.6 * (1 - sstep(0, 0.1, Math.min(LT * i / M, LT * (1 - i / M))));
+        A.push(RA * k); B.push(RB * k); NV.push(N); UV.push(U); C.push(q.map((v, m) => v + U[m] * 0.45 * RB * k)); });
+      const RM = RB * 1.05, lo = [0, 1, 2].map((m) => Math.min(...C.map((c) => c[m])) - RM - 0.01), hi = [0, 1, 2].map((m) => Math.max(...C.map((c) => c[m])) + RM + 0.01);
+      // measured at the path's nearest point (each piece's own ellipse rippled the surface every 5 mm: the shading's edge sawn)
+      const sdf = (x, y, z) => { let bd = 1e9, bi = 0, bt = 0;
+        for (let i = 0; i < M; i++) { const c0 = C[i], c1 = C[i + 1], sx = c1[0] - c0[0], sy = c1[1] - c0[1], sz = c1[2] - c0[2], ll = sx * sx + sy * sy + sz * sz || 1e-12;
+          const t = Math.min(1, Math.max(0, ((x - c0[0]) * sx + (y - c0[1]) * sy + (z - c0[2]) * sz) / ll)), d = Math.hypot(x - c0[0] - t * sx, y - c0[1] - t * sy, z - c0[2] - t * sz);
+          if (d < bd) { bd = d; bi = i; bt = t; } }
+        if (bd > RM + 0.02) return bd - RM;   // (far off it: a lower bound)
+        const i = bi, t = bt, w = 1 - t, c0 = C[i], c1 = C[i + 1], qx = x - c0[0] - t * (c1[0] - c0[0]), qy = y - c0[1] - t * (c1[1] - c0[1]), qz = z - c0[2] - t * (c1[2] - c0[2]);
+        const N0 = NV[i], N1 = NV[i + 1], U0 = UV[i], U1 = UV[i + 1], a = A[i] * w + A[i + 1] * t, b = B[i] * w + B[i + 1] * t;
+        let nx = N0[0] * w + N1[0] * t, ny = N0[1] * w + N1[1] * t, nz = N0[2] * w + N1[2] * t, ux = U0[0] * w + U1[0] * t, uy = U0[1] * w + U1[1] * t, uz = U0[2] * w + U1[2] * t;
+        const ln = Math.hypot(nx, ny, nz) || 1, lu = Math.hypot(ux, uy, uz) || 1, n = (qx * nx + qy * ny + qz * nz) / ln, u = (qx * ux + qy * uy + qz * uz) / lu;
+        const tx = c1[0] - c0[0], ty = c1[1] - c0[1], tz = c1[2] - c0[2], tl = Math.hypot(tx, ty, tz) || 1, along = (qx * tx + qy * ty + qz * tz) / tl;   // past the path's ends: capped there
+        const best = (Math.hypot(n / a, u / b) - 1) * Math.min(a, b);
+        return (i === 0 && t === 0 && along < 0) || (i === M - 1 && t === 1 && along > 0) ? Math.max(best, Math.abs(along) - 0.002) : best;
+      };
+      return { sdf, lo, hi };
     })() : null;
     const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
     const f = (x, y, z, B = bodySdf) => {
