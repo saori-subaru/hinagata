@@ -130,7 +130,7 @@ export const CHARACTERS = {
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, backPlane: { z: 0.21, tilt: 0.2, k: 0.08 } },   // backPlane: the back of his skull about 2 cm shorter (the spikes stand on it: with the whole ball under them the back of his head bulged)
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
@@ -140,12 +140,6 @@ export const CHARACTERS = {
         gradient: { on: true, color: "#c6a48e", start: 0.6, soft: 0.4 },
         whorl: { x: -0.07, z: 0.1 },
         tufts: [   // to: [round the head (degrees, 0 = front, + his left), the tip's height (head space)]; widths and thicknesses in m; a spike's y: its point's height
-          // under the others, in shadow: along the nape and behind the ears, from their own roots at the back
-          { to: [180, 0.885], from: [0, -0.29], width: 0.2, thick: 0.012, tips: [0.9, 1, 0.8], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
-          { to: [140, 0.9], from: [0.17, -0.22], width: 0.18, thick: 0.012, tips: [1, 0.8, 0.92], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
-          { to: [-140, 0.9], from: [-0.17, -0.22], width: 0.18, thick: 0.012, tips: [0.92, 0.8, 1], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
-          { to: [103, 0.96], from: [0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.8, 1, 0.88], notch: 0.15, endWidth: 1, hug: 0.6, shade: 0.6 },
-          { to: [-103, 0.96], from: [-0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.88, 1, 0.8], notch: 0.15, endWidth: 1, hug: 0.6, shade: 0.6 },
           // the back: thin tufts lying on the head, and out of them the sheet's back as three-sided spikes in two rows, running back and down
           // (the tufts' own ends flicked were flat bananas; locks laid as one shell were a bowl with a fringe). Thin, the spikes little out:
           // at 4.5 cm and 8.5 cm the back of his head swelled; thinner (1.5 cm) the scalp showed through
@@ -168,7 +162,8 @@ export const CHARACTERS = {
           { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.9, 1, 0.95], notch: 0.09, endWidth: 0.8, hook: -10 },   // its points a little uneven (three alike read as a comb)
         ],
         sculpt: {
-          whorl: { on: true, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
+          whorl: { on: true, crop: { top: 1.02, y: 0.82, side: 0.9, z: -0.03, thick: 0.006 } },   // crop: the cropped nape as its own layer under the back's tufts (tufts in shadow there were a second row of petals; painted, whorl.nape, it had no edge)
+          shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
           backVolume: 0,   // the back of his head 1.8 cm shorter
           ahogeCurl: true, ahogeLean: -20, ahogeDir: 125, ahogeSize: 1.5, ahogeWidth: 2, ahogeX: -0.07, ahogeZ: 0.08,   // a thick horn at the whorl, its point toward his left and the back
         },
