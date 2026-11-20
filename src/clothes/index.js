@@ -540,7 +540,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         let U = [T[1] * N[2] - T[2] * N[1], T[2] * N[0] - T[0] * N[2], T[0] * N[1] - T[1] * N[0]]; const g = grad(neck.cut, q); if (U[0] * g[0] + U[1] * g[1] + U[2] * g[2] < 0) U = U.map((v) => -v);
         return { N, U }; });
       // a tube along a path: at each point an ellipse A across the cloth by B along it, its middle at C (m); DR (optional): its lower half X longer,
-      // measured there off the cloth itself (surf, less L: the middle's lift; across the path's plane it sank into the cape flaring out under it)
+      // measured there off the cloth itself (surf, less L: the middle's lift; across the path's plane it sank into the cape flaring out under it), F more
       const tube = (F, A, B, C, DR = null) => { const M = C.length - 1, NV = F.map((f) => f.N), UV = F.map((f) => f.U), RM = Math.max(...B.map((v, i) => v + (DR ? DR.X[i] : 0)), ...A) * 1.05;
         const lo = [0, 1, 2].map((m) => Math.min(...C.map((c) => c[m])) - RM - 0.01), hi = [0, 1, 2].map((m) => Math.max(...C.map((c) => c[m])) + RM + 0.01);
         // measured at the path's nearest point (each piece's own ellipse rippled the surface every 5 mm: the shading's edge sawn)
@@ -555,7 +555,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
           const ln = Math.hypot(nx, ny, nz) || 1, lu = Math.hypot(ux, uy, uz) || 1, n = (qx * nx + qy * ny + qz * nz) / ln, u = (qx * ux + qy * uy + qz * uz) / lu;
           const tx = c1[0] - c0[0], ty = c1[1] - c0[1], tz = c1[2] - c0[2], tl = Math.hypot(tx, ty, tz) || 1, along = (qx * tx + qy * ty + qz * tz) / tl;   // past the path's ends: capped there
           let nn = n, bb = b;
-          if (DR && u < 0) { const xx = DR.X[i] * w + DR.X[i + 1] * t; if (xx > 0) { bb = b + xx; const k = sstep(0, 0.02, -u) * Math.min(1, xx / 0.01); if (k > 0) nn += (DR.surf(x, y, z) - (DR.L[i] * w + DR.L[i + 1] * t) - n) * k; } }
+          if (DR && u < 0) { const xx = DR.X[i] * w + DR.X[i + 1] * t; if (xx > 0) { bb = b + xx; const k = sstep(0, 0.02, -u) * Math.min(1, xx / 0.01); if (k > 0) nn += (DR.surf(x, y, z) - (DR.L[i] * w + DR.L[i + 1] * t) - n) * k; nn -= DR.F * Math.min(1, xx / 0.02) * (u / bb) ** 2; } }
           const best = (Math.hypot(nn / a, u / bb) - 1) * Math.min(a, bb);
           return (i === 0 && t === 0 && along < 0) || (i === M - 1 && t === 1 && along > 0) ? Math.max(best, Math.abs(along) - 0.002) : best;
         };
@@ -572,9 +572,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         for (let it = 0; it < 3; it++) { const g = grad(shell, p), l = Math.hypot(...g) || 1, d = shell(...p); p = p.map((v, m) => v - g[m] / l * d); }   // onto the cloth's middle
         return p; });
       const F2 = frames(P2, shell), S2 = K2.map((k) => 0.3 + 0.7 * k);
-      // the droop: EX m at the middle, none from 12 cm out (wider, its fading sides creased)
-      const EX = P2.map((q) => 0.09 * (1 - sstep(0, 0.12, Math.abs(q[0]))) * sstep(-0.02, -0.06, q[2]));
-      const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])), { X: EX, L: S2.map((k) => 0.7 * A2 * k), surf: shell });
+      // the droop: EX m, 7 cm at the middle to a point, none from 12 cm out (wider, its fading sides creased); its lower part lifted off the cloth
+      // up to F at the tip (flat on it, it read as stuck on)
+      const EX = P2.map((q) => { const s = Math.min(1, Math.abs(q[0]) / 0.12); return 0.07 * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
+      const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])), { X: EX, L: S2.map((k) => 0.7 * A2 * k), surf: shell, F: 0.015 });
       return { sdf: (x, y, z) => Math.min(R1.sdf(x, y, z), R2.sdf(x, y, z)), lo: R1.lo.map((v, m) => Math.min(v, R2.lo[m])), hi: R1.hi.map((v, m) => Math.max(v, R2.hi[m])), two: true };
     })() : null;
     const BAG = hood && !roll?.two;

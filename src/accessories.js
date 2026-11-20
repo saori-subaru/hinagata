@@ -1,6 +1,6 @@
 // Accessories (options.accessories, 2026-10-05, Saori: Nahida's leaf hair ornament and golden anklets): small pieces stuck on the character,
 // each riding on one bone. Not shapes in the body's distance field: plain little meshes (fast to add and move in an editor).
-// An item: { kind, bone, at: [x, y, z], n: [x, y, z], spin (degrees), size (m), color, mirror }
+// An item: { kind, bone, at: [x, y, z], n: [x, y, z], spin (degrees), size (m), color, mirror, lift (m), outline (m), metal }
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).

@@ -225,7 +225,7 @@ export const CHARACTERS = {
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt
-        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.099], n: [0.35, 0.3, 1], size: 0.12, color: "#d4a878" },   // on the closure, right of the middle as on the sheet (cape.closeX); n and depth fitted to the cloak's round front under it (facing forward its upper left stood off it)
+        { kind: "star4", bone: "upperChest", at: [0.046, 0.078, 0.099], n: [0.35, 0.3, 1], size: 0.12, color: "#d4a878", lift: 0.01, metal: true, outline: 0.005 },   // on the closure, right of the middle as on the sheet (cape.closeX); n fitted to the cloak's round front under it (facing forward its upper left stood off it); lifted onto the collar's two rings, shining as metal
         { kind: "pinBuckle", bone: "spine", at: [0, 0.093, 0.119], n: [0, 0, 1], size: 0.085, color: "#d4a878", lift: 0.004 },   // the sheet's: a thin frame, its prong
       ],
     } },

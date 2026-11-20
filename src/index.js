@@ -818,7 +818,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap }).forEach(({ geo, bone }, k) => {
         const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
-        const key = k ? `acc${i}.${k}` : `acc${i}`; parts[key] = skinned(geo, it.color ?? "#e8c25a", 0.0025); accKeys.push(key); }); });
+        // outline (m): its line's width; metal: the armor's shine (stronger bands, a glint: a gold clasp buried in the cloak's folds read flat)
+        const key = k ? `acc${i}.${k}` : `acc${i}`, col = it.color ?? "#e8c25a", x = parts[key] = skinned(geo, col, it.outline ?? 0.0025); accKeys.push(key);
+        if (it.metal) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, col); x.metal = true; } }); });
   }
   makeAccessories();
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
@@ -1139,7 +1141,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN && !x.sim) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = x.wrap(shadeToon(old.color.getHex())); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) || x.metal ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
