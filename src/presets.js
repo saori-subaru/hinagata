@@ -160,14 +160,16 @@ export const CHARACTERS = {
           { to: [92, 0.97], width: 0.24, thick: 0.05, tips: [1, 0.8, 0.9], notch: 0.06, endWidth: 0.8, spikes: [{ y: 1.2, length: 0.18, out: 0.08, width: 0.12, side: [-0.4, 0.4] }, { y: 1.04, out: 0.08, up: 5, width: 0.12, side: [-0.3, 0.5] }] },
           // the front: a block outside each eye (the forehead shows between his right one and the middle), the sidelocks to the cheeks, and
           // the middle blade, its points between the eyes. Thick: on the sheet the fringe stands well off the forehead
-          { to: [-40, 1.0], width: 0.09, thick: 0.04 },
-          { to: [35, 1.0], width: 0.12, thick: 0.045 },
-          { to: [-60, 0.93], width: 0.16, thick: 0.04, tips: [1, 0.86], notch: 0.07, endWidth: 0.75 },
-          { to: [62, 0.945], width: 0.17, thick: 0.04, tips: [0.84, 1], notch: 0.06, endWidth: 0.8 },
-          { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.72, 1, 0.86], notch: 0.14, endWidth: 0.8 },   // the middle point long, the two beside it shorter by turns (three alike read as a comb)
+          // bow: each curves on its way down, the sides' out round the temples, the middle toward his right (straight from the whorl they were rulers;
+          // the middle bowed to his left bared the forehead over his right eye)
+          { to: [-40, 1.0], width: 0.09, thick: 0.04, bow: -4 },
+          { to: [35, 1.0], width: 0.12, thick: 0.045, bow: 9 },
+          { to: [-60, 0.93], width: 0.16, thick: 0.04, tips: [1, 0.86], notch: 0.07, endWidth: 0.75, bow: -9 },
+          { to: [62, 0.945], width: 0.17, thick: 0.04, tips: [0.84, 1], notch: 0.06, endWidth: 0.8, bow: 9 },
+          { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.72, 1, 0.86], notch: 0.14, endWidth: 0.8, bow: -9 },   // the middle point long, the two beside it shorter by turns (three alike read as a comb)
         ],
         sculpt: {
-          whorl: { on: true, nape: { y: 0.76, z: -0.02 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
+          whorl: { on: true, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
           backVolume: 0,   // the back of his head 1.8 cm shorter
           ahogeCurl: true, ahogeLean: -20, ahogeDir: 125, ahogeSize: 1.5, ahogeWidth: 2, ahogeX: -0.07, ahogeZ: 0.08,   // a thick horn at the whorl, its point toward his left and the back
         },
