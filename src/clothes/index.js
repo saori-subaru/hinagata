@@ -533,29 +533,43 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       // smoothed (the ends kept): where the neckline turns down to the closure it bends tighter than the roll is thick, and the roll folded into itself there in dark creases
       for (let it = 0; it < 12; it++) { const Q = P.map((q) => q.slice()); for (let i = 1; i < M; i++) for (let m = 0; m < 3; m++) P[i][m] = (Q[i - 1][m] + 2 * Q[i][m] + Q[i + 1][m]) / 4; }
       // each point's frame: N off the cloth, U across the line toward the cut-off side (from the neck's axis, the frame spun where the line comes
-      // straight out of it near the closure: shards); thinner over 10 cm to each end; the ellipse's middle lifted 0.45 of its height
-      const C = [], NV = [], UV = [], A = [], B = [], e = 0.002, grad = (f, q) => [f(q[0] + e, q[1], q[2]) - f(q[0] - e, q[1], q[2]), f(q[0], q[1] + e, q[2]) - f(q[0], q[1] - e, q[2]), f(q[0], q[1], q[2] + e) - f(q[0], q[1], q[2] - e)];
-      P.forEach((q, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(M, i + 1)]; let T = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...T); T = T.map((v) => v / l);
-        let N = grad(capeBody, q); const d = N[0] * T[0] + N[1] * T[1] + N[2] * T[2]; N = N.map((v, m) => v - d * T[m]); l = Math.hypot(...N) || 1; N = N.map((v) => v / l);
+      // straight out of it near the closure: shards)
+      const e = 0.002, grad = (f, q) => [f(q[0] + e, q[1], q[2]) - f(q[0] - e, q[1], q[2]), f(q[0], q[1] + e, q[2]) - f(q[0], q[1] - e, q[2]), f(q[0], q[1], q[2] + e) - f(q[0], q[1], q[2] - e)];
+      const frames = (P, body) => P.map((q, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)]; let T = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], l = Math.hypot(...T); T = T.map((v) => v / l);
+        let N = grad(body, q); const d = N[0] * T[0] + N[1] * T[1] + N[2] * T[2]; N = N.map((v, m) => v - d * T[m]); l = Math.hypot(...N) || 1; N = N.map((v) => v / l);
         let U = [T[1] * N[2] - T[2] * N[1], T[2] * N[0] - T[0] * N[2], T[0] * N[1] - T[1] * N[0]]; const g = grad(neck.cut, q); if (U[0] * g[0] + U[1] * g[1] + U[2] * g[2] < 0) U = U.map((v) => -v);
-        const k = 1 - 0.6 * (1 - sstep(0, 0.1, Math.min(LT * i / M, LT * (1 - i / M))));
-        A.push(RA * k); B.push(RB * k); NV.push(N); UV.push(U); C.push(q.map((v, m) => v + U[m] * 0.45 * RB * k)); });
-      const RM = RB * 1.05, lo = [0, 1, 2].map((m) => Math.min(...C.map((c) => c[m])) - RM - 0.01), hi = [0, 1, 2].map((m) => Math.max(...C.map((c) => c[m])) + RM + 0.01);
-      // measured at the path's nearest point (each piece's own ellipse rippled the surface every 5 mm: the shading's edge sawn)
-      const sdf = (x, y, z) => { let bd = 1e9, bi = 0, bt = 0;
-        for (let i = 0; i < M; i++) { const c0 = C[i], c1 = C[i + 1], sx = c1[0] - c0[0], sy = c1[1] - c0[1], sz = c1[2] - c0[2], ll = sx * sx + sy * sy + sz * sz || 1e-12;
-          const t = Math.min(1, Math.max(0, ((x - c0[0]) * sx + (y - c0[1]) * sy + (z - c0[2]) * sz) / ll)), d = Math.hypot(x - c0[0] - t * sx, y - c0[1] - t * sy, z - c0[2] - t * sz);
-          if (d < bd) { bd = d; bi = i; bt = t; } }
-        if (bd > RM + 0.02) return bd - RM;   // (far off it: a lower bound)
-        const i = bi, t = bt, w = 1 - t, c0 = C[i], c1 = C[i + 1], qx = x - c0[0] - t * (c1[0] - c0[0]), qy = y - c0[1] - t * (c1[1] - c0[1]), qz = z - c0[2] - t * (c1[2] - c0[2]);
-        const N0 = NV[i], N1 = NV[i + 1], U0 = UV[i], U1 = UV[i + 1], a = A[i] * w + A[i + 1] * t, b = B[i] * w + B[i + 1] * t;
-        let nx = N0[0] * w + N1[0] * t, ny = N0[1] * w + N1[1] * t, nz = N0[2] * w + N1[2] * t, ux = U0[0] * w + U1[0] * t, uy = U0[1] * w + U1[1] * t, uz = U0[2] * w + U1[2] * t;
-        const ln = Math.hypot(nx, ny, nz) || 1, lu = Math.hypot(ux, uy, uz) || 1, n = (qx * nx + qy * ny + qz * nz) / ln, u = (qx * ux + qy * uy + qz * uz) / lu;
-        const tx = c1[0] - c0[0], ty = c1[1] - c0[1], tz = c1[2] - c0[2], tl = Math.hypot(tx, ty, tz) || 1, along = (qx * tx + qy * ty + qz * tz) / tl;   // past the path's ends: capped there
-        const best = (Math.hypot(n / a, u / b) - 1) * Math.min(a, b);
-        return (i === 0 && t === 0 && along < 0) || (i === M - 1 && t === 1 && along > 0) ? Math.max(best, Math.abs(along) - 0.002) : best;
-      };
-      return { sdf, lo, hi };
+        return { N, U }; });
+      // a tube along a path: at each point an ellipse A across the cloth by B along it, its middle at C (m)
+      const tube = (F, A, B, C) => { const M = C.length - 1, NV = F.map((f) => f.N), UV = F.map((f) => f.U), RM = Math.max(...B, ...A) * 1.05;
+        const lo = [0, 1, 2].map((m) => Math.min(...C.map((c) => c[m])) - RM - 0.01), hi = [0, 1, 2].map((m) => Math.max(...C.map((c) => c[m])) + RM + 0.01);
+        // measured at the path's nearest point (each piece's own ellipse rippled the surface every 5 mm: the shading's edge sawn)
+        const sdf = (x, y, z) => { let bd = 1e9, bi = 0, bt = 0;
+          for (let i = 0; i < M; i++) { const c0 = C[i], c1 = C[i + 1], sx = c1[0] - c0[0], sy = c1[1] - c0[1], sz = c1[2] - c0[2], ll = sx * sx + sy * sy + sz * sz || 1e-12;
+            const t = Math.min(1, Math.max(0, ((x - c0[0]) * sx + (y - c0[1]) * sy + (z - c0[2]) * sz) / ll)), d = Math.hypot(x - c0[0] - t * sx, y - c0[1] - t * sy, z - c0[2] - t * sz);
+            if (d < bd) { bd = d; bi = i; bt = t; } }
+          if (bd > RM + 0.02) return bd - RM;   // (far off it: a lower bound)
+          const i = bi, t = bt, w = 1 - t, c0 = C[i], c1 = C[i + 1], qx = x - c0[0] - t * (c1[0] - c0[0]), qy = y - c0[1] - t * (c1[1] - c0[1]), qz = z - c0[2] - t * (c1[2] - c0[2]);
+          const N0 = NV[i], N1 = NV[i + 1], U0 = UV[i], U1 = UV[i + 1], a = A[i] * w + A[i + 1] * t, b = B[i] * w + B[i + 1] * t;
+          let nx = N0[0] * w + N1[0] * t, ny = N0[1] * w + N1[1] * t, nz = N0[2] * w + N1[2] * t, ux = U0[0] * w + U1[0] * t, uy = U0[1] * w + U1[1] * t, uz = U0[2] * w + U1[2] * t;
+          const ln = Math.hypot(nx, ny, nz) || 1, lu = Math.hypot(ux, uy, uz) || 1, n = (qx * nx + qy * ny + qz * nz) / ln, u = (qx * ux + qy * uy + qz * uz) / lu;
+          const tx = c1[0] - c0[0], ty = c1[1] - c0[1], tz = c1[2] - c0[2], tl = Math.hypot(tx, ty, tz) || 1, along = (qx * tx + qy * ty + qz * tz) / tl;   // past the path's ends: capped there
+          const best = (Math.hypot(n / a, u / b) - 1) * Math.min(a, b);
+          return (i === 0 && t === 0 && along < 0) || (i === M - 1 && t === 1 && along > 0) ? Math.max(best, Math.abs(along) - 0.002) : best;
+        };
+        return { sdf, lo, hi }; };
+      // the roll: thinner over 10 cm to each end; the ellipse's middle lifted 0.45 of its height
+      const F1 = frames(P, capeBody), end = (i) => Math.min(LT * i / M, LT * (1 - i / M)), K1 = P.map((q, i) => 1 - 0.6 * (1 - sstep(0, 0.1, end(i))));
+      const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i])));
+      // cape.cowlRoll2 (m): a second roll that thick under it, twice as wide along the cloth, its top under the first and its middle 0.7 of its half
+      // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end
+      const T2 = CA.cowlRoll2 ?? 0; if (!(T2 > 0)) return R1;
+      const A2 = T2 / 2, B2 = A2 * 2, DN = B2 + 0.55 * RB - 0.01, shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, K2 = P.map((q, i) => sstep(0, 0.15, end(i)));
+      const P2 = P.map((q, i) => { let p = q.map((v, m) => v - F1[i].U[m] * DN * K2[i]);
+        for (let it = 0; it < 3; it++) { const g = grad(shell, p), l = Math.hypot(...g) || 1, d = shell(...p); p = p.map((v, m) => v - g[m] / l * d); }   // onto the cloth's middle
+        return p; });
+      const F2 = frames(P2, shell), S2 = K2.map((k) => 0.3 + 0.7 * k);
+      const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])));
+      return { sdf: (x, y, z) => Math.min(R1.sdf(x, y, z), R2.sdf(x, y, z)), lo: R1.lo.map((v, m) => Math.min(v, R2.lo[m])), hi: R1.hi.map((v, m) => Math.max(v, R2.hi[m])) };
     })() : null;
     const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
     const f = (x, y, z, B = bodySdf) => {
