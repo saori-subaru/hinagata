@@ -5,15 +5,15 @@
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
 // Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), button, anchor, cross (an X),
-// tassel and tab (hanging down from where they are put), buckle (a frame), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
+// tassel and tab (hanging down from where they are put), buckle (a frame), pinBuckle (a thin frame with a prong), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "cord"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
-function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: 0.04, bevelSegments: 2, curveSegments: 10 });
+function flat(shape, depth, bevel = 0.04) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 });
   g.translate(0, 0, depth * 0.6); return g;
 }
 function merge(list) {   // geometries (position + normal, indexed or not) → one
@@ -71,6 +71,13 @@ const SHAPES = {
     const g = merge(parts); g.translate(0, 0, 0.15); return g; },
   buckle: () => { const box = (p, w, h, r) => { p.moveTo(-w + r, -h); p.lineTo(w - r, -h); p.quadraticCurveTo(w, -h, w, -h + r); p.lineTo(w, h - r); p.quadraticCurveTo(w, h, w - r, h); p.lineTo(-w + r, h); p.quadraticCurveTo(-w, h, -w, h - r); p.lineTo(-w, -h + r); p.quadraticCurveTo(-w, -h, -w + r, -h); return p; };
     const s = box(new THREE.Shape(), 0.5, 0.35, 0.1); s.holes.push(box(new THREE.Path(), 0.3, 0.16, 0.05)); const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
+  // a belt buckle with its prong (for アステル's): a thin frame 0.84 high, the prong's tip coming in from its left side at the middle, 1 wide.
+  // Its bevel small: the buckle's 0.04 rounds every edge out, and a thin frame came out as thick as the buckle's
+  pinBuckle: () => { const W = 0.49, H = 0.41, F = 0.06, iw = W - F, ih = H - F, r = 0.07, ri = 0.03, PL = 0.2, PH = 0.06, s = new THREE.Shape(), h = new THREE.Path();
+    s.moveTo(-W + r, -H); s.lineTo(W - r, -H); s.quadraticCurveTo(W, -H, W, -H + r); s.lineTo(W, H - r); s.quadraticCurveTo(W, H, W - r, H); s.lineTo(-W + r, H); s.quadraticCurveTo(-W, H, -W, H - r); s.lineTo(-W, -H + r); s.quadraticCurveTo(-W, -H, -W + r, -H);
+    h.moveTo(-iw, -ih + ri); h.lineTo(-iw, -PH); h.lineTo(-iw + PL, -PH); h.lineTo(-iw + PL, PH); h.lineTo(-iw, PH); h.lineTo(-iw, ih - ri); h.quadraticCurveTo(-iw, ih, -iw + ri, ih); h.lineTo(iw - ri, ih);
+    h.quadraticCurveTo(iw, ih, iw, ih - ri); h.lineTo(iw, -ih + ri); h.quadraticCurveTo(iw, -ih, iw - ri, -ih); h.lineTo(-iw + ri, -ih); h.quadraticCurveTo(-iw, -ih, -iw, -ih + ri);
+    s.holes.push(h); const g = flat(s, 0.05, 0.012); g.computeVertexNormals(); return g; },
   cord: () => { const g = new THREE.CapsuleGeometry(0.06, 0.88, 4, 10); g.rotateZ(Math.PI / 2); g.translate(0, 0, 0.06); return g; },
   tab: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.05); s.lineTo(w, 0.05); s.lineTo(w, -1); s.lineTo(0, -0.88); s.lineTo(-w, -1); s.lineTo(-w, 0.05);
     const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
