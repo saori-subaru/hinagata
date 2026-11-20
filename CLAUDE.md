@@ -5,11 +5,12 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
 
 - 宿題（次にやること）は **TODO.md**。「宿題を読んで続けて」と言われたらそこから。
 - 設計の記録は DESIGN.md、エージェント向けの使い方は llms.txt（サイトでも公開）。
+- 成長動画(ちび→本人、数値を補間して毎コマ作り直す)は `node tools/grow.mjs --who sylvie2`。オン・オフの値は補間できない。
 - 作業はブランチで。main に入れるのはサオリが言ったときだけ（サイトは main から自動公開）。
 - **エンジン（src/）を変えたら `node tools/thin-check.mjs` を回す**（間引きの崩れの見張り。高頭身・2頭身・版の無いレシピ・細い体を fine / lite / 0.15 で組み、
   前後の厚みを間引かない体と比べる。失敗なら終了コード1。正面と横の絵は thin-check-out/thin-check.png）。落ちたまま main に入れない。
   2026-10-06、原生林の2頭身が 0.15 で紙のように薄く潰れたのを、使う側が見つけるまで誰も気づかなかったため。
-  クラウドでは CDN に出られず止まるので、`npm install three@0.160.0 meshoptimizer@1` した場所を `--npm <node_modules>`、ブラウザを `--chrome /opt/pw-browsers/chromium` で渡す。
+  クラウドでは CDN に出られず止まるので(tools/grow.mjs も同じ)、`npm install three@0.160.0 meshoptimizer@1` した場所を `--npm <node_modules>`、ブラウザを `--chrome /opt/pw-browsers/chromium` で渡す。
 
 ## 断捨離と棚卸し(リモートでは全体の CLAUDE.md が読まれないので、ここにも置く)
 - MD に書くのは3種類だけ: 間違えやすい仕様・何度も調べ直す仕様(置き場・入口)・バグを防ぐ手順と再発防止。日付・発言者・引用・感想・経緯・飾りの絵文字・測定記録・重複は書かない(状態の印は例外=下)。

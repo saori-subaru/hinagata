@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Hinagata — grow</title>
+<style>body { margin: 0; background: #f0ece4; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<script type="module">
+// 成長のパラパラ漫画の1コマを作る: window.frame(t) が t(0=ちび, 1=本人)の絵を PNG の dataURL で返す。tools/grow.mjs が回す。
+// 数値の葉だけを線形に補間し、数値でない値(on/off・種類)は終点のもの(オン・オフは補間できず、そのコマで形がガクッと変わるため使わない)。
+import * as THREE from "three";
+import { createAvatar, CHARACTERS, BODY_TYPES } from "../src/index.js";
+
+const Q = new URLSearchParams(location.search), who = Q.get("who") || "sylvie2", W = +(Q.get("w") || 540), H = +(Q.get("h") || 720);
+const file = CHARACTERS[who].file, end = file.options;
+// 始点: 本人の体を、同じ体型のちび(girl)の比率・太さ・頭の大きさに。arms はちびの null(胴と伸びる)を補間できないので 1
+const chibi = structuredClone(BODY_TYPES[Q.get("from") || "girl"].body); chibi.proportion.arms = 1;
+const merge = (a, b) => { const o = structuredClone(a); for (const [k, v] of Object.entries(b)) o[k] = v && typeof v === "object" && !Array.isArray(v) && o[k] && typeof o[k] === "object" ? merge(o[k], v) : v; return o; };
+const start = merge(end, { body: { proportion: chibi.proportion, thickness: chibi.thickness, head: { scale: chibi.head.scale } } });
+const lerp = (a, b, t) => { if (typeof a === "number" && typeof b === "number") return a + (b - a) * t;
+  if (a && b && typeof a === "object" && typeof b === "object" && !Array.isArray(a)) { const o = {}; for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) o[k] = k in b ? (k in a ? lerp(a[k], b[k], t) : b[k]) : a[k]; return o; }
+  return b; };
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(W, H); renderer.outputColorSpace = THREE.SRGBColorSpace; document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.05, 50);
+let av = null, frameH = null;
+window.frame = async (t, yaw = 0.35) => {
+  if (av) { scene.remove(av.object); av.dispose?.(); }
+  av = await createAvatar({ ...file, options: lerp(start, end, t) }, { quality: Q.get("q") || "game", cache: false, workers: false });
+  av.update(0, { instant: true }); scene.add(av.object); av.object.rotation.y = yaw;
+  if (frameH == null) { const b = new THREE.Box3().setFromObject(av.object); frameH = (b.max.y - b.min.y); }   // 枠は最初に撮った(最大の)コマで固定し、背が伸びて見えるように
+  const cy = frameH * 0.5, d = frameH * 0.62 / Math.tan(THREE.MathUtils.degToRad(15));
+  cam.position.set(0, cy, d); cam.lookAt(0, cy, 0);
+  for (let i = 0; i < 3; i++) av.update(1 / 60, { instant: true });
+  renderer.render(scene, cam); return renderer.domElement.toDataURL("image/png");
+};
+window.READY = true;
+</script>
+</body>
+</html>
