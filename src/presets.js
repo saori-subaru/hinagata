@@ -201,9 +201,10 @@ export const CHARACTERS = {
       },
       outfit: {
         // the tunic: a dress to the hip joints, blue (the sleeves, the sides, the back), its white panels printed on the front
-        shirt: { color: "#657096", sleeve: "bell", bell: 0.004, sleeveWidth: 0.05, collar: { y: 0.8, notch: 0.03, notchWidth: 0.03 } },   // round tubes from the elbow, cut square
-        // its middle panel over the side ones near the hem, the sides hanging lower (sideOut < 0) and all one panel behind
-        dress: { on: true, color: "#657096", waist: 0.575, hem: 0.444, flare: 0.5, pleats: 0, cinch: 0.01, cinchAt: 0.554, sideDrop: 0.015, sideAt: 0.56, sideOut: -0.005, middleBack: false,
+        shirt: { color: "#657096", sleeve: "bell", bell: 0.004, sleeveWidth: 0.05, collar: { y: 0.835, notch: 0.03, notchWidth: 0.014 } },   // round tubes from the elbow, cut square; a standing collar round the neck (the neckline up the neck), a slit in front
+        // its middle panel over the side ones near the hem, the sides hanging lower (sideOut < 0) and all one panel behind; flared off the shorts
+        // in a straight line (curl flipped only its last cm out, a frill)
+        dress: { on: true, color: "#657096", waist: 0.575, hem: 0.444, flare: 0.8, pleats: 0, cinch: 0.01, cinchAt: 0.554, sideDrop: 0.015, sideAt: 0.56, sideOut: -0.005, middleBack: false,
           texture: { src: ASTEL_TUNIC, mode: "front", scale: 0.56, y: 0.775 } },
         cuffs: { on: true, color: "#e4e0e4", width: 0.055, out: 0.005, flare: 0 },
         belt: { on: true, color: "#7a625b", y: 0.554, width: 0.062 },
