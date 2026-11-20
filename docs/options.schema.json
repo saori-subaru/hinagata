@@ -696,7 +696,7 @@
    "tier": "main",
    "cost": "body",
    "apply": null,
-   "min": 1,
+   "min": 0.75,
    "max": 2,
    "step": 0.01,
    "order": 50,
@@ -705,8 +705,8 @@
     "en": "Face shape"
    },
    "help": {
-    "ja": "口から下だけを縦にのばす(倍)。鼻と口と目はそのまま。あごをとがらせても、ほおがこけない",
-    "en": "only the face under the mouth gets longer (×); the nose, mouth and eyes stay. Room for a pointed chin without hollow cheeks"
+    "ja": "口から下だけを縦にのばす・縮める(倍)。鼻と口と目はそのまま。のばすと、あごをとがらせても、ほおがこけない。1 より小さいと短いあご(首が見える)",
+    "en": "only the face under the mouth gets longer or shorter (×); the nose, mouth and eyes stay. Longer: room for a pointed chin without hollow cheeks. Under 1: a short jaw, more neck showing"
    }
   },
   "body.head.crown": {

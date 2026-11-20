@@ -93,7 +93,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HK = OPT.body.proportion?.hands ?? 1, SHW = 0.115 * ((OPT.body.proportion?.shoulders ?? 1) - 1);
   Object.assign(J, armJoints(OPT));
   // neck.length: a longer neck lifts the head (its bone and everything built in head space: the head, the face, the hair; headTransform's lift)
-  // jawLength (> 1): the face under the mouth comes down (headTransform); the head goes up by as much as the chin does, so the neck stays as long
+  // jawLength (> 1): the face under the mouth comes down (headTransform); the head goes up by as much as the chin does, so the neck stays as long.
+  // Under 1 the chin comes up and the head stays: more neck shows
   const JL = OPT.body.head.jawLength ?? 1, JAW_Y = (OPT.face?.layout?.mouthY ?? 0.896) - 0.016, JAW_LIFT = JL > 1 ? (JAW_Y - OPT.body.sculpt.chin.y) * (JL - 1) * OPT.body.head.scale : 0;
   const NK = OPT.body.sculpt.neck, LIFT = (NK.length ?? 0) + JAW_LIFT; J.head[1] += LIFT;
   for (const k of Object.keys(J)) if (k.endsWith(".L")) { const v = J[k]; J[k.replace(".L", ".R")] = [-v[0], v[1], v[2]]; }
@@ -580,7 +581,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
  * lift: then move it up (a longer neck).
  * shift: everything in front of z1 (head space) moves back by z, fading in between z0 and z1, so the head gets shorter front to back
  * while the side silhouette keeps its shape (skin, hair and face picture move together).
- * jawLength (> 1, with jawY: just under the mouth): below jawY the face is that much longer, at the front only (fading out behind the
+ * jawLength (with jawY: just under the mouth): below jawY the face is that much longer (< 1: shorter), at the front only (fading out behind the
  * cheeks, so the nape and the ears stay), with a soft bend (about 1 cm). The nose and mouth above it stay where they are: the jaw gets longer,
  * so a pointed chin has room below the cheeks (2026-10-07, Saori: "顎をとがらせれば美少女っぽくなりますが、そうするには今のモデルは頬から下が
  * 短すぎてこけてしまってた"; faceLength, taken out, stretched from under the eyes and brought the nose and mouth down too).
@@ -598,10 +599,10 @@ export function headTransform(h) {
   // together, and the face under the brows stays. CS: a squashed height → the head's own, CU back
   const CR = h.crown ?? 1, CRY = h.crownY ?? 1.11, CK = 1 / CR - 1;
   const CS = CR === 1 ? (y) => y : (y) => y + CK * fr(y - CRY), CU = CR === 1 ? (y) => y : (y) => { let v = y; for (let i = 0; i < 10; i++) v = y - CK * fr(v - CRY); return v; };
-  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && JL === 1 && CR === 1, k = Math.min(sx, sy, sz) / stretch * (JL === 1 ? 1 : 0.9) * Math.min(1, CR);
+  const identity = sx === 1 && sy === 1 && sz === 1 && !S.z && !ly && JL === 1 && CR === 1, k = Math.min(sx, sy, sz) / stretch * (JL === 1 ? 1 : 0.9 * Math.min(1, JL)) * Math.min(1, CR);   // (a shorter jaw, JL < 1, stretches distances into head space by 1 / JL)
   const toHead = (x, y, z) => { const Z = warp(pz + (z - pz) / sz); return [x / sx, CS(JS(py + (y - ly - py) / sy, Z)), Z]; };
   return {
-    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * JL * Math.max(1, CR),
+    identity, sx, sy, sz, k, max: Math.max(sx, sy, sz) * Math.max(1, JL) * Math.max(1, CR),
     toHead,
     fromHead: (x, y, z) => [x * sx, py + (JU(CU(y), z) - py) * sy + ly, pz + (unwarp(z) - pz) * sz],
     wrap: (f) => identity ? f : (x, y, z) => f(...toHead(x, y, z)) * k,
