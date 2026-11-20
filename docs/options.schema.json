@@ -8416,7 +8416,7 @@
    "cost": "clothes",
    "apply": null,
    "min": 0,
-   "max": 0.06,
+   "max": 0.1,
    "step": 0.001,
    "order": 270,
    "section": {

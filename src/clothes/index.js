@@ -412,11 +412,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       return Math.max(Math.hypot(x - NK0.ax - NK0.bx * s, z - NK0.az - NK0.bz * s) - (NK0.ra + COWL - off + CA.thick / 2), CAPE_Y - 0.05 - y); } : null;
     const capeBody = COWL ? (x, y, z) => smin(bodySdf(x, y, z), cowlCol(x, y, z), 0.02) : bodySdf;
     // the cape's outside before its cuts (S): the cone, and the body pushed out
-    const outside = (x, y, z, B = bodySdf) => {
+    const outside = (x, y, z, B = bodySdf, col = true) => {
       const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax1 = ax0 + CA.flare * 0.6 * drop, ax0_ = CLOSED ? smax(ax1, armX(y), 0.03) : ax1, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
       const q = Math.hypot(x / ax, z / az), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
       const m0 = OVER_BODY ? torso(x, y, z) - off : CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);   // (over the body: not round the arms, which stand out of its sides in the rest pose)
-      const mantle = COWL ? smin(m0, cowlCol(x, y, z) - off, 0.02) : m0;
+      const mantle = COWL && col ? smin(m0, cowlCol(x, y, z) - off, 0.02) : m0;
       return smin(cone, mantle, k); };
     // cape.neckOpen (シルヴィ): the neckline cut low and wide (the clothes' shoulders show inside it): level round the body, a little
     // higher behind, neckOpen out from the neck at its sides; closed, it dips in front to the closure's ends (XF, at cape.close).
@@ -446,8 +446,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         const f = k - i, a = rays[i], b = rays[i + 1], m = (u, v) => u + (v - u) * f; return { th, t: m(a.t, b.t), y: m(a.p[1], b.p[1]), tr: m(a.tr, b.tr), ty: m(a.ty, b.ty) }; };
       // > 0 above the cut: near the line across the shell through it, turning level toward the closure (past the rays: the dip to it), and level
       // 2 cm over it; farther out level (across, the shell round an elf's ears hanging over the shoulders stayed)
+      // (the rays are the +x side's: with the closure off the middle the other side's line is lifted by the sides' level difference; else the
+      // cut there ran up to 3 cm under that side's roll, a hole under it)
       const cut = (x, y, z) => { const level = y - at(x, z), r = ray(x, z); if (!r) return level;
-        const rN = Math.hypot(x, z - zA), across = (r.t - rN) * r.tr - (y - r.y) * r.ty, w = 1 - sstep(END - 0.35, END, r.th);
+        const rN = Math.hypot(x, z - zA), across = (r.t - rN) * r.tr - (y - r.y - (x < 0 ? at(x, z) - at(-x, z) : 0)) * r.ty, w = 1 - sstep(END - 0.35, END, r.th);
         return Math.max(w * across + (1 - w) * level, level - 0.02 * (1 - sstep(0.015, 0.035, rN - r.t))); };
       return { at, cut, ray, line: rays.map((r) => r.p) };
     })();
@@ -483,7 +485,14 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         const g = -0.005 + 0.016 * (1 - sstep(Math.min(1.75, END - 0.25), Math.min(2, END), th)) * sstep(NK.ra - 0.002, NK.ra + 0.008, rN);   // (sunk 5 mm: nothing left)
         const r = neck.ray(x, z), inside = r ? rN - r.t - 0.004 : 0;   // (past the rays it has sunk)
         return Math.max(B - g, -(B + 0.004), neck.at(x, z) - 0.008 - y, y - neck.at(x, z) - 0.055 + 0.3 * Math.max(0, rN - NK.ra), inside); };
-      const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = COWL ? Math.min(0.16 * LS, NK0.ra + COWL + Math.max(CA.thick, CA.cowlRoll ?? 0) / 2) : 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind (with a cowl no wider than its ring: wider, its top corners stood on the shoulders, seen from the front)
+      const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind
+      // with a cowl its top SH (m, at x = 0.004 i) 2.5 cm under the shoulders' top as if no cowl stood there, coming down no steeper than 45°: higher, its
+      // corners stood on the shoulders and beside the ring (seen from the front and either side); steeper, its edge stood upright under the ring
+      const SH = COWL ? (() => { const T = [], out = (x, y) => outside(x, y, zA, bodySdf, false);
+        for (let i = 0; i * 0.004 <= hw + 0.004; i++) { const x = 0.004 * i; let y = yT + 0.03, a = y; while (y > yT - hd && out(x, y) > 0) { a = y; y -= 0.002; }
+          for (let k = 0; k < 4; k++) { const m = (a + y) / 2; if (out(x, m) > 0) a = m; else y = m; }
+          T.push(Math.max(y - 0.025, i ? T[i - 1] - 0.004 : -Infinity)); }
+        return T; })() : null;
       // the bag: inside an ellipse narrowing downward (bagCut < 0), its top bagTop (m) over the cape's outer side: 14 mm at its rim, 52 in the middle (at 22 it lay flat as a print)
       const bagE = (x, y) => { const t = Math.min(1, Math.max(0, (yT - y) / hd)); return Math.hypot(x / (hw * (1 - 0.4 * t)), (y - yT) / hd); };
       const bagTop = (x, y) => { const e = bagE(x, y); return 0.014 + 0.038 * Math.max(0, 1 - e * e); };
@@ -499,7 +508,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
             best = Math.min(best, Math.max((n - Fa) / Math.hypot(1, 2 * k * a), a - (WO[i] * w + WO[i + 1] * t), -a - (WI[i] * w + WI[i + 1] * t), NIN - n, beyond)); }
           return smin(best, lining(x, y, z), 0.006); },
         layer: (x, y, z, S, deep = 0.002) => Math.max(S - bagTop(x, y), -S - deep, bagCut(x, y, z)),
-        bagTop, bagCut, bagOut, bagY: yT,
+        bagTop, bagCut, bagOut, bagY: (x) => { if (!SH) return yT; const k = Math.min(SH.length - 1.001, Math.abs(x) / 0.004), i = Math.floor(k); return Math.min(yT, SH[i] + (SH[i + 1] - SH[i]) * (k - i)); },
         bag: { lo: [-hw - 0.01, yT - hd - 0.01], hi: [hw + 0.01, yT + 0.01] } };
     })() : null;
     // cape.cowlRoll (m, with the cowl): its top a roll that thick (the hood rolled into a ring, アステル's sheet), its own part ("hood", fine
@@ -563,7 +572,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
     // Its top ends 1 cm under the neckline (and under its height at the back) and rises out of the cape over 3 cm (sunk 4 mm at its top): ending
     // on the neckline itself, its rim and the cape's ran together in black shards, worst over the shoulders
-    f.bag = hood ? { sheet: (B = bodySdf, one = false) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return (hood.bagTop(x, y) - rim(x, y, z)) * w - 0.004 * (1 - w); };
+    f.bag = hood ? { sheet: (B = bodySdf, one = false) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY(x)), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return (hood.bagTop(x, y) - rim(x, y, z)) * w - 0.004 * (1 - w); };
       // one-sided (sdf/sheet.js `one`): no wall under the bag's rim, so over its last 3 cm the bag comes down onto the cape (5 mm over it): its edge's facet is the hood's outline there. Standing 14 mm off, one saw under it
       const rim = (x, y, z) => one ? 0.009 * (1 - sstep(0, 0.03, -hood.bagOut(x, y, z))) : 0;
       return { o: (x, y, z) => outside(x, y, z) - top(x, y, z), of: (x, y, z) => outside(x, y, z, B) - top(x, y, z), tk: (x, y, z) => top(x, y, z) + 0.01, smooth: 3, line: true, cut: (x, y, z) => Math.max(hood.bagOut(x, y, z), dTop(x, y, z) + 0.01) }; },
