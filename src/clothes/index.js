@@ -539,8 +539,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         let N = grad(body, q); const d = N[0] * T[0] + N[1] * T[1] + N[2] * T[2]; N = N.map((v, m) => v - d * T[m]); l = Math.hypot(...N) || 1; N = N.map((v) => v / l);
         let U = [T[1] * N[2] - T[2] * N[1], T[2] * N[0] - T[0] * N[2], T[0] * N[1] - T[1] * N[0]]; const g = grad(neck.cut, q); if (U[0] * g[0] + U[1] * g[1] + U[2] * g[2] < 0) U = U.map((v) => -v);
         return { N, U }; });
-      // a tube along a path: at each point an ellipse A across the cloth by B along it, its middle at C (m)
-      const tube = (F, A, B, C) => { const M = C.length - 1, NV = F.map((f) => f.N), UV = F.map((f) => f.U), RM = Math.max(...B, ...A) * 1.05;
+      // a tube along a path: at each point an ellipse A across the cloth by B along it, its middle at C (m); DR (optional): its lower half X longer,
+      // measured there off the cloth itself (surf, less L: the middle's lift; across the path's plane it sank into the cape flaring out under it)
+      const tube = (F, A, B, C, DR = null) => { const M = C.length - 1, NV = F.map((f) => f.N), UV = F.map((f) => f.U), RM = Math.max(...B.map((v, i) => v + (DR ? DR.X[i] : 0)), ...A) * 1.05;
         const lo = [0, 1, 2].map((m) => Math.min(...C.map((c) => c[m])) - RM - 0.01), hi = [0, 1, 2].map((m) => Math.max(...C.map((c) => c[m])) + RM + 0.01);
         // measured at the path's nearest point (each piece's own ellipse rippled the surface every 5 mm: the shading's edge sawn)
         const sdf = (x, y, z) => { let bd = 1e9, bi = 0, bt = 0;
@@ -553,7 +554,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
           let nx = N0[0] * w + N1[0] * t, ny = N0[1] * w + N1[1] * t, nz = N0[2] * w + N1[2] * t, ux = U0[0] * w + U1[0] * t, uy = U0[1] * w + U1[1] * t, uz = U0[2] * w + U1[2] * t;
           const ln = Math.hypot(nx, ny, nz) || 1, lu = Math.hypot(ux, uy, uz) || 1, n = (qx * nx + qy * ny + qz * nz) / ln, u = (qx * ux + qy * uy + qz * uz) / lu;
           const tx = c1[0] - c0[0], ty = c1[1] - c0[1], tz = c1[2] - c0[2], tl = Math.hypot(tx, ty, tz) || 1, along = (qx * tx + qy * ty + qz * tz) / tl;   // past the path's ends: capped there
-          const best = (Math.hypot(n / a, u / b) - 1) * Math.min(a, b);
+          let nn = n, bb = b;
+          if (DR && u < 0) { const xx = DR.X[i] * w + DR.X[i + 1] * t; if (xx > 0) { bb = b + xx; const k = sstep(0, 0.02, -u) * Math.min(1, xx / 0.01); if (k > 0) nn += (DR.surf(x, y, z) - (DR.L[i] * w + DR.L[i + 1] * t) - n) * k; } }
+          const best = (Math.hypot(nn / a, u / bb) - 1) * Math.min(a, bb);
           return (i === 0 && t === 0 && along < 0) || (i === M - 1 && t === 1 && along > 0) ? Math.max(best, Math.abs(along) - 0.002) : best;
         };
         return { sdf, lo, hi }; };
@@ -561,26 +564,24 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const F1 = frames(P, capeBody), end = (i) => Math.min(LT * i / M, LT * (1 - i / M)), K1 = P.map((q, i) => 1 - 0.6 * (1 - sstep(0, 0.1, end(i))));
       const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i])));
       // cape.cowlRoll2 (m): a second roll that thick under it, twice as wide along the cloth, its top under the first and its middle 0.7 of its half
-      // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end
+      // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end.
+      // The hood has no bag: behind, this ring's lower half droops into its point (a bag over the ring came up through it in ragged seams; under it, a step)
       const T2 = CA.cowlRoll2 ?? 0; if (!(T2 > 0)) return R1;
       const A2 = T2 / 2, B2 = A2 * 2, DN = B2 + 0.55 * RB - 0.01, shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, K2 = P.map((q, i) => sstep(0, 0.15, end(i)));
       const P2 = P.map((q, i) => { let p = q.map((v, m) => v - F1[i].U[m] * DN * K2[i]);
         for (let it = 0; it < 3; it++) { const g = grad(shell, p), l = Math.hypot(...g) || 1, d = shell(...p); p = p.map((v, m) => v - g[m] / l * d); }   // onto the cloth's middle
         return p; });
       const F2 = frames(P2, shell), S2 = K2.map((k) => 0.3 + 0.7 * k);
-      const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])));
-      // the hood's bag starts under its lower half behind (by x, UT every 4 mm from -0.2; higher, the bag's top came up through the ring at a slant:
-      // ragged seams). Off its back, no limit
-      const BK = P2.filter((q) => q[2] < -0.01).sort((a, b) => a[0] - b[0]), UT = [];
-      for (let k = 0, j = 0; k <= 100; k++) { const x = -0.2 + 0.004 * k; if (BK.length < 2 || x < BK[0][0] || x > BK.at(-1)[0]) { UT.push(Infinity); continue; }
-        while (j < BK.length - 2 && BK[j + 1][0] < x) j++; const t = (x - BK[j][0]) / Math.max(1e-9, BK[j + 1][0] - BK[j][0]); UT.push(BK[j][1] + (BK[j + 1][1] - BK[j][1]) * t - 0.6 * B2 + 0.01); }
-      const under = (x) => { const k = (x + 0.2) / 0.004, i = Math.floor(k); if (i < 0 || i >= 100) return Infinity; const a = UT[i], b = UT[i + 1]; return a === Infinity || b === Infinity ? Infinity : a + (b - a) * (k - i); };
-      return { sdf: (x, y, z) => Math.min(R1.sdf(x, y, z), R2.sdf(x, y, z)), lo: R1.lo.map((v, m) => Math.min(v, R2.lo[m])), hi: R1.hi.map((v, m) => Math.max(v, R2.hi[m])), under };
+      // the droop: EX m at the middle, none from 12 cm out (wider, its fading sides creased)
+      const EX = P2.map((q) => 0.09 * (1 - sstep(0, 0.12, Math.abs(q[0]))) * sstep(-0.02, -0.06, q[2]));
+      const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])), { X: EX, L: S2.map((k) => 0.7 * A2 * k), surf: shell });
+      return { sdf: (x, y, z) => Math.min(R1.sdf(x, y, z), R2.sdf(x, y, z)), lo: R1.lo.map((v, m) => Math.min(v, R2.lo[m])), hi: R1.hi.map((v, m) => Math.max(v, R2.hi[m])), two: true };
     })() : null;
+    const BAG = hood && !roll?.two;
     const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
     const f = (x, y, z, B = bodySdf) => {
       const S = outside(x, y, z, B), d = Math.max(S, -(S + CA.thick), cutOf(x, y, z));
-      return hood ? smin(d, hood.layer(x, y, z, S), 0.004) : d; };
+      return BAG ? smin(d, hood.layer(x, y, z, S), 0.004) : d; };
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
     f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
@@ -592,7 +593,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
     // Its top ends 1 cm under the neckline (and under its height at the back) and rises out of the cape over 3 cm (sunk 4 mm at its top): ending
     // on the neckline itself, its rim and the cape's ran together in black shards, worst over the shoulders
-    f.bag = hood ? { sheet: (B = bodySdf, one = false) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - Math.min(hood.bagY(x), roll?.under?.(x) ?? Infinity)), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return (hood.bagTop(x, y) - rim(x, y, z)) * w - 0.004 * (1 - w); };
+    f.bag = BAG ? { sheet: (B = bodySdf, one = false) => { const dTop = (x, y, z) => Math.max(cutOf(x, y, z), y - hood.bagY(x)), top = (x, y, z) => { const w = sstep(-0.01, -0.04, dTop(x, y, z)); return (hood.bagTop(x, y) - rim(x, y, z)) * w - 0.004 * (1 - w); };
       // one-sided (sdf/sheet.js `one`): no wall under the bag's rim, so over its last 3 cm the bag comes down onto the cape (5 mm over it): its edge's facet is the hood's outline there. Standing 14 mm off, one saw under it
       const rim = (x, y, z) => one ? 0.009 * (1 - sstep(0, 0.03, -hood.bagOut(x, y, z))) : 0;
       return { o: (x, y, z) => outside(x, y, z) - top(x, y, z), of: (x, y, z) => outside(x, y, z, B) - top(x, y, z), tk: (x, y, z) => top(x, y, z) + 0.01, smooth: 3, line: true, cut: (x, y, z) => Math.max(hood.bagOut(x, y, z), dTop(x, y, z) + 0.01) }; },

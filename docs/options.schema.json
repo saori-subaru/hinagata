@@ -8482,8 +8482,8 @@
     "en": "Cape"
    },
    "help": {
-    "ja": "輪の下に、この太さ(m)のもう一段広い輪を重ねる(フードを二段に巻いた襟)。布に沿って太さの 2 倍の幅、留め具で一段目に合わさる。輪(cowlRoll)があるときだけ。0 = なし",
-    "en": "under the roll, a second, wider one this thick (m): the hood rolled in two rings; twice as wide along the cloth, meeting the first at the closure. Only with cowlRoll. 0 = none"
+    "ja": "輪の下に、この太さ(m)のもう一段広い輪を重ねる(フードを二段に巻いた襟)。布に沿って太さの 2 倍の幅、留め具で一段目に合わさる。後ろでは下半分が垂れてフードの先になる(袋はなくなる)。輪(cowlRoll)があるときだけ。0 = なし",
+    "en": "under the roll, a second, wider one this thick (m): the hood rolled in two rings; twice as wide along the cloth, meeting the first at the closure; behind, its lower half droops into the hood's point (no bag). Only with cowlRoll. 0 = none"
    },
    "when": {
     "outfit.cape.on": true,
