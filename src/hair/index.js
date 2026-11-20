@@ -205,5 +205,11 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
     if (L || (pick.bangs === "none" && tuftsOn())) o = underLocks(o); if (thin) o = { ...o, shell: sh };   // tufts with no bangs under them: the same thin hairline between them
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh };
+  // crop (hair.sculpt.whorl.crop { top, y, side, z, thick }, head space): cropped hair as its own thin layer over the back of the head and
+  // the neck, from under the hair (top) down to a hairline (y at the middle of the nape, side behind the ears), behind z. The painted nape
+  // (whorl.nape) has no edge and no outline: it read as tinted skin
+  const cropSdf = (C) => (x, y, z) => { const s2 = Math.sin(Math.atan2(x, z)) ** 2, hem = C.y + ((C.side ?? C.y) - C.y) * s2, ear = earDist(x, y, z) - EAR_GAP.gap;
+    const base = bodySdf(x, y, z) - (C.thick ?? 0.004);   // on the skin itself (the skull and the neck blended: a ball filling the nape's hollow)
+    return smax(smax(smax(smax(base, y - C.top, 0.008), hem - y, 0.005), z - (C.z ?? -0.02), 0.01), -ear, EAR_GAP.k); };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh, cropSdf };
 }
