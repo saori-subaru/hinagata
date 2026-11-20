@@ -306,7 +306,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
     const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
     if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }
-    { const e0 = E(ec, [0.062 * ES, 0.067 * ES, 0.019 * ES], "head", OPT.body.sculpt.ears.blend, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth * ES, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
+    const ER3 = [0.062 * ES, 0.067 * ES, 0.019 * ES];   // the ear's plate: half its size along eu, ev, ew
+    { const e0 = E(ec, ER3, "head", OPT.body.sculpt.ears.blend, [eu, ev, ew]), ta = OPT.body.sculpt.ears.trimAngle, tc = OPT.body.sculpt.ears.trimDepth * ES, n = eu.map((c, i) => c * Math.cos(ta) - ev[i] * Math.sin(ta));
       // hollow: a crescent inside the rim (like the drawn ear line, filled) pressed into the ear's front, with soft edges so it follows the ear's curve
       const HO = OPT.body.sculpt.ears.hollow, dent = !HO.on ? () => 0 : (x, y, z) => { const d = [x - ec[0], y - ec[1], z - ec[2]], u = (d[0] * eu[0] + d[1] * eu[1] + d[2] * eu[2]) / ES, v = (d[0] * ev[0] + d[1] * ev[1] + d[2] * ev[2]) / ES, w = (d[0] * ew[0] + d[1] * ew[1] + d[2] * ew[2]) / ES;
         const r1 = Math.hypot((u - HO.cu) / HO.ru, (v - HO.cv) / HO.rv), r2 = Math.hypot((u - HO.cu + HO.shift) / HO.ru, (v - HO.cv) / (HO.rv * HO.inner));
@@ -332,7 +333,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
           const q = [0, 1, 2].map((i) => d[i] - a[i] * t * L - bu[i] * CV * L * t * t), qa = q[0] * a[0] + q[1] * a[1] + q[2] * a[2], qw = q[0] * bn[0] + q[1] * bn[1] + q[2] * bn[2];
           const qb = Math.sqrt(Math.max(0, q[0] * q[0] + q[1] * q[1] + q[2] * q[2] - qa * qa - qw * qw)), r = W * (1 - t) + 0.0015;   // a triangle: straight edges from the ear to the point
           return (Math.hypot(qa, qb, qw / FL) - r) * FL * 0.9; } }; }
-    EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES });   // the ear's frame (head space), for the ear line
+    EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES, R: ER3, parts: ["ear", "earLobe", "earFill"].map((k) => P[`${k}.${s}`]).filter(Boolean) });   // the ear's frame (head space), for the ear line and earShells
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     if (AD) { const B = AD.butt; P[`butt.${s}`] = fin(adultPart({ ...B, x: m * (B.x ?? 0.055), y: yH + (B.y ?? -0.06) * T }, { w: 0.062, h: 0.2 * T, d: 0.05, z: -0.04 }, "hips")); }
     else { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B) + BB / 2], [0.08, 0.066, 0.075 * B - BB / 2], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
@@ -484,6 +485,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const isEar = (k) => /^ear(Lobe|Fill|Tip)?\./.test(k);
   const HEAD = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts,
     ...Object.entries(P).filter(([k]) => isEar(k)).map(([, v]) => v), ...Object.entries(CUT).filter(([k]) => isEar(k)).map(([, v]) => v), BRIDGE, P.nose], 0.022);   // 鼻筋と鼻は削ったあとに足す
+  // the head without its ears (head space): how far out of the head a point of an ear is (earShells)
+  const HEAD_BARE = G([...Object.entries(P).filter(([k]) => isHead(k) && k !== "nose" && !isEar(k)).map(([, v]) => v), ...(faceBox ? [faceBox] : []), ...Object.entries(CUT).filter(([k]) => !isEar(k)).map(([, v]) => v), ...planeCuts], 0.022);
   // 目のくぼみ(眼窩): 目が大きく平たいので、広く浅く、なだらかに沈める。下側に広く(目の下半分が前に出ないように)
   const SOCK_K = OPT.body.sculpt.socketScale ?? 1;   // 0 = no eye sockets (a flat face under the eyes: drawn eyes stay straight from any angle)
   // socketSize: the whole socket (its dips and the band toward the temple) scaled around the eye's middle, its depth with it (2026-10-07, Saori:
@@ -561,7 +564,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
   const bodySdfSlow = bent(blend(BODY_LIST)), bodySdf = slow ? bodySdfSlow : bent(blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // ?slow で元の遅い版(確認用)
   const bodySdfRaw = HT.identity ? bodySdf : bent(blendFast(BODY_LIST.map((p) => p === HEAD ? HEAD_RAW : p), [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // the body with the head untransformed (hair is built against it, then transformed with the head)
-  return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
+  return { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, headBare: HEAD_BARE.f, faceWarp, PLANES: planeCuts, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT };
 }
 
 /**
@@ -740,4 +743,60 @@ export function fingerTubes(P, sdf, { N = 8, DS = 0.006, D0 = 0.0004, BACK = 0.0
     }
   }
   return pos.length ? { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx), under: (x, y, z) => unders.some((f) => f(x, y, z)) } : null;
+}
+
+/**
+ * The round ears made as rings of points put on the body's surface, as the elf ears' blades are (earBlades): the ear's rim is thinner than
+ * the grid's cells, and its points sat in a staircase the outline traced. The rings go round the ear's upright axis (ev), each point where
+ * a ray from a start inside the ear toward its plate's ellipse at that height leaves the body. They lie D0 over the surface and dive D0
+ * under it where the ear meets the head (bare: the head without ears, head space; under O0 out of it the body's own mesh goes on). A ray
+ * into the head leaves nowhere: it has no point, and the rings end there, under the body's mesh (points put inside the head made walls
+ * down into it, whose outline stood out in black slivers). The rings are the surface itself, so the ears' thin top and bottom ends, which
+ * the grid lost (5 to 9 mm), are there. EARS, HT: buildBody's; sdf: the body's distance (base space).
+ * Returns { pos, nor, idx, under(x, y, z): a body point the rings cover (its triangles can go), mid } or null.
+ */
+export function earShells(EARS, HT, sdf, bare, { N = 20, S = 20, D0 = 0.0004, O0 = 0.0015, O1 = 0.005 } = {}) {
+  const toH = HT.identity ? (x, y, z) => [x, y, z] : HT.toHead, fromH = HT.identity ? (x, y, z) => [x, y, z] : HT.fromHead;
+  const pos = [], nor = [], idx = [], unders = [], TH0 = 0.22;   // TH0: the first and last rings' angle from the axis' ends (rad)
+  const g = (x, y, z) => { const q = toH(x, y, z); return sdf(x, y, z) - D0 * (2 * sstep(O0, O1, bare(q[0], q[1], q[2])) - 1); };
+  // where f turns positive from b along the unit direction d, up to far (null: nowhere, or b isn't inside)
+  const hit = (f, b, d, far, step) => { const at = (u) => f(b[0] + d[0] * u, b[1] + d[1] * u, b[2] + d[2] * u); if (at(0) >= 0) return null;
+    let u0 = 0, u1 = step; while (u1 <= far && at(u1) < 0) { u0 = u1; u1 += step; } if (u1 > far) return null;
+    for (let k = 0; k < 14; k++) { const um = (u0 + u1) / 2; if (at(um) >= 0) u1 = um; else u0 = um; } return (u0 + u1) / 2; };
+  const aim = (b, t) => { const d = t.map((x, i) => x - b[i]), l = Math.hypot(...d); return [d.map((x) => x / l), l]; };
+  for (const E of EARS) {
+    const { c, eu, ev, ew, R } = E, FAR = 0.6 * R[0];
+    const at = (u, v, w) => fromH(...c.map((x, i) => x + eu[i] * u + ev[i] * v + ew[i] * w));   // base space, from the ear's frame
+    // the rays' start at the angle th from the axis' top: inside the plate, toward the head (the plate's back is trimmed away low down, the
+    // axis itself there in the air; sv: nearer the middle, where the ear ends short of its plate); null where nothing of the ear is
+    const start = (th) => { for (const sv of [1, 0.85, 0.7]) for (const k of [0.3, 0.6, 0.9]) { const b = at(-k * R[0] * Math.sin(th), sv * R[1] * Math.cos(th), 0); if (g(b[0], b[1], b[2]) < -0.001) return Object.assign(b, { k }); } return null; };
+    const ths = Array.from({ length: S + 1 }, (_, i) => TH0 + (Math.PI - 2 * TH0) * i / S), B = ths.map(start); if (B.some((b) => !b)) continue;
+    const at0 = pos.length / 3, ids = [], tri = (a, b, d) => { if (a >= 0 && b >= 0 && d >= 0) idx.push(a, b, d); };
+    const put = (b, t) => { const [d, l] = aim(b, t), u = hit(g, b, d, l + FAR, l / 8); if (u == null) { ids.push(-1); return; }
+      const p = b.map((x, k) => x + d[k] * u), n = grad4(g, p[0], p[1], p[2], 0.0005); ids.push(pos.length / 3); pos.push(p[0], p[1], p[2]); nor.push(n[0], n[1], n[2]); };
+    for (let i = 0; i <= S; i++) { const th = ths[i], sn = Math.sin(th);
+      for (let j = 0; j < N; j++) { const f = 2 * Math.PI * j / N; put(B[i], at(R[0] * sn * Math.cos(f), R[1] * Math.cos(th), R[2] * sn * Math.sin(f))); } }
+    put(B[0], at(0, R[1], 0)); put(B[S], at(0, -R[1], 0));   // the top and the bottom
+    const V = (i, j) => ids[i * N + (j % N)], top = ids[(S + 1) * N], bottom = ids[(S + 1) * N + 1], i0 = idx.length;
+    for (let i = 0; i < S; i++) for (let j = 0; j < N; j++) { tri(V(i, j), V(i + 1, j), V(i + 1, j + 1)); tri(V(i, j), V(i + 1, j + 1), V(i, j + 1)); }
+    for (let j = 0; j < N; j++) { tri(V(0, j + 1), top, V(0, j)); tri(V(S, j), bottom, V(S, j + 1)); }
+    if (idx.length === i0) { pos.length = nor.length = at0 * 3; continue; }
+    { let fl = 0; for (let k = i0; k < idx.length; k += 3) { const [A, B1, C1] = [idx[k], idx[k + 1], idx[k + 2]].map((v) => pos.slice(v * 3, v * 3 + 3)), a = B1.map((x, q) => x - A[q]), w = C1.map((x, q) => x - A[q]);   // wound to face along the normals
+        const n = nor.slice(idx[k] * 3, idx[k] * 3 + 3); fl += Math.sign((a[1] * w[2] - a[2] * w[1]) * n[0] + (a[2] * w[0] - a[0] * w[2]) * n[1] + (a[0] * w[1] - a[1] * w[0]) * n[2]); }
+      if (fl < 0) for (let k = i0; k < idx.length; k += 3) { const t = idx[k + 1]; idx[k + 1] = idx[k + 2]; idx[k + 2] = t; } }
+    // a body point the rings cover: clear of the head, on the ear, the first surface its start's ray meets, and in a cell of the rings
+    // whose corners all have points (where the rings end, behind the ear down in the fold, the body's mesh stays: holes otherwise)
+    const RM = 1.7 * Math.max(...R);
+    unders.push((x, y, z) => { const q = toH(x, y, z), dq = q.map((v, i) => v - c[i]); if (Math.hypot(...dq) > RM || bare(q[0], q[1], q[2]) < O1 + 0.003) return false;
+      let de = 1e9; for (const p of E.parts) de = Math.min(de, dPrim(p, q[0], q[1], q[2])); if (de > 0.003) return false;
+      const cv = (dq[0] * ev[0] + dq[1] * ev[1] + dq[2] * ev[2]) / R[1], th = Math.acos(Math.max(Math.cos(Math.PI - TH0), Math.min(Math.cos(TH0), cv)));
+      const b = start(th); if (!b) return false; const [d, l] = aim(b, [x, y, z]), u = hit(sdf, b, d, l + 0.004, l / 8); if (u != null && u < l - 0.002) return false;
+      const sn = Math.sin(th), a = (dq[0] * eu[0] + dq[1] * eu[1] + dq[2] * eu[2]) / (R[0] * sn) + b.k, w = (dq[0] * ew[0] + dq[1] * ew[1] + dq[2] * ew[2]) / (R[2] * sn), ps = Math.atan2(w, a);
+      const r = b.k * Math.cos(ps) + Math.sqrt(Math.max(0, 1 - (b.k * Math.sin(ps)) ** 2)), f = Math.atan2(r * Math.sin(ps), r * Math.cos(ps) - b.k);   // the ray's angle round the ellipse, from its direction off the start
+      const j = Math.floor(((f / (2 * Math.PI) + 1) % 1) * N) % N, fi = (th - TH0) / ((Math.PI - 2 * TH0) / S), i = Math.min(S - 1, Math.floor(fi));
+      if (Math.abs(cv) > Math.cos(TH0)) return (cv > 0 ? top : bottom) >= 0 && V(cv > 0 ? 0 : S, j) >= 0 && V(cv > 0 ? 0 : S, j + 1) >= 0;
+      return V(i, j) >= 0 && V(i + 1, j) >= 0 && V(i, j + 1) >= 0 && V(i + 1, j + 1) >= 0; });
+  }
+  // mid: a body triangle with a corner under goes when its middle is under too (index.js joined)
+  return idx.length ? { pos: Float32Array.from(pos), nor: Float32Array.from(nor), idx: Uint32Array.from(idx), under: (x, y, z) => unders.some((f) => f(x, y, z)), mid: true } : null;
 }

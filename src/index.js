@@ -17,7 +17,7 @@ import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, wit
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
-import { buildBody, makeStretch, isArmBone, adultFit, earBlades, fingerTubes } from "./body/index.js";
+import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
@@ -142,7 +142,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
 
   lap("cache");
   // shapes
-  const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
+  const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, headBare, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
   const { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat, skirtHem, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
@@ -244,7 +244,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function withParts(name, rec, { bone1, only, soft, bells, FT } = {}) {
     if (name.startsWith("hair:")) { const A = hairKit.ahogeMesh(JSON.parse(name.slice(5)), HT.identity ? undefined : HT.fromHead); return A ? joined(rec, A, null, "head") : rec; }
     if (bells) return joined(rec, sheetsMesh(bells.sheets, null, null, bells.h, bells.one), null, bone1, only, soft);
-    const EB = name === "body" && OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : null;
+    const EB = name !== "body" ? null : OPT.body.sculpt.ears.elf?.on ? earBlades(P, HT, bodySdf) : earShells(EARS, HT, bodySdf, headBare, LITE ? { N: 12, S: 12 } : {});   // (an elf's round ear is small inside the blade's root: left to the grid)
     if (EB) rec = joined(rec, EB, EB.under);
     return FT ? joined(rec, FT, null) : rec;
   }
@@ -262,7 +262,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function joined(rec, EB, under, bone1, only, soft) {
     const { pos, nor, idx, si, sw } = rec, n = pos.length / 3, drop = new Uint8Array(n), kept = [], map = new Int32Array(n).fill(-1);
     if (under) for (let v = 0; v < n; v++) drop[v] = under(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]) ? 1 : 0;
-    for (let t = 0; t < idx.length; t += 3) if (!(drop[idx[t]] && drop[idx[t + 1]] && drop[idx[t + 2]])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
+    // a triangle goes when all its corners are under; EB.mid: also one with a corner under whose middle and edges' middles are (the thinned
+    // body's long triangles reached out from the head over the part joined, and showed through it)
+    const at3 = (a, b, k) => (pos[a * 3 + k] + pos[b * 3 + k]) / 2, um = (a, b) => under(at3(a, b, 0), at3(a, b, 1), at3(a, b, 2));
+    const gone = (a, b, c) => { const k = drop[a] + drop[b] + drop[c]; return k === 3 || (k > 0 && EB.mid && um(a, b) && um(b, c) && um(c, a)); };
+    for (let t = 0; t < idx.length; t += 3) if (!gone(idx[t], idx[t + 1], idx[t + 2])) kept.push(idx[t], idx[t + 1], idx[t + 2]);
     let m = 0; for (const v of kept) if (map[v] < 0) map[v] = m++;
     const k = EB.pos.length / 3, sk = skinOf(EB.pos, weightsAt, BI, bone1, only, soft), P2 = new Float32Array((m + k) * 3), N2 = new Float32Array((m + k) * 3), SI = new si.constructor((m + k) * 4), SW = new Float32Array((m + k) * 4);
     for (let v = 0; v < n; v++) { const u = map[v]; if (u < 0) continue; for (let c = 0; c < 3; c++) { P2[u * 3 + c] = pos[v * 3 + c]; N2[u * 3 + c] = nor[v * 3 + c]; } for (let c = 0; c < 4; c++) { SI[u * 4 + c] = si[v * 4 + c]; SW[u * 4 + c] = sw[v * 4 + c]; } }
