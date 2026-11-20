@@ -333,10 +333,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   // the scalp in the hair's color where the block would be (hair.sculpt.whorl: the locks lie on the head and no block is meshed, so a gap
   // between them showed the skin). Per vertex 0..1; the color is a uniform (setColors)
+  // whorl.nape { y, z, soft } (head space): cropped hair down the nape, the skin painted from the hair's hem down to y behind z (under short
+  // hair that ends at the head's widest part the bare nape read as a hollow cut into the back of the head)
   function scalpOf(Pa) {
     const A = new Float32Array(Pa.length / 3); if (!OPT.hair.sculpt.whorl?.on) return A;
-    const f = hairKit.hairSdfOf(hairForms(OPT.hair));
-    for (let v = 0; v < A.length; v++) { const h = HT.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); A[v] = sstep(0.003, 0, f(h[0], h[1], h[2])); }
+    const f = hairKit.hairSdfOf(hairForms(OPT.hair)), NP = OPT.hair.sculpt.whorl.nape, ns = NP?.soft ?? 0.015;
+    for (let v = 0; v < A.length; v++) { const h = HT.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); A[v] = sstep(0.003, 0, f(h[0], h[1], h[2]));
+      if (NP && h[1] < 1.1) A[v] = Math.max(A[v], sstep(NP.y - ns, NP.y + ns, h[1]) * sstep(NP.z + ns, NP.z - ns, h[2])); }
     return A;
   }
   // the knees' blush and line (body.knees; for シルヴィ, as on her sheet): per vertex "knee" = (where it is from the nearer kneecap's middle in
