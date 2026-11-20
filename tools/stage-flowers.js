@@ -167,15 +167,16 @@ export function createStage({ renderer, scene, cam, W, H }) {
   add(grass);
 
   // 桜の木(遠景の目印): 幹と枝、平たい傘の形に小さな花の塊を重ねる(大きな球だと風船に見えた)。中に濃い塊を詰めて透けを隠す。下ほど濃い桃色
-  const bark = softToon(C("#6e4c3e")), blooms = ["#f29bbb", "#ffb3cd", "#ffcadb", "#ffe2ec"].map((c) => softToon(C(c))), blobG = new THREE.IcosahedronGeometry(1, 1);
-  for (const [x, z, s] of [[-14, -18, 1.25], [19, -23, 1.4], [-26, 3, 1.1], [34, -6, 1.2]]) { const t = new THREE.Group(); t.position.set(x, 0, z); t.scale.setScalar(s); t.rotation.y = R() * 6.28;
+  const bark = softToon(C("#6e4c3e")), BLOOMS = ["#f29bbb", "#ffb3cd", "#ffcadb", "#ffe2ec"], blobs = BLOOMS.map(() => []);
+  for (const [x, z, s] of [[-14, -18, 1.25], [19, -23, 1.4], [-26, 3, 1.1], [34, -6, 1.2]]) { const t = new THREE.Group(); t.position.set(x, 0, z); t.scale.setScalar(s); t.rotation.y = R() * 6.28; t.updateMatrix();
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.27, 2.4, 7), bark); trunk.position.y = 1.2; t.add(trunk);
     for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.11, 1.8, 6), bark), a = i * 1.57 + R() * 0.6; b.position.set(Math.sin(a) * 0.55, 2.7, Math.cos(a) * 0.55); b.rotation.set(Math.cos(a) * 0.85, 0, -Math.sin(a) * 0.85); t.add(b); }
-    const blob = (x, y, z, r, k) => { const b = new THREE.Mesh(blobG, blooms[k]); b.position.set(x, y, z); b.scale.set(r, r * 0.8, r); t.add(b); };
-    for (let i = 0; i < 9; i++) { const a = R() * 6.283, d = 1.4 * R(); blob(Math.sin(a) * d, 3.3 + 0.4 * R(), Math.cos(a) * d, 0.9, 0); }
-    for (let i = 0; i < 80; i++) { const a = R() * 6.283, e = Math.acos(1 - 1.35 * R()), y = Math.cos(e) * 1.2;
-      blob(Math.sin(a) * Math.sin(e) * 2.7, 3.35 + y, Math.cos(a) * Math.sin(e) * 2.7, 0.28 + 0.26 * R(), Math.min(3, Math.max(0, Math.round((y + 0.4) * 1.7 + R() - 0.6)))); }
+    const blob = (x, y, z, r, k) => blobs[k].push(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion(), new THREE.Vector3(r, r * 0.8, r)).premultiply(t.matrix));
+    for (let i = 0; i < 12; i++) { const a = R() * 6.283, d = 1.6 * R(); blob(Math.sin(a) * d, 3.3 + 0.4 * R(), Math.cos(a) * d, 0.75, 0); }
+    for (let i = 0; i < 130; i++) { const a = R() * 6.283, e = Math.acos(1 - 1.35 * R()), y = Math.cos(e) * 1.2;
+      blob(Math.sin(a) * Math.sin(e) * 2.7, 3.35 + y, Math.cos(a) * Math.sin(e) * 2.7, 0.22 + 0.2 * R(), Math.min(3, Math.max(0, Math.round((y + 0.4) * 1.7 + R() - 0.6)))); }
     scene.add(t); }
+  BLOOMS.forEach((c, k) => { const m = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), softToon(C(c)), blobs[k].length); blobs[k].forEach((x, i) => m.setMatrixAt(i, x)); scene.add(m); });
 
   // 花びら: 舞い落ちる(mode 0)と、回転で渦を巻いて決めで散る(mode 1)。手前のものほど大きくぼかす(被写界深度のまね)
   const DOF = { uFocus: { value: 4 }, uCoc: { value: 0.5 } }, VTX = { uVortex: { value: new THREE.Vector4(VORTEX, BURST, 1.4, 0) }, uCenter: { value: new THREE.Vector3() } };
@@ -269,10 +270,12 @@ export function createStage({ renderer, scene, cam, W, H }) {
   const path = (f, t, o) => o.set(f.x + f.rad * Math.sin(f.w * t + f.ph[0]) + 0.35 * f.rad * Math.sin(2.7 * f.w * t + f.ph[1]), f.y + 0.22 * Math.sin(1.3 * t + f.ph[2]),
     f.z + 0.8 * f.rad * Math.cos(f.w * t + f.ph[0]) + 0.3 * f.rad * Math.cos(2.1 * f.w * t + f.ph[3]));
 
-  // 決めの瞬間の光(胸の前でふわっと広がる)
-  const flash = add(new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uK: { value: 0 } },   // 体の後ろ(体が隠す): 前に置くと顔が白く飛んだ
+  // 決めの瞬間の光: 体の後ろから外へ広がる光の輪だけ(光の芯は小さくてもブルームが体ごと白く飛ばした)
+  const flash = add(new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uT: { value: -1 } },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform float uK; varying vec2 vUv; void main() { float r = length(vUv - 0.5) * 2.0; gl_FragColor = vec4(vec3(1.0, 0.95, 0.86), uK * (exp(-r * r * 6.0) * 0.8 + exp(-r * 2.5) * 0.25) * (1.0 - smoothstep(0.85, 1.0, r)));
+    fragmentShader: `uniform float uT; varying vec2 vUv; void main() { float r = length(vUv - 0.5) * 2.0, x = (r - 0.12 - 0.8 * (1.0 - exp(-3.5 * max(uT, 0.0)))) / 0.04;
+      float ring = uT > 0.0 ? exp(-x * x) * exp(-2.6 * uT) : 0.0;
+      gl_FragColor = vec4(vec3(1.0, 0.95, 0.86), 0.6 * ring * (1.0 - smoothstep(0.9, 1.0, r)));
       #include <colorspace_fragment>
     }` })), 8);
 
@@ -292,7 +295,7 @@ export function createStage({ renderer, scene, cam, W, H }) {
   composer.addPass(grade); composer.addPass(new OutputPass());
 
   // カメラ: [秒, 方位(0 = 正面, + = 本人の左), 高さ, 距離(m, 本人の最後の背 1.5 m あたり), 注視の高さ(今の背に対する割合), 画角]
-  const KEYS = [[0, -0.75, 2.4, 8.2, 0.5, 34], [2.4, -0.45, 1.2, 5.0, 0.55, 30], [4.8, 0.15, 0.95, 4.0, 0.56, 28], [6.4, 0.75, 0.35, 3.3, 0.66, 30],
+  const KEYS = [[0, -0.75, 2.4, 8.2, 0.5, 34], [2.4, -0.45, 1.2, 5.0, 0.55, 30], [4.8, 0.15, 0.95, 4.0, 0.56, 28], [6.4, 0.95, 0.35, 3.3, 0.66, 30],
     [7.7, 0.3, 0.8, 3.6, 0.55, 30], [9.0, 0.3, 1.0, 3.2, 0.56, 28], [SECONDS, 0.26, 1.15, 2.2, 0.7, 26]];
   const camAt = (t) => { const i = Math.max(0, Math.min(KEYS.length - 2, KEYS.findIndex((k) => k[0] > t) - 1)), a = KEYS[i], b = KEYS[i + 1], u = Math.min(1, Math.max(0, (t - a[0]) / (b[0] - a[0])));
     const tan = (j, c) => { const p = KEYS[j - 1], n = KEYS[j + 1]; return p && n ? ((n[c] - p[c]) / (n[0] - p[0])) * (b[0] - a[0]) : 0; };   // Catmull-Rom(両端は止まる)
@@ -317,10 +320,10 @@ export function createStage({ renderer, scene, cam, W, H }) {
           tmp.lerp(ho, near); tmp2.lerp(ho2, near); }
         const fl = 4.5 * 2 * Math.PI * t + f.ph[4], th = -0.25 + 1.45 * (0.5 + 0.5 * Math.sin(fl)); f.g.position.copy(tmp); f.g.position.y += 0.02 * Math.sin(fl);
         tmp2.sub(tmp); f.g.rotation.set(-Math.atan2(tmp2.y, Math.hypot(tmp2.x, tmp2.z)) * 0.6, Math.atan2(tmp2.x, tmp2.z), 0); f.L.rotation.z = th; f.Rw.rotation.z = -th; }
-      const k = Math.exp(-(((t - BURST) / 0.2) ** 2)) + (t > BURST ? 0.45 * Math.exp(-(t - BURST) / 0.8) : 0);
+      const k = Math.exp(-(((t - BURST) / 0.18) ** 2)) + (t > BURST ? 0.25 * Math.exp(-(t - BURST) / 0.5) : 0);
       flash.position.set(0, 0.6 * h, 0); flash.position.addScaledVector(tmp.copy(flash.position).sub(cam.position).normalize(), 0.6); flash.quaternion.copy(cam.quaternion);
-      flash.scale.setScalar(3 * h * (0.6 + 0.4 * Math.min(1, k))); flash.material.uniforms.uK.value = 0.9 * k;
-      bloom.strength = 0.3 + 0.35 * k; grade.uniforms.uFlash.value = 0.12 * Math.exp(-(((t - BURST) / 0.15) ** 2));
+      flash.scale.setScalar(3.2 * h); flash.material.uniforms.uT.value = t - BURST;
+      bloom.strength = 0.3 + 0.1 * k; grade.uniforms.uFlash.value = 0.06 * Math.exp(-(((t - BURST) / 0.15) ** 2));
       composer.render();
     } };
 }
