@@ -782,7 +782,9 @@ export const DEFAULTS = {
       "tie": {
         "on": true,
         "color": "#c94a4a",
-        "size": 1
+        "size": 1,
+        "kind": "ring",
+        "leaf": "#7fbf62"
       }
     },
     "back": "short",

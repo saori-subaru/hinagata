@@ -206,7 +206,7 @@ export const CHARACTERS = {
       hair: {
         // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
-        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
+        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6, kind: "berries" } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
@@ -276,7 +276,13 @@ export const CHARACTERS = {
   const FL = [0.014, 0.022, 0.008, 0.018, 0.01, 0.02, 0.012, 0.02, 0.009, 0, 0, 0.016, 0.021], DY = [0, -0.03, 0.02, -0.01, 0.025, -0.03, 0, -0.025, 0.02, 0, 0, -0.02, 0.015];
   SL.edits = FL.map((fl, i) => i === 9 || i === 10 ? { ...SL.edits.find((e) => e.i === i), fk: 0 } : { i, fl, dy: DY[i] });
   SL.fork = { n: 3, short: 1 };   // each tip split in two points: her sheet's many short tips at the hem, without more locks (layers under them muddied the outline)
-}
+}// シルヴィ v2 殻 (a try beside v2): the locks over the head as one shell, as a hand-made model's top is one sheet from the whorl with the
+// locks only as lines on it: each lock full width from its root (no narrow root), none tilted over its neighbour, none puffed up off the skull;
+// they part only toward their tips
+{ const o = structuredClone(CHARACTERS.sylvie2.file.options);
+  Object.assign(o.hair.sculpt.whorl, { rootW: 1, shingle: 0, puff: 0 }); o.hair.sculpt.shortLocks.overlap = 1.6;   // overlap: no gap where they lie side by side
+  CHARACTERS.sylvie2h = { name: { ja: "シルヴィ v2 殻", en: "Sylvie v2 (shell)" }, about: { ja: "頭の上の房をひとつの殻のようにつなげたシルヴィ v2(試し)", en: "Sylvie v2 with the locks over the head joined as one shell (a try)" }, file: { hinagata: 3, name: "シルヴィ v2 殻", options: o } }; }
+
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
 // 6 heads on the adult body (body.adult), made 2026-10-08/09 beside a Genshin character's picture and her three views, then Saori's VRoid

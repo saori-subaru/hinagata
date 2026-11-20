@@ -649,7 +649,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tails", "tailTie", "tailLeaf"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [];   // tailAnchors: where the tails are tied now (avatar.tailTies)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
@@ -724,14 +724,28 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
         const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
-          g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026); return g; });
-        const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of geos) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
-        g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
-        const nv = g.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
-        g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
-        out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
+          g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026);
+          const out = [[g, TL.tie.color]];
+          // kind "berries": two big berries and two leaves (three smaller berries read as busy) on the tie's top, toward the face (a forest elf's; a plain ring read as no one's)
+          if (TL.tie.kind === "berries") { const R = TL.volume * (TL.size ?? 1) * 0.5 + 0.008, c = p.map((v, i) => v + o[i] * 0.026), dt = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+            const fw = [0, 0.6, 1], k = dt(fw, o), u0 = fw.map((v, i) => v - o[i] * k), ul = Math.hypot(...u0), u = u0.map((v) => v / ul), v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];
+            const at = (a, b, e) => c.map((x, i) => x + u[i] * (R + a) + v[i] * b + o[i] * e), br = 0.015 * ts;
+            for (const [a, b, e, r] of [[0.008, -0.012, 0.005, 1], [0.01, 0.012, 0.003, 0.9]]) { const q = new THREE.SphereGeometry(br * r, 12, 9); q.translate(...at(a * ts, b * ts, e * ts)); out.push([q, TL.tie.color]); }
+            // two leaves: flat ovals from one stalk behind the berries' top, up and apart in a V, behind the berries (through them, one stuck in a berry)
+            for (const sg of [1, -1]) { const lf = new THREE.SphereGeometry(1, 10, 6); lf.scale(0.011 * ts, 0.0026 * ts, 0.02 * ts); lf.translate(0, 0, 0.018 * ts);
+              const L0 = [0, 1, 2].map((q) => u[q] * 0.7 + v[q] * 0.6 * sg - o[q] * 0.4), ll = Math.hypot(...L0), L = L0.map((x) => x / ll), k2 = dt(o, L), n0 = o.map((x, q) => x - L[q] * k2), nl = Math.hypot(...n0), nn = n0.map((x) => x / nl);
+              const w = [nn[1] * L[2] - nn[2] * L[1], nn[2] * L[0] - nn[0] * L[2], nn[0] * L[1] - nn[1] * L[0]];
+              lf.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3(...w), new THREE.Vector3(...nn), new THREE.Vector3(...L))); lf.translate(...at(0.022 * ts, 0, -0.009 * ts)); out.push([lf, TL.tie.leaf ?? "#7fbf62"]); } }
+          return out; }).flat();
+        // one mesh per color (the tie's, the leaf's): the toon material takes one color
+        const merged = (list) => { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of list) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
+          g.setAttribute("position", new THREE.Float32BufferAttribute(Pm, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(Nm, 3)); g.setIndex(Im);
+          const nv = g.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; }
+          g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4)); return g; };
+        for (const [key, col] of [["tailTie", TL.tie.color], ["tailLeaf", TL.tie.leaf ?? "#7fbf62"]]) { const list = geos.filter(([, c]) => c === col).map(([q]) => q); if (!list.length || (key === "tailLeaf" && col === TL.tie.color)) continue;
+          out[key] = skinned(merged(list), col, 0.003); out[key].sim = { update() {}, rest() {} }; } }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, floor: true, stiff: 1, damping: 0.86 });   // floor: blown, a sidelock along the cheek went into the face and the ear (no head among its colliders)
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
@@ -831,13 +845,28 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
+  // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
+  // opens under the upper lip (a notch: フ), not only a hole drawn on an unmoved face. The body's points move (the face's layers rebuilt over
+  // them), as a shape key would; back to where they were when it closes. Normals kept (the dent is shallow)
+  const OPEN_MOUTHS = new Set(["open", "openSoft"]); let mouthOpen = false, mouthBase = null;
+  function mouthShape(open) {
+    const geo = parts.body.m.geometry, P = geo.attributes.position; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice() }; mouthOpen = false; }
+    if (open === mouthOpen) return; mouthOpen = open; P.array.set(mouthBase.p);
+    if (open) { const M3 = OPT.face.mouth3d, k = OPT.face.openSize ?? 1, y0 = face.MOUTHP.y + face.FACE.dy, yT = y0 + 0.006, yB = y0 - 0.021 * k, D = 0.015 * (M3.depth ?? 1), H = HTr.identity ? null : HTr;
+      const toH = H ? H.toHead : (x, y, z) => [x, y, z], fromH = H ? H.fromHead : (x, y, z) => [x, y, z];
+      for (let i = 0; i < P.count; i++) { const q = toH(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); if (q[2] < 0.05 || q[1] > yT || q[1] < yB - 0.045) continue;
+        // across: far past the mouth's corners (the face is round: a dent only as wide as the mouth is hidden from aside behind the cheeks, 2-3 mm showed);
+        // down: none to 3 mm under the upper lip, all 11 mm further (the step lies inside the mouth's hole), out again by the mouth's bottom (over the chin too, the jaw read as receding)
+        const wx = 1 - sstep(0.02 * k, 0.065, Math.abs(q[0])), wy = sstep(yT - 0.003, yT - 0.014, q[1]) * (1 - sstep(yB + 0.008, yB - 0.014, q[1])), w = wx * wy; if (!(w > 0)) continue;
+        const r = fromH(q[0], q[1], q[2] - D * w); P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; } }
+    P.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); }
   // ⏳ the mouth's inside (face.mouth3d, a try): a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone.
   // Drawn after everything solid, without the depth test (the head's own skin is in front of them), only where the mouth's hole marked the
   // pixels (face/index.js HOLE), one over the other in this order. Unlit: plain colors, as the mouth's picture was
   if (face.HOLE) { const M3 = OPT.face.mouth3d, g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
     const yc = face.MOUTHP.y + face.FACE.dy - 0.006; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
     const piece = (geo, c, r, color, order, side = THREE.FrontSide) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) P.setXYZ(i, ...HTr.fromHead(c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]));
-      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFuncMask: 2, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
+      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 4, stencilFuncMask: 4, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
       m.renderOrder = order; m.frustumCulled = false; g.add(m); };
     const D = M3.depth ?? 1;
     piece(new THREE.SphereGeometry(1, 20, 14), [0, yc - 0.002, zs - 0.012 * D], [0.044, 0.036, 0.03 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);
@@ -1022,7 +1051,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
       avatar.drawFace();
     },
-    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); },
+    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
@@ -1044,7 +1073,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [k, v, key] of [["extraEars", ears, "earColor"], ["extraEarsIn", earsIn, "earInColor"], ["extraTail", tail, "tailColor"], ["extraWings", wings, "wingColor"]]) {
         if (v !== undefined) XO[key] = v; if (v !== undefined || hair) parts[k]?.m.material.color.set(XC[{ extraEars: "ears", extraEarsIn: "earsIn", extraTail: "tail", extraWings: "wings" }[k]]()); }
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
-      if (hair) { OPT.colors.hair = hair; KNEE.scalp.value.set(hair); ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (hair) { OPT.colors.hair = hair; KNEE.scalp.value.set(hair); ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie" && k !== "tailLeaf") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       else if (hair && OPT.face.lashTrace) avatar.drawFace();   // the lashes follow the hair's color
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
@@ -1163,7 +1192,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setTails(values) {
       const TL = OPT.hair.tail; for (const [k, v] of Object.entries(structuredClone(values))) { if (k === "tie" && v && typeof v === "object") Object.assign(TL.tie, v); else TL[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
-      for (const k of ["tails", "tailTie"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
+      for (const k of ["tails", "tailTie", "tailLeaf"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks(["tails"]))) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
     /** Where the tails are tied (avatar space, rest pose): [{ p, o }] (o: the way the bundle leaves the head), [] without tails. For an editor's handles. */
