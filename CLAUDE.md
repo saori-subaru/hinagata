@@ -5,7 +5,7 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
 
 - 宿題（次にやること）は **TODO.md**。「宿題を読んで続けて」と言われたらそこから。
 - 設計の記録は DESIGN.md、エージェント向けの使い方は llms.txt（サイトでも公開）。
-- 成長・動きの動画は `node tools/grow.mjs --who sylvie2`(育ちは数値を補間して毎コマ作り直す。オン・オフの値は補間できない)。`--motion dance` で踊る、`--times 0,1` で止め絵、`--set "outfit.cape.hem=0.6"` で値を差し替えて試す。`--stage flowers` で花畑のイベントムービー(長さ・育ち・カメラ・光は tools/stage-flowers.js が時刻から決める)。
+- 成長・動きの動画は `node tools/grow.mjs --who sylvie2`(育ちは数値を補間して毎コマ作り直す。オン・オフの値は補間できない)。`--motion dance` で踊る、`--times 0,1` で止め絵、`--set "outfit.cape.hem=0.6"` で値を差し替えて試す。`--stage flowers` で花畑のイベントムービー(長さ・育ち・カメラ・光は tools/stage-flowers.js が時刻から決める)。`--to astel` で別の人へ変わる(数値と色は補間、髪型・服・顔の絵は `--switch` の1コマで入れ替わる)。
 - 作業はブランチで。main に入れるのはサオリが言ったときだけ（サイトは main から自動公開）。
 - **エンジン（src/）を変えたら `node tools/thin-check.mjs` を回す**（間引きの崩れの見張り。高頭身・2頭身・版の無いレシピ・細い体を fine / lite / 0.15 で組み、
   前後の厚みを間引かない体と比べる。失敗なら終了コード1。正面と横の絵は thin-check-out/thin-check.png）。落ちたまま main に入れない。

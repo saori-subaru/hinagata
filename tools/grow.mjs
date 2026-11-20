@@ -4,6 +4,7 @@
 //   動きをつける: --motion dance [--seconds 8] [--grow 0](育たずに本人のまま踊る。1 = 踊りながら育つ: 毎コマ作り直すので遅い)
 //   止め絵の確かめ: --times 0,0.5,1 (その秒のコマだけを撮って横に並べた sheet.png)
 //   値を差し替えて試す: --set "outfit.cape.open=1.2;outfit.cape.hem=0.6"   向き: --yaw 0 (正面。既定 0.35)
+//   別の人へ変わる: --to astel [--switch 0.5] (数値と色は補間、髪型・服・顔の絵は育ち 0.5 のコマで入れ替わる)
 //   舞台の中で撮る: --stage flowers --motion dance (tools/stage-flowers.js が長さ・育ち・カメラを決める。上下に黒帯、白へ溶けて終わる。--w --h で大きさ)
 // クラウドでは CDN に出られないので --npm に three@0.160.0 と meshoptimizer@1 を入れた node_modules を渡す。
 import http from "node:http"; import fs from "node:fs"; import path from "node:path"; import { execFileSync } from "node:child_process"; import { fileURLToPath } from "node:url";
@@ -21,7 +22,7 @@ await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const require = createRequire(path.join(process.cwd(), "x.js")); let pw; try { pw = require("playwright"); } catch { pw = createRequire("/usr/lib/node_modules/")("playwright"); }
 const browser = await pw.chromium.launch({ ...(opt("--chrome") ? { executablePath: opt("--chrome") } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage(); page.on("pageerror", (e) => console.error("page:", e.message)); page.on("console", (m) => m.type() === "error" && console.error("console:", m.text().slice(0, 2000)));
-await page.goto(`http://127.0.0.1:${server.address().port}/tools/grow.html?who=${WHO}&from=${FROM}${MOTION ? `&motion=${MOTION}` : ""}${SET ? `&set=${encodeURIComponent(SET)}` : ""}${STAGE ? `&stage=${STAGE}` : ""}${opt("--w") ? `&w=${opt("--w")}&h=${opt("--h")}` : ""}`); await page.waitForFunction("window.READY", null, { timeout: 120e3 });
+await page.goto(`http://127.0.0.1:${server.address().port}/tools/grow.html?who=${WHO}&from=${FROM}${MOTION ? `&motion=${MOTION}` : ""}${SET ? `&set=${encodeURIComponent(SET)}` : ""}${STAGE ? `&stage=${STAGE}` : ""}${opt("--to") ? `&to=${opt("--to")}&switch=${opt("--switch", 0.5)}` : ""}${opt("--w") ? `&w=${opt("--w")}&h=${opt("--h")}` : ""}`); await page.waitForFunction("window.READY", null, { timeout: 120e3 });
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
 // 1コマ目は終点(背の一番高い形)で撮って枠を決める。なめらかに見えるよう t はイーズイン・アウト
 await page.evaluate(() => window.shot(1));
