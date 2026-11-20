@@ -323,6 +323,10 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       line: () => { const { x, y } = NOSEP, g = fctx.createRadialGradient(px(x + 0.004), py(y - 0.002), 0, px(x + 0.004), py(y - 0.002), pu(0.008)); g.addColorStop(0, "#d9897a50"); g.addColorStop(1, "#d9897a00");
         fctx.fillStyle = g; fctx.fillRect(px(x - 0.006), py(y + 0.008), pu(0.02), pu(0.02));
         line(0.0026, OPT.face.noseColor ?? "#7a4a52"); fctx.beginPath(); fctx.moveTo(px(x + 0.002), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.0035), py(y - 0.001), px(x - 0.001), py(y - 0.004)); fctx.stroke(); },
+      // highlight: no nose drawn, only a soft white glint on its tip (a light on the round of it, as anime faces have)
+      highlight: () => { const { x, y } = NOSEP, k = OPT.face.noseSize ?? 1, cx = x + 0.002 * k, cy = y + 0.004, g = fctx.createRadialGradient(px(cx), py(cy), 0, px(cx), py(cy), pu(0.0075 * k));
+        g.addColorStop(0, "#ffffff"); g.addColorStop(0.45, "#ffffffd0"); g.addColorStop(1, "#ffffff00");
+        fctx.save(); fctx.translate(px(cx), py(cy)); fctx.scale(1, 1.5); fctx.translate(-px(cx), -py(cy)); fctx.fillStyle = g; fctx.fillRect(px(cx - 0.008 * k), py(cy + 0.008 * k), pu(0.016 * k), pu(0.016 * k)); fctx.restore(); },
       none: () => {},
     },
     cheeks: {

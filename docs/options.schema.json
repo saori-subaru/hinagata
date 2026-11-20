@@ -18832,6 +18832,13 @@
      }
     },
     {
+     "value": "highlight",
+     "label": {
+      "ja": "ハイライト",
+      "en": "Highlight"
+     }
+    },
+    {
      "value": "image",
      "label": {
       "ja": "絵の鼻",
