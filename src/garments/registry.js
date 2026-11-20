@@ -16,7 +16,8 @@
 //   build(ctx) → state | null       the shapes (a distance function, a band's value...) from ctx: { OPT, O (its options), P, J, bodySdf, shirtSdf,
 //                                   slope (y → how many times a base height is stretched there), legsSdf(hem, off) (pants with their own hem),
 //                                   outerSdf (the clothes' outside round the torso), sleeveEnd(side) (a long or bell sleeve's end: out, up, lo, hi) }
-//   spec(state, { OPT, H, B, ax, ay, kit, none }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js)
+//   spec(state, { OPT, H, B, ax, ay, kit, none, sheetH, one }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js);
+//                                   sheetH, one: a cloth sheet's cells at this quality, and whether sheets are one-sided (lite)
 //   outline: 0.003, soft: true,     the outline's width (m at outline.width 1); shading by softened normals
 //   thin: null | "cloth" | "keep",  how the "fine" and "lite" builds thin it: as the body / as cloth (less) / not at all
 //   wrist: (O, OPT) => m,           (optional) how far it stands out round the wrists (a cuff): a cape's cloth keeps that far off the forearm's end
