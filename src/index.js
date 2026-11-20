@@ -20,7 +20,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP } from "./hair/locks.js";
+import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -326,6 +326,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
           const r1 = Math.hypot((u - ES_.cu) / ES_.ru, (vv - ES_.cv) / ES_.rv), r2 = Math.hypot((u - ES_.cu + ES_.shift) / ES_.ru, (vv - ES_.cv) / (ES_.rv * 0.92));
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
+    geo.setAttribute("scalp", new THREE.BufferAttribute(scalpOf(Pa), 1));
+  }
+  // the scalp in the hair's color where the block would be (hair.sculpt.whorl: the locks lie on the head and no block is meshed, so a gap
+  // between them showed the skin). Per vertex 0..1; the color is a uniform (setColors)
+  function scalpOf(Pa) {
+    const A = new Float32Array(Pa.length / 3); if (!OPT.hair.sculpt.whorl?.on) return A;
+    const f = hairKit.hairSdfOf(hairForms(OPT.hair));
+    for (let v = 0; v < A.length; v++) { const h = HT.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); A[v] = sstep(0.003, 0, f(h[0], h[1], h[2])); }
+    return A;
   }
   // the knees' blush and line (body.knees; for シルヴィ, as on her sheet): per vertex "knee" = (where it is from the nearer kneecap's middle in
   // the front view, x and y, the vertical as built: a round blush on a stretched leg; how much it faces the front). The distance and the angle
@@ -338,16 +347,17 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       A[i] = dx; A[i + 1] = dy; A[i + 2] = sstep(c[2] - 0.045, c[2] - 0.02, Pa[i + 2]); }
     geo.setAttribute("knee", new THREE.BufferAttribute(A, 3));
   }
-  const KNEE = { blush: { value: new THREE.Vector4() }, bc: { value: new THREE.Color() }, line: { value: new THREE.Vector4() }, lc: { value: new THREE.Color() } };   // blush: (on × strength, size); line: (on × strength, width, radius)
+  const KNEE = { scalp: { value: new THREE.Color(OPT.colors.hair) }, blush: { value: new THREE.Vector4() }, bc: { value: new THREE.Color() }, line: { value: new THREE.Vector4() }, lc: { value: new THREE.Color() } };   // blush: (on × strength, size); line: (on × strength, width, radius)
   const kneeColors = () => { const B = OPT.body.knees?.blush ?? {}, Ln = OPT.body.knees?.line ?? {};
     KNEE.blush.value.set(B.on ? B.strength ?? 0.3 : 0, B.size ?? 0.035, 0, 0); KNEE.bc.value.set(B.color ?? "#ff8a73");
     KNEE.line.value.set(Ln.on ? Ln.strength ?? 0.55 : 0, Ln.width ?? 0.0016, Ln.radius ?? 0.02, 0); KNEE.lc.value.set(Ln.color ?? "#c98a80"); };
   kneeColors();
   const shadeToon = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    Object.assign(sh.uniforms, { kBlush: KNEE.blush, kBC: KNEE.bc, kLine: KNEE.line, kLC: KNEE.lc });
-    sh.vertexShader = "attribute vec3 paint;\nattribute vec3 knee;\nvarying vec3 vPaint;\nvarying vec3 vKnee;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint; vKnee = knee;");
-    sh.fragmentShader = "varying vec3 vPaint;\nvarying vec3 vKnee;\nuniform vec4 kBlush, kLine;\nuniform vec3 kBC, kLC;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+    Object.assign(sh.uniforms, { kScalp: KNEE.scalp, kBlush: KNEE.blush, kBC: KNEE.bc, kLine: KNEE.line, kLC: KNEE.lc });
+    sh.vertexShader = "attribute vec3 paint;\nattribute vec3 knee;\nattribute float scalp;\nvarying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint; vKnee = knee; vScalp = scalp;");
+    sh.fragmentShader = "varying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\nuniform vec4 kBlush, kLine;\nuniform vec3 kBC, kLC, kScalp;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   diffuseColor.rgb *= vPaint;
+  diffuseColor.rgb = mix(diffuseColor.rgb, kScalp, vScalp);
   float kr = length(vKnee.xy);
   if (kBlush.x > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, kBC, kBlush.x * exp(-kr * kr / (kBlush.y * kBlush.y)) * vKnee.z);
   if (kLine.x > 0.0) { float d = abs(kr - kLine.z), w = fwidth(kr) * 0.7 + 1e-6, a = atan(vKnee.y, vKnee.x);
@@ -645,6 +655,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
+  // hair.sculpt.whorl { on, th, ph: where the whorl is (degrees around and up from the skull's middle), r: the roots' ring around it (radians),
+  // rootW: the roots' width, part: the parting's angle (0 = front), shingle: the locks' tilt }: every lock (bangs and back) grows from the whorl
+  // over the head, laid like roof tiles away from the part; no block is meshed under them (the scalp is painted the hair's color: scalpOf)
+  const WHORL = OPT.hair.sculpt.whorl?.on ? { rootW: 0.35, ...OPT.hair.sculpt.whorl } : null;
+  const whorlOf = () => { const D = Math.PI / 180, th = (WHORL.th ?? 180) * D, ph = (WHORL.ph ?? 80) * D;
+    return { whorl: { d: [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], r: WHORL.r ?? 0.12 }, shingle: WHORL.shingle ?? 0.3, part: WHORL.part ?? 0 }; };
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
     const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
@@ -654,7 +670,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const capRaw = hairKit.hairSdfOf(hairPick), cap = HTr.wrap(capRaw), c = HTr.fromHead(0, 1.125, -0.02);
     const outward = (x, y, z, M) => { const e = M.elements, cx = e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12], cy = e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13], cz = e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14];
       return [x - cx, Math.max(0, y - cy), z - cz]; };   // from the head's center, or from the line under it (hair hanging down faces out sideways)
-    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, uvAt: ringUV, rigid: OPT.hair.rigid ?? 0, points: OPT.hair.lockPoints ?? 0, oneShade: OPT.hair.paint.oneShade ?? 0, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), U); x.m.material = x.wrap(x.m.material); x.sim = sim; return x; };
+    const part = (specs, opt, U = GRAD.hair) => { const sim = createLocks({ specs, head: BI.head, skeleton, root, outward, lite: LITE, uvAt: ringUV, rigid: OPT.hair.rigid ?? 0, points: OPT.hair.lockPoints ?? 0, bendPts: WHORL ? 0.3 : 0, oneShade: OPT.hair.paint.oneShade ?? 0, ...opt }), x = skinned(sim.geometry, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), U); x.m.material = x.wrap(x.m.material); x.sim = sim; return x; };
     if (longOn || shortOn) {
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
@@ -664,6 +680,25 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       else if (hairPick.back === "bob" || hairPick.back === "flip") {   // a bob or a flip in locks: hanging from the back of the head as the short hair's do, further round to the front, down to that style's hem; the bob's tips curl in a little, the flip's out and up
         const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
         out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10, hugY: hugOf(BL) }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }
+      else if (WHORL && hairPick.back === "hang") {   // from the whorl: the back's locks are made as the bangs' are, one lock per row around the back (-span..span from 180), each as wide as its share
+        const B = hairKit.BACKS.short, n = Math.max(3, Math.round(SL.count ?? 13)), span = SL.span ?? 115, tips = [], hem = (a) => B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos((180 + a) * Math.PI / 180))) - (SL.below ?? 0.02);
+        for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0);
+          tips.push([a, hem(a) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
+        const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.shape ? 0.3 : SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };   // (with a shape nothing hangs: the shape says where the hem goes)
+        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
+        // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
+        specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
+        // fork (shortLocks.fork { n, short }; an edit's fk: 0 leaves a lock whole): each tip split in two points, the shorter one by turns left and right
+        if (SL.fork) specs.forEach((sp, i) => { if ((SL.edits ?? []).find((e) => e?.i === i)?.fk !== 0) sp.fork = { n: SL.fork.n ?? 3, short: SL.fork.short ?? 1, side: i % 2 ? 1 : -1 }; });
+        // inner (shortLocks.inner { count, span, root: degrees up from the skull's middle, thick, dy }): a layer under the outer one, rooted where it is
+        // hidden under it, lying down the head and the nape without a flick, shaded darker (layer 1): where the outer locks flick out, hair shows
+        // under them, not the neck (a gap from the side)
+        // (span: round the back only; by the ears a lock along the head ran out over the elf ear and hung from its tip)
+        const IN = SL.inner; if (IN?.on) { const m = Math.max(2, Math.round(IN.count ?? 8)), sp1 = IN.span ?? 70, it = [];
+          for (let i = 0; i < m; i++) { const a = -sp1 + 2 * sp1 * (i + 0.5) / m; it.push([a, hem(a) + (IN.dy ?? 0.01), null, null, null, 0, 0, 0, 1, 0, 0]); }
+          for (const sp of bangLocks({ ...kit, span: sp1, tips: it, lockThick: IN.thick ?? 0.08, puff: 0, lockRoot: IN.root ?? 20, lockRootSpread: 1, shingle: 0 }, bangKit()))
+            specs.push(Object.assign(sp, { stiff: 1, layer: 1, hold: INNER_HOLD, rigid: INNER_RIGID })); }
+        out.locks = part(specs, { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 }); }
       else { const B = hairKit.BACKS.short, bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (SL.below ?? 0.02), 0)[1];   // short hair: locks over the block down to its hem (lower at the nape: a U across the back, not a V)
         out.locks = hairPick.back === "hang" ? part(ringLocks(SL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 8, hugY: hugOf(SL), innerHugY: SL.innerHug ? HTr.fromHead(0, SL.innerHug, 0)[1] : hugOf(SL) }), { coll, ell, stiff: SL.stiff ?? 3, damping: 0.85 })   // hanging: draped from the back of the head, standing off the nape (which shows under them)
           : part(surfaceLocks({ ...SL, ...SL.lie }, { cap, center: c, bottom }), { coll: [], ell: null, stiff: SL.stiff ?? 3, damping: 0.85 }); }   // lying on the hair: no colliders (they would push the locks off the nape's inward curve)
@@ -671,7 +706,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (bangsOn) {
       // the hime cut in locks (2026-10-07, Saori: "姫カットの毛束タイプ"): the same locks from its own tips (a straight fringe, side locks to the
       // cheeks), each ending square instead of in a point (HIME_END)
-      const HIME = hairPick.bangs === "hime", B = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo;   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
+      const HIME = hairPick.bangs === "hime", B0 = HIME ? { ...OPT.hair.sculpt.nendo, lockHangY: HIME_HANG, lockRise: 0, lockTipSpread: 1, ...OPT.hair.sculpt.hime } : OPT.hair.sculpt.nendo, B = WHORL ? { ...B0, lockRootW: B0.lockRootW ?? WHORL.rootW, puff: WHORL.puff ?? 0.004, ...whorlOf() } : B0;   // (puff: the bangs' own 1.2 cm, over the forehead from their old roots, peaks over the crown from the whorl: a hump in front)   // (its side locks hang from the side of the head: their tips are by the chin, where no hair lies)
       const specs = hairPick.bangs === "side" ? sideLocks(hairKit.SIDE(), bangKit()) : bangLocks(B, bangKit()), long = specs.some((sp) => sp.stiff < 1);   // a tuft hanging long keeps off the neck, the shoulders and the chest
       if (HIME) for (const sp of specs) { sp.prof = HIME_END; sp.blunt = 0.06; }
       const GO = OPT.hair.gradient; if (GO?.bangs === false && GO.hanging !== false) for (const sp of specs) sp.grad = sp.hang ? 1 : 0;   // gradient.hanging: with the bangs left out, the tufts hanging long still take it (Nahida's side locks)
@@ -696,7 +731,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         g.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); g.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         out.tailTie = skinned(g, TL.tie.color, 0.003); out.tailTie.sim = { update() {}, rest() {} }; }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z) }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
@@ -782,19 +817,34 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null;
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); holeLayer.bind(skeleton); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
     browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
+  // ⏳ the mouth's inside (face.mouth3d, a try): a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone.
+  // Drawn after everything solid, without the depth test (the head's own skin is in front of them), only where the mouth's hole marked the
+  // pixels (face/index.js HOLE), one over the other in this order. Unlit: plain colors, as the mouth's picture was
+  if (face.HOLE) { const M3 = OPT.face.mouth3d, g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
+    const yc = face.MOUTHP.y + face.FACE.dy - 0.006; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
+    const piece = (geo, c, r, color, order, side = THREE.FrontSide) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) P.setXYZ(i, ...HTr.fromHead(c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]));
+      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFuncMask: 2, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
+      m.renderOrder = order; m.frustumCulled = false; g.add(m); };
+    const D = M3.depth ?? 1;
+    piece(new THREE.SphereGeometry(1, 20, 14), [0, yc - 0.002, zs - 0.012 * D], [0.044, 0.036, 0.03 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);
+    piece(new THREE.SphereGeometry(1, 14, 10), [0, yc + 0.002, zs - 0.034 * D], [0.011, 0.009, 0.006], M3.throat ?? "#7d2a40", 5);
+    piece(new THREE.SphereGeometry(1, 16, 12), [0, yc - 0.016, zs - 0.017 * D], [0.016, 0.0065, 0.017], M3.tongue ?? "#ee8798", 6);
+    if (M3.teeth) piece(new THREE.BoxGeometry(2, 2, 2), [0, yc + 0.0125, zs - 0.007], [0.013, 0.0035, 0.002], "#ffffff", 7);
+    bone.head.add(g); }
 
   lap("faceLayer");
   // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index
@@ -994,7 +1044,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [k, v, key] of [["extraEars", ears, "earColor"], ["extraEarsIn", earsIn, "earInColor"], ["extraTail", tail, "tailColor"], ["extraWings", wings, "wingColor"]]) {
         if (v !== undefined) XO[key] = v; if (v !== undefined || hair) parts[k]?.m.material.color.set(XC[{ extraEars: "ears", extraEarsIn: "earsIn", extraTail: "tail", extraWings: "wings" }[k]]()); }
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
-      if (hair) { OPT.colors.hair = hair; ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (hair) { OPT.colors.hair = hair; KNEE.scalp.value.set(hair); ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       else if (hair && OPT.face.lashTrace) avatar.drawFace();   // the lashes follow the hair's color
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color

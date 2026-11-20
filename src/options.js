@@ -330,7 +330,8 @@ export const DEFAULTS = {
           "back": 25,
           "flat": 0.5,
           "curve": 0.25,
-          "k": 0.012
+          "k": 0.012,
+          "round": 0.62
         },
         "turn": 0,
         "blend": 0.02,
@@ -1029,6 +1030,11 @@ export const DEFAULTS = {
     "noseColor": null,
     "noseSize": 1,
     "openSize": 1,
+    "mouth3d": {
+      "on": false,
+      "depth": 1,
+      "teeth": false
+    },
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,

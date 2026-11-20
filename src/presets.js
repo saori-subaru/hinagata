@@ -195,12 +195,13 @@ export const CHARACTERS = {
   o.colors.hair = "#f4ece3";
   o.outline = { trace: 0.75 };
   o.body.head.crown = 1.2;   // the top of the head as high over the eyes as on her design sheet (higher, 1.35, came out flat-topped and stepped)
-  o.body.sculpt.crown = { y: 1.34, blend: 0.14 };   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
+  o.body.sculpt.crown = { y: 1.34, blend: 0.14 };
+  o.body.sculpt.cheeks = { ...o.body.sculpt.cheeks, y: 0.96, height: 0.1 };   // the cheeks fullest higher, not down to the jaw: from 3/4 the jowls (v1's 0.94 / 0.14) bulged out past the chin   // the flat top's corner rounded wide: the head's outline one curve (blend 0.05 left a flat top with a corner each side)
   o.body.sculpt.hand = { slim: 1, fingers: 0.7 };   // her sheet's hands: slender, tapering, the fingers together (fingers 0.7: a child's, not the adult hand's 0.55)
   // her sheet's neck: a thin column, the shirt's neckline and the cape close round its base (lower and wider they bared the slope to the shoulders,
   // and the neck read as wide as that)
   o.body.sculpt.neck = { ...o.body.sculpt.neck, width: 0.6 }; Object.assign(o.outfit.shirt.collar, { y: 0.786, bowl: 4 }); o.outfit.cape.neckOpen = 0.05;
-  o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0 } };   // short, level and a little back: their tips show beside the hair
+  o.body.sculpt.ears = { elf: { on: true, length: 0.12, width: 0.045, angle: -14, back: 30, curve: 0, round: 0.3 } };   // short, level and a little back: their tips show beside the hair
   Object.assign(o, {
       hair: {
         // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
@@ -210,11 +211,12 @@ export const CHARACTERS = {
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),
         // straight down along the cheeks, curving in a little under the jaw (head space)
-        // The wing on her right (the tail is on her left): two cones standing out from behind the ear to the side and down (taper 1)
-        drawn: [{ pts: [[0.15, 1.24, 0.09], [0.16, 1.13, 0.11], [0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true },
-          { pts: [[-0.2, 1.07, -0.095], [-0.265, 1.03, -0.099], [-0.31, 0.99, -0.103], [-0.347, 0.954, -0.105]], width: 0.09, thick: 1, stiff: 3, taper: 1 },
-          { pts: [[-0.19, 1.0, -0.135], [-0.25, 0.96, -0.155], [-0.29, 0.925, -0.17]], width: 0.08, thick: 0.8, stiff: 3, taper: 1 }],
+        // (v2: from the whorl under the bangs, out from under them by the temple: rooted at the temple it showed its root's stub above the ear)
+        drawn: [{ pts: [[0.17, 1.03, 0.118], [0.175, 0.94, 0.112], [0.17, 0.85, 0.115], [0.153, 0.77, 0.13]], width: 0.028, thick: 0.35, stiff: 3, mirror: true, fromWhorl: true }],
         sculpt: {
+          // every lock from the whorl behind the ahoge, laid like roof tiles away from the part down the middle; no block under them (the
+          // locks make the head's shape; on a 1.6 cm block they lay over a helmet). lockShell: the locks lie on the skull, not 1.6 cm over it
+          whorl: { on: true, th: 180, ph: 78 }, lockShell: 0.004,
           ahogeCurl: true, ahogeSize: 1.05,   // small and curled round as on her design sheet
           shortBack: 0.78,   // the back's hem at the middle, longer only there (shortLocks.below lengthened every lock: long strands beside the face, whiskers at the ears)
           // the bangs as on her design sheet, placed by her eyes (the locks' edges read off its front view, scaled to her eyes' spacing):
@@ -237,24 +239,13 @@ export const CHARACTERS = {
             overlap: 1.44, lockBand: 0.5, lockRootSpread: 1, lockRoot: 48, lockSpan: 14,
           },
           shortLocks: {
-            count: 12, width: 0.09, thick: 0.1, below: 0.03, flick: 0.01, hug: 0.95, innerHug: 0.82,
-            // the left side mirrors the right. The locks over the ears end above them (1, 10 and the inner 12, 13, 21, 22), curling in a
-            // little, so the ears show from the front and the side (a lock passes through an ear: a long one buries it); behind the ears
-            // (2, 9) they hang to the jaw
-            edits: [
-              { i: 0, da: 0.46 },
-              { i: 1, dy: 0.03, da: -3.67, fl: -0.006 },
-              { i: 2, dy: 0.02, da: -5.05, fl: -0.004 },
-              { i: 9, dy: 0.02, da: 5.05, fl: -0.004 },
-              { i: 10, dy: 0.03, da: 3.67, fl: -0.006 },
-              { i: 11, da: -0.46 },
-              { i: 12, dy: 0.05 },
-              { i: 13, dy: 0.09 },
-              { i: 14, dy: 0.01 },
-              { i: 20, dy: 0.01 },
-              { i: 21, dy: 0.09 },
-              { i: 22, dy: 0.05 },
-            ],
+            count: 13, width: 0.09, thick: 0.15, below: 0.03,   // from the whorl (hair.sculpt.whorl): one lock right behind, across from the part
+            // the wing on her right (the tail is on her left): the two locks behind the ear flick out from below the head's widest part, their
+            // points turning up (drawn cones standing out from behind the ear read as horns)
+            // the rest flick out unevenly (as her sheet's hem: tips each its own way), a little longer or shorter by turns
+            edits: [{ i: 0, fl: 0.014 }, { i: 1, fl: 0.022, dy: -0.015 }, { i: 2, fl: 0.008, dy: 0.01 }, { i: 3, fl: 0.018 }, { i: 4, fl: 0.01, dy: -0.015 }, { i: 5, fl: 0.02, dy: 0.01 },
+              { i: 6, fl: 0.012 }, { i: 7, fl: 0.02, dy: -0.015 }, { i: 8, fl: 0.009, dy: 0.01 }, { i: 9, fl: 0.018, w: 1.25 }, { i: 10, fl: 0.022, w: 1.25, dy: 0.02 },
+              { i: 11, fl: 0.016, dy: 0.01 }, { i: 12, fl: 0.021 }],
             stiff: 2.7,
           },
           long: { flick: 0.002, bottom: 0.85 },
@@ -263,7 +254,7 @@ export const CHARACTERS = {
       face: {   // as on her design sheet: tall flat-colored eyes set wide, a faint brow, a tiny mouth, a soft blush under the eyes
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 9 }, nose: { on: false } },
         parts: { eyes: "tall", brows: "thin", mouth: "small", nose: "dot" },
-        noseColor: "#c98a8090", noseSize: 0.65, openSize: 1.3, lashHatch: true, lashTrace: 0.8,   // the knees' line's color (body.knees.line), see-through; a small dot
+        noseColor: "#c98a8090", noseSize: 0.65, openSize: 1.3, mouth3d: { on: true }, lashHatch: true, lashTrace: 0.8,   // the knees' line's color (body.knees.line), see-through; a small dot
         browsOverHair: true,   // her brows are a whole eye over the eyes (past the face picture's top), drawn over the bangs
         eyeSize: 1.08,   // ⛔ the eyes' size and place are Saori's choice (bigger and further apart than the sheet's on this face): the brows and the bangs are placed by them
         layout: { eyeX: 0.104, eyeY: 1.005, browX: 0.117, browY: 1.15, mouthY: 0.906 },
@@ -278,6 +269,14 @@ export const CHARACTERS = {
       },
   });
   CHARACTERS.sylvie2 = { name: { ja: "シルヴィ v2", en: "Sylvie v2" }, about: { ja: "設定画に寄せたシルヴィ", en: "Sylvie as on her design sheet" }, file: { hinagata: 3, name: "シルヴィ v2", options: o } }; }
+// シルヴィ v2's back: its outline set first (shortLocks.shape) and the locks laid on it, not an inner layer under flicks lock by lock
+{ const o = CHARACTERS.sylvie2.file.options, SL = o.hair.sculpt.shortLocks;
+  SL.shape = { hang: 0.75, flare: [[1.0, 0], [0.9, 0.005], [0.8, 0.02], [0.74, 0.032]], sides: 0.7 };   // (hang 0.4 tucked the hem in to the nape: no flick showed)
+  // the hem jagged by turns (her sheet's) and the tips flicked out unevenly over the shape (v2's flicks), the two behind her right ear the wing
+  const FL = [0.014, 0.022, 0.008, 0.018, 0.01, 0.02, 0.012, 0.02, 0.009, 0, 0, 0.016, 0.021], DY = [0, -0.03, 0.02, -0.01, 0.025, -0.03, 0, -0.025, 0.02, 0, 0, -0.02, 0.015];
+  SL.edits = FL.map((fl, i) => i === 9 || i === 10 ? { ...SL.edits.find((e) => e.i === i), fk: 0 } : { i, fl, dy: DY[i] });
+  SL.fork = { n: 3, short: 1 };   // each tip split in two points: her sheet's many short tips at the hem, without more locks (layers under them muddied the outline)
+}
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
 // 6 heads on the adult body (body.adult), made 2026-10-08/09 beside a Genshin character's picture and her three views, then Saori's VRoid

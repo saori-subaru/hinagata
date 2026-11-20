@@ -113,6 +113,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
     return GP.spec(st, { OPT, H, B, ax, ay, kit, hairCap: () => hairKit.hairSdfOf(hairForms(OPT.hair)) }); }
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));
+    if (OPT.hair.sculpt.whorl?.on) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "head" };   // locks from the whorl: no block, the scalp is painted (index.js scalpOf); the ahoge is joined to this
     return { sdf: HT.wrap(hairKit.hairSdfOf(pick)), lo: [-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], hi: [0.4, 1.5, 0.38], h: H * OPT.quality.hairCell, bone1: "head" };
   }
   throw new Error(`Unknown part "${name}"`);

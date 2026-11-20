@@ -4545,6 +4545,25 @@
     "en": "ears › elf"
    }
   },
+  "body.sculpt.ears.elf.round": {
+   "path": "body.sculpt.ears.elf.round",
+   "type": "number",
+   "default": 0.62,
+   "label": {
+    "en": "ears › elf › round"
+   },
+   "group": "body",
+   "tier": "advanced",
+   "cost": "body",
+   "apply": null,
+   "min": 0.31,
+   "max": 0.93,
+   "step": 0.001,
+   "soft": true,
+   "section": {
+    "en": "ears › elf"
+   }
+  },
   "body.sculpt.ears.turn": {
    "path": "body.sculpt.ears.turn",
    "type": "number",
@@ -18324,6 +18343,55 @@
    "help": {
     "ja": "あーん(上だけ線)の大きさ",
     "en": "the size of Open (top line)"
+   }
+  },
+  "face.mouth3d.on": {
+   "path": "face.mouth3d.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "en": "mouth 3d › on"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "section": {
+    "en": "mouth 3d"
+   }
+  },
+  "face.mouth3d.depth": {
+   "path": "face.mouth3d.depth",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "en": "mouth 3d › depth"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "min": 0.5,
+   "max": 1.5,
+   "step": 0.01,
+   "soft": true,
+   "section": {
+    "en": "mouth 3d"
+   }
+  },
+  "face.mouth3d.teeth": {
+   "path": "face.mouth3d.teeth",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "en": "mouth 3d › teeth"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "section": {
+    "en": "mouth 3d"
    }
   },
   "face.lashHatch": {
