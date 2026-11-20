@@ -19225,6 +19225,10 @@
    "section": {
     "ja": "影と線",
     "en": "Shadows and lines"
+   },
+   "help": {
+    "ja": "あごの裏だけに、くっきりした影。少し下から見ても、あごの形が首に溶けない",
+    "en": "a crisp shadow on the jaw's underside only: seen from a little below, the chin doesn't melt into the neck"
    }
   },
   "face.jawShadow.color": {
@@ -19242,40 +19246,21 @@
     "en": "jaw shadow"
    }
   },
-  "face.jawShadow.jawNy": {
-   "path": "face.jawShadow.jawNy",
-   "type": "json",
-   "default": [
-    0.55,
-    0.85
-   ],
+  "face.jawShadow.edge": {
+   "path": "face.jawShadow.edge",
+   "type": "number",
+   "default": 0.92,
    "label": {
-    "en": "jaw shadow › jaw ny"
+    "en": "jaw shadow › edge"
    },
    "group": "face",
    "tier": "advanced",
    "cost": "paint",
    "apply": null,
-   "section": {
-    "en": "jaw shadow"
-   }
-  },
-  "face.jawShadow.jawY": {
-   "path": "face.jawShadow.jawY",
-   "type": "json",
-   "default": [
-    0.8,
-    0.84,
-    0.9,
-    0.95
-   ],
-   "label": {
-    "en": "jaw shadow › jaw y"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
+   "min": 0.46,
+   "max": 1.38,
+   "step": 0.001,
+   "soft": true,
    "section": {
     "en": "jaw shadow"
    }
@@ -19295,44 +19280,6 @@
    "max": -0.025,
    "step": 0.001,
    "soft": true,
-   "section": {
-    "en": "jaw shadow"
-   }
-  },
-  "face.jawShadow.neckY": {
-   "path": "face.jawShadow.neckY",
-   "type": "json",
-   "default": [
-    0.76,
-    0.81,
-    0.86,
-    0.9
-   ],
-   "label": {
-    "en": "jaw shadow › neck y"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
-   "section": {
-    "en": "jaw shadow"
-   }
-  },
-  "face.jawShadow.neckX": {
-   "path": "face.jawShadow.neckX",
-   "type": "json",
-   "default": [
-    0.075,
-    0.1
-   ],
-   "label": {
-    "en": "jaw shadow › neck x"
-   },
-   "group": "face",
-   "tier": "advanced",
-   "cost": "paint",
-   "apply": null,
    "section": {
     "en": "jaw shadow"
    }

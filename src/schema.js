@@ -153,7 +153,7 @@ const MAIN = [
   ["face.blush.nose.strength", L("鼻先の濃さ", "Nose blush strength"), { when: { "face.blush.nose.on": true }, min: 0, max: 1, step: 0.01, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.blush.nose.size", L("鼻先の大きさ", "Nose blush size"), { when: { "face.blush.nose.on": true }, min: 0.008, max: 0.03, step: 0.001, section: L("赤み", "Blush"), apply: "setBlush" }],
   ["face.noseShadow.on", L("鼻の下の影", "Nose shadow"), { section: L("影と線", "Shadows and lines") }],
-  ["face.jawShadow.on", L("あごの影", "Jaw shadow"), { section: L("影と線", "Shadows and lines") }],
+  ["face.jawShadow.on", L("あごの影", "Jaw shadow"), { section: L("影と線", "Shadows and lines"), help: L("あごの裏だけに、くっきりした影。少し下から見ても、あごの形が首に溶けない", "a crisp shadow on the jaw's underside only: seen from a little below, the chin doesn't melt into the neck") }],
   ["face.earLine.on", L("耳の線", "Ear line"), { section: L("影と線", "Shadows and lines") }],
   ["face.earShade.on", L("耳の陰", "Ear shade"), { section: L("影と線", "Shadows and lines") }],
   ["face.images.eye.src", L("目の絵", "Eye picture"), { section: L("描いたパーツ", "Drawn parts"), help: L("null = 同梱の img/parts/eye.png", "null = the bundled img/parts/eye.png") }],

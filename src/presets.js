@@ -188,6 +188,7 @@ export const CHARACTERS = {
         layout: { eyeX: 0.088, browX: 0.125, browY: 1.104, mouthY: 0.91 },   // the eyes where シルヴィ's are (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
         browsOverHair: true,
         blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
+        jawShadow: { on: true },   // the chin's underside shaded: seen from a little below, the chin's outline is gone and it melted into the neck
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
         drawn: [
           { id: "happy", name: "にっこり", eye: ASTEL_EYE_HAPPY, brow: null, mouth: ASTEL_MOUTH_HAPPY, cheeks: "none", blink: false },

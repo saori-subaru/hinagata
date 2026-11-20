@@ -1028,11 +1028,8 @@ export const DEFAULTS = {
     "jawShadow": {
       "on": false,
       "color": "#ecd3d1",
-      "jawNy": [0.55, 0.85],
-      "jawY": [0.8, 0.84, 0.9, 0.95],
-      "backZ": -0.05,
-      "neckY": [0.76, 0.81, 0.86, 0.9],
-      "neckX": [0.075, 0.1]
+      "edge": 0.92,
+      "backZ": -0.05
     },
     "blush": {
       "cheeks": {

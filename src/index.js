@@ -318,25 +318,27 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
     geo.setAttribute("shadeN", new THREE.BufferAttribute(S, 3));
   }
-  // painted jaw shadow (anime style, not from lighting): under the jaw toward the ears, and the top of the neck. Stored per vertex as "paint" (0..1)
+  // painted jaw shadow (anime style, not from lighting) on the jaw's underside only, so the chin's edge reads seen from below (the outline is
+  // only drawn where the surface turns away: from below the underside faces the camera). Per vertex "jawSh" = (where: head space, under the
+  // mouth, in front of backZ, off the torso; how far the surface faces down, −ny), cut crisp per pixel at edge (shadeToon). It was painted
+  // per vertex at fixed heights for one body: blurred over the triangles, and on another body it covered the lower face (whose front
+  // under the mouth faces down 0.4–0.9: edge 0.92 takes the underside alone)
   const JS = OPT.face.jawShadow;
-  // painted color per vertex (multiplied into the skin): the jaw shadow, and a soft crescent of shade inside each ear (reads as the ear's hollow)
+  // painted color per vertex (multiplied into the skin): a soft crescent of shade inside each ear (reads as the ear's hollow)
   const ES_ = OPT.face.earShade;
   function addPaint(geo) {
-    const Pa = basePos(geo), N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), jc = new THREE.Color(JS.color), ec = new THREE.Color(ES_.color);
+    const Pa = basePos(geo), N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), ec = new THREE.Color(ES_.color), JA = new Float32Array(Pa.length / 3 * 2);
     const put = (v, c, k) => { if (k <= 0) return; for (const [o, ch] of [[0, "r"], [1, "g"], [2, "b"]]) A[v * 3 + o] *= 1 + (c[ch] - 1) * Math.min(1, k); };
-    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2], ny = N[i + 1];   // (at the base proportions: the shadow's heights are)
-      if (JS.on) { const jaw = sstep(JS.jawNy[0], JS.jawNy[1], -ny) * sstep(JS.jawY[0], JS.jawY[1], y) * (1 - sstep(JS.jawY[2], JS.jawY[3], y)) * sstep(JS.backZ - 0.04, JS.backZ, z);
-        // the neck's top all the way round to behind the ears (only its front middle before: the sides under the ears were left bare; 2026-10-07,
-        // Saori: "耳下の首などが抜けてる"), fading out at the back (backZ)
-        const neck = sstep(JS.neckY[0], JS.neckY[1], y) * (1 - sstep(JS.neckY[2], JS.neckY[3], y)) * (1 - sstep(JS.neckX[0], JS.neckX[1], Math.abs(x))) * sstep(JS.backZ - 0.04, JS.backZ, z);
-        put(v, jc, Math.max(jaw, neck)); }
+    const JTOP = (OPT.face.layout?.mouthY ?? 0.896) - 0.012;
+    for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2];   // (at the base proportions, as HT reads them)
+      if (JS.on) { const h = HT.toHead(x, y, z); JA[v * 2] = sstep(JTOP + 0.008, JTOP - 0.008, h[1]) * sstep(0.62, 0.68, h[1]) * sstep(JS.backZ - 0.04, JS.backZ, h[2]) * sstep(0.22, 0.18, Math.abs(h[0])); JA[v * 2 + 1] = -N[i + 1]; }
       if (ES_.on) { const h = HT.toHead(x, y, z);
         for (const E of EARS) { const d = [0, 1, 2].map((k) => h[k] - E.c[k]), u = (d[0] * E.eu[0] + d[1] * E.eu[1] + d[2] * E.eu[2]) / E.ES, vv = (d[0] * E.ev[0] + d[1] * E.ev[1] + d[2] * E.ev[2]) / E.ES, w = (d[0] * E.ew[0] + d[1] * E.ew[1] + d[2] * E.ew[2]) / E.ES;
           if (w < -0.012 || w > 0.04 || Math.abs(u) > 0.09 || Math.abs(vv) > 0.09) continue;   // the ear's front only
           const r1 = Math.hypot((u - ES_.cu) / ES_.ru, (vv - ES_.cv) / ES_.rv), r2 = Math.hypot((u - ES_.cu + ES_.shift) / ES_.ru, (vv - ES_.cv) / (ES_.rv * 0.92));
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
+    geo.setAttribute("jawSh", new THREE.BufferAttribute(JA, 2));
     geo.setAttribute("scalp", new THREE.BufferAttribute(scalpOf(Pa), 1));
   }
   // the scalp in the hair's color where the block would be (hair.sculpt.whorl: the locks lie on the head and no block is meshed, so a gap
@@ -361,16 +363,18 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       A[i] = dx; A[i + 1] = dy; A[i + 2] = sstep(c[2] - 0.045, c[2] - 0.02, Pa[i + 2]); }
     geo.setAttribute("knee", new THREE.BufferAttribute(A, 3));
   }
-  const KNEE = { scalp: { value: new THREE.Color(OPT.colors.hair) }, blush: { value: new THREE.Vector4() }, bc: { value: new THREE.Color() }, line: { value: new THREE.Vector4() }, lc: { value: new THREE.Color() } };   // blush: (on × strength, size); line: (on × strength, width, radius)
+  const KNEE = { scalp: { value: new THREE.Color(OPT.colors.hair) }, blush: { value: new THREE.Vector4() }, bc: { value: new THREE.Color() }, line: { value: new THREE.Vector4() }, lc: { value: new THREE.Color() },
+    jaw: { value: new THREE.Vector4(...new THREE.Color(JS.color).toArray(), JS.on ? JS.edge ?? 0.92 : 9) } };   // blush: (on × strength, size); line: (on × strength, width, radius); jaw: (the shadow's color, the edge: how far down the surface faces)
   const kneeColors = () => { const B = OPT.body.knees?.blush ?? {}, Ln = OPT.body.knees?.line ?? {};
     KNEE.blush.value.set(B.on ? B.strength ?? 0.3 : 0, B.size ?? 0.035, 0, 0); KNEE.bc.value.set(B.color ?? "#ff8a73");
     KNEE.line.value.set(Ln.on ? Ln.strength ?? 0.55 : 0, Ln.width ?? 0.0016, Ln.radius ?? 0.02, 0); KNEE.lc.value.set(Ln.color ?? "#c98a80"); };
   kneeColors();
   const shadeToon = (c) => { const m = shaded(OPT.shading.style, c, OPT.shading.bands), prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    Object.assign(sh.uniforms, { kScalp: KNEE.scalp, kBlush: KNEE.blush, kBC: KNEE.bc, kLine: KNEE.line, kLC: KNEE.lc });
-    sh.vertexShader = "attribute vec3 paint;\nattribute vec3 knee;\nattribute float scalp;\nvarying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint; vKnee = knee; vScalp = scalp;");
-    sh.fragmentShader = "varying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\nuniform vec4 kBlush, kLine;\nuniform vec3 kBC, kLC, kScalp;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+    Object.assign(sh.uniforms, { kScalp: KNEE.scalp, kBlush: KNEE.blush, kBC: KNEE.bc, kLine: KNEE.line, kLC: KNEE.lc, kJaw: KNEE.jaw });
+    sh.vertexShader = "attribute vec3 paint;\nattribute vec3 knee;\nattribute float scalp;\nattribute vec2 jawSh;\nvarying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\nvarying vec2 vJaw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPaint = paint; vKnee = knee; vScalp = scalp; vJaw = jawSh;");
+    sh.fragmentShader = "varying vec3 vPaint;\nvarying vec3 vKnee;\nvarying float vScalp;\nvarying vec2 vJaw;\nuniform vec4 kBlush, kLine, kJaw;\nuniform vec3 kBC, kLC, kScalp;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   diffuseColor.rgb *= vPaint;
+  if (kJaw.a < 2.0) { float jw = fwidth(vJaw.y) * 0.7 + 1e-6; diffuseColor.rgb *= mix(vec3(1.0), kJaw.rgb, vJaw.x * smoothstep(kJaw.a - jw, kJaw.a + jw, vJaw.y)); }
   diffuseColor.rgb = mix(diffuseColor.rgb, kScalp, vScalp);
   float kr = length(vKnee.xy);
   if (kBlush.x > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, kBC, kBlush.x * exp(-kr * kr / (kBlush.y * kBlush.y)) * vKnee.z);
