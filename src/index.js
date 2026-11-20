@@ -41,7 +41,7 @@ export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto poi
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureCharacter, fitProportions } from "./measure.js";   // proportions in real terms, and options found from proportions (measure.js; no three.js: Node too)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
-import "./motion/dance.js";   // a cute dance, 16 beats at 120 BPM (motion/dance.js)
+import "./motion/dance.js";   // a cute dance, 16 beats at 100 BPM (motion/dance.js)
 import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and crawling (motion/crawl.js)
 import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
