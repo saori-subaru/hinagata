@@ -205,11 +205,14 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
     if (L || (pick.bangs === "none" && tuftsOn())) o = underLocks(o); if (thin) o = { ...o, shell: sh };   // tufts with no bangs under them: the same thin hairline between them
     return blend([backBlock(o), ...(L ? [] : BANGS[pick.bangs](pick))]); };   // pick: { bangs, back, ahoge } (the ahoge: ahogeMesh)
-  // crop (hair.sculpt.whorl.crop { top, y, side, z, thick }, head space): cropped hair as its own thin layer over the back of the head and
-  // the neck, from under the hair (top) down to a hairline (y at the middle of the nape, side behind the ears), behind z. The painted nape
-  // (whorl.nape) has no edge and no outline: it read as tinted skin
-  const cropSdf = (C) => (x, y, z) => { const s2 = Math.sin(Math.atan2(x, z)) ** 2, hem = C.y + ((C.side ?? C.y) - C.y) * s2, ear = earDist(x, y, z) - EAR_GAP.gap;
-    const tt = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, (C.at ?? C.top) - hem))), zb = sstep((C.z ?? -0.02) - 0.01, (C.z ?? -0.02) - (C.round ?? 0.1), z), base = Math.min(skullOnly(x, y, z), dPrim(P.neck, x, y, z)) - ((C.thick ?? 0.004) + ((C.full ?? C.thick ?? 0.004) - (C.thick ?? 0.004)) * Math.pow(tt, C.curve ?? 1.5) * zb);   // on the skin itself (the skull and the neck blended: a ball filling the nape's hollow)
-    return smax(smax(smax(smax(base, y - C.top, 0.008), hem - y, 0.005), z - (C.z ?? -0.02), 0.01), -ear, EAR_GAP.k); };
+  // crop (hair.sculpt.whorl.crop { top, full, curve, y, side, z, thick, round }, head space): cropped hair under the back's hair, where the
+  // hair's hem stood off the nape as a step. The neck pushed out, by full at the hem's height (top: as far as the hair's hem stands off
+  // the neck) and less and less down to a hairline (y at the nape's middle, side behind the ears; curve > 1: a hollow curve, close to the
+  // neck most of the way), behind z, fading to nothing toward the ears (round).
+  // ⛔ not the skull pushed out by a thickness: a ball's offset is a bigger ball under the hair
+  const cropSdf = (C) => (x, y, z) => { const s2 = Math.sin(Math.atan2(x, z)) ** 2, hem = C.y + ((C.side ?? C.y) - C.y) * s2, ear = earDist(x, y, z) - EAR_GAP.gap, z0 = C.z ?? -0.02;
+    const zb = sstep(z0 - 0.01, z0 - (C.round ?? 0.1), z), tk = C.thick ?? 0.003, t = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, C.top - hem)));
+    const base = smin(dPrim(P.neck, x, y, z) - tk - (C.full ?? 0) * zb * Math.pow(t, C.curve ?? 2.5), skullOnly(x, y, z) - tk, 0.01);
+    return smax(smax(smax(smax(base, y - C.top, 0.004), hem - y, 0.005), z - z0, 0.01), -ear, EAR_GAP.k); };
   return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
 }
