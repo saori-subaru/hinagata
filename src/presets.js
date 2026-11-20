@@ -149,26 +149,24 @@ export const CHARACTERS = {
           // the back: thinner (his head is deeper than the sheet's: as thick as the sides, the back stood out further still). The spikes at
           // its corners are the sheet's flicks at the back's outline, from the back and from the side; none straight back (from behind it
           // pointed at the eye: a stud)
-          // out: their tips flick off the head, and a flick turned up low at each back corner: lying on the head to their ends the back was a
-          // smooth ball from the side (the sheet's is a line of flicks)
-          { to: [-150, 0.99], width: 0.2, thick: 0.025, out: 0.06, spikes: [{ y: 1.04, length: 0.14, out: 0.07, up: 20 }] },
-          { to: [150, 0.99], width: 0.22, thick: 0.025, out: 0.06, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }, { y: 1.03, length: 0.14, out: 0.07, up: 20 }] },
-          { to: [178, 0.96], width: 0.24, thick: 0.025, out: 0.055, tips: [0.82, 1, 0.9], notch: 0.12 },
-          { to: [-125, 1.01], width: 0.2, thick: 0.035, out: 0.045, spikes: [{ y: 1.09, out: 0.08 }] },
-          { to: [122, 1.01], width: 0.2, thick: 0.035, out: 0.045, spikes: [{ y: 1.1 }] },
+          // out: only their tips flick off the head (lying on it to their ends the back was a smooth ball from the side)
+          { to: [-150, 0.97], width: 0.2, thick: 0.025, out: 0.02 },
+          { to: [150, 0.97], width: 0.22, thick: 0.025, out: 0.02, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }] },
+          { to: [178, 0.94], width: 0.24, thick: 0.025, out: 0.02 },
+          { to: [-125, 0.99], width: 0.2, thick: 0.035, out: 0.02, spikes: [{ y: 1.09, out: 0.08 }] },
+          { to: [122, 0.99], width: 0.2, thick: 0.035, out: 0.02, spikes: [{ y: 1.1 }] },
           // the sides: a thick fan over each ear, and the flicks beside the brows from the front growing out of it: his right one and the
           // end under it flared out (up: below level), his left two, running a little toward the back (side)
           { to: [-90, 0.985], width: 0.22, thick: 0.06, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.145, length: 0.18, out: 0.085, width: 0.12 }, { y: 0.995, length: 0.13, out: 0.05, up: -40, width: 0.1 }] },
           { to: [92, 0.97], width: 0.24, thick: 0.05, tips: [1, 0.8, 0.9], notch: 0.06, endWidth: 0.8, spikes: [{ y: 1.2, length: 0.18, out: 0.08, width: 0.12, side: [-0.4, 0.4] }, { y: 1.04, out: 0.08, up: 5, width: 0.12, side: [-0.3, 0.5] }] },
           // the front: a block outside each eye (the forehead shows between his right one and the middle), the sidelocks to the cheeks, and
           // the middle blade, its points between the eyes. Thick: on the sheet the fringe stands well off the forehead
-          // bow: each curves on its way down, the sides' out round the temples, the middle toward his right (straight from the whorl they were rulers;
-          // the middle bowed to his left bared the forehead over his right eye)
-          { to: [-40, 1.0], width: 0.09, thick: 0.04, bow: -4 },
-          { to: [35, 1.0], width: 0.12, thick: 0.045, bow: 9 },
-          { to: [-60, 0.93], width: 0.16, thick: 0.04, tips: [1, 0.86], notch: 0.07, endWidth: 0.75, bow: -9 },
-          { to: [62, 0.945], width: 0.17, thick: 0.04, tips: [0.84, 1], notch: 0.06, endWidth: 0.8, bow: 9 },
-          { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.72, 1, 0.86], notch: 0.14, endWidth: 0.8, bow: -9 },   // the middle point long, the two beside it shorter by turns (three alike read as a comb)
+          // hook: only their ends curve, the sides' outward, the middle's toward his right (bowed along their whole length the fringe moved off the forehead)
+          { to: [-40, 1.0], width: 0.09, thick: 0.04, hook: -6 },
+          { to: [35, 1.0], width: 0.12, thick: 0.045, hook: 10 },
+          { to: [-60, 0.93], width: 0.16, thick: 0.04, tips: [1, 0.86], notch: 0.07, endWidth: 0.75, hook: -10 },
+          { to: [62, 0.945], width: 0.17, thick: 0.04, tips: [0.84, 1], notch: 0.06, endWidth: 0.8, hook: 10 },
+          { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.9, 1, 0.95], notch: 0.09, endWidth: 0.8, hook: -10 },   // its points a little uneven (three alike read as a comb)
         ],
         sculpt: {
           whorl: { on: true, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
