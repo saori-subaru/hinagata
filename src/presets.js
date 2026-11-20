@@ -205,7 +205,7 @@ export const CHARACTERS = {
       hair: {
         // the tail as on her design sheet: tied high and behind the ear, hanging close to the head as a few thick locks whose tips fan out,
         // with its own outline over the other hair (without it, the same color, it read as part of the head)
-        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6 } },
+        tail: { kind: "side", y: 1.24, angle: 116, count: 4, width: 0.07, thick: 0.75, volume: 0.025, lift: 0.025, spread: 1.0, gather: 0.5, waves: 0.5, tiers: 2, tierFlick: 0.012, flare: 0.085, outline: true, tie: { size: 1.6, kind: "berries" } },
         rigid: 0.5, lockPoints: 5,
         paint: { inner: 0.3, oneShade: 1, ring: { color: "#fffaf4", shade: 0.35 } },   // one shadow over the hair, its edge smooth (lock by lock it was stepped and patchy on her pale hair)
         // the sidelocks: rooted at the temple's hairline under the cap (rooted under the bangs' edge they read as growing from the eyes),

@@ -14081,6 +14081,36 @@
     "en": "tail › tie"
    }
   },
+  "hair.tail.tie.kind": {
+   "path": "hair.tail.tie.kind",
+   "type": "json",
+   "default": "ring",
+   "label": {
+    "en": "tail › tie › kind"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setTails",
+   "section": {
+    "en": "tail › tie"
+   }
+  },
+  "hair.tail.tie.leaf": {
+   "path": "hair.tail.tie.leaf",
+   "type": "color",
+   "default": "#7fbf62",
+   "label": {
+    "en": "tail › tie › leaf"
+   },
+   "group": "hair",
+   "tier": "advanced",
+   "cost": "hair",
+   "apply": "setTails",
+   "section": {
+    "en": "tail › tie"
+   }
+  },
   "hair.back": {
    "path": "hair.back",
    "type": "enum",
