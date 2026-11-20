@@ -543,7 +543,14 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y, crownY: (OPT.face?.layout?.browY ?? 1.092) + 0.018 }), HEAD_RAW = { ...HEAD };   // (crown: bent just over the brows)
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }
-  const CROTCH = cut(E([0, OPT.body.sculpt.crotch.y + HL, 0], [OPT.body.sculpt.crotch.width, OPT.body.sculpt.crotch.height, 0.13], "hips", 0.02));   // 股下を少し上げる(左右の脚のあいだを上へ削る)
+  // the crotch: a slot that cuts overlapping thighs apart, and an arch under which all but the thighs' own flesh goes (the pelvis's and the belly's
+  // soft blends hung a lobe each side of the slot between thin thighs). The slot ends under the arch (its tip over the arch's top read as a dark dot);
+  // the arch keeps CM off the thighs (so they keep their shape) and stops AY - 0.09 down (the knees' parts aren't in THIGHS: it cut into them). Base space, m
+  const { CROTCH, CROTCH_ARCH } = (() => { const CRS = OPT.body.sculpt.crotch, AY = CRS.y + CRS.height + HL - 0.015, AR = 0.035, RZ = 0.25, ZC = -0.01, CM = 0.008, CK = 0.015;
+    const smax = (a, b, k) => -smin(-a, -b, k), archAt = (x, y, z) => (y - AY + x * x / (2 * AR) - (z - ZC) ** 2 / (2 * RZ)) / Math.hypot(1, x / AR, (z - ZC) / RZ);   // < 0 under the arch (from below a rounded saddle: lower toward the middle front to back)
+    const SLOT = E([0, CRS.y + HL, 0], [CRS.width, CRS.height, 0.13], "hips", 0.02), THIGHS = blend(["thigh", "thighB", "thighF", "thighIn", "thighOut"].flatMap((n) => [P[`${n}.L`], P[`${n}.R`]]).filter(Boolean));
+    return { CROTCH: cut({ ...SLOT, t: 3, f: (x, y, z) => smax(dPrim(SLOT, x, y, z), archAt(x, y, z), 0.005) }),   // (the clothes' masks take this one)
+      CROTCH_ARCH: { t: 3, sub: true, k: 0.008, bone: "hips", bx0: 0, by0: AY - 0.02, bz0: -0.02, br: 0.13, f: (x, y, z) => smax(smax(archAt(x, y, z), CM - THIGHS(x, y, z), CK), AY - 0.09 - y, 0.01) } }; })();
   const KNEE_OUT = [1, -1].map((m) => cut(E([m * (KNEE_X + OPT.body.sculpt.knee.outer.x), OPT.body.sculpt.knee.outer.y, 0], [OPT.body.sculpt.knee.outer.width, OPT.body.sculpt.knee.outer.height, 0.06], "hips", 0.02)));   // 膝の外側を少し入りこませる
   const KNEE_IN = cut(E([0, OPT.body.sculpt.knee.inner.y, 0], [OPT.body.sculpt.knee.inner.width * Math.min(1, KNEE_X / 0.108), OPT.body.sculpt.knee.inner.height, 0.09], "hips", 0.02));   // 正面から見た膝の内側を少し引き締める(左右の膝のあいだを削る)
   // 脇の下のくぼみ(2026-10-02 サオリ「青い線(脇)を上げればいい。女の子より上げる必要はない」)。腕の付け根は胴の中にあるので、胸の太い体型(幼児)は
@@ -560,7 +567,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         // adult: only under the shoulder joint. The torso's side line (c2) runs on inward above the armpit, and on the slim adult chest it
         // reached the collarbones: holes in the mesh there (2026-10-08)
         return AD ? -smin(-cut0, -(y - (a[1] - 0.015)), RND) : cut0; } }; });   // 角を丸める(とがった先は細いひびになって、メッシュに切れ端が出た)
-  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, ...(AD ? [] : [KNEE_IN, ...KNEE_OUT]), ...ARMPIT, ...FOOT_CUT, HEAD];
+  const BODY_LIST = [...Object.entries(P).filter(([k]) => !isHead(k) && !/^(sleeve|leghole|toeBox|shoeLast)/.test(k)).map(([, v]) => v), CROTCH, CROTCH_ARCH, ...(AD ? [] : [KNEE_IN, ...KNEE_OUT]), ...ARMPIT, ...FOOT_CUT, HEAD];
   const BX = 0.5 + armReach(OPT).x;   // (longer arms and wider shoulders reach further out)
   const HB = heelBend(OPT), bent = (f) => HB ? (x, y, z) => f(x, HB(x, y, z), z) : f;   // in heels the forefoot bent up (heelBend)
   const bodySdfSlow = bent(blend(BODY_LIST)), bodySdf = slow ? bodySdfSlow : bent(blendFast(BODY_LIST, [-BX, -0.04, -0.34], [BX, 1.46, 0.4], OPT.quality.bodyCell));   // ?slow で元の遅い版(確認用)
