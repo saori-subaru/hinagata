@@ -135,13 +135,25 @@ export const CHARACTERS = {
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
         // pointed, and bent spikes growing out of them (locks lay flat on the head; thin tufts stood off it like a pineapple's leaves).
-        // No block under them (sculpt.whorl.on: the scalp is painted the hair's color): the tufts lie on the head and are the hair's shape.
-        // The back is not tufts but locks from a whorl behind the ahoge laid edge to edge as one shell (sculpt.shortLocks; nape "hang"):
-        // on the sheet it is one mass, only its hem jagged and flicked (tufts each had an outline: petals, and more of them than drawn)
-        bangs: "none", back: "short", backForm: "locks", nape: "hang", ahoge: true,
+        // No block under them (sculpt.whorl.on: the scalp is painted the hair's color): the tufts lie on the head and are the hair's shape
+        bangs: "none", back: "short", backForm: "block", ahoge: true,
         gradient: { on: true, color: "#c6a48e", start: 0.6, soft: 0.4 },
         whorl: { x: -0.07, z: 0.1 },
         tufts: [   // to: [round the head (degrees, 0 = front, + his left), the tip's height (head space)]; widths and thicknesses in m; a spike's y: its point's height
+          // under the others, in shadow: along the nape and behind the ears, from their own roots at the back
+          { to: [180, 0.885], from: [0, -0.29], width: 0.2, thick: 0.012, tips: [0.9, 1, 0.8], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
+          { to: [140, 0.9], from: [0.17, -0.22], width: 0.18, thick: 0.012, tips: [1, 0.8, 0.92], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
+          { to: [-140, 0.9], from: [-0.17, -0.22], width: 0.18, thick: 0.012, tips: [0.92, 0.8, 1], notch: 0.15, endWidth: 1, hug: 1, shade: 0.6 },
+          { to: [103, 0.96], from: [0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.8, 1, 0.88], notch: 0.15, endWidth: 1, hug: 0.6, shade: 0.6 },
+          { to: [-103, 0.96], from: [-0.22, -0.08], width: 0.17, thick: 0.012, tips: [0.88, 1, 0.8], notch: 0.15, endWidth: 1, hug: 0.6, shade: 0.6 },
+          // the back: thin tufts lying on the head, and out of them the sheet's back as three-sided spikes in two rows, running back and down
+          // (the tufts' own ends flicked were flat bananas; locks laid as one shell were a bowl with a fringe). Thin, the spikes little out:
+          // at 4.5 cm and 8.5 cm the back of his head swelled; thinner (1.5 cm) the scalp showed through
+          { to: [-150, 0.97], width: 0.2, thick: 0.025, tips: [1, 0.85], notch: 0.08, endWidth: 0.8, spikes: [{ y: 1.02, length: 0.2, out: 0.055, up: -25, width: 0.16 }, { y: 1.16, length: 0.18, out: 0.055, up: -15, width: 0.15 }] },
+          { to: [150, 0.97], width: 0.22, thick: 0.025, tips: [1, 0.85], notch: 0.08, endWidth: 0.8, spikes: [{ y: 1, length: 0.2, out: 0.055, up: -25, width: 0.16 }, { y: 1.22, length: 0.18, out: 0.055, up: -10, width: 0.15 }] },
+          { to: [178, 0.94], width: 0.24, thick: 0.025, tips: [1, 0.85], notch: 0.08, endWidth: 0.8, spikes: [{ y: 0.98, length: 0.2, out: 0.055, up: -30, width: 0.16 }, { y: 1.1, length: 0.18, out: 0.055, up: -20, width: 0.15, side: [0.5, 0.3] }] },
+          { to: [-125, 0.99], width: 0.2, thick: 0.025, tips: [1, 0.85], notch: 0.08, endWidth: 0.8, spikes: [{ y: 1.07, length: 0.18, out: 0.055, up: -20, width: 0.13 }] },
+          { to: [122, 0.99], width: 0.2, thick: 0.025, tips: [1, 0.85], notch: 0.08, endWidth: 0.8, spikes: [{ y: 1.1, length: 0.18, out: 0.055, up: -20, width: 0.13 }] },
           // the sides: a thick fan over each ear, and the flicks beside the brows from the front growing out of it: his right one and the
           // end under it flared out (up: below level), his left two, running a little toward the back (side)
           { to: [-90, 0.985], width: 0.22, thick: 0.06, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.145, length: 0.18, out: 0.085, width: 0.12 }, { y: 0.995, length: 0.13, out: 0.05, up: -40, width: 0.1 }] },
@@ -156,14 +168,8 @@ export const CHARACTERS = {
           { to: [8, 0.985], width: 0.19, thick: 0.06, tips: [0.9, 1, 0.95], notch: 0.09, endWidth: 0.8, hook: -10 },   // its points a little uneven (three alike read as a comb)
         ],
         sculpt: {
-          whorl: { on: true, th: 180, ph: 78, rootW: 1, shingle: 0, puff: 0, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, lockShell: 0.004, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
+          whorl: { on: true, nape: { y: 0.76, z: -0.05, soft: 0.012 } }, shell: 0.008, square: 0.8,   // shell: how far over the skull the tufts lie (no block is meshed; at 0.004 the scalp showed through the back's thin tufts)
           backVolume: 0,   // the back of his head 1.8 cm shorter
-          // the back's shell: full width from the root, none over its neighbour (whorl rootW 1, shingle 0, puff 0; overlap: no gap between
-          // them), each end forked and flicked its own amount (fl) and length (dy); shape / fork as シルヴィ v2's
-          shortBack: 0.9,
-          shortLocks: { count: 13, width: 0.09, thick: 0.15, below: 0, overlap: 1.6, stiff: 2.7, shape: { hang: 0.75, flare: [[1, 0], [0.9, 0.005], [0.8, 0.02], [0.74, 0.032]], sides: 0.7 }, fork: { n: 3, short: 1 },
-            edits: [{ i: 0, fl: 0.02, dy: 0.01 }, { i: 1, fl: 0.014, dy: -0.015 }, { i: 2, fl: 0.022, dy: 0.01 }, { i: 3, fl: 0.008 }, { i: 4, fl: 0.016, dy: -0.015 }, { i: 5, fl: 0.01, dy: 0.01 }, { i: 6, fl: 0.018 },
-              { i: 7, fl: 0.008, dy: -0.015 }, { i: 8, fl: 0.02, dy: 0.01 }, { i: 9, fl: 0.012 }, { i: 10, fl: 0.022, dy: -0.015 }, { i: 11, fl: 0.014, dy: 0.01 }, { i: 12, fl: 0.02 }] },
           ahogeCurl: true, ahogeLean: -20, ahogeDir: 125, ahogeSize: 1.5, ahogeWidth: 2, ahogeX: -0.07, ahogeZ: 0.08,   // a thick horn at the whorl, its point toward his left and the back
         },
       },
