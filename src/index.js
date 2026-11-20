@@ -743,7 +743,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         for (const [key, col] of [["tailTie", TL.tie.color], ["tailLeaf", TL.tie.leaf ?? "#7fbf62"]]) { const list = geos.filter(([, c]) => c === col).map(([q]) => q); if (!list.length || (key === "tailLeaf" && col === TL.tie.color)) continue;
           out[key] = skinned(merged(list), col, 0.003); out[key].sim = { update() {}, rest() {} }; } }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.86 });
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, floor: true, stiff: 1, damping: 0.86 });   // floor: blown, a sidelock along the cheek went into the face and the ear (no head among its colliders)
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
