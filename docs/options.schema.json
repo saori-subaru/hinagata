@@ -18409,17 +18409,21 @@
     "en": "mouth 3d"
    }
   },
-  "face.mouth3d.teeth": {
-   "path": "face.mouth3d.teeth",
-   "type": "boolean",
-   "default": false,
+  "face.mouth3d.angle": {
+   "path": "face.mouth3d.angle",
+   "type": "number",
+   "default": 6.5,
    "label": {
-    "en": "mouth 3d › teeth"
+    "en": "mouth 3d › angle"
    },
    "group": "face",
    "tier": "advanced",
    "cost": "paint",
    "apply": null,
+   "min": 3.25,
+   "max": 9.75,
+   "step": 0.01,
+   "soft": true,
    "section": {
     "en": "mouth 3d"
    }

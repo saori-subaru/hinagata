@@ -1035,7 +1035,7 @@ export const DEFAULTS = {
     "mouth3d": {
       "on": false,
       "depth": 1,
-      "teeth": false
+      "angle": 6.5
     },
     "lashHatch": false,
     "lashTrace": 0,
