@@ -209,7 +209,7 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // the neck, from under the hair (top) down to a hairline (y at the middle of the nape, side behind the ears), behind z. The painted nape
   // (whorl.nape) has no edge and no outline: it read as tinted skin
   const cropSdf = (C) => (x, y, z) => { const s2 = Math.sin(Math.atan2(x, z)) ** 2, hem = C.y + ((C.side ?? C.y) - C.y) * s2, ear = earDist(x, y, z) - EAR_GAP.gap;
-    const base = bodySdf(x, y, z) - (C.thick ?? 0.004);   // on the skin itself (the skull and the neck blended: a ball filling the nape's hollow)
+    const tt = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, (C.at ?? C.top) - hem))), zb = sstep((C.z ?? -0.02) - 0.01, (C.z ?? -0.02) - (C.round ?? 0.1), z), base = Math.min(skullOnly(x, y, z), dPrim(P.neck, x, y, z)) - ((C.thick ?? 0.004) + ((C.full ?? C.thick ?? 0.004) - (C.thick ?? 0.004)) * Math.pow(tt, C.curve ?? 1.5) * zb);   // on the skin itself (the skull and the neck blended: a ball filling the nape's hollow)
     return smax(smax(smax(smax(base, y - C.top, 0.008), hem - y, 0.005), z - (C.z ?? -0.02), 0.01), -ear, EAR_GAP.k); };
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh, cropSdf };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
 }
