@@ -13,6 +13,7 @@ export const SIZE = [1280, 544];   // 2.35:1。grow.mjs が上下に黒い帯を
 export const SET = { "shading.rim.on": true };   // 外の光: 体の縁を明るく
 const SECONDS = 11.6, GROW = [1.4, 8.75], VORTEX = 6.8, BURST = 8.75, HOLD = 8.7, CLEAR = 0.55;   // 秒。CLEAR: 足もとの花の無い輪(m)
 const WIND = [0.6, 0, -0.15];   // m/s。花びら・草・髪が同じ風に流れる
+const BLINKS = [0.9, 2.9, 4.6, 6.2, 9.8];   // 瞬きの時刻(秒、0.12 秒ずつ): 毎コマ作り直す所と時を止めた決めでは、体の自前の瞬きが来ない
 const ss = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
 const smoother = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * x * (x * (6 * x - 15) + 10); };
 const growAt = (t) => smoother((t - GROW[0]) / (GROW[1] - GROW[0]));
@@ -305,6 +306,7 @@ export function createStage({ renderer, scene, cam, W, H }) {
 
   return { seconds: SECONDS, grow: growAt,
     motion: (t) => (t < HOLD ? t : HOLD + 0.35 * (1 - Math.exp(-(t - HOLD) / 0.35))),   // 決めのポーズで時を止める(髪・布・花びらは動き続ける)
+    blink: (t) => BLINKS.some((b) => t >= b && t < b + 0.12),
     wind: (t) => { const k = t > BURST ? Math.exp(-(t - BURST) / 0.5) : 0; return [WIND[0], 1.6 * k, WIND[2] + 1.2 * k]; },   // 決めで下から吹き上げる
     render(t, { av, H: h, H1 }) {
       const s = (H1 || 1.5) / 1.5, [az, cy, dist, look, fov] = camAt(t);

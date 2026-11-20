@@ -978,8 +978,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose.
      *  camera: the camera the scene is drawn with: the hair and cloth are simulated less when the character is small on the screen
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself.
-     *  wind: [x, y, z] a breeze through the hair (m/s in the avatar's own size, world axes), on top of the stream from its own motion. */
-    update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
+     *  wind: [x, y, z] a breeze through the hair (m/s in the avatar's own size, world axes), on top of the stream from its own motion.
+     *  blink: true / false shuts or opens the eyes now (no blinks of its own while given; they come back 2.5 s after the last). */
+    update(dt, { t, instant = false, pose, camera, detail, wind: breeze, blink } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
       syncCover(); hairLines(); traceLines(); rims();
@@ -1007,8 +1008,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         let wx = -rootV[0] - fx * extra + (breeze?.[0] ?? 0) * sc, wz = -rootV[1] - fz * extra + (breeze?.[2] ?? 0) * sc; const w = Math.hypot(wx, wz), CAP = 3 * sc, s = w > 1e-6 ? CAP * Math.tanh(w / CAP) / w : 0;   // (+ a breeze: update's wind, m/s in the avatar's own size)
         wind[0] = wx * s; wind[1] = (breeze?.[1] ?? 0) * sc; wind[2] = wz * s; }
       if (sim) for (const k of [...LOCK_PARTS, "extraTail"]) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);   // (extraTail: outfit.extras.tail)
-      if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
-      if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
+      // blink given: the caller times the blinks (a film rebuilt every frame, or holding its time still, never reached one of its own)
+      if (blink != null) { if (!!blink !== blinking) { blinking = !!blink; avatar.drawFace(); } blinkAt = time + 2.5; }
+      else { if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
+        if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; } }
     },
     /** Play a pose (a motion): a name in POSES, or "joints" (the avatar follows avatar.joints). blend: seconds to ease into it (default ~0.35,
      *  0 = at once: a fast move switched to mid-game). */

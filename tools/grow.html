@@ -38,7 +38,8 @@ let av = null, frameH = null, curH = null, ref = null, built = null, clock = nul
 // texP(プリントを当てる位置)の高さを、ドレス(shirt と pants の部品)の裾から上端までで本人(最終形)のドレスに写す。横はそのまま
 const texParts = (a) => ["shirt", "pants"].map((k) => a.parts[k]).filter((x) => x?.m?.visible && x.m.geometry?.attributes?.texP).map((x) => x.m.geometry.attributes.texP);
 const span = (L) => { let lo = Infinity, hi = -Infinity; for (const A of L) for (let i = 1; i < A.array.length; i += 3) { lo = Math.min(lo, A.array[i]); hi = Math.max(hi, A.array[i]); } return [lo, hi]; };
-const MOTION = Q.get("motion"), WARM = 0.6;   // WARM: 作り直したコマでは髪と布が動きに追いつくよう、その前の 0.6 秒を回してから撮る
+// 瞬きは時刻で決める(作り直した体は自前の瞬きまで届かない)
+const MOTION = Q.get("motion"), WARM = 0.6, blinkAt = S ? S.blink : (t) => t % 3.3 > 3.18;   // WARM: 作り直したコマでは髪と布が動きに追いつくよう、その前の 0.6 秒を回してから撮る
 async function build(g) {
   if (built === g) return; if (av) { scene.remove(av.object); av.dispose?.(); }
   av = await createAvatar({ ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
@@ -52,8 +53,8 @@ async function build(g) {
 window.shot = async (g, time = 0, yaw = 0.35) => {
   if (g == null) g = S.grow(time);
   await build(g); av.object.rotation.y = S ? 0 : yaw;
-  if (MOTION) { let tau = clock == null || time < clock ? time - WARM : clock; if (clock == null) av.update(0, { t: tau, instant: true });
-    while (tau < time - 1e-6) { const dt = Math.min(1 / 60, time - tau); tau += dt; av.update(dt, { t: S ? S.motion(tau) : tau, wind: S?.wind(tau) }); } clock = time; }
+  if (MOTION) { let tau = clock == null || time < clock ? time - WARM : clock; if (clock == null) av.update(0, { t: tau, instant: true, blink: blinkAt(tau) });
+    while (tau < time - 1e-6) { const dt = Math.min(1 / 60, time - tau); tau += dt; av.update(dt, { t: S ? S.motion(tau) : tau, wind: S?.wind(tau), blink: blinkAt(tau) }); } clock = time; }
   else for (let i = 0; i < 3; i++) av.update(1 / 60, { instant: true });
   if (S) S.render(time, { av, H: curH, H1: frameH }); else { const cy = frameH * 0.5, d = frameH * 0.62 / Math.tan(THREE.MathUtils.degToRad(15));
     cam.position.set(0, cy, d); cam.lookAt(0, cy, 0); renderer.render(scene, cam); }
