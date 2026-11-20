@@ -195,23 +195,27 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // front and behind (middleBack false: in front only, the back all one long panel), from sideAt (the sine of the angle round from the middle
   // line) on, standing sideOut m out over them: two layers, a petticoat showing under the shorter middle ones
   const SD = SKIRT ? SK.sideDrop ?? 0 : 0, SAT = SK.sideAt ?? 0.4, SOUT = SD > 0 ? SK.sideOut ?? 0.005 : 0, SW = 0.04;
-  // slit (m, アステル's tunic): the middle panel cut apart from the side ones from the hem up this far, a gap slitWidth (m) across, wider than
-  // the cloth's cells (3 mm at 8 mm cells came out jagged). The panels then part along a line straight down the front, as a front print's
-  // borders run: |x| = XS, where sideAt's angle meets the hem; the step between them lies inside the gap (WX)
-  const SLIT = SD > 0 ? SK.slit ?? 0 : 0, SLITW = SK.slitWidth ?? 0.012, WX = 0.35 * SLITW, XS = SLIT ? (() => { const d = SK_Y0 - SK.hem, ax = SK_AX + SK.flare * d, az = SK_AZ + SK.flare * 0.8 * d;
-    return SAT / Math.sqrt(SAT * SAT / (ax * ax) + (1 - SAT * SAT) / (az * az)); })() : 0;
+  // slit (m, アステル's tunic): the middle panel cut apart from the side ones from the hem up this far, in a V: closed at its top, slitWidth (m)
+  // across at the hem, as two panels hanging apart (a gap as wide all the way up read as a slit cut in one cloth). It runs as a front print's
+  // borders do, in the front view: its middle at |x| = slitX at its top (null: where sideAt's angle meets the hem), slitLean further out at
+  // the hem; put it in the middle of the print's band between the panels, so both keep a border. The step between them lies inside it
+  const SLIT = SD > 0 ? SK.slit ?? 0 : 0, SLITW = SK.slitWidth ?? 0.012, YT = SK.hem + SLIT, XS = SLIT ? SK.slitX ?? (() => { const d = SK_Y0 - SK.hem, ax = SK_AX + SK.flare * d, az = SK_AZ + SK.flare * 0.8 * d;
+    return SAT / Math.sqrt(SAT * SAT / (ax * ax) + (1 - SAT * SAT) / (az * az)); })() : 0, LEAN = SK.slitLean ?? 0;
+  const slitAt = (y) => { const t = Math.min(1, Math.max(0, (YT - y) / Math.max(SLIT, 1e-6))); return [XS + LEAN * t, Math.max(0.002, SLITW / 2 * t)]; };   // its middle and half its width at y (m)
   const CINCH = SKIRT ? SK.cinch ?? 0 : 0, CINCH_AT = SK.cinchAt ?? 0.55;   // skirtOf's cinch (m) at cinchAt (base): drawn in there, as by a belt
-  const MB = SK.middleBack !== false, sideOf = (x, dz) => SD > 0 ? (!MB && dz < 0 ? 1 : SLIT ? sstep(XS - WX, XS + WX, Math.abs(x)) : sstep(SAT - SW, SAT + SW, Math.abs(x) / (Math.hypot(x, dz) || 1))) : 0;   // (at the sides |x| / r is 1 either way)
+  const MB = SK.middleBack !== false, sideOf = (x, dz, y = SK.hem) => { if (!(SD > 0)) return 0; if (!MB && dz < 0) return 1;
+    if (SLIT) { const [c, h] = slitAt(y), w = Math.max(0.001, 0.7 * h); return sstep(c - w, c + w, Math.abs(x)); }
+    return sstep(SAT - SW, SAT + SW, Math.abs(x) / (Math.hypot(x, dz) || 1)); };   // (at the sides |x| / r is 1 either way)
   const hemAt = (x, dz) => { const h = SK.hem - SD * sideOf(x, dz); if (HS !== "zigzag" && HS !== "scallop") return h; const e = 2 * (((Math.atan2(x, dz) / (2 * Math.PI) + 1) * HN) % 1) - 1;
     return h + HD * (HS === "zigzag" ? Math.abs(e) : 1 - Math.sqrt(Math.max(0, 1 - e * e))); };
   // the hem's cut as a distance: over the panels' step it is steep round the skirt, so divided by its slope there (else 3x too far, and
   // the mesher's coarse pass skipped the step)
   const hemCut = (x, y, dz) => { const v = hemAt(x, dz) - y; if (!SD || (!MB && dz < 0)) return v;
-    if (SLIT) { const u = Math.min(1, Math.max(0, (Math.abs(x) - XS + WX) / (2 * WX))); return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * WX)); }
+    if (SLIT) { const [c, h] = slitAt(SK.hem), w = Math.max(0.001, 0.7 * h), u = Math.min(1, Math.max(0, (Math.abs(x) - c + w) / (2 * w))); return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * w)); }
     const r = Math.hypot(x, dz) || 1, u = Math.min(1, Math.max(0, (Math.abs(x) / r - SAT + SW) / (2 * SW)));
     return v / Math.hypot(1, SD * 6 * u * (1 - u) / (2 * SW) * Math.abs(dz) / (r * r)); };
-  const slitCut = (x, y, dz) => { if (!SLIT || (!MB && dz < 0)) return -1; const a = Math.abs(Math.abs(x) - XS), h = SLITW / 2, c = SK.hem + SLIT - h;
-    return y > c ? h - Math.hypot(a, y - c) : h - a; };   // > 0 in the slit (round at its top)
+  const slitCut = (x, y, dz) => { if (!SLIT || (!MB && dz < 0)) return -1; const [c, h] = slitAt(y), a = Math.abs(Math.abs(x) - c);
+    return y > YT ? 0.002 - Math.hypot(a, y - YT) : h - a; };   // > 0 in the slit (a 4 mm round tip at its top)
   // front tabs (skirtOf's tabDrop, tabAt, tabWidth; for シルヴィ's straps' ends): two pointed tabs of the skirt hanging tabDrop below the hem
   // in front, tabAt out from the middle; as a distance in the front view (x, y), < 0 inside. Below the hem they lie on the petticoat and
   // take its color (bands by the plain hem): a print on the front shows on them. From the hem down they sink to the petticoat's face (1 cm
@@ -242,7 +246,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // side panels: out over the middle ones, flaring on below the middle's hem; sideOut < 0 (アステル's tunic): the middle panel out over the
     // sides near its hem (the sides pushed in went under the clothes below: the shorts showed through in slivers; cut apart by a slit, at the
     // cloth's 8 mm cells a few mm wide slit came out jagged)
-    if (SD) outer -= (SOUT < 0 ? -SOUT * (1 - sideOf(x, dz)) * sstep(SK.hem + Math.max(0.05, SLIT), SK.hem, y) : SOUT * sideOf(x, dz)) + SK.flare * Math.max(0, SK.hem - y) * 0.9;
+    if (SD) outer -= (SOUT < 0 ? -SOUT * (1 - sideOf(x, dz, y)) * sstep(SK.hem + Math.max(0.05, SLIT), SK.hem, y) : SOUT * sideOf(x, dz)) + SK.flare * Math.max(0, SK.hem - y) * 0.9;
     if (CINCH) outer += CINCH * Math.exp(-(((y - CINCH_AT) / 0.035) ** 2));   // drawn in round cinchAt (a belt), smoothly: no step
     if (TD && dz > 0 && y < SK.hem + 0.01) { const tc = tabCut(x, y, dz); if (tc < 0.004) { const h = hemAt(Math.sign(x) * TA, dz); outer += 0.01 * sstep(h, h - TD, y) * sstep(0.004, 0, tc); } }   // the tabs sink toward their tips
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
