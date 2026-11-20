@@ -502,6 +502,18 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         bagTop, bagCut, bagOut, bagY: yT,
         bag: { lo: [-hw - 0.01, yT - hd - 0.01], hi: [hw + 0.01, yT + 0.01] } };
     })() : null;
+    // cape.cowlRoll (m, with the cowl): its top a roll that thick round the neck (the hood rolled into a ring, アステル's sheet), its own part
+    // ("hood", fine cells): an ellipse across the neckline, 1.5 times as tall as thick, its lower part over the cape's cut edge; thinner toward
+    // the closure. (The cowl stood higher alone, or its cloth thicker, was a standing collar: a thin wall, or a flat-topped one)
+    const roll = COWL && (CA.cowlRoll ?? 0) > 0 && neck ? (() => {
+      const RA = CA.cowlRoll / 2, RB = RA * 1.5, s0 = (CA.collar - NK0.ay) / NK0.by, xa = NK0.ax + NK0.bx * s0, za = NK0.az + NK0.bz * s0;
+      const RC = NK0.ra + COWL, END = (neck.line.length - 1) * Math.PI / 360;   // RC: round the cowl's middle; END: where the neckline reaches the closure (rad from the back)
+      const sdf = (x, y, z) => { const dx = x - xa, dz = z - za, r = Math.hypot(dx, dz) || 1e-6, th = Math.atan2(Math.abs(dx), -dz), k = 1 - 0.55 * sstep(END - 0.7, END, th);
+        const a = RA * k, b = RB * k, yc = neck.at(xa + dx / r * RC, za + dz / r * RC) + 0.45 * b;
+        return (Math.hypot((r - RC) / a, (y - yc) / b) - 1) * Math.min(a, b); };
+      const R = RC + RA + 0.01;
+      return { sdf, lo: [xa - R, (CA.close ?? 0.7) - 0.04, za - R], hi: [xa + R, CA.collar + 0.04 + 2 * RB, za + R] };
+    })() : null;
     const cutOf = (x, y, z) => Math.max(neck ? neck.cut(x, y, z) : y - collarTop(x, z), CLOSED ? -opening(x, y, z) : z - (-0.04 + (CA.wrap + 0.04) * sstep(CAPE_Y - 0.04, CAPE_Y + 0.03, y)), hemY(z) - y);   // open: the front edge behind the arms below the shoulders
     const f = (x, y, z, B = bodySdf) => {
       const S = outside(x, y, z, B), d = Math.max(S, -(S + CA.thick), cutOf(x, y, z));
@@ -511,7 +523,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z);
     f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
-    f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
+    f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : roll;   // the hood's fold and lining, or the cowl's roll (parts.js "hood")
     // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
     // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];

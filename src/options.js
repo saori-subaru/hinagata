@@ -549,6 +549,7 @@ export const DEFAULTS = {
       "hoodRim": true,
       "hoodSize": 1,
       "cowl": 0,
+      "cowlRoll": 0,
       "neckOpen": null,
       "line": null,
       "lineIn": 0.012,
