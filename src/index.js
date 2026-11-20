@@ -540,9 +540,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)
   const WRIST = Math.max(0, ...PARTS.map((p) => p.wrist && garments[p.name] ? p.wrist(partOptions(OPT, p), OPT) : 0));
-  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST]].map(([a, b, r, pa, pb]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
+  // (the upper arm's from a third of the way down: round the shoulder the cape follows the arm by its weights, and the joint's sphere pushed
+  //  the cloth lying on the shoulder about, a raised arm's sleeve showing through it)
+  const lerp3 = (p, q, t) => p.map((v, i) => v + (q[i] - v) * t);
+  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0, 0.3], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST, 0]].map(([a, b, r, pa, pb, from]) => ({ bone: `${a}.${s}`, a: lerp3(Jr[`${a}.${s}`], Jr[`${b}.${s}`], from), b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
-    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
+    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0, firm: { bones: ["upperArm.L", "upperArm.R"], pull: 0.85 } }) : null;
   // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts.
   // texH (a picture along the hem): the height over the hem as built (a skirt's or a cape's own hem line, base positions; else its lowest point)
   { const hemH = (key) => key === "cape" ? capeSdf?.hemOf : (key === "dress" || key === "pants") ? skirtHem : null;

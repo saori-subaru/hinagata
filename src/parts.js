@@ -33,6 +33,18 @@ const clothCell = (h, thick) => Math.min(h, (thick ?? 0.018) * 0.45);
 // 1.2 x the mesh's (the fine quality's: the game's), free of the thickness
 const sheetCell = (H, clothH, k) => (clothH ? 0.0136 : H) * 1.2 * k;
 
+// the cape's bones (closed over the arms, cape.over "arms": it goes down with them), its weights from the armpit up taken where the surface
+// under it is (the body, or the shirt over it): 2-4 cm out on the shoulder the cape took about half the upper arm's share the sleeve under
+// it did, and a raised arm's sleeve came up through it
+function capeOnly(OPT, C, B) {
+  const re = C.capeSdf.overArms ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/;
+  const worn = OPT.outfit.shirt.on !== false || OPT.outfit.dress?.on, U = (x, y, z) => Math.min(B(x, y, z), worn ? C.shirtSdf(x, y, z, B, true) : 1), Y = C.capeSdf.armY;
+  re.at = (x, y, z) => { const k = Math.min(1, Math.max(0, (y - Y + 0.06) / 0.04)); if (!k) return [x, y, z, 0];
+    let px = x, py = y, pz = z; for (let i = 0; i < 4; i++) { const d = U(px, py, pz), e = 0.002, gx = U(px + e, py, pz) - d, gy = U(px, py + e, pz) - d, gz = U(px, py, pz + e) - d, l = Math.hypot(gx, gy, gz) || 1; px -= gx / l * d; py -= gy / l * d; pz -= gz / l * d; }
+    return [px, py, pz, k * k * (3 - 2 * k)]; };
+  return re;
+}
+
 export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, kit, bodyAt = null }) {   // clothH: the skirt's and the cape's cell, if set (the game quality: see index.js); sheetK: the sheets' cells times this (lite)
   // foot0: the feet's box, 2 cm under the floor: the mesher makes no faces between a box's first two layers, and the soles' bottom (3 mm
   // under it) and the socks' fell there at the game's cells: no bottom, the foot seen through the boots from below
@@ -62,7 +74,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
       const BG = C.capeSdf.bag, bag = () => sheetsMesh([BG.sheet(B, one)], BG.lo, BG.hi, sheetCell(H, clothH, sheetK) / 2, one);   // the hood's bag: a sheet over the cape's (half its cells: its dome is small)
       return { sdf: C.capeSdf, fast: (x, y, z) => C.capeSdf(x, y, z, B), lo: C.capeSdf.lo, hi: C.capeSdf.hi, h: clothCell(clothH || partClothCell(H), CA.thick),
         make: () => { const m = sheetsMesh(C.capeSdf.sheets(B), C.capeSdf.lo, C.capeSdf.hi, sheetCell(H, clothH, sheetK), one); return BG ? joinMeshes([m, bag()]) : m; },
-        only: C.capeSdf.overArms ? /^(hips|spine|chest|upperChest|neck|shoulder|upperArm)/ : /^(hips|spine|chest|upperChest|neck|shoulder)/ }; }   // closed over the arms (cape.over "arms"): it goes down with them
+        only: capeOnly(OPT, C, B) }; }
     case "hood": { const R = C.capeSdf?.rim;   // the hood's fold along the neckline and its lining (clothes/index.js): 4 mm cells
       if (!R) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       return { sdf: R.sdf, lo: R.lo, hi: R.hi, h: Math.min(0.004, Math.max(H * 0.5, 0.0025)), only: /^(neck|upperChest|chest|shoulder)/ }; }
@@ -123,9 +135,14 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
 
 /** Skin weights for each vertex: bone1 binds everything to one bone, otherwise the nearest body parts (only: a RegExp of bones allowed).
  *  soft: { bone, k(x, y, z) } — only the fraction k of the weight on other bones is kept, the rest goes to that bone (a skirt: mostly the hips) */
+// only.at (a RegExp's own property): (x, y, z) → [x, y, z, k], where to take the weights instead, k of them (the rest from the point itself)
 export function skinOf(pos, weightsAt, BI, bone1, only, soft = null) {
-  const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] };
-  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only?.L ? (only.below != null && pos[v * 3 + 1] >= only.below ? only.all : pos[v * 3] >= 0 ? only.L : only.R) : only);   // (only: a RegExp, or { L, R }: sided)
+  const nv = pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), tmp = { idx: [0, 0, 0, 0], w: [0, 0, 0, 0] }, at = only instanceof RegExp ? only.at : null, mixW = new Map();
+  const take = (x, y, z) => { const q = at(x, y, z), k = q[3]; if (k >= 1) { weightsAt(q[0], q[1], q[2], tmp, only); return; } weightsAt(x, y, z, tmp, only); if (k <= 0) return;
+    mixW.clear(); for (let i = 0; i < 4; i++) if (tmp.w[i]) mixW.set(tmp.idx[i], tmp.w[i] * (1 - k));
+    tmp.idx.fill(0); tmp.w.fill(0); weightsAt(q[0], q[1], q[2], tmp, only); for (let i = 0; i < 4; i++) if (tmp.w[i]) mixW.set(tmp.idx[i], (mixW.get(tmp.idx[i]) ?? 0) + tmp.w[i] * k);
+    const top = [...mixW].sort((a, b) => b[1] - a[1]).slice(0, 4), sum = top.reduce((a, e) => a + e[1], 0) || 1; tmp.idx.fill(0); tmp.w.fill(0); top.forEach(([b, w], i) => { tmp.idx[i] = b; tmp.w[i] = w / sum; }); };
+  for (let v = 0; v < nv; v++) { tmp.idx.fill(0); tmp.w.fill(0); if (bone1) { tmp.idx[0] = BI[bone1]; tmp.w[0] = 1; } else if (at) take(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]); else weightsAt(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2], tmp, only?.L ? (only.below != null && pos[v * 3 + 1] >= only.below ? only.all : pos[v * 3] >= 0 ? only.L : only.R) : only);   // (only: a RegExp, or { L, R }: sided)
     if (soft?.front && !bone1) { const x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2], k = soft.k(x, y, z), f = soft.front(z), sL = Math.min(1, Math.max(0, 0.5 + x / 0.16));   // the skirt: the hips, and toward the hem the front on the skirt bones / the rest on the thighs, by side (the middle half and half)
       const W = [[soft.bone, 1 - k], ["skirt.L", k * f * sL], ["skirt.R", k * f * (1 - sL)], ["upperLeg.L", k * (1 - f) * sL], ["upperLeg.R", k * (1 - f) * (1 - sL)]].sort((a, b) => b[1] - a[1]).slice(0, 4), sum = W.reduce((a, w) => a + w[1], 0);
       W.forEach(([b, w], q) => { tmp.idx[q] = BI[b]; tmp.w[q] = w / sum; }); }

@@ -444,7 +444,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
     f.edge = (x, y, z) => Math.min((y - hemY(z)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z);
-    f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
+    f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY; f.armY = P["upperArm.L"].ay;   // (armY: parts.js, the cape's weights)
     f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : null;   // the hood's fold and lining (parts.js "hood")
     // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
     // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)

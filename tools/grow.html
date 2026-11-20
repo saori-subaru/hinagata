@@ -14,7 +14,9 @@ import * as THREE from "three";
 import { createAvatar, CHARACTERS, BODY_TYPES } from "../src/index.js";
 
 const Q = new URLSearchParams(location.search), who = Q.get("who") || "sylvie2", W = +(Q.get("w") || 540), H = +(Q.get("h") || 720);
-const file = CHARACTERS[who].file, end = file.options;
+const file = CHARACTERS[who].file, end = structuredClone(file.options);
+// ?set=outfit.cape.open=1.2;outfit.cape.hem=0.6 : 値を差し替えて試す(始点・終点とも)
+for (const kv of (Q.get("set") || "").split(";").filter(Boolean)) { const [k, v] = kv.split("="), ks = k.split("."); let o = end; for (const p of ks.slice(0, -1)) o = o[p] ??= {}; try { o[ks.at(-1)] = JSON.parse(v); } catch { o[ks.at(-1)] = v; } }
 // 始点: 本人の体を、同じ体型のちび(girl)の比率・太さ・頭の大きさに。arms はちびの null(胴と伸びる)を補間できないので 1
 const chibi = structuredClone(BODY_TYPES[Q.get("from") || "girl"].body); chibi.proportion.arms = 1;
 const merge = (a, b) => { const o = structuredClone(a); for (const [k, v] of Object.entries(b)) o[k] = v && typeof v === "object" && !Array.isArray(v) && o[k] && typeof o[k] === "object" ? merge(o[k], v) : v; return o; };
@@ -38,7 +40,7 @@ async function build(g) {
   av = await createAvatar({ ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
   const L = texParts(av), [lo, hi] = span(L); ref ??= [lo, hi];
   if (hi > lo) for (const A of L) { for (let i = 1; i < A.array.length; i += 3) A.array[i] = ref[0] + (A.array[i] - lo) * (ref[1] - ref[0]) / (hi - lo); A.needsUpdate = true; }
-  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null;
+  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null; window.AV = av;   // (AV: 調べもの用)
   if (frameH == null) { const b = new THREE.Box3().setFromObject(av.object); frameH = (b.max.y - b.min.y); }   // 枠は最初に作った(最大の)形で固定し、背が伸びて見えるように
   if (MOTION) av.play(MOTION, { blend: 0 });
 }
