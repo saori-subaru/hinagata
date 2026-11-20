@@ -8,7 +8,7 @@
 </head>
 <body>
 <script type="module">
-// 成長のパラパラ漫画の1コマを作る: window.frame(t) が t(0=ちび, 1=本人)の絵を PNG の dataURL で返す。tools/grow.mjs が回す。
+// 成長と動きのコマを作る: window.shot(g, time) が育ち g(0=ちび, 1=本人)・動き(?motion=dance)の time 秒の絵を PNG の dataURL で返す。tools/grow.mjs が回す。
 // 数値の葉だけを線形に補間し、数値でない値(on/off・種類)は終点のもの(オン・オフは補間できず、そのコマで形がガクッと変わるため使わない)。
 import * as THREE from "three";
 import { createAvatar, CHARACTERS, BODY_TYPES } from "../src/index.js";
@@ -27,23 +27,32 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffe
 const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
 scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
 const cam = new THREE.PerspectiveCamera(30, W / H, 0.05, 50);
-let av = null, frameH = null, ref = null;
+let av = null, frameH = null, ref = null, built = null, clock = null;
 // 前向きのプリント(texture mode "front")は作ったときの位置にメートルで貼られ、体が伸びても付いてこない(ベルトが下へ滑って見えた)。
 // texP(プリントを当てる位置)の高さを、ドレス(shirt と pants の部品)の裾から上端までで本人(最終形)のドレスに写す。横はそのまま
-const texParts = (a) => ["shirt", "pants"].map((k) => a.parts[k]).filter((x) => x?.m?.visible && x.m?.geometry?.attributes?.texP).map((x) => x.m.geometry.attributes.texP);
+const texParts = (a) => ["shirt", "pants"].map((k) => a.parts[k]).filter((x) => x?.m?.visible && x.m.geometry?.attributes?.texP).map((x) => x.m.geometry.attributes.texP);
 const span = (L) => { let lo = Infinity, hi = -Infinity; for (const A of L) for (let i = 1; i < A.array.length; i += 3) { lo = Math.min(lo, A.array[i]); hi = Math.max(hi, A.array[i]); } return [lo, hi]; };
-window.frame = async (t, yaw = 0.35) => {
-  if (av) { scene.remove(av.object); av.dispose?.(); }
-  av = await createAvatar({ ...file, options: lerp(start, end, t) }, { quality: Q.get("q") || "game", cache: false, workers: false });
+const MOTION = Q.get("motion"), WARM = 0.6;   // WARM: 作り直したコマでは髪と布が動きに追いつくよう、その前の 0.6 秒を回してから撮る
+async function build(g) {
+  if (built === g) return; if (av) { scene.remove(av.object); av.dispose?.(); }
+  av = await createAvatar({ ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
   const L = texParts(av), [lo, hi] = span(L); ref ??= [lo, hi];
   if (hi > lo) for (const A of L) { for (let i = 1; i < A.array.length; i += 3) A.array[i] = ref[0] + (A.array[i] - lo) * (ref[1] - ref[0]) / (hi - lo); A.needsUpdate = true; }
-  av.update(0, { instant: true }); scene.add(av.object); av.object.rotation.y = yaw;
-  if (frameH == null) { const b = new THREE.Box3().setFromObject(av.object); frameH = (b.max.y - b.min.y); }   // 枠は最初に撮った(最大の)コマで固定し、背が伸びて見えるように
+  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null;
+  if (frameH == null) { const b = new THREE.Box3().setFromObject(av.object); frameH = (b.max.y - b.min.y); }   // 枠は最初に作った(最大の)形で固定し、背が伸びて見えるように
+  if (MOTION) av.play(MOTION, { blend: 0 });
+}
+// g: 育ち(0 = ちび, 1 = 本人)、time: 動きの時刻(秒)
+window.shot = async (g, time = 0, yaw = 0.35) => {
+  await build(g); av.object.rotation.y = yaw;
+  if (MOTION) { let tau = clock == null || time < clock ? time - WARM : clock; if (clock == null) av.update(0, { t: tau, instant: true });
+    while (tau < time - 1e-6) { const dt = Math.min(1 / 60, time - tau); tau += dt; av.update(dt, { t: tau }); } clock = time; }
+  else for (let i = 0; i < 3; i++) av.update(1 / 60, { instant: true });
   const cy = frameH * 0.5, d = frameH * 0.62 / Math.tan(THREE.MathUtils.degToRad(15));
   cam.position.set(0, cy, d); cam.lookAt(0, cy, 0);
-  for (let i = 0; i < 3; i++) av.update(1 / 60, { instant: true });
   renderer.render(scene, cam); return renderer.domElement.toDataURL("image/png");
 };
+window.frame = (g, yaw) => window.shot(g, 0, yaw);
 window.READY = true;
 </script>
 </body>

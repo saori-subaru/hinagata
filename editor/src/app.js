@@ -287,7 +287,7 @@ function renderViewControls() {
 const QUICK = ["idle", "walk", "run", "wave", "cheer", "guard", "aPose", "tPose", "sitChair", "sitChairGirl", "sitFloor", "hugKnees"];   // the everyday ones and the poses checked most (a wide screen shows them all; "下が余ってるからもっと出して")
 const MOTION_GROUPS = [
   ["demo", null],
-  ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
+  ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "dance", "banzai", "aPose", "tPose"]],
   ["sit", ["sitChair", "sitChairGirl", "sitFloor", "hugKnees", "sleep"]],
   ["jump", ["jumpCrouch", "jumpRise", "jumpLeap", "jumpAir", "jumpLand", "fall", "hardLand", "stumble", "roll", "knockdown"]],
   ["climb", ["climb", "mantleReach", "mantlePull", "mantleKnee", "climbOver", "vault", "hang", "shimmy", "glide", "balance", "balanceWalk", "slide"]],

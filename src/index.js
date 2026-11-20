@@ -41,6 +41,7 @@ export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto poi
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureCharacter, fitProportions } from "./measure.js";   // proportions in real terms, and options found from proportions (measure.js; no three.js: Node too)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
+import "./motion/dance.js";   // a cute dance, 16 beats at 120 BPM (motion/dance.js)
 import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and crawling (motion/crawl.js)
 import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
@@ -919,7 +920,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cover");
   // motion
   const HEEL = ["heels", "heelBoots"].includes(OPT.outfit.shoes.kind) ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip });
+  const playPose = createPosePlayer({ J: Jr, root, bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip });
   let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null, blendT = null;   // follower: the rig this avatar dresses (follow); blendT: play's blend
   // The joints to pose by hand (avatar.joints, 2026-10-06, Saori: Hinagata is there to save a game's makers time, and an agent writing a
   // tennis swing straight onto the bones lost ~20 min to the A-pose rest (arms 44° down: "forward" with x swung them out sideways), the
