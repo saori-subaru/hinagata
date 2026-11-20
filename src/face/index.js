@@ -40,9 +40,14 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   if (BROWS) { const c = BROWS.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; BROWS.ctx = c.getContext("2d");
     BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
   const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
-  // ⏳ face.mouth3d (a try): an open mouth is a real gap in the head with the mouth's inside behind it (index.js mouthShape), so its picture
-  // is only the upper lip's line (openSoft); the rest of it isn't drawn
+  // ⏳ face.mouth3d (a try): an open mouth is a hole into a mouth made in 3D (index.js mouthInside), not a picture of its inside: from aside
+  // the tongue lies behind the lips, not on the cheek like a sticker. The mouth's shape goes on HOLE's own picture; a layer drawn from it marks
+  // the pixels (stencil bit 4: the hair takes 1 and 2, index.js) where the inside shows through the head. The lips' lines stay on the face's picture, over it
   const HOLE = OPT.face.mouth3d?.on ? {} : null;
+  if (HOLE) { const c = HOLE.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; HOLE.ctx = c.getContext("2d"); HOLE.tex = new THREE.CanvasTexture(c);
+    HOLE.mat = new THREE.MeshBasicMaterial({ map: HOLE.tex, alphaTest: 0.5, colorWrite: false, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      stencilWrite: true, stencilRef: 4, stencilWriteMask: 4, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); }
+  const hole = (shape) => { const c = fctx; fctx = HOLE.ctx; fctx.setTransform(c.getTransform()); shape(); fctx.fillStyle = "#fff"; fctx.fill(); fctx = c; };
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK0 = "#3a2632", MOUTH = "#b8475e";
   // face.lashTrace: the ink toward a dark of the hair's color (warm: a pale or grey hair still gives a brown), by its amount
@@ -287,21 +292,20 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       smile: () => { const { x, y } = MOUTHP; line(0.0045); fctx.beginPath(); fctx.moveTo(px(x - 0.014), py(y + 0.003)); fctx.quadraticCurveTo(px(x), py(y - 0.01), px(x + 0.014), py(y + 0.003)); fctx.stroke(); },
       open: () => { const { x, y } = MOUTHP;
         const shape = () => { fctx.beginPath(); fctx.moveTo(px(x - 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x), py(y + 0.008), px(x + 0.02), py(y + 0.006)); fctx.quadraticCurveTo(px(x + 0.016), py(y - 0.02), px(x), py(y - 0.02)); fctx.quadraticCurveTo(px(x - 0.016), py(y - 0.02), px(x - 0.02), py(y + 0.006)); fctx.closePath(); };
-        if (HOLE) return; shape(); fctx.fillStyle = MOUTH; fctx.fill();
-        fctx.save(); shape(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore();
+        if (HOLE) hole(shape); else { shape(); fctx.fillStyle = MOUTH; fctx.fill();
+          fctx.save(); shape(); fctx.clip(); ell(x, y - 0.02, 0.012, 0.009, "#f08a9c"); fctx.restore(); }
         line(0.003); shape(); fctx.stroke(); },   // ふちは口の形を引き直してから(前は 舌の楕円の線を描いていて、口とずれて見えた。2026-10-09 サオリ)
       // シルヴィの笑う口(絵を用意するまで): 線は上だけで口角で細くはね、口角から脇を下りて消える。下は線なし。舌は大きく
       openSoft: () => { const { x, y } = MOUTHP, P = (a, b) => [px(x + a), py(y + b)], k = OPT.face.openSize ?? 1;
         fctx.save(); fctx.translate(px(x), py(y)); fctx.scale(k, k); fctx.translate(-px(x), -py(y));   // face.openSize: the open mouth bigger or smaller
         const shape = () => { fctx.beginPath(); fctx.moveTo(...P(-0.019, 0.006)); fctx.quadraticCurveTo(...P(0, 0.009), ...P(0.019, 0.006)); fctx.bezierCurveTo(...P(0.0195, -0.011), ...P(0.012, -0.021), ...P(0, -0.021)); fctx.bezierCurveTo(...P(-0.012, -0.021), ...P(-0.0195, -0.011), ...P(-0.019, 0.006)); fctx.closePath(); };
-        if (!HOLE) { shape(); fctx.fillStyle = MOUTH; fctx.fill(); }
+        if (HOLE) hole(shape); else { shape(); fctx.fillStyle = MOUTH; fctx.fill(); }
         fctx.save(); shape(); fctx.clip(); if (HOLE) fctx.globalAlpha = 0;
         ell(x, y - 0.023, 0.016, 0.0125, "#ee8798"); ell(x - 0.003, y - 0.017, 0.006, 0.0035, "#f6a8b4");   // 舌とそのつや
         ell(x, y + 0.009, 0.022, 0.006, "#7a2a3c70"); fctx.restore();                                    // 上唇の下の影
         fctx.fillStyle = "#8a2f40"; for (const m of [1, -1]) {   // 濃い赤の細い線: 上の線(中ほど 2.6mm、口角で少し上へはねる)と、口角から脇を下りて消える線(下は線なし)
           fctx.beginPath(); fctx.moveTo(...P(0, 0.0094)); fctx.quadraticCurveTo(...P(m * 0.012, 0.0094), ...P(m * 0.0215, 0.0078)); fctx.lineTo(...P(m * 0.0235, 0.0098));
           fctx.lineTo(...P(m * 0.0205, 0.0055)); fctx.quadraticCurveTo(...P(m * 0.012, 0.0068), ...P(0, 0.0068)); fctx.closePath(); fctx.fill();
-          if (HOLE) continue;   // (the corner's line would lie stretched over the cheek under the open jaw)
           fctx.beginPath(); fctx.moveTo(...P(m * 0.0207, 0.0072)); fctx.quadraticCurveTo(...P(m * 0.0205, -0.003), ...P(m * 0.0165, -0.011)); fctx.quadraticCurveTo(...P(m * 0.0192, -0.002), ...P(m * 0.0192, 0.0068)); fctx.closePath(); fctx.fill(); } fctx.restore(); },
       o: () => { const { x, y } = MOUTHP; ell(x, y - 0.004, 0.009, 0.011, MOUTH); line(0.003); fctx.stroke(); },
       cat: () => { const { x, y } = MOUTHP; line(0.004); fctx.beginPath(); fctx.moveTo(px(x - 0.016), py(y + 0.002)); fctx.quadraticCurveTo(px(x - 0.008), py(y - 0.012), px(x), py(y)); fctx.quadraticCurveTo(px(x + 0.008), py(y - 0.012), px(x + 0.016), py(y + 0.002)); fctx.stroke(); },
@@ -357,6 +361,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   /** Draw a face: sel = { eyes, brows, mouth, cheeks } (names in PARTS). blinking swaps open eyes for closed ones. */
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+    if (HOLE) { HOLE.ctx.setTransform(1, 0, 0, 1, 0, 0); HOLE.ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height); HOLE.tex.needsUpdate = true; }
     drawBlush();
     // blinking: the closed eye drawn as its own entry (face.images.eyeClosed) whatever the open eye is, else the code's line
     for (const slot of SLOTS) { const shut = slot === "eyes" && blinking && BLINKS.has(sel.eyes), name = shut ? (PART_IMG.eyeClosed.img ? "imageClosed" : SHUT[sel.eyes] ?? "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});

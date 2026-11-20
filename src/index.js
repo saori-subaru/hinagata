@@ -829,72 +829,49 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null;
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); faceLayer.bind(skeleton);
+    if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); holeLayer.bind(skeleton); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
     browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); browLayer.bind(skeleton);
   }
   buildFaceLayer();
-  // ⏳ the open mouth (face.mouth3d, a try): the jaw swung down, a real gap between the lips, the mouth's inside behind it.
-  // jawAt(q, hard): where a head-space point goes with the jaw open. Under the upper lip's line (yT) the jaw's points turn about a hinge up
-  // behind the mouth (down and back); within the mouth's width the line is a cut (above: still, below: all the way), past its corners the
-  // turn comes in over 1.6 cm of height (the cheeks stretch, no cut; that steep, the step shows in the outline from straight aside). Not the neck, not the back of the head.
-  const M3 = face.HOLE ? OPT.face.mouth3d : null, JAW = M3 ? (() => { const k = OPT.face.openSize ?? 1, yT = face.MOUTHP.y + face.FACE.dy + 0.0075, hw = 0.012 * k, m = 0.03, TH = (M3.angle ?? 6.5) * Math.PI / 180, hy = yT + 0.12, hz = -0.01,   // (the hinge high over the mouth: the lower lip goes back as well as down, so from aside the gap is open to the front: フ)
-    yC = OPT.body.sculpt.chin.y;
-    const cut = (x) => 1 - sstep(hw, hw + m, Math.abs(x));
-    const at = (q, side = q[1] < yT ? 1 : 0) => { const c = cut(q[0]), w = (c * side + (1 - c) * sstep(yT + 0.008, yT - 0.008, q[1])) * sstep(0, 0.07, q[2]) * sstep(yC - 0.04, yC - 0.01, q[1]); return turn(q, w); };
-    const turn = (q, w) => { const a = TH * w, dy = q[1] - hy, dz = q[2] - hz; return [q[0], hy + dy * Math.cos(a) - dz * Math.sin(a), hz + dz * Math.cos(a) + dy * Math.sin(a)]; };
-    return { yT, hw, m, cut, at, turn }; })() : null;
-  const toH3 = HTr.identity ? (x, y, z) => [x, y, z] : HTr.toHead, fromH3 = HTr.identity ? (x, y, z) => [x, y, z] : HTr.fromHead;
-  // mouthShape(open): the body's points moved by jawAt and the triangles across the cut emptied (the face's layers rebuilt over them); closed,
-  // all put back. The points of the triangles across the cut are first drawn onto the line, so both lips' edges are straight, not the mesh's cells.
-  let mouthOpen = false, mouthBase = null, mouthIn = null, mouthLid = null; const OPEN_MOUTHS = new Set(["open", "openSoft"]);
+  // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
+  // opens under the upper lip (a notch: フ), not only a hole drawn on an unmoved face. The body's points move (the face's layers rebuilt over
+  // them), as a shape key would; back to where they were when it closes. Normals kept (the dent is shallow)
+  const OPEN_MOUTHS = new Set(["open", "openSoft"]); let mouthOpen = false, mouthBase = null;
   function mouthShape(open) {
-    const geo = parts.body.m.geometry, P = geo.attributes.position, I = geo.index; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice(), i: I.array.slice(), n: geo.attributes.normal.array.slice() }; mouthOpen = false; }
-    if (mouthIn) mouthIn.visible = open; if (open === mouthOpen) return; mouthOpen = open; P.array.set(mouthBase.p); I.array.set(mouthBase.i); const NR = geo.attributes.normal; NR.array.set(mouthBase.n); NR.needsUpdate = true;
-    if (mouthLid) { root.remove(mouthLid); mouthLid.geometry.dispose(); mouthLid = null; } const lid = [];
-    if (open) { const n = P.count, Q = new Array(n), side = new Int8Array(n), snap = new Uint8Array(n), A = I.array;
-      for (let i = 0; i < n; i++) { const q = Q[i] = toH3(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); side[i] = q[2] > 0.03 && Math.abs(q[0]) < JAW.hw + JAW.m && Math.abs(q[1] - JAW.yT) < 0.05 ? (q[1] < JAW.yT ? 1 : 2) : 0; }
-      // (not a triangle with a corner far out, hardly drawn to the line: the gap had a spike up beside the mouth)
-      for (let t = 0; t < A.length; t += 3) { const a = A[t], b = A[t + 1], c = A[t + 2]; if (!side[a] || !side[b] || !side[c] || (side[a] === side[b] && side[b] === side[c])) continue;
-        if (Math.min(JAW.cut(Q[a][0]), JAW.cut(Q[b][0]), JAW.cut(Q[c][0])) < 0.2) continue; snap[a] = snap[b] = snap[c] = 1; lid.push(a, b, c); A[t + 1] = A[t + 2] = a; }
-      // (the mesh has points doubled at the same place, in other triangles: all of them go to the line, or the skin tears open beside it)
-      { const key = (i) => `${Math.round(mouthBase.p[i * 3] * 2e4)},${Math.round(mouthBase.p[i * 3 + 1] * 2e4)},${Math.round(mouthBase.p[i * 3 + 2] * 2e4)}`, S = new Set(); for (let i = 0; i < n; i++) if (snap[i]) S.add(key(i)); for (let i = 0; i < n; i++) if (side[i] && !snap[i] && S.has(key(i))) snap[i] = 1; }
-      for (let i = 0; i < n; i++) { const q = Q[i]; if (q[2] <= 0) continue; const sd = q[1] < JAW.yT ? 1 : 0; if (snap[i]) q[1] += (JAW.yT - q[1]) * JAW.cut(q[0]);
-        const r = fromH3(...JAW.at(q, sd)); if (Math.abs(r[1] - P.array[i * 3 + 1]) + Math.abs(r[2] - P.array[i * 3 + 2]) > 1e-5) snap[i] |= 2; P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; }
-      // the moved points' normals from the triangles as they lie now (the outline's shell goes out along them: along the old ones it came
-      // through the stretched skin in thin lines)
-      { const acc = new Float32Array(n * 3), pa = P.array; for (let t = 0; t < A.length; t += 3) { const a = A[t], b = A[t + 1], c = A[t + 2]; if (b === c || !(snap[a] || snap[b] || snap[c])) continue;
-          const ux = pa[b * 3] - pa[a * 3], uy = pa[b * 3 + 1] - pa[a * 3 + 1], uz = pa[b * 3 + 2] - pa[a * 3 + 2], vx = pa[c * 3] - pa[a * 3], vy = pa[c * 3 + 1] - pa[a * 3 + 1], vz = pa[c * 3 + 2] - pa[a * 3 + 2];
-          const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; for (const v of [a, b, c]) { acc[v * 3] += nx; acc[v * 3 + 1] += ny; acc[v * 3 + 2] += nz; } }
-        for (let i = 0; i < n; i++) { if (!snap[i]) continue; const l = Math.hypot(acc[i * 3], acc[i * 3 + 1], acc[i * 3 + 2]); if (l > 1e-12) for (let q = 0; q < 3; q++) NR.array[i * 3 + q] = acc[i * 3 + q] / l; } }
-      // the lid: the emptied triangles, now spanning the gap, drawn unseen to mark its pixels (stencil bit 4; the hair takes 1 and 2); the
-      // mouth's inside is drawn only there, over all else (seen through the gap the body's outline shell showed inside the lips, and the bag
-      // came out through the chin)
-      if (lid.length) { const g = new THREE.BufferGeometry(), pk = (name, sz) => { const src = geo.attributes[name].array, out = new src.constructor(lid.length * sz); lid.forEach((v, j) => { for (let q = 0; q < sz; q++) out[j * sz + q] = src[v * sz + q]; }); g.setAttribute(name, new THREE.BufferAttribute(out, sz)); };
-        pk("position", 3); pk("skinIndex", 4); pk("skinWeight", 4);
-        mouthLid = new THREE.SkinnedMesh(g, new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, side: THREE.DoubleSide, stencilWrite: true, stencilRef: 4, stencilWriteMask: 4, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }));
-        mouthLid.name = "mouthLid"; mouthLid.frustumCulled = false; mouthLid.renderOrder = 3; root.add(mouthLid); mouthLid.bind(skeleton); } }
-    P.needsUpdate = true; I.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); if (mouthIn) mouthIn.visible = open; }
-  // the mouth's inside: a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone, made as they are with
-  // the jaw open (the bag's lower half and the tongue go with it). Drawn one over the other in this order, only on the gap's pixels (the lid, mouthShape). Unlit: plain colors
-  if (M3) { const g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
-    const yc = JAW.yT - 0.012; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
-    const piece = (geo, c, r, color, order, side = THREE.FrontSide, jaw = null) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) { const q = [c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]];
-        P.setXYZ(i, ...fromH3(...JAW.turn(q, jaw ?? sstep(JAW.yT + 0.004, JAW.yT - 0.004, q[1])))); }
-      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 4, stencilFuncMask: 4, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc })); m.renderOrder = order; m.frustumCulled = false; g.add(m); };
+    const geo = parts.body.m.geometry, P = geo.attributes.position; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice() }; mouthOpen = false; }
+    if (open === mouthOpen) return; mouthOpen = open; P.array.set(mouthBase.p);
+    if (open) { const M3 = OPT.face.mouth3d, k = OPT.face.openSize ?? 1, y0 = face.MOUTHP.y + face.FACE.dy, yT = y0 + 0.006, yB = y0 - 0.021 * k, D = 0.015 * (M3.depth ?? 1), H = HTr.identity ? null : HTr;
+      const toH = H ? H.toHead : (x, y, z) => [x, y, z], fromH = H ? H.fromHead : (x, y, z) => [x, y, z];
+      for (let i = 0; i < P.count; i++) { const q = toH(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); if (q[2] < 0.05 || q[1] > yT || q[1] < yB - 0.045) continue;
+        // across: far past the mouth's corners (the face is round: a dent only as wide as the mouth is hidden from aside behind the cheeks, 2-3 mm showed);
+        // down: none to 3 mm under the upper lip, all 11 mm further (the step lies inside the mouth's hole), out again by the mouth's bottom (over the chin too, the jaw read as receding)
+        const wx = 1 - sstep(0.02 * k, 0.065, Math.abs(q[0])), wy = sstep(yT - 0.003, yT - 0.014, q[1]) * (1 - sstep(yB + 0.008, yB - 0.014, q[1])), w = wx * wy; if (!(w > 0)) continue;
+        const r = fromH(q[0], q[1], q[2] - D * w); P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; } }
+    P.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); }
+  // ⏳ the mouth's inside (face.mouth3d, a try): a bag, a darker throat at its back and a tongue, in the head behind the mouth, on the head bone.
+  // Drawn after everything solid, without the depth test (the head's own skin is in front of them), only where the mouth's hole marked the
+  // pixels (face/index.js HOLE), one over the other in this order. Unlit: plain colors, as the mouth's picture was
+  if (face.HOLE) { const M3 = OPT.face.mouth3d, g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
+    const yc = face.MOUTHP.y + face.FACE.dy - 0.006; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
+    const piece = (geo, c, r, color, order, side = THREE.FrontSide) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) P.setXYZ(i, ...HTr.fromHead(c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]));
+      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 4, stencilFuncMask: 4, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
+      m.renderOrder = order; m.frustumCulled = false; g.add(m); };
     const D = M3.depth ?? 1;
-    piece(new THREE.SphereGeometry(1, 20, 14), [0, yc + 0.004, zs - 0.02 * D], [0.05, 0.03, 0.034 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);
-    piece(new THREE.SphereGeometry(1, 14, 10), [0, yc + 0.004, zs - 0.05 * D], [0.011, 0.009, 0.006], M3.throat ?? "#7d2a40", 5);
-    piece(new THREE.SphereGeometry(1, 16, 12), [0, JAW.yT - 0.008, zs - 0.028 * D], [0.016, 0.0065, 0.02], M3.tongue ?? "#ee8798", 6, THREE.FrontSide, 1);
-    g.visible = false; mouthIn = g; bone.head.add(g); }   // (closed, the bag made for the open jaw would hang out under the chin)
+    piece(new THREE.SphereGeometry(1, 20, 14), [0, yc - 0.002, zs - 0.012 * D], [0.044, 0.036, 0.03 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);
+    piece(new THREE.SphereGeometry(1, 14, 10), [0, yc + 0.002, zs - 0.034 * D], [0.011, 0.009, 0.006], M3.throat ?? "#7d2a40", 5);
+    piece(new THREE.SphereGeometry(1, 16, 12), [0, yc - 0.016, zs - 0.017 * D], [0.016, 0.0065, 0.017], M3.tongue ?? "#ee8798", 6);
+    if (M3.teeth) piece(new THREE.BoxGeometry(2, 2, 2), [0, yc + 0.0125, zs - 0.007], [0.013, 0.0035, 0.002], "#ffffff", 7);
+    bone.head.add(g); }
 
   lap("faceLayer");
   // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index
@@ -1072,7 +1049,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
       avatar.drawFace();
     },
-    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(!!M3 && OPEN_MOUTHS.has(faceSel.mouth)); },
+    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
