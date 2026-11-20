@@ -56,6 +56,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the torso alone (the sleeves hang by the waist). The belt's top in base heights, from its width in built metres
   const BL = OPT.outfit.belt, BLOUSE = BL?.on && (BL.blouse ?? 0) > 0 ? BL.blouse : 0, BT = BLOUSE ? (BL.y ?? 0.52) + (BL.width ?? 0.04) / 2 / makeStretch(OPT, J).slope(BL.y ?? 0.52) : 0;
   const blouseAt = (x, y, z) => { const u = y + (BL?.tilt ?? 0) * z; return sstep(BT, BT + 0.012, u) * (1 - sstep(BT + 0.02, BT + 0.06, u)) * (1 - sstep(0.135, 0.165, Math.abs(x))); };
+  // belt.blouseUnder (m): a skirt's (or a dress's) top puffs out as much under the belt, from its bottom edge down 6 cm. Put the skirt's top at
+  // the belt's bottom edge: its top hugs the shirt there and flares below, which read as a pinch under the belt
+  const BLOUSE_U = BL?.on && (BL.blouseUnder ?? 0) > 0 ? BL.blouseUnder : 0, BB = BLOUSE_U ? (BL.y ?? 0.52) - (BL.width ?? 0.04) / 2 / makeStretch(OPT, J).slope(BL.y ?? 0.52) : 0;
+  const underAt = (y, z) => { const u = y + (BL?.tilt ?? 0) * z; return sstep(BB, BB - 0.012, u) * (1 - sstep(BB - 0.025, BB - 0.06, u)); };
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   // the bell sleeve: a shell around the forearm from the elbow (as wide as the sleeve) to the cuff, open there. It hangs: the bell's middle
   // drops below the arm toward the cuff, and its lower side reaches further (a slanted opening that shows from the front)
@@ -242,6 +246,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (CINCH) outer += CINCH * Math.exp(-(((y - CINCH_AT) / 0.035) ** 2));   // drawn in round cinchAt (a belt), smoothly: no step
     if (TD && dz > 0 && y < SK.hem + 0.01) { const tc = tabCut(x, y, dz); if (tc < 0.004) { const h = hemAt(Math.sign(x) * TA, dz); outer += 0.01 * sstep(h, h - TD, y) * sstep(0.004, 0, tc); } }   // the tabs sink toward their tips
     if (SK_BAND && y > top - SK_BAND) outer += (Math.min(shirtSdf(x, y, z, B, true), B(x, y, z) - 0.008) - (SK.dress ? 0.003 - 0.006 * sstep(top - 0.02, top, y) : 0.007) - outer) * sstep(top - SK_BAND, top - 0.015, y) * (1 - sstep(SK_AX - 0.01, SK_AX + 0.03, Math.abs(x)));   // (the torso only: round long sleeves at the elbows it made fins, 2026-10-07)
+    if (BLOUSE_U) outer -= BLOUSE_U * underAt(y, z);   // (after the band: hugging the shirt it was gone)
     return outer; }
   const skirtTk = (y) => { const slope = Math.abs(shapeOut(y + 0.005) - shapeOut(y - 0.005)) / 0.01 + SK.flare;   // where it flares nearly flat a sideways thickness is thin across the cloth: thicker by the slope
     return SK.thick * Math.hypot(1, slope); };
@@ -300,7 +305,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const SHOE_OFF = PUMPS ? 0.006 : SHOE.off, CUFF = BOOTS ? OPT.outfit.shoes.cuff ?? 0 : 0;
   // shoes.cuffTube (boots, for アステル): the cuff a round tube standing off the shaft (a turned-down cuff, cuffOut out past the shaft's widest
   // under it, CW thick) and open at the top round the leg; the shaft ends inside it. As the shaft pushed out (cuffOut alone) it read as one soft boot
-  const TUBE = BOOTS && !HBOOTS && CUFF > 0 && OPT.outfit.shoes.cuffTube, CW = 0.008;
+  const TUBE = BOOTS && !HBOOTS && CUFF > 0 && OPT.outfit.shoes.cuffTube, CW = 0.008, FD = 0.014, FO = CW / 2 - 0.003, FW = 0.018, FN = Math.hypot(1, FD / FW);   // FD, FO, FW: the funnel's depth, where it starts in from the outside, how wide it is
   let tubes = null;
   const tubeO = (x, y, z) => { const T = tubes[x >= 0 ? 0 : 1], f = (y - T.a[1]) / T.l; return (Math.hypot((x - T.a[0] - T.u[0] * f) / T.rx, (z - T.a[2] - T.u[2] * f) / T.rz) - 1) * T.r; };   // (m) off the tube's middle
   // how far under the top (m, base): the cuff is painted by it (a tube's outside all of it: across its bottom edge onto the shaft the band's edge
@@ -320,10 +325,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     if (TOE_CAP) c = smin(c, dPrim(TOE_CAP[x >= 0 ? 0 : 1], x, y, z) - SHOE_OFF, 0.012);
     let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z));
-    // (solid from the shaft out over its lower half: hollow down to its bottom, the shaft close inside it came out as a jagged edge; its outer
-    // edges rounded wider than a cell: cut sharp, the mesh's points fell on one face or the other in a saw)
+    // (its outer edges rounded wider than a cell: cut sharp, the mesh's points fell on one face or the other in a saw.) Its top a funnel, from
+    // a 3 mm rim down inward to FD under it, the shaft's top lowered to that floor: hollow, its 8 mm wall and the gap inside it were about a
+    // cell at "game" (9.5 mm for the shoes) and came out as a saw
     if (tubes) { const o = tubeO(x, y, z), top = TOP - TILT * z, bot = top - CUFF + 0.002, r = -smin(-(o - CW / 2), -(bot - y), 0.008);
-      d = Math.min(d, Math.max(r, y - top, -Math.max(o + CW / 2, bot + CUFF * 0.45 - y))); }
+      const k = Math.min(1, Math.max(0, (FO - o) / FW)), ft = (y - top + FD * k) / (k > 0 && k < 1 ? FN : 1);
+      d = Math.max(Math.min(d, r), ft); }
     return d; };
   if (TUBE) tubes = ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], m = Math.sign(a[0]) || 1;
     // the shaft's widest round the axis under the cuff (across and front to back), measured on the boot without the tube
@@ -519,7 +526,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // for the garment parts (src/garments):
   // legsSdf(hem, off): pants cut at their own hem, off (m) off the body, whatever the outfit's own pants are (shorts under a skirt or a dress)
   const legsMask = blend([...pick("pelvis", "butt", "leghole", "belly", "thighF", "thighB", "thighIn", "thighOut"), CROTCH]);
-  const legsSdf = (hem, off = PANTS_OFF) => (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - off, legsMask(x, y, z) - 0.054, y - (PANTS_TOP - PANTS_TILT * z), hem - y);
+  const legsSdf = (hem, off = PANTS_OFF, top = PANTS_TOP) => (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - off, legsMask(x, y, z) - 0.054, y - (top - PANTS_TILT * z), hem - y);
   // outerSdf: the outside of what is worn round the torso (< 0 inside): the shirt without its bells, the skirt under its top, the pants (a belt lies on it)
   const outerSdf = (x, y, z, B = bodySdf) => Math.min(B(x, y, z), OPT.outfit.shirt.on !== false || OPT.outfit.dress?.on ? shirtSdf(x, y, z, B, true) : 1,
     SKIRT ? Math.max(skirtOuter(x, y, z, B), y - skirtTop(z)) : OPT.outfit.pants.on !== false ? pantsShape(x, y, z, B) : 1);
@@ -531,6 +538,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return { out: BELL ? (x, y, z) => bellAt(x, y, z, A)[0] : (x, y, z) => F(x, y, z) - 0.014,
       up: BELL ? (x, y, z) => { const [t, s] = along(x, y, z); return (A.Lf + 0.01 + SLANT * Math.max(0, s) - t) / (s > 0 && SLANT ? 1.22 : 1); } : (x, y, z) => A.Lf - 0.012 - along(x, y, z)[0],
       lo: [0, 1, 2].map((k) => Math.min(ends[0][k], ends[1][k]) - R), hi: [0, 1, 2].map((k) => Math.max(ends[0][k], ends[1][k]) + R) }; } : () => null;
-  return { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+  // the shirt's mesh: under a dress with slits and shorts its torso ends 1 cm under the shorts' top (the skirt's top band still follows the
+  // whole shirt; the sleeves hanging by it are kept): through the slits its front print showed as a white line. Put the shorts' top over
+  // the slits' (shorts.top): cut under a lower top, the skin showed between
+  const ST_TOP = OPT.outfit.shorts?.on ? OPT.outfit.shorts.top ?? PANTS_TOP : null;
+  const shirtMesh = SKIRT && SK.dress && SLIT && ST_TOP != null ? (x, y, z, B, noBell, noHole) => { const d = shirtSdf(x, y, z, B, noBell, noHole), ax = Math.abs(x);
+    return ax > 0.19 ? d : Math.max(d, ST_TOP - PANTS_TILT * z - 0.01 - y - 2 * sstep(0.16, 0.19, ax)); } : shirtSdf;
+  return { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
     garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)), legsSdf, outerSdf, sleeveEnd }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

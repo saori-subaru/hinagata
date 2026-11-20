@@ -143,7 +143,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, headBare, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat, skirtHem, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat, skirtHem, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -229,6 +229,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // line round the waist (2026-10-09, Saori: "ギザギザ消せる？"; only at "fine", the thinned build)
     { const SK = name === "shirt" ? skirtOf(OPT) : null; if (SK?.top != null) { lock = new Uint8Array(pos.length / 3);
       for (let v = 0; v < lock.length; v++) if (Math.abs(pos[v * 3 + 1] - SK.top) < 0.035) lock[v] = 1; } }
+    // a boot's cuff as a tube (shoes.cuffTube): its top 8 mm kept as built (its rounded rim); thinned, long triangles from the rounded rim
+    // down its side spread the rim's normals in light flames
+    { const S = OPT.outfit.shoes; if (name === "shoes" && S.cuffTube && S.kind === "boots" && (S.cuff ?? 0) > 0) { lock = new Uint8Array(pos.length / 3);
+      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > S.bootHeight - 0.12 * pos[v * 3 + 2] - 0.008) lock[v] = 1; } }
     let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
     const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
     const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);
@@ -379,7 +383,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, garments } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, garments } };
   if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
     const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
@@ -497,7 +501,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
 
   // build every mesh
-  const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
+  const fast = { shirt: (x, y, z) => shirtMesh(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
   const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, one: ONE, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);

@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 465,
+   "order": 467,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -11282,7 +11282,7 @@
      }
     }
    ],
-   "order": 440,
+   "order": 442,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11300,7 +11300,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 441,
+   "order": 443,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11323,7 +11323,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 442,
+   "order": 444,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11371,7 +11371,7 @@
      }
     }
    ],
-   "order": 443,
+   "order": 445,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11389,7 +11389,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 444,
+   "order": 446,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11415,7 +11415,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 445,
+   "order": 447,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11433,7 +11433,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 446,
+   "order": 448,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11451,7 +11451,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 447,
+   "order": 449,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11492,7 +11492,7 @@
      }
     }
    ],
-   "order": 448,
+   "order": 450,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11510,7 +11510,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 449,
+   "order": 451,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11536,7 +11536,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 450,
+   "order": 452,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11854,7 +11854,7 @@
      }
     }
    ],
-   "order": 435,
+   "order": 437,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11872,7 +11872,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 437,
+   "order": 439,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11896,7 +11896,7 @@
    "min": 0.12,
    "max": 0.3,
    "step": 0.005,
-   "order": 438,
+   "order": 440,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11927,7 +11927,7 @@
    "min": 8,
    "max": 45,
    "step": 1,
-   "order": 439,
+   "order": 441,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11958,7 +11958,7 @@
    "min": 0,
    "max": 0.08,
    "step": 0.002,
-   "order": 452,
+   "order": 454,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -11989,7 +11989,7 @@
    "min": 0.002,
    "max": 0.03,
    "step": 0.001,
-   "order": 453,
+   "order": 455,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12018,7 +12018,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 454,
+   "order": 456,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -12047,7 +12047,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 455,
+   "order": 457,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12076,7 +12076,7 @@
    "min": 0,
    "max": 1,
    "step": 0.02,
-   "order": 456,
+   "order": 458,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12104,7 +12104,7 @@
    "min": 0,
    "max": 0.03,
    "step": 0.001,
-   "order": 457,
+   "order": 459,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12132,7 +12132,7 @@
    "min": 0,
    "max": 2,
    "step": 1,
-   "order": 458,
+   "order": 460,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12160,7 +12160,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 459,
+   "order": 461,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -12192,7 +12192,7 @@
    "min": 0,
    "max": 0.15,
    "step": 0.002,
-   "order": 460,
+   "order": 462,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12223,7 +12223,7 @@
    "min": 0.004,
    "max": 0.04,
    "step": 0.001,
-   "order": 461,
+   "order": 463,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12254,7 +12254,7 @@
    "min": 0,
    "max": 0.05,
    "step": 0.001,
-   "order": 462,
+   "order": 464,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12285,7 +12285,7 @@
    "min": 0,
    "max": 0.06,
    "step": 0.001,
-   "order": 463,
+   "order": 465,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12316,7 +12316,7 @@
    "min": 0.006,
    "max": 0.06,
    "step": 0.001,
-   "order": 464,
+   "order": 466,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12344,7 +12344,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 434,
+   "order": 436,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12362,7 +12362,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 436,
+   "order": 438,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12380,7 +12380,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 451,
+   "order": 453,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -13412,7 +13412,7 @@
    "min": 0,
    "max": 1,
    "step": 0.02,
-   "order": 421,
+   "order": 422,
    "section": {
     "ja": "下にはく短パン",
     "en": "Shorts under a skirt"
@@ -13420,6 +13420,35 @@
    "help": {
     "ja": "すそへ向かって脚から離れる(箱形の短パン)",
     "en": "the legs stand off the thighs toward the hem (boxy shorts)"
+   },
+   "when": {
+    "outfit.shorts.on": true
+   }
+  },
+  "outfit.shorts.top": {
+   "path": "outfit.shorts.top",
+   "type": "number",
+   "default": null,
+   "label": {
+    "ja": "上端の高さ",
+    "en": "Top"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.44,
+   "max": 0.6,
+   "step": 0.002,
+   "order": 421,
+   "nullable": true,
+   "section": {
+    "ja": "下にはく短パン",
+    "en": "Shorts under a skirt"
+   },
+   "help": {
+    "ja": "伸ばす前の体で(後ろ上がりはズボンと同じ)。null = ズボンの上端。ワンピースの切れ目より上に置くと、切れ目の奥は短パンだけが見える",
+    "en": "on the body before it is stretched (rising at the back as the pants do); null = the pants' top. Over a dress's slits only the shorts show through them"
    },
    "when": {
     "outfit.shorts.on": true
@@ -13437,7 +13466,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 422,
+   "order": 423,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13459,7 +13488,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 423,
+   "order": 424,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13484,7 +13513,7 @@
    "min": 0.44,
    "max": 0.66,
    "step": 0.002,
-   "order": 424,
+   "order": 425,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13512,7 +13541,7 @@
    "min": 0.01,
    "max": 0.09,
    "step": 0.002,
-   "order": 425,
+   "order": 426,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13540,7 +13569,7 @@
    "min": 0.003,
    "max": 0.02,
    "step": 0.001,
-   "order": 426,
+   "order": 427,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13568,7 +13597,7 @@
    "min": -0.3,
    "max": 0.4,
    "step": 0.01,
-   "order": 428,
+   "order": 430,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13596,7 +13625,7 @@
    "min": 0,
    "max": 0.03,
    "step": 0.001,
-   "order": 427,
+   "order": 428,
    "section": {
     "ja": "ベルト",
     "en": "Belt"
@@ -13604,6 +13633,34 @@
    "help": {
     "ja": "ベルトのすぐ上で服がふくらんでかぶる量(m)。胴だけ(袖はそのまま)。0 = なし。ワンピースはスカートの始まり(waist)をベルトの下端に置くとスカートがベルトの下から広がる",
     "en": "how far the clothes puff out right over the belt (m), the torso alone; 0 = none. With a dress, its waist at the belt's bottom edge: the skirt flares out from under it"
+   },
+   "when": {
+    "outfit.belt.on": true
+   }
+  },
+  "outfit.belt.blouseUnder": {
+   "path": "outfit.belt.blouseUnder",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "下の服のたるみ",
+    "en": "Blousing under it"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.03,
+   "step": 0.001,
+   "order": 429,
+   "section": {
+    "ja": "ベルト",
+    "en": "Belt"
+   },
+   "help": {
+    "ja": "ベルトのすぐ下でスカート・ワンピースのすそがふくらむ量(m)。スカートの始まりをベルトの下端に置いたとき用。0 = なし",
+    "en": "how far a skirt or a dress puffs out right under the belt (m), with the skirt's top at the belt's bottom edge; 0 = none"
    },
    "when": {
     "outfit.belt.on": true
@@ -13621,7 +13678,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 429,
+   "order": 431,
    "section": {
     "ja": "折り返しの袖口",
     "en": "Turned-back cuffs"
@@ -13649,7 +13706,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 430,
+   "order": 432,
    "section": {
     "ja": "折り返しの袖口",
     "en": "Turned-back cuffs"
@@ -13674,7 +13731,7 @@
    "min": 0.02,
    "max": 0.14,
    "step": 0.002,
-   "order": 431,
+   "order": 433,
    "section": {
     "ja": "折り返しの袖口",
     "en": "Turned-back cuffs"
@@ -13702,7 +13759,7 @@
    "min": 0.002,
    "max": 0.03,
    "step": 0.001,
-   "order": 432,
+   "order": 434,
    "section": {
     "ja": "折り返しの袖口",
     "en": "Turned-back cuffs"
@@ -13730,7 +13787,7 @@
    "min": 0,
    "max": 1,
    "step": 0.02,
-   "order": 433,
+   "order": 435,
    "section": {
     "ja": "折り返しの袖口",
     "en": "Turned-back cuffs"

@@ -210,8 +210,8 @@ export const CHARACTERS = {
         dress: { on: true, color: "#657096", waist: 0.536, hem: 0.444, flare: 1.15, pleats: 0, sideDrop: 0.015, sideAt: 0.56, sideOut: -0.005, slit: 0.07, slitWidth: 0.022, middleBack: false,
           texture: { src: ASTEL_TUNIC, mode: "front", scale: 0.56, y: 0.775 } },
         cuffs: { on: true, color: "#e4e0e4", width: 0.055, out: 0.005, flare: 0 },
-        belt: { on: true, color: "#7a625b", y: 0.554, width: 0.062, blouse: 0.012 },   // the tunic puffing out over it, as on the sheet (at 0.015 it touched the cloak's inner corner by the arm)
-        shorts: { on: true, color: "#606a90", hem: 0.36, flare: 1 },
+        belt: { on: true, color: "#7a625b", y: 0.554, width: 0.062, blouse: 0.012, blouseUnder: 0.012 },   // the tunic puffing out over it and under it, as on the sheet (over it at 0.015 it touched the cloak's inner corner by the arm; under it at 0.018 the skirt's top stood out under the belt in an outline)
+        shorts: { on: true, color: "#606a90", hem: 0.36, flare: 1, top: 0.54 },   // up over the slits' tops: through them only the shorts show (the shirt is cut under their top)
         socks: { color: "#5a4e55", top: 0.38 },   // tights: up under the shorts
         // the cuff a tube standing off the shaft, a round toe, a heel
         shoes: { kind: "boots", color: "#7a625b", soleColor: "#d2c8c6", bootHeight: 0.23, offset: 0.017, cuff: 0.08, cuffOut: 0.02, cuffTube: true, toeCap: 0.3, heelBlock: 0.012, cuffColor: "#a98a76" },
