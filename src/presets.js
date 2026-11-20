@@ -131,7 +131,7 @@ export const CHARACTERS = {
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it)
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, napeCut: { round: { y: 0.9, z: -0.31, r: 0.2, k: 0.05 } } },
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, napeCut: { round: { y: 0.9, z: -0.24, r: 0.13, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
