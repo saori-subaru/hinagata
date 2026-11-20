@@ -849,7 +849,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   if (face.HOLE) { const M3 = OPT.face.mouth3d, g = new THREE.Group(); g.name = "mouthInside"; root.updateMatrixWorld(true); const inv = bone.head.matrixWorld.clone().invert();
     const yc = face.MOUTHP.y + face.FACE.dy - 0.006; let zs = 0.3; while (zs > 0 && bodySdfRaw(0, yc, zs) > 0) zs -= 0.001;   // the skin at the mouth (head space)
     const piece = (geo, c, r, color, order, side = THREE.FrontSide) => { const P = geo.attributes.position; for (let i = 0; i < P.count; i++) P.setXYZ(i, ...HTr.fromHead(c[0] + P.getX(i) * r[0], c[1] + P.getY(i) * r[1], c[2] + P.getZ(i) * r[2]));
-      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFuncMask: 2, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
+      geo.applyMatrix4(inv); const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side, depthTest: false, depthWrite: false, stencilWrite: true, stencilRef: 4, stencilFuncMask: 4, stencilWriteMask: 0, stencilFunc: THREE.EqualStencilFunc }));
       m.renderOrder = order; m.frustumCulled = false; g.add(m); };
     const D = M3.depth ?? 1;
     piece(new THREE.SphereGeometry(1, 20, 14), [0, yc - 0.002, zs - 0.012 * D], [0.044, 0.036, 0.03 * D], M3.color ?? "#a23a52", 4, THREE.BackSide);

@@ -42,11 +42,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
   // ⏳ face.mouth3d (a try): an open mouth is a hole into a mouth made in 3D (index.js mouthInside), not a picture of its inside: from aside
   // the tongue lies behind the lips, not on the cheek like a sticker. The mouth's shape goes on HOLE's own picture; a layer drawn from it marks
-  // the pixels (stencil 2, holeMat) where the inside shows through the head. The lips' lines stay on the face's picture, over it
+  // the pixels (stencil bit 4: the hair takes 1 and 2, index.js) where the inside shows through the head. The lips' lines stay on the face's picture, over it
   const HOLE = OPT.face.mouth3d?.on ? {} : null;
   if (HOLE) { const c = HOLE.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; HOLE.ctx = c.getContext("2d"); HOLE.tex = new THREE.CanvasTexture(c);
     HOLE.mat = new THREE.MeshBasicMaterial({ map: HOLE.tex, alphaTest: 0.5, colorWrite: false, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-      stencilWrite: true, stencilRef: 2, stencilWriteMask: 2, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); }
+      stencilWrite: true, stencilRef: 4, stencilWriteMask: 4, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }); }
   const hole = (shape) => { const c = fctx; fctx = HOLE.ctx; fctx.setTransform(c.getTransform()); shape(); fctx.fillStyle = "#fff"; fctx.fill(); fctx = c; };
   const px = (x) => (x - FACE.x0) * FACE.S, py = (y) => (FACE.y1 - y - FACE.dy) * FACE.S, pu = (d) => d * FACE.S;   // 体の座標 → 絵のピクセル
   const INK0 = "#3a2632", MOUTH = "#b8475e";
