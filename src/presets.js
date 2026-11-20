@@ -149,12 +149,12 @@ export const CHARACTERS = {
           // the back: thinner (his head is deeper than the sheet's: as thick as the sides, the back stood out further still). The spikes at
           // its corners are the sheet's flicks at the back's outline, from the back and from the side; none straight back (from behind it
           // pointed at the eye: a stud)
-          // flick: their ends turn out and up, each a little differently (lying on the head to their tips they pointed down: a smooth ball from the side)
-          { to: [-150, 0.97], width: 0.2, thick: 0.025, flick: 0.028, flickFrom: 0.75 },
-          { to: [150, 0.97], width: 0.22, thick: 0.025, flick: 0.026, flickFrom: 0.72, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }] },
-          { to: [178, 0.94], width: 0.24, thick: 0.025, flick: 0.03, flickFrom: 0.72 },
-          { to: [-125, 0.99], width: 0.2, thick: 0.035, flick: 0.022, flickFrom: 0.8, spikes: [{ y: 1.09, out: 0.08 }] },
-          { to: [122, 0.99], width: 0.2, thick: 0.035, flick: 0.024, flickFrom: 0.78, spikes: [{ y: 1.1 }] },
+          // flick: their ends turn out to about level; band: a short thick point (lying on the head to their tips the back was a smooth ball from the side; turned further, with a long thin point, each end was a curled whisker)
+          { to: [-150, 0.97], width: 0.2, thick: 0.025, flick: 0.014, flickFrom: 0.75, band: 0.8 },
+          { to: [150, 0.97], width: 0.22, thick: 0.025, flick: 0.014, flickFrom: 0.75, band: 0.8, spikes: [{ y: 1.24, length: 0.18, out: 0.08 }] },
+          { to: [178, 0.94], width: 0.24, thick: 0.025, flick: 0.014, flickFrom: 0.75, band: 0.8 },
+          { to: [-125, 0.99], width: 0.2, thick: 0.035, flick: 0.014, flickFrom: 0.75, band: 0.8, spikes: [{ y: 1.09, out: 0.08 }] },
+          { to: [122, 0.99], width: 0.2, thick: 0.035, flick: 0.014, flickFrom: 0.75, band: 0.8, spikes: [{ y: 1.1 }] },
           // the sides: a thick fan over each ear, and the flicks beside the brows from the front growing out of it: his right one and the
           // end under it flared out (up: below level), his left two, running a little toward the back (side)
           { to: [-90, 0.985], width: 0.22, thick: 0.06, tips: [0.85, 1], notch: 0.06, endWidth: 0.75, spikes: [{ y: 1.145, length: 0.18, out: 0.085, width: 0.12 }, { y: 0.995, length: 0.13, out: 0.05, up: -40, width: 0.1 }] },
