@@ -726,14 +726,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
           g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026);
           const out = [[g, TL.tie.color]];
-          // kind "berries": two big berries and a big leaf (three smaller ones read as busy) on the tie's top, toward the face (a forest elf's; a plain ring read as no one's)
+          // kind "berries": two big berries and two leaves (three smaller berries read as busy) on the tie's top, toward the face (a forest elf's; a plain ring read as no one's)
           if (TL.tie.kind === "berries") { const R = TL.volume * (TL.size ?? 1) * 0.5 + 0.008, c = p.map((v, i) => v + o[i] * 0.026), dt = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
             const fw = [0, 0.6, 1], k = dt(fw, o), u0 = fw.map((v, i) => v - o[i] * k), ul = Math.hypot(...u0), u = u0.map((v) => v / ul), v = [o[1] * u[2] - o[2] * u[1], o[2] * u[0] - o[0] * u[2], o[0] * u[1] - o[1] * u[0]];
             const at = (a, b, e) => c.map((x, i) => x + u[i] * (R + a) + v[i] * b + o[i] * e), br = 0.015 * ts;
             for (const [a, b, e, r] of [[0.008, -0.012, 0.005, 1], [0.01, 0.012, 0.003, 0.9]]) { const q = new THREE.SphereGeometry(br * r, 12, 9); q.translate(...at(a * ts, b * ts, e * ts)); out.push([q, TL.tie.color]); }
-            const lf = new THREE.SphereGeometry(1, 10, 6); lf.scale(0.012 * ts, 0.0026 * ts, 0.024 * ts); lf.translate(0, 0, 0.021 * ts);   // a leaf: a flat oval from its stalk at the berries
-            const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(...v).negate(), new THREE.Vector3(...u), new THREE.Vector3(...o)).multiply(new THREE.Matrix4().makeRotationY(0.9)).multiply(new THREE.Matrix4().makeRotationX(-0.5));
-            lf.applyMatrix4(m); lf.translate(...at(0.008 * ts, 0, -0.004 * ts)); out.push([lf, TL.tie.leaf ?? "#7fbf62"]); }
+            // two leaves: flat ovals from one stalk behind the berries' top, up and apart in a V, behind the berries (through them, one stuck in a berry)
+            for (const sg of [1, -1]) { const lf = new THREE.SphereGeometry(1, 10, 6); lf.scale(0.011 * ts, 0.0026 * ts, 0.02 * ts); lf.translate(0, 0, 0.018 * ts);
+              const L0 = [0, 1, 2].map((q) => u[q] * 0.7 + v[q] * 0.6 * sg - o[q] * 0.4), ll = Math.hypot(...L0), L = L0.map((x) => x / ll), k2 = dt(o, L), n0 = o.map((x, q) => x - L[q] * k2), nl = Math.hypot(...n0), nn = n0.map((x) => x / nl);
+              const w = [nn[1] * L[2] - nn[2] * L[1], nn[2] * L[0] - nn[0] * L[2], nn[0] * L[1] - nn[1] * L[0]];
+              lf.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3(...w), new THREE.Vector3(...nn), new THREE.Vector3(...L))); lf.translate(...at(0.022 * ts, 0, -0.009 * ts)); out.push([lf, TL.tie.leaf ?? "#7fbf62"]); } }
           return out; }).flat();
         // one mesh per color (the tie's, the leaf's): the toon material takes one color
         const merged = (list) => { const g = new THREE.BufferGeometry(), Pm = [], Nm = [], Im = []; for (const q of list) { const o0 = Pm.length / 3; Pm.push(...q.attributes.position.array); Nm.push(...q.attributes.normal.array); for (const i of q.index.array) Im.push(i + o0); }
