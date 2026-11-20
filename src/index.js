@@ -662,7 +662,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   let bangKitMemo = null, tailAnchors = [], tuftSpots = [];   // tailAnchors: where the tails are tied now (avatar.tailTies) / tuftSpots: where the tufts and their spikes end (avatar.tuftSpots)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
-  const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), dPrim(P.skull, x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
+  const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; const BK = CUT.back?.f, sk = BK ? (x, y, z) => Math.max(dPrim(P.skull, x, y, z), -BK(x, y, z)) : (x, y, z) => dPrim(P.skull, x, y, z);   // (the skull's ball cut as the head's back is, body.sculpt.backPlane: on the whole ball the hair kept the back the head had lost)
+    return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), sk(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   // hair.sculpt.whorl { on, th, ph: where the whorl is (degrees around and up from the skull's middle), r: the roots' ring around it (radians),
   // rootW: the roots' width, part: the parting's angle (0 = front), shingle: the locks' tilt }: every lock (bangs and back) grows from the whorl
   // over the head, laid like roof tiles away from the part; no block is meshed under them (the scalp is painted the hair's color: scalpOf)

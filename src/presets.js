@@ -130,7 +130,7 @@ export const CHARACTERS = {
         joints: { footX: 0.13, kneeX: 0.118 },
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 } },
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, backPlane: { z: 0.21, tilt: 0.2, k: 0.08 } },   // backPlane: the back of his skull about 2 cm shorter (the spikes stand on it: with the whole ball under them the back of his head bulged)
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
