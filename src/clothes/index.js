@@ -52,6 +52,10 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const NOTCH = (OPT.outfit.shirt.collar.notch ?? 0) > 0 ? (() => { const D = OPT.outfit.shirt.collar.notch, k = D / Math.max(0.002, (OPT.outfit.shirt.collar.notchWidth ?? 0.016) / 2), kn = Math.hypot(1, k);
     return (x, y, z) => { if (z < 0.02) return -1; const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;
       return (y - (COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (x * x + rz * rz) - D) - k * Math.abs(x)) / kn; }; })() : null;   // > 0 inside the V (its point notch under the neckline)
+  // belt.blouse (m, アステル's): the shirt puffs out this much over a belt, right above it (tucked under at its top edge, gone 6 cm up), round
+  // the torso alone (the sleeves hang by the waist). The belt's top in base heights, from its width in built metres
+  const BL = OPT.outfit.belt, BLOUSE = BL?.on && (BL.blouse ?? 0) > 0 ? BL.blouse : 0, BT = BLOUSE ? (BL.y ?? 0.52) + (BL.width ?? 0.04) / 2 / makeStretch(OPT, J).slope(BL.y ?? 0.52) : 0;
+  const blouseAt = (x, y, z) => { const u = y + (BL?.tilt ?? 0) * z; return sstep(BT, BT + 0.012, u) * (1 - sstep(BT + 0.02, BT + 0.06, u)) * (1 - sstep(0.135, 0.165, Math.abs(x))); };
   const SHOULDER_FIT = { x0: OPT.outfit.shirt.shoulderFit.x0, xw: OPT.outfit.shirt.shoulderFit.xWidth, off: OPT.outfit.shirt.shoulderFit.offset, y0: OPT.outfit.shirt.shoulderFit.y0, y1: OPT.outfit.shirt.shoulderFit.y1 };   // 肩の上だけ体にそわせる: 浮き / ここから / ここまでで効ききる
   // the bell sleeve: a shell around the forearm from the elbow (as wide as the sleeve) to the cuff, open there. It hangs: the bell's middle
   // drops below the arm toward the cuff, and its lower side reaches further (a slanted opening that shows from the front)
@@ -94,6 +98,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         d = sm(d, -Math.max(t + 0.012, Math.hypot(px, py, z - A.az) - 0.063)); }   // 0.063: around the sleeve only, not the back or chest beside it   // (only around the arm: a plane alone would cut through the body too)
       if (LONG) d = sm(d, (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz - (A.Lf - 0.012));   // long: the cuff just before the wrist
       if (BELL && !noBell) d = smin(d, bellShell(x, y, z, A), 0.008); }
+    if (BLOUSE) d -= BLOUSE * blouseAt(x, y, z);
     return Math.max(sm(sm(d, neck), fit), HEM - y - (HEM_X < Infinity ? 1.5 * Math.max(0, Math.abs(x) - HEM_X) : 0), NOTCH ? NOTCH(x, y, z) : -1); };   // tuck: すそはズボンの中に入れる
   // pants.length: "shorts" (hem = pants.hem) | "knee" (just below the knee) | "long" (to the ankle)
   const PL = OPT.outfit.pants.length ?? "shorts", PANTS_HEM = FIT.pantsHem ?? { knee: 0.2, long: 0.1 }[PL] ?? OPT.outfit.pants.hem;   // ズボンのすその高さ

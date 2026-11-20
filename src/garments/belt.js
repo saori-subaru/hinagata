@@ -7,13 +7,14 @@ const L = (ja, en) => ({ ja, en }), SEC = L("ベルト", "Belt");
 
 definePart({ src: import.meta.url,
   name: "belt", path: "outfit.belt", section: SEC, outline: 0.003, soft: false, thin: "keep",
-  defaults: { on: false, color: "#7a5a48", y: 0.52, width: 0.04, thick: 0.007, tilt: 0 },
+  defaults: { on: false, color: "#7a5a48", y: 0.52, width: 0.04, thick: 0.007, tilt: 0, blouse: 0 },
   schema: [
     ["on", L("ベルト", "Belt"), { help: L("服の上から腰に巻く帯。着たときだけ作る(バックルはアクセサリーの buckle を上に置く)", "a strap round the waist over the clothes; built only when worn (a buckle: the accessory \"buckle\" put on it)") }],
     ["color", L("ベルトの色", "Belt color"), { when: { ".on": true } }],
     ["y", L("高さ", "Height"), { when: { ".on": true }, min: 0.44, max: 0.66, step: 0.002, help: L("伸ばす前の体で(脚の付け根 0.44、肩 0.73)", "on the body before it is stretched (the hip joints at 0.44, the shoulders at 0.73)") }],
     ["width", L("幅", "Width"), { when: { ".on": true }, min: 0.01, max: 0.09, step: 0.002, help: L("m(できた体で)", "m (on the character)") }],
     ["thick", L("厚み", "Thickness"), { when: { ".on": true }, min: 0.003, max: 0.02, step: 0.001, help: L("m", "m") }],
+    ["blouse", L("上の服のたるみ", "Blousing over it"), { when: { ".on": true }, min: 0, max: 0.03, step: 0.001, help: L("ベルトのすぐ上で服がふくらんでかぶる量(m)。胴だけ(袖はそのまま)。0 = なし。ワンピースはスカートの始まり(waist)をベルトの下端に置くとスカートがベルトの下から広がる", "how far the clothes puff out right over the belt (m), the torso alone; 0 = none. With a dress, its waist at the belt's bottom edge: the skirt flares out from under it") }],
     ["tilt", L("後ろ上がり", "Rise at the back"), { when: { ".on": true }, min: -0.3, max: 0.4, step: 0.01, help: L("後ろへ 1 m 行くごとに上がる量(m)。0 = 水平", "how much it rises per m toward the back; 0 = level") }],
   ],
   build({ O, outerSdf, slope }) {
