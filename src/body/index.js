@@ -430,12 +430,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       FOOT_CUT.push(cut(E([cx, 0.068, z0 + 0.085], [0.08, 0.04, 0.06], `foot.${s}`, 0.012))); } }
     // the feet's size (body.proportion.feet, ×): every part of the foot grown about the ankle, the sole kept on the floor (shoes are made
     // around them: they grow too). feetFrom (m, front to back): the point they grow from; at the heel (-0.04) they grow forward only, from
-    // behind it further forward. The bare foot never from behind its heel (that pulled it in front of the Achilles tendon), and the shoes'
-    // heel grows back about the ankle at least: held at the bare heel, アステル's boots (-0.11) had none behind the shaft and he looked to lean back
+    // behind it further forward. Neither the bare foot nor the shoes' heel grows from behind the heel: from there the bare heel came in front
+    // of the Achilles tendon and アステル's boots (-0.11, for their long toe) had no heel behind the shaft, so he looked to lean back (grown
+    // about the ankle instead, it stood out 3 cm)
     { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, OPT.body.proportion?.feetFrom ?? 0], BZ = Math.max(O[2], -0.04);
       const grow = (p, oz = O[2]) => { if (!p) return; p.cx = O[0] + (p.cx - O[0]) * FK; p.cy = O[1] + (p.cy - O[1]) * FK; p.cz = oz + (p.cz - oz) * FK; p.rx *= FK; p.ry *= FK; p.rz *= FK; p.k *= FK;
         p.bx0 = p.cx; p.by0 = p.cy; p.bz0 = p.cz; p.br = Math.max(p.rx, p.ry, p.rz); };
-      { const L = P[`shoeLast.${s}`], b = (L.cz - L.rz) * FK; grow(L); const f = L.cz + L.rz;   // b: its back grown about the ankle
+      { const L = P[`shoeLast.${s}`], b = BZ + (L.cz - L.rz - BZ) * FK; grow(L); const f = L.cz + L.rz;   // b: its back grown from the heel
         if (b < L.cz - L.rz) { L.cz = L.bz0 = (b + f) / 2; L.rz = (f - b) / 2; L.br = Math.max(L.rx, L.ry, L.rz); } }
       grow(P[`toeBox.${s}`]);   // (the shoes' too, with the last: from the heel it shortened アステル's boots' toe)
       for (const n of ["foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3"]) grow(P[`${n}.${s}`], BZ);
