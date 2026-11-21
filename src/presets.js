@@ -137,8 +137,8 @@ export const CHARACTERS = {
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).
         // chin.taper: the jaw in straight lines to a point, as on the sheet (round, the chin's middle hung below them as a knob; chin.sides for a V
-        // creased the jaw under the ear)
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
+        // creased the jaw under the ear). chin.lift: the jaw's underside rising to the neck (level, it was the bulge under the chin seen from a little below)
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 1, lift: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
@@ -188,7 +188,6 @@ export const CHARACTERS = {
         layout: { eyeX: 0.088, browX: 0.125, browY: 1.104, mouthY: 0.91 },   // the eyes where シルヴィ's are (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
         browsOverHair: true,
         blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
-        jawShadow: { on: true },   // the chin's underside shaded: seen from a little below, the chin's outline is gone and it melted into the neck
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
         drawn: [
           { id: "happy", name: "にっこり", eye: ASTEL_EYE_HAPPY, brow: null, mouth: ASTEL_MOUTH_HAPPY, cheeks: "none", blink: false },

@@ -327,7 +327,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // painted color per vertex (multiplied into the skin): a soft crescent of shade inside each ear (reads as the ear's hollow)
   const ES_ = OPT.face.earShade;
   function addPaint(geo) {
-    const Pa = basePos(geo), N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), ec = new THREE.Color(ES_.color), JA = new Float32Array(Pa.length / 3 * 2);
+    const Pa = basePos(geo), N = geo.attributes.normal.array, A = new Float32Array(Pa.length).fill(1), ec = new THREE.Color(ES_.color), JA = JS.on ? new Float32Array(Pa.length / 3 * 2) : null;   // (off: no attribute, kJaw skips it)
     const put = (v, c, k) => { if (k <= 0) return; for (const [o, ch] of [[0, "r"], [1, "g"], [2, "b"]]) A[v * 3 + o] *= 1 + (c[ch] - 1) * Math.min(1, k); };
     const JTOP = (OPT.face.layout?.mouthY ?? 0.896) - 0.012;
     for (let i = 0, v = 0; i < Pa.length; i += 3, v++) { const x = Pa[i], y = Pa[i + 1], z = Pa[i + 2];   // (at the base proportions, as HT reads them)
@@ -338,7 +338,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
           const r1 = Math.hypot((u - ES_.cu) / ES_.ru, (vv - ES_.cv) / ES_.rv), r2 = Math.hypot((u - ES_.cu + ES_.shift) / ES_.ru, (vv - ES_.cv) / (ES_.rv * 0.92));
           put(v, ec, ES_.strength * sstep(1 + ES_.soft, 1 - ES_.soft, r1) * sstep(1 - ES_.soft, 1 + ES_.soft, r2)); } } }   // a crescent: inside the outer oval, outside the same oval moved toward the face
     geo.setAttribute("paint", new THREE.BufferAttribute(A, 3));
-    geo.setAttribute("jawSh", new THREE.BufferAttribute(JA, 2));
+    if (JA) geo.setAttribute("jawSh", new THREE.BufferAttribute(JA, 2));
     geo.setAttribute("scalp", new THREE.BufferAttribute(scalpOf(Pa), 1));
   }
   // the scalp in the hair's color where the block would be (hair.sculpt.whorl: the locks lie on the head and no block is meshed, so a gap

@@ -175,6 +175,8 @@ export const DEFAULTS = {
         "backZ": 0.12,
         "backRise": 0.7,
         "backMax": 0.07,
+        "lift": 0,
+        "liftZ": 0.2,
         "point": 0,
         "pointW": 0.02,
         "sides": 0,
