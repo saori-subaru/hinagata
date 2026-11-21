@@ -1,7 +1,8 @@
 # 宿題 (TODO)
 
 ## 素体の見直し（全キャラ適用。ブランチ claude/youthful-brown-gq3wje、⏳サオリの確認待ち）
-- 済み: 尻の張り出しを控えめに(横から腰より約2cm)、尻から太ももの裏へ段なしでつなぐ(buttFold)、脚の起伏を既定に(legShape: 高頭身 1・ちび 0.6)、大きい足はかかとから前へ伸びる(feetFrom -0.06)、待機ポーズを腰を前に出した緩いS字に。仕組みは DESIGN.md "The base body's bottom, legs and stance"。
+- 済み: 尻の張り出しを控えめに(横から肩甲骨より約2.5cm)、尻から太ももの裏へ段なしでつなぐ(buttFold)、脚の起伏を既定に(legShape: 高頭身 1・ちび 0.6)、大きい足はかかとから前へ伸びる(feetFrom -0.06)、待機ポーズを腰を前に出した緩いS字に。仕組みは DESIGN.md "The base body's bottom, legs and stance"。
+- 済み: 背中のS字(腰の後ろのくぼみ body.sculpt.lumbar)、首の後ろと背中の上を内側へ(nape・trap、標準体型の背中の厚み 0.9)、手はシルヴィ v2 の細い指を全員の既定に。脚の間隔は元のまま(寄せると腰が広いのに足幅が狭くて変)。
 - 🚧 まだ: 大人の体型(girlAdult)の脚と尻は別の作りなので今回は触っていない。片足に体重をかける立ち方(コントラポスト)は入れていない。
 
 ## スバルを設定画どおりに作る（ブランチ claude/youthful-brown-gq3wje、⏳サオリの確認待ち）

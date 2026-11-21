@@ -142,7 +142,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   // the back of the neck reaching up to the base of the skull (which ends level at chin.napeY behind the ear, as a real skull's does): only
   // the back, so the throat and where it meets the jaw stay as they were (lengthening the whole neck filled the corner under the jaw)
   { const NN = NK.nape; if (NN?.on) P.nape = C([0, NN.y0, NN.z0], [0, NN.y1 + LIFT, NN.z1], NN.r * NW, NN.r * NW, "neck", NN.k); }
-  P.trap = E([0, 0.77, -0.016 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.056 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
+  P.trap = E([0, 0.77, -0.011 + 0.03 * (1 - (OPT.body.torso.back ?? 1))], [0.12 + SHW, 0.03, 0.051 - 0.03 * (1 - (OPT.body.torso.back ?? 1))], "upperChest", 0.035);   // 首の根元から肩へ: 高めの位置から肩へつなぐ(首は台形に広げない)
   // torso shape (1 = the toddler body of the reference sheet): chest size, belly size (shrinks toward the back, the back line stays), waist pinch depth, hip width
   const TO = OPT.body.torso;
   const BD = 0.06 * (1 - (TO.back ?? 1));   // back < 1: a thinner back (the front stays; the back comes forward by BD)
@@ -212,11 +212,16 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // a thinner back (torso.back < 1) thins the pelvis's back too, most of the way (the bottom has its own parts and slider): with only the
     // chest and belly thinned, the back went flat high up and the hips stood out behind it (2026-10-07, Saori: "凹む場所が上すぎて、下半身がもっさりする")
     const PB = 0.75 * BD;
-    P.pelvis = E([0, 0.435 + HL * (1 - sq / 2), 0.002 + PB / 2], [0.157 * TO.hips, 0.115 - HL * sq / 2, 0.092 - PB / 2], "hips", PV.blend ?? 0.12); }
+    P.pelvis = E([0, 0.435 + HL * (1 - sq / 2), 0.002 + PB / 2], [0.157 * TO.hips, 0.115 - HL * sq / 2, 0.086 - PB / 2], "hips", PV.blend ?? 0.12); }
   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)。肋骨の下と骨盤の上のあいだ(本当のウエスト)を、縦に短く削る。
   // 前は胸のすぐ下(0.6)を中心に縦 0.16 の広い範囲を削っていて、胸の下から一直線に細くなるだけだった(2026-10-07 サオリ「くびれが上の方から細くなるだけ」)
   const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
   if (TO.waist) for (const [sd, m] of [["L", 1], ["R", -1]]) P[`waist.${sd}`] = cut(E([m * (WS.x - TO.waist), WS.y, 0], [WS.width, WS.height, 0.14], "spine", WS.blend));
+  // the hollow of the back: the lower back cut in (depth: its front this far ahead of z -0.09, m; following a thinner back), so from the side
+  // the back runs in from the shoulder blades and out to the bottom in an S. Without it the torso's wide blends filled it: a straight slope
+  // out to the bottom, a stoop. Made before the bottom, which it doesn't cut; the adult torso has its own (AD.waist)
+  const LB = OPT.body.sculpt.lumbar ?? {};
+  if (!AD && LB.depth > 0) P.lumbar = cut(E([0, LB.y ?? 0.565, -0.17 + LB.depth + BD], [0.2, LB.height ?? 0.075, 0.08], "spine", LB.blend ?? 0.04));
   if (AD) { delete P["waist.L"]; delete P["waist.R"];   // the waist is the narrow piece between the ribcage and the pelvis (no cut)
     // the waist reaches well down into the pelvis, its front under the bust's (2026-10-08, Saori: "胸の下の段をはっきりさせて、お腹の凹みは
     // なだらかな方が自然"): it stood as far forward as the bust just under it (no step there) and ended above the pelvis's top (a dip between)
@@ -355,9 +360,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const palm = at(w, [D, 0.03], [N, 0.002]);
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
-    // body.sculpt.hand: slim = how far toward that hand, whatever the body (null: by the body); fingers = their thickness (null: slim's. Under about
-    // 0.8 the game quality's 13.6 mm cells break them up: the adult body is built fine)
-    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? (AD ? 1 : 0), hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, 0.55), FL = hs(1, 1.45), FS = hs(1, 0.7);
+    // body.sculpt.hand: slim = how far toward that hand (null: all the way, every body: シルヴィ v2's hand, the chibi's thick one only at 0);
+    // fingers = their thickness (null: by slim, to 0.55 on the adult body, 0.7 on the others: a child's. Open hands get their fingers as rings, smooth at any cells)
+    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? 1, hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, AD ? 0.55 : 0.7), FL = hs(1, 1.45), FS = hs(1, 0.7);
     P[`palm.${s}`] = E(palm, [0.034 * HK, hs(0.05, 0.036) * HK, hs(0.019, 0.012) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {

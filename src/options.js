@@ -75,7 +75,7 @@ export const DEFAULTS = {
       "hips": 0.85,
       "bust": 0,
       "butt": 1,
-      "back": 1
+      "back": 0.9
     },
     "thickness": {
       "upperArm": 0.71,
@@ -123,6 +123,12 @@ export const DEFAULTS = {
         "x": 0.225,
         "blend": 0.04
       },
+      "lumbar": {
+        "depth": 0.018,
+        "y": 0.565,
+        "height": 0.075,
+        "blend": 0.04
+      },
       "skull": {
         "width": 0.198,
         "height": 0.24,
@@ -137,8 +143,8 @@ export const DEFAULTS = {
           "on": true,
           "y0": 0.82,
           "y1": 0.96,
-          "z0": -0.025,
-          "z1": -0.035,
+          "z0": -0.008,
+          "z1": -0.018,
           "r": 0.04,
           "k": 0.04
         }
@@ -1344,7 +1350,8 @@ export const OLD_DEFAULTS = {
   2: { body: {   // the chibi (about 3 heads; the values BODY_TYPES.toddler has): the default body until 2026-10-06
     proportion: { legs: 1, torso: 1 }, head: { scale: 0.9 },
     torso: { chest: 1, belly: 1, waist: 0, hips: 1, bust: 0, butt: 1, back: 1 },
-    thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 } } },
+    thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 },
+    sculpt: { legShape: 0.6 } } },   // (the chibi's legs: at the tall default's 1 they bowed)
   3: { body: {   // the first tall default (about 4 heads: 3.9 measured, chin to crown against the height): 2026-10-06, until the same evening
     proportion: { legs: 1.65, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.82 } } },   // (arms null: they stretched with the torso)
   4: { body: { head: { scale: 0.7 } } },   // the tall default at 4.19 heads (measureCharacter: chin to crown against the height): 2026-10-06 to 10-10
