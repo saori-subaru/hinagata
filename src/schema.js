@@ -112,7 +112,7 @@ const MAIN = [
   ["body.thickness.upperArm", L("二の腕", "Upper arm"), { min: 0.4, max: 1.15, step: 0.01, section: L("手足の太さ", "Limbs") }],
   ["body.thickness.forearm", L("前腕", "Forearm"), { min: 0.4, max: 1.15, step: 0.01, section: L("手足の太さ", "Limbs") }],
   ["body.thickness.thigh", L("太もも", "Thigh"), { min: 0.4, max: 1.15, step: 0.01, section: L("手足の太さ", "Limbs") }],
-  ["body.thickness.thighTop", L("太ももの付け根", "Thigh top"), { min: 0.5, max: 1.15, step: 0.01, nullable: true, section: L("手足の太さ", "Limbs"), help: L("null = 太ももと同じ", "null = same as the thigh") }],
+  ["body.thickness.thighTop", L("太ももの付け根", "Thigh top"), { min: 0.4, max: 1.15, step: 0.01, nullable: true, section: L("手足の太さ", "Limbs"), help: L("null = 太ももと同じ", "null = same as the thigh") }],
   ["body.thickness.calf", L("ふくらはぎ", "Calf"), { min: 0.4, max: 1.15, step: 0.01, section: L("手足の太さ", "Limbs") }],
   ["body.knees.blush.on", L("ひざの赤み", "Knee blush"), { section: L("ひざ", "Knees"), apply: "setKnees" }],
   ["body.knees.blush.color", L("赤みの色", "Blush color"), { when: { "body.knees.blush.on": true }, section: L("ひざ", "Knees"), apply: "setKnees" }],

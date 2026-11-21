@@ -395,7 +395,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         P[`thigh.${s}`].rb *= 1 - 0.32 * q;   // a slimmer knee
         P[`calf.${s}`].rb *= 1 - 0.42 * q; P[`calf.${s}`].ra *= 1 - 0.18 * q;   // a slimmer ankle
         P[`kneeCap.${s}`] = E([m * kx, k[1] + 0.01, k[2] + 0.04 * q], [0.03, 0.032, 0.026], `lowerLeg.${s}`, 0.02);
-        P[`calfOut.${s}`] = E([m * (kx + 0.055 * Math.min(q, 1)), k[1] - 0.24 * LL, k[2] - 0.012], [0.05, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);   // (out no further over 1: at ルミナ's 1.5 the calves ballooned)
+        P[`calfOut.${s}`] = E([m * (kx + 0.035 * Math.min(q, 1)), k[1] - 0.24 * LL, k[2] - 0.012], [0.05, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);   // (out no further over 1: at ルミナ's 1.5 the calves ballooned; 5.5 cm out, they stood past the hips' line: bowed legs)
         // the lower, inner calf on the leg's line: further in, it closed the gap between the calves and the legs read as two straight columns
         P[`calfInner.${s}`] = E([m * kx, k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
         P[`calfBack.${s}`] = E([m * kx, k[1] - 0.36 * LL, k[2] - 0.045 * q], [0.05, 0.3 * LL, 0.055], `lowerLeg.${s}`, 0.035); } }

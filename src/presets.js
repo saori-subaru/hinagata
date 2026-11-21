@@ -142,7 +142,7 @@ export const CHARACTERS = {
         head: { scale: 0.84, width: 0.94, jawLength: 0.82 },   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
-        joints: { footX: 0.13, kneeX: 0.118 },
+        joints: { hipX: 0.11, footX: 0.13, kneeX: 0.118 },   // (his hip joints as before the default came in: the legs stand apart in his boots)
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).

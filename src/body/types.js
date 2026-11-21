@@ -11,10 +11,10 @@
 // head 0.7, 4.77 at legs 2 torso 1.3; the first tall, legs 1.65 head 0.82: 3.92).
 const CHIBI = { torso: {}, thickness: {}, proportion: { legs: 1, torso: 1, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.9 } };
 const base = {
-  standard: { torso: { chest: 0.95, belly: 0.75, waist: 0.022, hips: 0.85, bust: 0, butt: 1, back: 0.9 }, thickness: { upperArm: 0.85, forearm: 0.85, thigh: 0.73, thighTop: 0.73, calf: 0.72 } },   // slim, a little waist: a general-purpose body
-  toddler: { torso: { chest: 1, belly: 1, waist: 0, hips: 1, bust: 0, butt: 1, back: 1 }, thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 } },   // the reference sheet: round belly, no waist
-  girl: { torso: { chest: 0.92, belly: 0.62, waist: 0.02, hips: 0.92, bust: 0.77, butt: 0.96, back: 0.56 }, thickness: { upperArm: 0.92, forearm: 0.88, thigh: 0.95, thighTop: 0.73, calf: 0.72 } },
-  sturdy: { torso: { chest: 1.3, belly: 0.9, waist: 0, hips: 0.95, bust: 0, butt: 1, back: 1 }, thickness: { upperArm: 1.12, forearm: 1.12, thigh: 1.05, thighTop: 1.05, calf: 1.05 } },   // broad chest (wider shoulders need joint sliders, later)
+  standard: { torso: { chest: 0.95, belly: 0.75, waist: 0.022, hips: 0.72, bust: 0, butt: 1, back: 0.9 }, thickness: { upperArm: 0.85, forearm: 0.85, thigh: 0.73, thighTop: 0.63, calf: 0.72 } },   // slim, a little waist: a general-purpose body
+  toddler: { torso: { chest: 1, belly: 1, waist: 0, hips: 0.85, bust: 0, butt: 1, back: 1 }, thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.77, calf: 1 } },   // the reference sheet: round belly, no waist
+  girl: { torso: { chest: 0.92, belly: 0.62, waist: 0.02, hips: 0.78, bust: 0.77, butt: 0.96, back: 0.56 }, thickness: { upperArm: 0.92, forearm: 0.88, thigh: 0.95, thighTop: 0.63, calf: 0.72 } },
+  sturdy: { torso: { chest: 1.3, belly: 0.9, waist: 0, hips: 0.81, bust: 0, butt: 1, back: 1 }, thickness: { upperArm: 1.12, forearm: 1.12, thigh: 1.05, thighTop: 0.9, calf: 1.05 } },   // broad chest (wider shoulders need joint sliders, later)
 };
 const r2 = (x) => Math.round(x * 100) / 100, r3 = (x) => Math.round(x * 1000) / 1000;
 // tall: about 5 heads (4.8 measured: legs 2, torso 1.3, head 0.7); limbs 0.84×, belly 0.82× (not under 0.6, its slider's least), a little more waist.
@@ -41,7 +41,7 @@ const ADULT = {
 // what the adult type sets, at the defaults: the chibi and tall types set it too, so choosing one after the adult takes it all back
 // legShape: the tall types' knees and calves at 1; the chibi's short legs at 0.6 (at 1 their calves stood out sideways: bowed legs from the front).
 // hand.slim: the chibi's round hand (0); the others' slender one (null: 1)
-const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.09, kneeX: 0.08 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1, hand: { slim: null } } };
+const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.1, footX: 0.09, kneeX: 0.08 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1, hand: { slim: null } } };
 const plain = (b, legShape = 1, slim = null) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape, hand: { slim } }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
 export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }, 0.6, 0) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
   ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));

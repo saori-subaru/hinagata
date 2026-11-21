@@ -861,7 +861,7 @@
   "body.torso.hips": {
    "path": "body.torso.hips",
    "type": "number",
-   "default": 0.85,
+   "default": 0.72,
    "label": {
     "ja": "腰の幅",
     "en": "Hips"
@@ -1008,7 +1008,7 @@
   "body.thickness.thighTop": {
    "path": "body.thickness.thighTop",
    "type": "number",
-   "default": 0.61,
+   "default": 0.53,
    "label": {
     "ja": "太ももの付け根",
     "en": "Thigh top"
@@ -1017,7 +1017,7 @@
    "tier": "main",
    "cost": "body",
    "apply": null,
-   "min": 0.5,
+   "min": 0.4,
    "max": 1.15,
    "step": 0.01,
    "order": 72,
@@ -1124,7 +1124,7 @@
   "body.joints.hipX": {
    "path": "body.joints.hipX",
    "type": "number",
-   "default": 0.11,
+   "default": 0.1,
    "label": {
     "ja": "脚の付け根の間隔",
     "en": "Hip joint spacing"

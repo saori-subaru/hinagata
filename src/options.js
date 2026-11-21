@@ -72,7 +72,7 @@ export const DEFAULTS = {
       "chest": 0.95,
       "belly": 0.62,
       "waist": 0.028,
-      "hips": 0.85,
+      "hips": 0.72,
       "bust": 0,
       "butt": 1,
       "back": 0.9
@@ -81,7 +81,7 @@ export const DEFAULTS = {
       "upperArm": 0.71,
       "forearm": 0.71,
       "thigh": 0.61,
-      "thighTop": 0.61,
+      "thighTop": 0.53,
       "calf": 0.6
     },
     "adult": {
@@ -90,7 +90,7 @@ export const DEFAULTS = {
     },
     "joints": {
       "hipY": 0.44,
-      "hipX": 0.11,
+      "hipX": 0.1,
       "footX": 0.09,
       "kneeX": 0.08
     },
