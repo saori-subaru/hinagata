@@ -36,11 +36,12 @@ const ADULT = {
     proportion: { legs: 2.2, torso: 2.0, chest: 0, arms: 1.4, hands: 1.05, feet: 1.08, shoulders: 0.827 }, head: { scale: 0.48, width: 0.92 },
     torso: { chest: 0.63, belly: 0.6, waist: 0.06, hips: 0.56, bust: 0.75, butt: 0.672, back: 0.392 },
     thickness: { upperArm: 0.62, forearm: 0.58, thigh: 0.434, thighTop: 0.546, calf: 0.42 },
-    sculpt: { neck: { width: 0.612 }, bustX: 0.038, thigh: { topDrop: 0.06 }, legShape: 1.5 } },
+    sculpt: { neck: { width: 0.612 }, bustX: 0.038, thigh: { topDrop: 0.06 }, legShape: 1.5, hand: { slim: null } } },
 };
 // what the adult type sets, at the defaults: the chibi and tall types set it too, so choosing one after the adult takes it all back
-// legShape: the tall types' knees and calves at 1; the chibi's short legs at 0.6 (at 1 their calves stood out sideways: bowed legs from the front)
-const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1 } };
-const plain = (b, legShape = 1) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
-export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }, 0.6) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
+// legShape: the tall types' knees and calves at 1; the chibi's short legs at 0.6 (at 1 their calves stood out sideways: bowed legs from the front).
+// hand.slim: the chibi's round hand (0); the others' slender one (null: 1)
+const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1, hand: { slim: null } } };
+const plain = (b, legShape = 1, slim = null) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape, hand: { slim } }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
+export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }, 0.6, 0) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
   ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));
