@@ -137,8 +137,9 @@ export const CHARACTERS = {
         // the nose seen from the side ("アステルの顔をこれにするといいかも"). The eyes' place is not his: face.layout below
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).
         // chin.taper: the jaw in straight lines to a point, as on the sheet (round, the chin's middle hung below them as a knob; chin.sides for a V
-        // creased the jaw under the ear). chin.lift: the jaw's underside rising to the neck (level, it was the bulge under the chin seen from a little below)
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 1, lift: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
+        // creased the jaw under the ear). chin.lift: the jaw's underside in one straight line, a little higher at the neck (level, it read as a bulge
+        // under the chin from a little below; steep, a scoop in the profile)
+        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 1, lift: 0.3 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends

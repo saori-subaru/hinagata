@@ -249,8 +249,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
   const CH = OPT.body.sculpt.chin;   // under the chin: height at the middle, how fast it rises toward the sides (rounder U), softness of the corner
   // backRise: seen from the side the underside of the jaw rises from the chin toward the ear (by backRise per m behind backZ, at most backMax),
   // so there is no corner under the ear: the jaw line runs up to it and the neck sits behind (2026-10-04, Saori: "the jaw looks heavy, under the ear bulges")
-  const rise = (z) => { if (!CH.backRise) return 0; const s = (CH.backZ ?? 0.12) - z, r = CH.backRise * 0.5 * (s + Math.sqrt(s * s + 0.0004)), m = CH.backMax ?? 0.06;
-    return r - 0.5 * (r - m + Math.sqrt((r - m) ** 2 + 0.0001)); };   // a smooth ramp, then a smooth cap
+  // lift (m per m, 0 = off): the underside rises in one straight line from the chin's bottom (liftZ) to the neck, so seen from a little below it
+  // faces away and the chin's outline stays (level, it read as a bulge under the chin). Keep it low: steep then capped it scooped the profile, and
+  // raised into the eye sockets' dip (it reaches down through the whole head) it was carved into pockets beside the neck
+  const upTo = (z, z0, k, m) => { const s = z0 - z, r = k * 0.5 * (s + Math.sqrt(s * s + 0.0004)); return r - 0.5 * (r - m + Math.sqrt((r - m) ** 2 + 0.0001)); };   // a smooth ramp, then a smooth cap
+  const rise = (z) => { const b = CH.backRise ? upTo(z, CH.backZ ?? 0.12, CH.backRise, CH.backMax ?? 0.06) : 0; return CH.lift ? Math.max(b, upTo(z, CH.liftZ ?? 0.2, CH.lift, CH.backMax ?? 0.06)) : b; };
   // napeY: behind the ear (z behind napeZ) the bottom of the head is level at this height, as a real skull's base is (about the ear's
   // height, cut off level, the neck below; Saori, with a photo of a skull). Before, the skull's ball reached down below the earlobe and
   // showed under the ear seen from below. The neck reaches up to it (neck.top)
@@ -271,8 +274,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // the cut fades out (its planes move outward) toward y0 and toward z0 instead of stopping there: no ledge at its edges
     const fade = (y, z) => sstep(V.y0, V.y0 - (V.fadeY ?? 0.06), y) * sstep(V.z0 ?? 0.04, (V.z0 ?? 0.04) + (V.fadeZ ?? 0.06), z);
     CUT.vChin = plane((x, y, z) => (V.halfW + V.slope * (y - CH.y) + 0.3 * (1 - fade(y, z)) - Math.abs(x)) / L, V.k ?? 0.02); } }
-  const chinY = (x, z, r) => level(x, z, CH.y + r - 0.014 * Math.exp(-x * x / 0.0032) - pointAt(x) * sstep(-0.02, 0.06, z) + CH.curve * x * x + sharpAt(x, z));   // the underside's height with rise r (also chin.lift's)
-  CUT.chin = plane((x, y, z) => (y - chinY(x, z, rise(z))) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + (CH.backRise ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
+  CUT.chin = plane((x, y, z) => (y - level(x, z, CH.y + rise(z) - 0.014 * Math.exp(-x * x / 0.0032) - pointAt(x) * sstep(-0.02, 0.06, z) + CH.curve * x * x + sharpAt(x, z))) / Math.sqrt(1 + (CH.curve === 0.95 ? 4 : 4 * CH.curve * CH.curve) * x * x + Math.max(CH.backRise ?? 0, CH.lift ?? 0) ** 2), CH.k);   // あご先: 顔の中心の一点だけ少し下げる   // あごの下: 真ん中の一点がいちばん低く、左右へ上がる
   // seen from above, the front below the nose curves back beside the center and levels off toward the sides (depth cheekBack, reached at about
   // cheekBackWidth from the center), so in a 3/4 view the outline is the nose-mouth-chin line instead of the edge of a flat front
   const CHEEK_BACK = OPT.body.sculpt.mouth.cheekBack, CHEEK_W = OPT.body.sculpt.mouth.cheekBackWidth;
@@ -538,19 +540,13 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     for (let y = CY - 0.04; y < CY + 0.15; y += 0.002) { const w = halfWidth(y, Math.min(0.3, prev + 0.03)); Ws.push([y, w]); if (w) prev = w; }
     const at = (y) => Ws.reduce((b, q) => Math.abs(q[0] - y) < Math.abs(b[0] - y) ? q : b)[1];
     const tip = Ws.find(([, w]) => w > 0.002), YA = (tip ? tip[0] : CY) + 0.01, HA = at(YA) * (1 - 0.7 * TP), YT = YA + 0.025 + 0.035 * TP, WT = at(YT);
-    if (WT > HA) { const S = (WT - HA) / (YT - YA), L = Math.hypot(1, S), smax = (a, b, k) => -smin(-a, -b, k);
+    if (WT > HA) { const S = (WT - HA) / (YT - YA), L = Math.hypot(1, S), smax = (a, b, k) => -smin(-a, -b, k), YK = YA - HA / S, LF = OPT.body.sculpt.chin.lift ?? 0;
+      // chin.lift: these lines' bottom (YK, under the chin's middle) rises with the underside, their joint stays (moved whole, they cut a notch under it)
+      const keel = (z) => upTo(z, OPT.body.sculpt.chin.liftZ ?? 0.2, LF, Math.min(OPT.body.sculpt.chin.backMax ?? 0.06, 0.6 * (YT - YK)));
       HEAD.f = (x, y, z) => { const d = f0(x, y, z), w = (1 - sstep(YT - 0.005, YT + 0.02, y)) * sstep(-0.12, 0, z); if (w <= 0) return d;
-        const c = (Math.abs(x) - HA - S * (y - YA)) / L; return d + w * (smax(d, c, 0.006) - d); }; } }
+        const k = LF ? keel(z) : 0, Sz = k ? S * (YT - YK) / (YT - YK - k) : 0;
+        const c = k ? (Math.abs(x) - Sz * (y - YK - k)) / Math.hypot(1, Sz) : (Math.abs(x) - HA - S * (y - YA)) / L; return d + w * (smax(d, c, 0.006) - d); }; } }
   { const f0 = HEAD.f; HEAD.f = (x, y, z) => f0(x, y, z) + socket(x, y, z) - temple(x, y, z) + groove(x, y, z); }
-  // chin.lift (m per m, 0 = off): seen from the side the jaw's underside rises from the chin's bottom (chin.liftZ) toward the neck, up to backMax
-  // (where backRise holds it under the ears), so seen from a little below it faces away and the chin's outline stays a point. Cut after the eye
-  // sockets: their dip reaches this low through the whole head and carved pockets into an underside raised before them (CUT.chin). It sits
-  // 0.02 under CUT.chin where it doesn't rise (the soft max wore the chin away where the two met), and stays off the ears (they hang below it)
-  { const LF = CH.lift ?? 0; if (LF) { const f0 = HEAD.f, Z0 = CH.liftZ ?? 0.2, M = CH.backMax ?? 0.07, K = CH.k, N = 4 * CH.curve * CH.curve;
-    const EX = EARS.length ? Math.min(...EARS.map((e) => Math.abs(e.c[0]))) - 0.045 : 9, EZ = EARS.length ? Math.max(...EARS.map((e) => e.c[2])) + 0.05 : -9;
-    const up = (z) => { const s = Z0 - z, r = LF * 0.5 * (s + Math.sqrt(s * s + 0.0004)); return r - 0.5 * (r - M + Math.sqrt((r - M) ** 2 + 0.0001)); };
-    HEAD.f = (x, y, z) => { const d = f0(x, y, z), r = rise(z), m = 1 - (1 - sstep(EZ, EZ + 0.03, z)) * sstep(EX - 0.03, EX, Math.abs(x));
-      const c = (chinY(x, z, r + m * Math.max(0, up(z) - r)) - 0.02 - y) / Math.sqrt(1 + N * x * x + LF * LF); return c < d - K ? d : -smin(-d, -c, K); }; } }
   // head size / width / depth: the head is built in its own space, then scaled around a pivot at the top of the neck
   const HT = headTransform({ ...OPT.body.head, lift: LIFT, jawY: JAW_Y, crownY: (OPT.face?.layout?.browY ?? 1.092) + 0.018 }), HEAD_RAW = { ...HEAD };   // (crown: bent just over the brows)
   if (!HT.identity) { const f0 = HEAD_RAW.f, c = HT.fromHead(HEAD.bx0, HEAD.by0, HEAD.bz0); HEAD.f = HT.wrap(f0); [HEAD.bx0, HEAD.by0, HEAD.bz0] = c; HEAD.br = HEAD_RAW.br * HT.max; }

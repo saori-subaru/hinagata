@@ -2372,7 +2372,7 @@
    "cost": "body",
    "apply": null,
    "min": 0,
-   "max": 1.5,
+   "max": 0.5,
    "step": 0.05,
    "order": 55,
    "section": {
@@ -2380,8 +2380,8 @@
     "en": "Face shape"
    },
    "help": {
-    "ja": "あごの下の面を、あご先から首へ向かって上げる(傾き)。少し下から見ても、あごの裏がふくらんで見えない。0 = 平ら",
-    "en": "the jaw's underside rises from the chin toward the neck (its slope): seen from a little below it doesn't show as a bulge; 0 = level"
+    "ja": "あごの下の線を、あご先から首の付け根へまっすぐ上げる(傾き)。少し下から見たとき、あごの裏がふくらんで見えにくい。0 = 平ら",
+    "en": "the jaw's underside in a straight line rising from the chin to the neck (its slope): seen from a little below it shows less as a bulge; 0 = level"
    }
   },
   "body.sculpt.chin.liftZ": {
