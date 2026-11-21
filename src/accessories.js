@@ -95,7 +95,7 @@ const SHAPES = {
   cord: () => { const g = new THREE.CapsuleGeometry(0.06, 0.88, 4, 10); g.rotateZ(Math.PI / 2); g.translate(0, 0, 0.06); return g; },
   tab: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.05); s.lineTo(w, 0.05); s.lineTo(w, -1); s.lineTo(0, -0.88); s.lineTo(-w, -1); s.lineTo(-w, 0.05);
     const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
-  // a strap (for クロエ's belt end): a narrow strip hanging down, 1 long and 0.13 wide, cut square (the tab is short and wide: at a strap's length it was a board)
+  // a strap (for スバル's belt end): a narrow strip hanging down, 1 long and 0.13 wide, cut square (the tab is short and wide: at a strap's length it was a board)
   strap: () => { const s = new THREE.Shape(), w = 0.065; s.moveTo(-w, 0.03); s.lineTo(w, 0.03); s.lineTo(w, -1); s.lineTo(-w, -1); s.lineTo(-w, 0.03);
     const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across

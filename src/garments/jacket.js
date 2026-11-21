@@ -1,4 +1,4 @@
-// An open jacket (outfit.jacket; for クロエ's rider's jacket): worn over the shirt, its front open, a notched collar and lapels folded back,
+// An open jacket (outfit.jacket; for スバル's rider's jacket): worn over the shirt, its front open, a notched collar and lapels folded back,
 // long sleeves with cuffs, a band along its hem, and it can have slipped off one shoulder (slip). Sheets (sdf/sheet.js): its edges are cut
 // exactly along the pattern's lines, hollow at the cuffs and the hem. The metal on it (zips, snaps) is the part "jacketMetal": ribbons and
 // discs made directly on its surface (a zip a few mm wide is finer than the cells).

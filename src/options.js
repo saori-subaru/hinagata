@@ -51,7 +51,7 @@ export const DEFAULTS = {
       "arms": 1.17,
       "hands": 1.1,
       "feet": 1,
-      "feetFrom": 0,
+      "feetFrom": -0.06,
       "shoulders": 1
     },
     "head": {
@@ -429,7 +429,7 @@ export const DEFAULTS = {
           "depth": 0.058
         }
       },
-      "legShape": 0,
+      "legShape": 1,
       "crotch": {
         "y": 0.29,
         "width": 0.025,

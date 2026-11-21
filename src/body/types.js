@@ -39,7 +39,8 @@ const ADULT = {
     sculpt: { neck: { width: 0.612 }, bustX: 0.038, thigh: { topDrop: 0.06 }, legShape: 1.5 } },
 };
 // what the adult type sets, at the defaults: the chibi and tall types set it too, so choosing one after the adult takes it all back
-const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 0 } };
-const plain = (b) => ({ ...PLAIN, ...b, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
-export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
+// legShape: the tall types' knees and calves at 1; the chibi's short legs at 0.6 (at 1 their calves stood out sideways: bowed legs from the front)
+const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.11, footX: 0.116, kneeX: 0.108 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1 } };
+const plain = (b, legShape = 1) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
+export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }, 0.6) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
   ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));

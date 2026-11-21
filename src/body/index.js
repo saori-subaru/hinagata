@@ -212,7 +212,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // a thinner back (torso.back < 1) thins the pelvis's back too, most of the way (the bottom has its own parts and slider): with only the
     // chest and belly thinned, the back went flat high up and the hips stood out behind it (2026-10-07, Saori: "凹む場所が上すぎて、下半身がもっさりする")
     const PB = 0.75 * BD;
-    P.pelvis = E([0, 0.435 + HL * (1 - sq / 2), -0.005 + PB / 2], [0.157 * TO.hips, 0.115 - HL * sq / 2, 0.1 - PB / 2], "hips", PV.blend ?? 0.12); }
+    P.pelvis = E([0, 0.435 + HL * (1 - sq / 2), 0.002 + PB / 2], [0.157 * TO.hips, 0.115 - HL * sq / 2, 0.092 - PB / 2], "hips", PV.blend ?? 0.12); }
   // くびれ: 脇腹を左右から削る(腕より前に溶かすので腕は削れない)。肋骨の下と骨盤の上のあいだ(本当のウエスト)を、縦に短く削る。
   // 前は胸のすぐ下(0.6)を中心に縦 0.16 の広い範囲を削っていて、胸の下から一直線に細くなるだけだった(2026-10-07 サオリ「くびれが上の方から細くなるだけ」)
   const WS = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04, ...(OPT.body.sculpt.waist ?? {}) };
@@ -337,7 +337,9 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     EARS.push({ m, c: ec.slice(), eu: eu.slice(), ev: ev.slice(), ew: ew.slice(), ES, R: ER3, parts: ["ear", "earLobe", "earFill"].map((k) => P[`${k}.${s}`]).filter(Boolean) });   // the ear's frame (head space), for the ear line and earShells
     CUT[`ear.${s}`] = cut(E(ec.map((v, i) => v + (ew[i] * 0.025 + eu[i] * 0.024) * ES), [0.026 * ES, 0.042 * ES, 0.011 * ES], "head", 0.014, [eu, ev, ew]));   // 耳の内側のくぼみ
     if (AD) { const B = AD.butt; P[`butt.${s}`] = fin(adultPart({ ...B, x: m * (B.x ?? 0.055), y: yH + (B.y ?? -0.06) * T }, { w: 0.062, h: 0.2 * T, d: 0.05, z: -0.04 }, "hips")); }
-    else { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, OPT.body.sculpt.buttY ?? 0.452, -0.05 + 0.03 * (1 - B) + BB / 2], [0.08, 0.066, 0.075 * B - BB / 2], "hips", 0.05); }   // butt: how far the bottom sticks out at the back (1 = the reference sheet). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
+    else { const B = TO.butt ?? 1, BB = 0.6 * BD; P[`butt.${s}`] = E([m * 0.07 * TO.hips, (OPT.body.sculpt.buttY ?? 0.44) + 0.01, -0.045 + 0.03 * (1 - B) + BB / 2], [0.08, 0.076, 0.055 * B - BB / 2], "hips", 0.05);
+      // under it, down onto the back of the thigh: the bottom runs into the thigh in a slope (without it, a step of 2-3 cm under the bottom: a diaper's outline, on thin legs most)
+      P[`buttFold.${s}`] = E([m * 0.075 * TO.hips, (OPT.body.sculpt.buttY ?? 0.44) - 0.075, -0.035 + 0.02 * (1 - B) + BB / 2], [0.06, 0.045, Math.max(0.01, 0.04 * B - BB / 2)], `upperLeg.${s}`, 0.05); }   // (on the thigh: on the hips it stayed behind as a hanging lump when sitting)   // butt: how far the bottom sticks out at the back (1: about 2 cm behind the waist from the side). BB: a thinner back (torso.back) takes some of it in too, so the bottom doesn't jut out under a flat back
     { const ks = Math.min(1, 0.4 + 0.6 * OPT.body.thickness.upperArm); P[`shoulder.${s}`] = E([m * (0.116 + SHW), 0.742 - SHOULDER_DROP, 0], [0.054 * ks, (0.045 - SHOULDER_DROP * 0.6) * ks, 0.048 * ks], `upperArm.${s}`, 0.04); }   // the shoulder slims with a thin upper arm (else it stays as a bump at the top of the arm)   // なで肩
     P[`upperArm.${s}`] = C(j("upperArm"), j("lowerArm"), 0.047, 0.043, `upperArm.${s}`, 0.022);   // 付け根は細く、脇はくっきり
     P[`foreArm.${s}`] = C(j("lowerArm"), j("hand"), 0.045, OPT.body.sculpt.forearm.wristRadius, `lowerArm.${s}`, OPT.body.sculpt.forearm.elbowBlend);   // ひじ: 溶かす幅を小さく(つなぎ目に余分な肉がついて一段ふくらまないように)
@@ -368,10 +370,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     });
     const tb = at(palm, [S, 0.04], [D, -0.008], [N, 0.006]);
     P[`thumb.${s}`] = fist ? C(tb, at(tb, [S, -0.004], [D, 0.024], [N, 0.03]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012) : C(tb, at(tb, [S, 0.022 * FL], [D, 0.016 * FL], [N, 0.016]), 0.013 * HK * FR, 0.011 * HK * FR, `thumb.${s}`, 0.012);
+    const LSQ = OPT.body.sculpt.legShape ?? 0;   // legShape: the thigh's flesh in front and behind (below), the knee and ankle slimmer, the calf high and full
     { const a = j("upperLeg"), b = j("lowerLeg"), d = OPT.body.sculpt.thigh.topDrop ?? 0, L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);   // topDrop: 太ももの肉の上端だけを脚の向きに下げる(股関節=骨の回る点は動かさない)。外側の付け根の張り出しが下がり、くびれから腰へのカーブがゆるくなる
       P[`thigh.${s}`] = C(a.map((v, i) => v + (b[i] - v) * d / L), b, 0.08, 0.066, `upperLeg.${s}`, 0.05); }
-    P[`thighB.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.back.y + HL)), OPT.body.sculpt.thigh.back.y + HL, OPT.body.sculpt.thigh.back.z], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)
-    P[`thighF.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.front.y + HL)), OPT.body.sculpt.thigh.front.y + HL, OPT.body.sculpt.thigh.front.z], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)
+    P[`thighB.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.back.y + HL + 0.02 * LSQ)), OPT.body.sculpt.thigh.back.y + HL + 0.02 * LSQ, OPT.body.sculpt.thigh.back.z - 0.006 * LSQ], [0.058, OPT.body.sculpt.thigh.back.height, OPT.body.sculpt.thigh.back.depth + 0.012 * LSQ], `upperLeg.${s}`, 0.05);   // 太ももの裏: おしりからひざへ、うしろ側をなめらかにつなぐ(正面の幅は変えない)。legShape: おしりの下の肉を厚く
+    P[`thighF.${s}`] = E([m * (0.11 + legDX(OPT.body.sculpt.thigh.front.y + HL)), OPT.body.sculpt.thigh.front.y + HL, OPT.body.sculpt.thigh.front.z + 0.008 * LSQ], [OPT.body.sculpt.thigh.front.width, OPT.body.sculpt.thigh.front.height, OPT.body.sculpt.thigh.front.depth + 0.012 * LSQ], `upperLeg.${s}`, OPT.body.sculpt.thigh.front.blend);   // 太ももの前: 前側にも肉をつける(正面の幅は変えない)。legShape: 前へふくらませる(横から見て太ももがひざより厚い)
     P[`thighIn.${s}`] = E([m * (OPT.body.sculpt.thigh.inner.x + legDX(OPT.body.sculpt.thigh.inner.y + HL)), OPT.body.sculpt.thigh.inner.y + HL, 0.002], [OPT.body.sculpt.thigh.inner.width, OPT.body.sculpt.thigh.inner.height, 0.05], `upperLeg.${s}`, 0.04);   // 内もも: 付け根の内側に肉をつけて、ひざへまっすぐ絞る
     P[`calfO.${s}`] = E([m * (FOOT_X + OPT.body.sculpt.calf.outer.x), OPT.body.sculpt.calf.outer.y, -0.008], [OPT.body.sculpt.calf.outer.width, OPT.body.sculpt.calf.outer.height, 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
     P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.05, `lowerLeg.${s}`, 0.05);   // narrowing to the ankle (0.057 there before: the shin came down as thick as the calf onto the foot, like a boot; 0.045 then narrowed too suddenly. 2026-10-07)
@@ -383,11 +386,11 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     { const LS = OPT.body.sculpt.legShape ?? 0;
       if (LS > 0) { const k = j("lowerLeg"), f = j("foot"), kx = Math.abs(k[0]), LL = k[1] - f[1], q = LS;
         P[`thigh.${s}`].rb *= 1 - 0.28 * q;   // a slimmer knee
-        P[`calf.${s}`].rb *= 1 - 0.22 * q;   // a slimmer ankle
+        P[`calf.${s}`].rb *= 1 - 0.3 * q; P[`calf.${s}`].ra *= 1 - 0.18 * q;   // a slimmer ankle
         P[`kneeCap.${s}`] = E([m * kx, k[1] + 0.01, k[2] + 0.04 * q], [0.03, 0.032, 0.026], `lowerLeg.${s}`, 0.02);
         P[`calfOut.${s}`] = E([m * (kx + 0.03 * q), k[1] - 0.26 * LL, k[2] - 0.012], [0.05, 0.3 * LL, 0.05], `lowerLeg.${s}`, 0.035);
         P[`calfInner.${s}`] = E([m * (kx - 0.022 * q), k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
-        P[`calfBack.${s}`] = E([m * kx, k[1] - 0.32 * LL, k[2] - 0.035 * q], [0.05, 0.32 * LL, 0.05], `lowerLeg.${s}`, 0.035); } }
+        P[`calfBack.${s}`] = E([m * kx, k[1] - 0.36 * LL, k[2] - 0.045 * q], [0.05, 0.3 * LL, 0.055], `lowerLeg.${s}`, 0.035); } }
     // adult: the back of the knee filled (seen from the side the slim knee was pinched front and back, "膝がちぎれそう"), made where it comes out
     if (AD) { const k = j("lowerLeg"), yK = STA.fwd(k[1]), tc = OPT.body.thickness?.calf ?? 1;
       P[`kneeBack.${s}`] = fin(E([k[0], yK + 0.005, k[2] - 0.012], [0.05 * tc, 0.07, 0.045 * tc], `lowerLeg.${s}`, 0.04)); }

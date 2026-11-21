@@ -37,7 +37,8 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
   // foot0: the feet's box, 2 cm under the floor: the mesher makes no faces between a box's first two layers, and the soles' bottom (3 mm
   // under it) and the socks' fell there at the game's cells: no bottom, the foot seen through the boots from below
   // (feet over 1.1, body.proportion.feet, reach past the box: at 1.4 a boot's toe was cut off at it. Up to 1.1 the box is as it was: growing it moves the cells of every character's shoes)
-  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, FKB = Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1.1), FX = 0.22 + 0.06 * FKB, FZ = 0.14 + 0.12 * FKB + Math.max(0, -(OPT.body.proportion?.feetFrom ?? 0)) * Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1), foot0 = [-FX, -0.02, -0.12 - 0.06 * FKB];
+  // (FZ, the box's front, also with any bigger feet and a thicker shoe: only its far end grows, the cells stay. At feet 1.1 with offset 0.018 a boot's toe was cut open there, the foot showing)
+  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, FKB = Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1.1), FX = 0.22 + 0.06 * FKB, FZ = 0.14 + 0.12 * FKB + (0.2 + Math.max(0, -(OPT.body.proportion?.feetFrom ?? 0))) * Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1) + 2 * Math.max(0, (OPT.outfit?.shoes?.offset ?? 0.012) - 0.012), foot0 = [-FX, -0.02, -0.12 - 0.06 * FKB];
   const { x: ax, y: ay } = armReach(OPT);   // longer arms, wider shoulders, bigger hands (body.proportion) reach further: the boxes around the arms grow by it
   switch (name) {
     case "body": return { sdf: bodySdf, lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 1.43, 0.34], h: H };

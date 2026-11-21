@@ -1197,7 +1197,7 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - ⛔ A part made after the first is bound with the first's matrix (index.js `bindTo`). three's `mesh.bind(skeleton)` alone takes the bones as they stand for the skeleton's rest: every part rebuilt alone in mid-motion (`setTufts`, `setBangs`, `setTails`, the face's layer) moved all parts' rest to that pose, a few cm off the bones (the dots stood beside the tips after a drag) and for good.
 - Not done: the cloak's hem in angular folds (the sheet's), a capelet over raised arms (banzai: its cloth tears into streaks, シルヴィ's too), the cloak's front over the upper arms with the forearms out from under it (the sheet's; a narrower `open` lays it over the arms, which then pierce it).
 
-## クロエ's design sheet: the parts it needed
+## スバル's design sheet: the parts it needed
 
 - `outfit.jacket` (garments/jacket.js): an open jacket over the shirt, made of sheets (sdf/sheet.js) cut along a pattern drawn on the body seen from the front, in base space and the A-pose: the body pushed out (over the shirt, hanging straight from the chest and wider to the hem), sleeves as round tubes from the shoulder to the wrist, the lapels and the collar as sheets lying `L1` / `L2` over it, the hem band and the cuffs as sheets over its ends. Lying sheets (`lying: true`) have no inner side: it never shows and was a third of the triangles.
 - Its sheets are meshed at the cloth sheets' cells (parts.js `sheetCell`, passed to a part's `spec` as `sheetH` with `one`), the folded parts at 0.6 of them: at the mesh cell × 0.6 the jacket alone was 70,000 triangles, now about 19,000. Its thinning is `keep`: the sheets are already as coarse as their edges allow.
@@ -1207,3 +1207,12 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - The accessory `strap`: a narrow strip hanging down, 1 long (a belt's end); `tab` is short and wide, at a strap's length a board.
 - Boots with `body.proportion.feet` over 1 and a thick shell (`shoes.offset` 0.018 at feet 1.1): the toe reaches past the feet's box (parts.js `FZ`, grown only past feet 1.1) and is cut open, the foot showing through the sole's front. Keep the offset at 0.012 there.
 - Her face is drawn in code (pictures after the sheet: a thick lash ending in a point toward the nose, a pale gold iris darker under the lid with a slit pupil): the sheet's own eye is under 100 px.
+
+## The base body's bottom, legs and stance (every character)
+
+- The tall and chibi legs are the chibi's stretched upright (body.proportion): depth along the leg comes from where parts sit, not from `body.thickness` (it scales round the bone, front and back alike). Before, the thigh was about 1.1× as deep as the knee and the calf thinner than the knee: a stick from the side.
+- `legShape` is on by default: 1 in DEFAULTS and the tall body types, 0.6 on the chibi ones (at 1 their short calves stood out sideways: bowed legs from the front). It deepens the thigh in front and behind (thighF, thighB), slims the knee's back and the ankle (calf ra, rb) and sets the calf's bulge higher and fuller: the thigh about 1.5× as deep as the knee.
+- The bottom (not the adult body's): the butt ellipsoid flatter and taller, the pelvis's back 1.5 cm in. From the side it stands about 2 cm behind the waist (it stood 3.6 cm, then dropped 3 cm onto the back of the thigh: a diaper's outline under tight trousers). `buttFold` under it runs the bottom down into the thigh; it rides on the thigh's bone (on the hips it stayed behind as a hanging lump when sitting).
+- Measure a side outline as the backmost (frontmost) z over every x at each height: one x misses the part that sticks out.
+- `body.proportion.feetFrom` defaults to -0.06, the heel: bigger feet grow forward (from the ankle, the heel stood out behind a boot's shaft). The feet's box front (parts.js `FZ`) grows with bigger feet and a thicker shoe; only its far end moves, so the cells stay.
+- `idle` stands at ease (motion/index.js `STAND`): the pelvis tipped back, the legs slanting back from it with the feet flat, the chest and head brought forward, the arms forward as the torso leans. Straight up it read as a mannequin.
