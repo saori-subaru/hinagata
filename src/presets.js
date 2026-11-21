@@ -256,7 +256,7 @@ export const CHARACTERS = {
         proportion: { legs: 1.86, torso: 0.95, shoulders: 0.8, feet: 1.1 },
         torso: { hips: 0.72 },
         thickness: { thigh: 0.45, thighTop: 0.5, calf: 0.46, upperArm: 0.66, forearm: 0.66 },
-        joints: { hipX: 0.095, kneeX: 0.095, footX: 0.1 },
+        joints: { hipX: 0.095, kneeX: 0.08, footX: 0.1 },   // the thighs close in to the knees, the boots apart, as on her sheet
         sculpt: { chin: { taper: 1 } },
       },
       hair: {

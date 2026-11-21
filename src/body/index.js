@@ -387,17 +387,17 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     P[`calfO.${s}`] = E([m * (FOOT_X + OPT.body.sculpt.calf.outer.x), OPT.body.sculpt.calf.outer.y, -0.008], [OPT.body.sculpt.calf.outer.width, OPT.body.sculpt.calf.outer.height, 0.045], `lowerLeg.${s}`, 0.04);   // ふくらはぎの外側: 膝の下で外へふくらむ(見本の正面の線)
     P[`calf.${s}`] = C(j("lowerLeg"), j("foot"), 0.062, 0.05, `lowerLeg.${s}`, 0.05);   // narrowing to the ankle (0.057 there before: the shin came down as thick as the calf onto the foot, like a boot; 0.045 then narrowed too suddenly. 2026-10-07)
     P[`calfB.${s}`] = E([m * (FOOT_X - 0.008), 0.18, OPT.body.sculpt.calf.back.z], [OPT.body.sculpt.calf.back.width, 0.068, OPT.body.sculpt.calf.back.depth], `lowerLeg.${s}`, 0.05);   // ふくらはぎのふくらみ
-    // legShape (0–1; 2026-10-07, Saori: "太ももから膝までが中心に向かって、膝から下は垂直に近い。膝上は内側に入っていて、膝下は少し外側にずれたところから
-    // 始まる…膝はアウトラインに段がある。横から見ると、膝から膝下は少し後ろに出て…段がある。いまただの棒に近い"): placed by the joints, so it fits
-    // legs closed in or apart. The thigh narrows into the knee; a kneecap at the front; under the knee the calf starts a little outside it (its
-    // outer head high, the inner one lower) and bulges out at the back, then narrows to a slim ankle: steps at the knee, front and side
+    // legShape (0–1): placed by the joints, so it fits legs closed in or apart. From the front in two stages, each heading in: the thigh narrows
+    // into the knee (in from the hip: joints.kneeX), then the calf bulges out just under it and narrows to a slim ankle (the instep's top with
+    // it, below). A kneecap at the front, the calf bulging out behind: steps at the knee, front and side
     { const LS = OPT.body.sculpt.legShape ?? 0;
       if (LS > 0) { const k = j("lowerLeg"), f = j("foot"), kx = Math.abs(k[0]), LL = k[1] - f[1], q = LS;
-        P[`thigh.${s}`].rb *= 1 - 0.28 * q;   // a slimmer knee
-        P[`calf.${s}`].rb *= 1 - 0.3 * q; P[`calf.${s}`].ra *= 1 - 0.18 * q;   // a slimmer ankle
+        P[`thigh.${s}`].rb *= 1 - 0.32 * q;   // a slimmer knee
+        P[`calf.${s}`].rb *= 1 - 0.42 * q; P[`calf.${s}`].ra *= 1 - 0.18 * q;   // a slimmer ankle
         P[`kneeCap.${s}`] = E([m * kx, k[1] + 0.01, k[2] + 0.04 * q], [0.03, 0.032, 0.026], `lowerLeg.${s}`, 0.02);
-        P[`calfOut.${s}`] = E([m * (kx + 0.03 * q), k[1] - 0.26 * LL, k[2] - 0.012], [0.05, 0.3 * LL, 0.05], `lowerLeg.${s}`, 0.035);
-        P[`calfInner.${s}`] = E([m * (kx - 0.022 * q), k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
+        P[`calfOut.${s}`] = E([m * (kx + 0.055 * Math.min(q, 1)), k[1] - 0.24 * LL, k[2] - 0.012], [0.05, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);   // (out no further over 1: at ルミナ's 1.5 the calves ballooned)
+        // the lower, inner calf on the leg's line: further in, it closed the gap between the calves and the legs read as two straight columns
+        P[`calfInner.${s}`] = E([m * kx, k[1] - 0.4 * LL, k[2] - 0.014], [0.046, 0.28 * LL, 0.05], `lowerLeg.${s}`, 0.035);
         P[`calfBack.${s}`] = E([m * kx, k[1] - 0.36 * LL, k[2] - 0.045 * q], [0.05, 0.3 * LL, 0.055], `lowerLeg.${s}`, 0.035); } }
     // adult: the back of the knee filled (seen from the side the slim knee was pinched front and back, "膝がちぎれそう"), made where it comes out
     if (AD) { const k = j("lowerLeg"), yK = STA.fwd(k[1]), tc = OPT.body.thickness?.calf ?? 1;
@@ -407,16 +407,15 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", HBOOT = OPT.outfit?.shoes?.kind === "heelBoots", n = heelsWorn(OPT) ? 0.68 : 1;
       // shoeLast: what shoes (and the plate's sabatons) are made around: the round foot of before (clothes/index.js). Not part of the body
       // (adult: the last's back with the foot's, 1.4 cm in: the shoes stood out behind the adult heel; 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる")
-      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.015], [HEELS ? 0.035 : HBOOT ? 0.042 : 0.052, FOOT_H, AD ? 0.072 : 0.075], `foot.${s}`, 0.04);
+      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.023], [HEELS ? 0.035 : HBOOT ? 0.042 : 0.052, FOOT_H, AD ? 0.072 : 0.067], `foot.${s}`, 0.04);   // (its back at the bare heel's, 1.6 cm in: the shoes' heels stood out behind the shaft)
       // the bare foot (2026-10-07, Saori: "裸足の造形が変、元の丸い足に脚の指をつけただけ"): a narrow heel, a long middle, the forefoot wide and
       // flat under the toes (the ball, a little toward the big toe); all within the shoe's last, so a shoe still covers it
-      // Then (Saori, with a photo): the heel stood out too far behind (−0.064 → −0.05), the sole is flat on the floor (the parts reach 4 mm
-      // under it and FOOT_FLAT cuts them level there), and the instep runs from the ankle down to the forefoot as one slope (instep, made below
-      // with the feet's size: its top stays at the ankle, so a small foot doesn't come apart from the leg)
-      // adult: the forefoot longer and thinner, the toes further forward (2026-10-08, Saori: "つま先側は指を含めてもう少し伸ばして薄くしたい")
+      // The sole is flat on the floor (the parts reach 4 mm under it and FOOT_FLAT cuts them level there), and the instep runs from the ankle
+      // down to the forefoot as one slope (instep, made below with the feet's size: its top stays at the ankle, so a small foot doesn't come
+      // apart from the leg). adult: the forefoot longer and thinner, the toes further forward
       const FH = FOOT_H * (AD ? 0.82 : 0.92);
-      P[`foot.${s}`] = E([fx, -0.007 + FH, AD ? 0.02 : 0.012], [0.04 * n, FH, AD ? 0.064 : 0.068], `foot.${s}`, 0.03);   // (adult: thinner, its back 1 cm in, at the heel's line (it reached 5.6 cm back, behind the heel: the bump over a heel shoe, 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる"); the toes make the front: reaching past them it swallowed them)
-      P[`heel.${s}`] = E([fx + m * 0.002, -0.007 + 0.024, AD ? -0.015 : -0.026], [0.028 * n, 0.024, 0.024], `foot.${s}`, 0.025);   // (adult: under the Achilles tendon, not 2 cm behind it with a dip above: 2026-10-08, Saori, "かかとが後ろにですぎ、かかとの上で急に凹んでる")
+      P[`foot.${s}`] = E([fx, -0.007 + FH, AD ? 0.02 : 0.022], [0.04 * n, FH, AD ? 0.064 : 0.058], `foot.${s}`, 0.03);   // (its back at the heel's line: further back it was a bump behind the heel, over a heel shoe too; adult: thinner. The toes make the front: reaching past them it swallowed them)
+      P[`heel.${s}`] = E([fx + m * 0.002, -0.007 + 0.024, AD ? -0.015 : -0.012], [0.028 * n, 0.024, 0.024], `foot.${s}`, 0.025);   // (just behind the Achilles tendon: 3.5 cm behind it, with a dip above, it stood out from the side)
       P[`ball.${s}`] = AD ? E([fx - m * 0.004, -0.007 + 0.011, 0.056], [0.047 * n, 0.011, 0.03], `foot.${s}`, 0.02) : E([fx - m * 0.004, -0.007 + 0.015, 0.05], [0.047 * n, 0.015, 0.03], `foot.${s}`, 0.02); }
     // toes (foot.toes, 2026-10-05, Saori: barefoot like Nahida; "足の指丸まってない？"): the foot's front top is shaved down to them (FOOT_CUT), so the
     // instep slopes to the toes instead of ending in a dome they sat under (curled-looking); the toes lie flat on the ground, pointing forward.
@@ -429,21 +428,25 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
         P[`toe${i}.${s}`] = E([cx + m * dx * k * hx, -0.003 + ry * k * ky + 0.001, z0 + dz * k], [rx * k * hx, ry * k * ky, rz * k], `foot.${s}`, 0.004));
       P[`toeBox.${s}`] = E([cx, 0.011, z0 + 0.058 * k], [0.05 * hx, 0.015, 0.032 * k], `foot.${s}`, 0.03);
       FOOT_CUT.push(cut(E([cx, 0.068, z0 + 0.085], [0.08, 0.04, 0.06], `foot.${s}`, 0.012))); } }
-    // the feet's size (body.proportion.feet, ×; 2026-10-07, Saori: "手や足の大きさもスライダーで変えられるようにしたい"): every part of the foot
-    // grown about the ankle, the sole kept on the floor (shoes are made around them: they grow too). feetFrom (m, front to back): the point they
-    // grow from; at the heel they grow forward only (アステル's big boots: grown about the ankle, the heel stood out behind the shaft)
-    { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, OPT.body.proportion?.feetFrom ?? 0];
-      const grow = (p) => { if (!p) return; p.cx = O[0] + (p.cx - O[0]) * FK; p.cy = O[1] + (p.cy - O[1]) * FK; p.cz = O[2] + (p.cz - O[2]) * FK; p.rx *= FK; p.ry *= FK; p.rz *= FK; p.k *= FK;
+    // the feet's size (body.proportion.feet, ×): every part of the foot grown about the ankle, the sole kept on the floor (shoes are made
+    // around them: they grow too). feetFrom (m, front to back): the point they grow from; at the heel (-0.04) they grow forward only, from
+    // behind it further forward. The bare foot never from behind its heel (that pulled it in front of the Achilles tendon), and the shoes'
+    // heel grows back about the ankle at least: held at the bare heel, アステル's boots (-0.11) had none behind the shaft and he looked to lean back
+    { const FK = OPT.body.proportion?.feet ?? 1; if (FK !== 1) { const O = [m * (FOOT_X - 0.002), -0.003, OPT.body.proportion?.feetFrom ?? 0], BZ = Math.max(O[2], -0.04);
+      const grow = (p, oz = O[2]) => { if (!p) return; p.cx = O[0] + (p.cx - O[0]) * FK; p.cy = O[1] + (p.cy - O[1]) * FK; p.cz = oz + (p.cz - oz) * FK; p.rx *= FK; p.ry *= FK; p.rz *= FK; p.k *= FK;
         p.bx0 = p.cx; p.by0 = p.cy; p.bz0 = p.cz; p.br = Math.max(p.rx, p.ry, p.rz); };
-      for (const n of ["shoeLast", "foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3", "toeBox"]) grow(P[`${n}.${s}`]);
-      if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1)); } }
+      { const L = P[`shoeLast.${s}`], b = (L.cz - L.rz) * FK; grow(L); const f = L.cz + L.rz;   // b: its back grown about the ankle
+        if (b < L.cz - L.rz) { L.cz = L.bz0 = (b + f) / 2; L.rz = (f - b) / 2; L.br = Math.max(L.rx, L.ry, L.rz); } }
+      grow(P[`toeBox.${s}`]);   // (the shoes' too, with the last: from the heel it shortened アステル's boots' toe)
+      for (const n of ["foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3"]) grow(P[`${n}.${s}`], BZ);
+      if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1), BZ); } }
     // the instep: from the ankle (as thick as the leg is there) down to the top of the forefoot, one slope; its top stays at the ankle whatever the feet's size
     { const FK = OPT.body.proportion?.feet ?? 1, fx = m * (FOOT_X - 0.002), th = OPT.body.thickness?.calf ?? 1;
       // (adult: from under the ankle's front, low, to the toes' roots, blended narrowly: the shin's front comes straight down and the instep arches
       // forward out of it, as in a heel or the VRoid foot (2026-10-08, Saori: "足の上の方が、ハイヒールだと反ってるけど、裸足でもこんな風に反るようにしたい");
       // from the ankle itself it was one straight slope down from high up. On over the toes it buried them)
       P[`instep.${s}`] = AD ? (() => { const a = j("foot"); return C([fx, a[1] - 0.028, a[2] + 0.018], [fx, -0.003 + 0.014 * FK, 0.062 * FK], 0.026 * Math.max(th, 0.6), 0.012 * FK, `foot.${s}`, 0.02); })()
-        : C(j("foot"), [fx, -0.003 + 0.02 * FK, 0.05 * FK], 0.04 * th, 0.017 * FK, `foot.${s}`, 0.03); }
+        : C(j("foot"), [fx, -0.003 + 0.02 * FK, 0.05 * FK], 0.04 * th * (1 - 0.3 * LSQ), 0.017 * FK, `foot.${s}`, 0.03); }   // (legShape: its top slimmer, as the ankle: as thick, the two blended there swelled it 1 cm a side)
     // 服用: 半分の長さの袖・すそ
     const ua = j("upperArm"), la = j("lowerArm"), mid = ua.map((v, i) => v + (la[i] - v) * 0.5);
     P[`sleeve.${s}`] = C(ua, mid, 0.046, 0.044, `upperArm.${s}`, 0.04);

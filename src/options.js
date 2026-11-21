@@ -51,7 +51,7 @@ export const DEFAULTS = {
       "arms": 1.17,
       "hands": 1.1,
       "feet": 1,
-      "feetFrom": -0.06,
+      "feetFrom": -0.04,
       "shoulders": 1
     },
     "head": {
@@ -91,8 +91,8 @@ export const DEFAULTS = {
     "joints": {
       "hipY": 0.44,
       "hipX": 0.11,
-      "footX": 0.116,
-      "kneeX": 0.108
+      "footX": 0.09,
+      "kneeX": 0.08
     },
     "knees": {
       "blush": {

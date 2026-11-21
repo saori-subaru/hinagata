@@ -532,7 +532,7 @@
   "body.proportion.feetFrom": {
    "path": "body.proportion.feetFrom",
    "type": "number",
-   "default": -0.06,
+   "default": -0.04,
    "label": {
     "ja": "足の伸びる元",
     "en": "Feet grow from"
@@ -550,8 +550,8 @@
     "en": "Proportions"
    },
    "help": {
-    "ja": "足を大きくするときの中心の前後の位置(m)。0 = 足首(かかとも後ろへ伸びる)、-0.06 ほどでかかとのまま前へだけ伸びる",
-    "en": "where the feet grow from, front to back (m): 0 = the ankle (the heel grows back too); about -0.06 the heel stays and they grow forward"
+    "ja": "足を大きくするときの中心の前後の位置(m)。0 = 足首(かかとも後ろへ伸びる)、-0.04(既定)でかかとのまま前へだけ伸びる",
+    "en": "where the feet grow from, front to back (m): 0 = the ankle (the heel grows back too); -0.04 (the default) the heel stays and they grow forward"
    }
   },
   "body.proportion.shoulders": {
@@ -1149,7 +1149,7 @@
   "body.joints.footX": {
    "path": "body.joints.footX",
    "type": "number",
-   "default": 0.116,
+   "default": 0.09,
    "label": {
     "ja": "足首の間隔",
     "en": "Ankle spacing"
@@ -1174,7 +1174,7 @@
   "body.joints.kneeX": {
    "path": "body.joints.kneeX",
    "type": "number",
-   "default": 0.108,
+   "default": 0.08,
    "label": {
     "ja": "膝の間隔",
     "en": "Knee spacing"
