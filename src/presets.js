@@ -263,8 +263,9 @@ export const CHARACTERS = {
         bangs: "nendo", back: "long", ahoge: false, rigid: 0.4, lockPoints: 6,
         paint: { ring: { color: "#5a5861" }, oneShade: 1 },   // the ring a cool grey (from the black itself it vanished)
         sculpt: {
-          // rooted low and thin (ph: degrees up from the head's middle; from 52° at 0.22 they stepped out of the block at the top's corners: twin
-          // tails' knots from the front). The tips flicked out a little (A line; 0.026: level wings); the left's first locks behind the ear (da)
+          // every lock from the whorl over her left (the sheet's part), no block; rootW 0.6: narrower roots let the sky through at the crown's edge.
+          // long: tips flicked out a little (0.026: level wings), the left's first behind the ear (da); ph, width, edit 18: the ring's, with the whorl off
+          whorl: { on: true, th: 120, ph: 74, r: 0.06, rootW: 0.6 }, lockShell: 0.004,
           long: { bottom: 0.48, count: 18, span: 100, width: 0.085, thick: 0.14, ph: [20, 4], flick: 0.016, edits: [{ i: 0, da: 16 }, { i: 1, da: 8 }, { i: 18, da: 14 }] },
           // her right side (negative angles) long, down over the eye to the jaw; her left short, swept back over the brow
           nendo: {

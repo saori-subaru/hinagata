@@ -20,7 +20,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
+import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -671,7 +671,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; const BK = CUT.back?.f, sk = BK ? (x, y, z) => Math.max(dPrim(P.skull, x, y, z), -BK(x, y, z)) : (x, y, z) => dPrim(P.skull, x, y, z);   // (the skull's ball cut as the head's back is, body.sculpt.backPlane: on the whole ball the hair kept the back the head had lost)
-    return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), sk(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
+    return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), sk(x, y, z)), head: (x, y, z) => Math.min(capRaw(x, y, z), sk(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   // hair.sculpt.whorl { on, th, ph: where the whorl is (degrees around and up from the skull's middle), r: the roots' ring around it (radians),
   // rootW: the roots' width, part: the parting's angle (0 = front), shingle: the locks' tilt }: every lock (bangs and back) grows from the whorl
   // over the head, laid like roof tiles away from the part; no block is meshed under them (the scalp is painted the hair's color: scalpOf)
@@ -693,8 +693,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
       const hugOf = (L) => L.hug ? HTr.fromHead(0, L.hug, 0)[1] : null;   // short locks lie on the hair down to this height (head space), then hang: from its widest part they stood off the nape
-      if (longOn) out.locks = part(longLocks({ ...L, bottom: ST.fwd(L.bottom) }, {   // (bottom: base space, recipe version 5: tips at the same place on a chibi or a tall body)
-        cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      if (longOn) { const LB = { ...L, bottom: ST.fwd(L.bottom) }, kit = { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null };   // (bottom: base space, recipe version 5: tips at the same place on a chibi or a tall body)
+        out.locks = part(WHORL ? whorlLongLocks(LB, { lockRootW: WHORL.rootW, ...whorlOf() }, { ...bangKit(), surf: bangKit().head }, { ...kit, toHeadY: (y) => HTr.toHead(0, y, 0)[1] }) : longLocks(LB, kit), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 }); }   // head: the skull without the body (laid over the ear, a lock stood out from its tip as a fin)
       else if (hairPick.back === "bob" || hairPick.back === "flip") {   // a bob or a flip in locks: hanging from the back of the head as the short hair's do, further round to the front, down to that style's hem; the bob's tips curl in a little, the flip's out and up
         const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
         out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10, hugY: hugOf(BL) }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }

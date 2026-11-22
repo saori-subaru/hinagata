@@ -108,7 +108,8 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
 // long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
 // split (0..1; 2026-10-10, Saori, with 島風's figure from behind: "うしろがみは…二股にわかれてもちあげる"): the long hair parted down the
 // back into two bundles, each lifted out to its side and a little back, its locks gathered toward the tips and swinging as one
-export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });   // kit.hugY: see drape
+const hemOf = (L) => (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5;   // L.bottom: root space
+export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bottom: hemOf(L) });   // kit.hugY: see drape
   const S = L.split ?? 0; if (!(S > 0)) return specs;
   const A = S * (L.splitAngle ?? 55) * Math.PI / 180, GAP = 0.03 * S, rotZ = (v, t) => [v[0] * Math.cos(t) - v[1] * Math.sin(t), v[0] * Math.sin(t) + v[1] * Math.cos(t), v[2]], rotX = (v, t) => [v[0], v[1] * Math.cos(t) - v[2] * Math.sin(t), v[1] * Math.sin(t) + v[2] * Math.cos(t)];
   for (const s of specs) { const side = s.root[0] >= 0 ? 1 : -1, P = s.pts, N = P.length, Q = [P[0]];
@@ -119,6 +120,28 @@ export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bott
     for (let i = 1; i < N; i++) { const m = [0, 1, 2].map((k) => B.reduce((a, s) => a + s.pts[i][k], 0) / B.length), g = 0.55 * S * (i / (N - 1)) ** 1.4;
       for (const s of B) for (let k = 0; k < 3; k++) s.pts[i][k] += (m[k] - s.pts[i][k]) * g; } }
   return specs; };
+/**
+ * Long hair from the whorl (hair.sculpt.whorl on, no block): the outer locks laid over the head from the whorl as the bangs are (bangLocks,
+ * one per row round the back, the tips on the hem), and where they leave the head let fall against it and the body as drape does (bangLocks
+ * hangs them straight down: through the shoulders), flicked from that part's middle. No inner layer: the ring's, draped as thick as it is,
+ * lay over these. L: as longLocks / W: bangLocks' whorl options / bk: bangKit() (head space) / toHeadY: a root-space height in head space
+ */
+export function whorlLongLocks(L, W, bk, { center, coll, ellipsoid: ell, toHeadY, N = 16 }) {
+  const bottom = hemOf(L), n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, tips = [];
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < n; i++) { const E = editOf(L, i), a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0), b = bottom((180 + a) * Math.PI / 180);   // a: from the back
+    tips.push([a, toHeadY(b - 0.04 - (L.vary ?? 0.12) * (rnd() - 0.5) * (center[1] - b) + (E.dy ?? 0)), null, null, null, 0, 0, 0, E.w ?? 1, 0, 0]); }   // 4 cm past the hem as the ring's (draped, they rise)
+  const specs = bangLocks({ span, lockSpan: 360, overlap: L.overlap ?? 1.3, lockBand: L.band ?? 0.3, lockHangY: L.hangY ?? 0.86, aOff: 180, noFront: true, N, tips, lockThick: L.thick ?? 0.22, puff: L.puff ?? 0.004, ...W }, bk);
+  const keepOut = (p) => { pushOutEllipsoid(p, ell.c, ell.r, 0.004); for (const c of coll) pushOutSphere(p, c.c, c.r + 0.004); };
+  specs.forEach((s, l) => { const P = s.pts, k0 = Math.max(1, Math.floor(s.frontFrom * (N - 1))), seg = P.map((p, i) => i ? Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1], p[2] - P[i - 1][2]) : 0);
+    const r = P.map((_, i) => 0.5 * s.w * s.thick * (s.prof ?? width)(i / (N - 1)) + 0.003);
+    if (s.hang) for (let it = 0; it < 160; it++) { for (let i = k0 + 1; i < N; i++) P[i][1] -= 0.002;   // drape's steps, the part on the head held
+      for (let k = 0; k < 3; k++) { for (let i = k0 + 1; i < N; i++) { const a = P[i - 1], b = P[i], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dl = Math.hypot(...d) || 1; for (let q = 0; q < 3; q++) b[q] = a[q] + d[q] * seg[i] / dl; }
+        for (let i = k0 + 1; i < N; i++) { pushOutEllipsoid(P[i], ell.c, ell.r, r[i]); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r[i]); } } }
+    const fl = (L.flick ?? 0) + (editOf(L, l).fl ?? 0); if (fl) s.pts = bendLock(P, fl, { center, keepOut, from: (k0 + 0.5 * (N - 1 - k0)) / (N - 1) });
+    Object.assign(s, { stiff: 1, group: `ring${Math.min(2, Math.floor(l / n * 3))}`, cohere: L.cohere ?? 0.45 }); });   // the left, the back and the right each swinging as one
+  return specs;
+}
 
 /** How far from c along the unit direction d the surface of f is (c inside it): halving the range, inside → outside. */
 export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
