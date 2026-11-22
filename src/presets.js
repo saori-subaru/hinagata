@@ -263,10 +263,9 @@ export const CHARACTERS = {
         bangs: "nendo", back: "long", ahoge: false, rigid: 0.4, lockPoints: 6,
         paint: { ring: { color: "#5a5861" }, oneShade: 1 },   // the ring a cool grey (from the black itself it vanished)
         sculpt: {
-          // from behind the ears (span 100: the side locks slid out along the arms), the tips curled in, three flicked out (edits fl); all out
-          // (0.016) they fanned 25 cm off the middle, twin tails from the front. The left side's first locks turned back behind the ear (da)
-          long: { bottom: 0.48, count: 18, span: 90, width: 0.085, thick: 0.22, flick: -0.01,
-            edits: [{ i: 0, da: 16 }, { i: 1, da: 8 }, { i: 3, fl: 0.016 }, { i: 12, fl: 0.016 }, { i: 15, fl: 0.016 }, { i: 18, da: 14 }] },
+          // rooted low and thin (ph: degrees up from the head's middle; from 52° at 0.22 they stepped out of the block at the top's corners: twin
+          // tails' knots from the front). The tips flicked out a little (A line; 0.026: level wings); the left's first locks behind the ear (da)
+          long: { bottom: 0.48, count: 18, span: 100, width: 0.085, thick: 0.14, ph: [20, 4], flick: 0.016, edits: [{ i: 0, da: 16 }, { i: 1, da: 8 }, { i: 18, da: 14 }] },
           // her right side (negative angles) long, down over the eye to the jaw; her left short, swept back over the brow
           nendo: {
             tips: [
@@ -283,12 +282,13 @@ export const CHARACTERS = {
             overlap: 1.3, lockThick: 0.16,
           },
         },
-        // flyaways (head space, from inside the hair), out and in: her left's falling out at the shoulder, her right's curling back in at the elbow
-        // and at its lowest tips. None before the shoulders: a stiff one turned with the head into the face when running, a soft one the arm flung out
+        // flyaways at the shoulders (the sheet's; head space, from under the hair's surface): one a side flying out, one a side curling back in.
+        // None before the shoulders: a stiff one turned with the head into the face when running, a soft one the arm flung out
         drawn: [
-          { pts: [[0.2, 0.66, -0.1], [0.26, 0.6, -0.09], [0.31, 0.54, -0.08], [0.35, 0.47, -0.075], [0.36, 0.41, -0.07]], width: 0.014, thick: 0.35, stiff: 3 },
-          { pts: [[-0.21, 0.56, -0.1], [-0.28, 0.5, -0.09], [-0.32, 0.43, -0.08], [-0.32, 0.36, -0.07], [-0.28, 0.32, -0.06]], width: 0.014, thick: 0.35, stiff: 3 },
-          { pts: [[-0.2, 0.42, -0.26], [-0.2, 0.34, -0.3], [-0.17, 0.28, -0.34], [-0.12, 0.26, -0.36]], width: 0.014, thick: 0.35, stiff: 3 },
+          { pts: [[-0.21, 0.96, -0.03], [-0.26, 0.82, -0.01], [-0.33, 0.7, 0.01], [-0.42, 0.65, 0.02], [-0.5, 0.66, 0.02]], width: 0.016, thick: 0.35, stiff: 3 },
+          { pts: [[-0.22, 0.92, -0.06], [-0.3, 0.82, -0.05], [-0.38, 0.72, -0.04], [-0.42, 0.62, -0.03], [-0.4, 0.54, -0.02], [-0.35, 0.5, -0.01]], width: 0.014, thick: 0.35, stiff: 3 },
+          { pts: [[0.21, 0.94, -0.07], [0.27, 0.8, -0.07], [0.35, 0.68, -0.06], [0.44, 0.63, -0.05], [0.51, 0.64, -0.05]], width: 0.015, thick: 0.35, stiff: 3 },
+          { pts: [[0.22, 0.86, -0.09], [0.29, 0.74, -0.08], [0.36, 0.63, -0.07], [0.39, 0.53, -0.06], [0.37, 0.46, -0.05], [0.32, 0.43, -0.04]], width: 0.014, thick: 0.35, stiff: 3 },
         ],
       },
       face: {   // her own pictures; the sheet's faces: setFace("happy") eyes shut / ("surprised") / ("angry") the glare
