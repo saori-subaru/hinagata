@@ -169,9 +169,10 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th + A0), 0, Math.cos(th + A0)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
   // where a tuft leaves the head to hang: at its height, but no closer in than the head is anywhere above it (at the sides HY is below the
   // jaw, and the surface there is the neck: a side tuft hung from the neck, as narrow as the neck's radius made it, a row of strings)
-  // (with a shape: on the shape at that height, so the tips and the locks' widths follow it, not the neck under it)
+  // (with a shape: on the shape at that height, so the tips and the locks' widths follow it, not the neck under it). noTuck: above HY too
+  // (the back from the whorl without a shape: a tip at the nape's height lay under the skull, a strand as thin as a thread along the neck)
   const shWof = (th) => SH ? (SH.sides ?? 1) + (1 - (SH.sides ?? 1)) * sstep(0.2, 0.7, -Math.cos(th + A0)) : 0;
-  const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
+  const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH && !B.noTuck) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
     for (let yy = y + 0.03; yy <= center[1]; yy += 0.03) { const q = horiz(yy, th); R = Math.max(R, Math.hypot(q[0], q[2] - center[2])); }
     if (SH) R = hs + (R - hs) * (SH.hang ?? 0) + flareAt(y) * shWof(th);
     return [Math.sin(th + A0) * R, y, center[2] + Math.cos(th + A0) * R]; };

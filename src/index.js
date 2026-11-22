@@ -344,8 +344,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // whorl.nape { y, z, soft } (head space): cropped hair down the nape, the skin painted from the hair's hem down to y behind z (under short
   // hair that ends at the head's widest part the bare nape read as a hollow cut into the back of the head)
   function scalpOf(Pa) {
-    const A = new Float32Array(Pa.length / 3); if (!OPT.hair.sculpt.whorl?.on) return A;
-    const f = hairKit.hairSdfOf(hairForms(OPT.hair)), NP = OPT.hair.sculpt.whorl.nape, ns = NP?.soft ?? 0.015;
+    const pick = hairForms(OPT.hair), A = new Float32Array(Pa.length / 3); if (!hairKit.whorlOn(pick)) return A;   // (setHair paints it again)
+    const f = hairKit.hairSdfOf(pick), NP = OPT.hair.sculpt.whorl.nape, ns = NP?.soft ?? 0.015;
     for (let v = 0; v < A.length; v++) { const h = HT.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); A[v] = sstep(0.003, 0, f(h[0], h[1], h[2]));
       if (NP && h[1] < 1.1) A[v] = Math.max(A[v], sstep(NP.y - ns, NP.y + ns, h[1]) * sstep(NP.z + ns, NP.z - ns, h[2])); }
     return A;
@@ -675,10 +675,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // hair.sculpt.whorl { on, th, ph: where the whorl is (degrees around and up from the skull's middle), r: the roots' ring around it (radians),
   // rootW: the roots' width, part: the parting's angle (0 = front), shingle: the locks' tilt }: every lock (bangs and back) grows from the whorl
   // over the head, laid like roof tiles away from the part; no block is meshed under them (the scalp is painted the hair's color: scalpOf)
-  const WHORL = OPT.hair.sculpt.whorl?.on ? { rootW: 0.35, ...OPT.hair.sculpt.whorl } : null;
+  let WHORL = null;   // set by makeLocks for the style it makes (hairKit.whorlOn: with another style the block is back)
   const whorlOf = () => { const D = Math.PI / 180, th = (WHORL.th ?? 180) * D, ph = (WHORL.ph ?? 80) * D;
     return { whorl: { d: [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], r: WHORL.r ?? 0.12 }, shingle: WHORL.shingle ?? 0.3, part: WHORL.part ?? 0 }; };
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
+    WHORL = hairKit.whorlOn(hairPick) ? { rootW: 0.35, ...OPT.hair.sculpt.whorl } : null;
     const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none", tuftsOn = which.includes("tufts") && hairKit.tuftsOn();
@@ -703,7 +704,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0);
           tips.push([a, hem(a) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
         const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.shape ? 0.3 : SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };   // (with a shape nothing hangs: the shape says where the hem goes)
-        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
+        // without a shape, on the skull alone and never tucked under it (noTuck): on the body too, a tip at the nape's height ran down the neck
+        // to the shoulder, a string
+        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, noTuck: !SL.shape, ...whorlOf() }, SL.shape ? bangKit() : { ...bangKit(), surf: bangKit().head });
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
         // fork (shortLocks.fork { n, short }; an edit's fk: 0 leaves a lock whole): each tip split in two points, the shorter one by turns left and right
@@ -1159,6 +1162,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       const HR = OPT.hair; for (const k of ["bangs", "back", "ahoge", "bangsForm", "backForm", "nape"]) if (k in pick) HR[k] = k === "bangs" ? bangsId(pick[k]) : pick[k];
       if (HR.bangs === "block") { HR.bangs = "nendo"; HR.bangsForm = "block"; } if (HR.back === "hang") { HR.back = "short"; HR.nape = "hang"; HR.backForm = "locks"; }   // the old names (options.js readHair)
       Object.assign(hairPick, hairForms(HR)); bangKitMemo = null;
+      { const g = parts.body.m.geometry; g.setAttribute("scalp", new THREE.BufferAttribute(scalpOf(basePos(g)), 1)); }   // the whorl comes and goes with the style (hairKit.whorlOn)
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }

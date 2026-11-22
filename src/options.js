@@ -954,6 +954,13 @@ export const DEFAULTS = {
       "shortBack": 0.86,
       "shell": 0.036,
       "lockShell": 0.016,
+      "whorl": {
+        "on": true,
+        "th": 180,
+        "ph": 80,
+        "r": 0.06,
+        "rootW": 0.6
+      },
       "ahogeSize": 1.15,
       "ahogeWidth": 1,
       "ahogeDir": 90,
@@ -1340,11 +1347,12 @@ export function diff(base, opt) {
 //     version 4 (2026-10-10, Saori: "4.5くらいにしたい", the 6-head adult body being made) the head 0.64: 4.48 heads (was 0.7: 4.19);
 //     version 5 (the same day, Saori: 島風 as a chibi lost her long hair) hair.sculpt.long.bottom in base space (the body before
 //     body.proportion stretches it, as the clothes' heights): it was the tips' height on the character as built, so a shorter body left the
-//     hair no length. Older files are carried over (longBottom): read into base space, written back as they were.
+//     hair no length. Older files are carried over (longBottom): read into base space, written back as they were;
+//     version 6: the hair's locks from the whorl with no block under them (hair.sculpt.whorl.on, where the style has a way: hairKit.whorlOn).
 //   - Recipes stored without a version are version 1 (the chibi defaults): bare recipe files (character.json as the sync helper and
 //     agents wrote them before), { "hinagata": 1, … } files, the editor's characters saved in a browser before, ?o= links made before.
 //   - A bare options object in code (createAvatar({ … })) is today's: the current defaults.
-export const RECIPE_VERSION = 5;
+export const RECIPE_VERSION = 6;
 /** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body, OLD_DEFAULTS[3] = version 2's tall body,
  *  OLD_DEFAULTS[4] = version 3's head). */
 export const OLD_DEFAULTS = {
@@ -1357,6 +1365,7 @@ export const OLD_DEFAULTS = {
     proportion: { legs: 1.65, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.82 } } },   // (arms null: they stretched with the torso)
   4: { body: { head: { scale: 0.7 } } },   // the tall default at 4.19 heads (measureCharacter: chin to crown against the height): 2026-10-06 to 10-10
   5: { hair: { sculpt: { long: { bottom: 0.55 } } } },   // the long hair's tips at 0.55 as built (version 4 and before; longBottom carries it over)
+  6: { hair: { sculpt: { whorl: { on: false, r: 0.12, rootW: 0.35 } } } },   // the block under the locks (version 5 and before); a whorl set on kept these
 };
 // version 4 and before: hair.sculpt.long.bottom was the tips' height on the character as built. To base space (reading an old file) or back
 // (writing one), on that recipe's own body
