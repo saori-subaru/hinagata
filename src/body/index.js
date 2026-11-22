@@ -441,6 +441,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       grow(P[`toeBox.${s}`]);   // (the shoes' too, with the last: from the heel it shortened アステル's boots' toe)
       for (const n of ["foot", "heel", "ball", "toe0", "toe1", "toe2", "toe3"]) grow(P[`${n}.${s}`], BZ);
       if (OPT.body.sculpt.foot.toes?.on) grow(FOOT_CUT.at(-1), BZ); } }
+    // the Achilles tendon (the adult's: calfLow), from the calf's back onto the heel's top (base space): under a slim ankle the heel stood 2 cm behind
+    // it, a notch from the side and a knob on a boot. None where the heel grew tall with the feet (アステル's 1.5 reaches up itself) or goes up in heels
+    { const H = P[`heel.${s}`]; if (!AD && !heelsWorn(OPT) && H.cy + H.ry < 0.055) { const kk = j("lowerLeg"), ff = j("foot"), xa = kk[0] + (ff[0] - kk[0]) * (kk[1] - 0.1) / (kk[1] - ff[1]);
+      P[`achilles.${s}`] = C([xa, 0.1, -0.014], [ff[0], 0.035, -0.022], 0.011, 0.013, `lowerLeg.${s}`, 0.02); } }
     // the instep: from the ankle (as thick as the leg is there) down to the top of the forefoot, one slope; its top stays at the ankle whatever the feet's size
     { const FK = OPT.body.proportion?.feet ?? 1, fx = m * (FOOT_X - 0.002), th = OPT.body.thickness?.calf ?? 1;
       // (adult: from under the ankle's front, low, to the toes' roots, blended narrowly: the shin's front comes straight down and the instep arches
