@@ -263,13 +263,14 @@ export const CHARACTERS = {
         bangs: "nendo", back: "long", ahoge: false, rigid: 0.4, lockPoints: 6,
         paint: { ring: { color: "#5a5861" }, oneShade: 1 },   // the ring a cool grey (from the black itself it vanished)
         sculpt: {
-          // the tips flicked out a little: an A line to the jacket's hem (0.026 spread them level, wings); the left side's first locks
-          // turned back behind the ear (da), as on the sheet
-          long: { bottom: 0.48, count: 18, span: 100, width: 0.085, thick: 0.22, flick: 0.016, edits: [{ i: 0, da: 16 }, { i: 1, da: 8 }, { i: 18, da: 14 }] },
+          // from behind the ears (span 100: the side locks slid out along the arms), the tips curled in, three flicked out (edits fl); all out
+          // (0.016) they fanned 25 cm off the middle, twin tails from the front. The left side's first locks turned back behind the ear (da)
+          long: { bottom: 0.48, count: 18, span: 90, width: 0.085, thick: 0.22, flick: -0.01,
+            edits: [{ i: 0, da: 16 }, { i: 1, da: 8 }, { i: 3, fl: 0.016 }, { i: 12, fl: 0.016 }, { i: 15, fl: 0.016 }, { i: 18, da: 14 }] },
           // her right side (negative angles) long, down over the eye to the jaw; her left short, swept back over the brow
           nendo: {
             tips: [
-              [-80, 0.56, null, null, null, 4],
+              [-80, 0.56, null, null, null, 4, 0, -0.014],   // its tip curled in toward the neck (fl), as the sheet's faces
               [-62, 0.64, null, null, null, 2],
               [-46, 0.76],
               [-33, 0.83],
@@ -277,16 +278,17 @@ export const CHARACTERS = {
               [-9, 0.88, null, null, null, 0, 0, 0, 1, 0, 1],   // its point at its far edge (lean): the eye's cover ends in a slant
               [28, 1.11, null, null, null, -12],
               [48, 1.03, null, null, null, -10],
-              [68, 0.72, null, null, null, 0, 0, 0, 0.32],   // narrow: the strand before the ear
+              [68, 0.72, null, null, null, 0, 0, -0.01, 0.32],   // narrow: the strand before the ear, its tip in toward the jaw
             ],
             overlap: 1.3, lockThick: 0.16,
           },
         },
-        // stray strands standing out at the shoulders (the sheet's flyaways), from under the hair's surface (head space)
+        // flyaways (head space, from inside the hair), out and in: her left's falling out at the shoulder, her right's curling back in at the elbow
+        // and at its lowest tips. None before the shoulders: a stiff one turned with the head into the face when running, a soft one the arm flung out
         drawn: [
-          { pts: [[-0.21, 0.96, -0.03], [-0.26, 0.82, -0.01], [-0.33, 0.7, 0.01], [-0.42, 0.65, 0.02], [-0.5, 0.66, 0.02]], width: 0.016, thick: 0.35, stiff: 3 },
-          { pts: [[-0.22, 0.9, -0.08], [-0.28, 0.74, -0.07], [-0.36, 0.6, -0.06], [-0.44, 0.52, -0.05], [-0.5, 0.52, -0.05]], width: 0.014, thick: 0.35, stiff: 3 },
-          { pts: [[0.21, 0.94, -0.07], [0.27, 0.8, -0.07], [0.35, 0.68, -0.06], [0.44, 0.63, -0.05], [0.51, 0.64, -0.05]], width: 0.015, thick: 0.35, stiff: 3 },
+          { pts: [[0.2, 0.66, -0.1], [0.26, 0.6, -0.09], [0.31, 0.54, -0.08], [0.35, 0.47, -0.075], [0.36, 0.41, -0.07]], width: 0.014, thick: 0.35, stiff: 3 },
+          { pts: [[-0.21, 0.56, -0.1], [-0.28, 0.5, -0.09], [-0.32, 0.43, -0.08], [-0.32, 0.36, -0.07], [-0.28, 0.32, -0.06]], width: 0.014, thick: 0.35, stiff: 3 },
+          { pts: [[-0.2, 0.42, -0.26], [-0.2, 0.34, -0.3], [-0.17, 0.28, -0.34], [-0.12, 0.26, -0.36]], width: 0.014, thick: 0.35, stiff: 3 },
         ],
       },
       face: {   // her own pictures; the sheet's faces: setFace("happy") eyes shut / ("surprised") / ("angry") the glare
@@ -313,10 +315,11 @@ export const CHARACTERS = {
         jacket: { on: true, color: "#3b3940", slip: "L", hem: 0.475, lapel: 0.066, collar: 0.07 },
         weapon: { right: "fist", left: "fist" },
       },
-      accessories: [   // (offsets from the bone's joint, as built) the belt's buckle, its end hanging down her left thigh with a ring, the jacket's hem strap on her right
-        { kind: "buckle", bone: "spine", at: [0, -0.011, 0.12], n: [0, 0, 1], size: 0.06, color: "#a4a4ab", lift: 0.002 },
+      accessories: [   // (offsets from the bone's joint, as built) the belt's buckle, its end hanging down her left thigh with a buckle, the jacket's hem strap on her right
+        // the buckles thin frames with a prong, as アステル's (the thick "buckle" read as a plate with a slot); the hanging one turned so its prong hangs from the strap
+        { kind: "pinBuckle", bone: "spine", at: [0, -0.011, 0.12], n: [0, 0, 1], size: 0.056, color: "#a4a4ab", lift: 0.003 },
         { kind: "strap", bone: "upperLeg.L", at: [0, 0.044, 0.092], n: [0.64, 0, 0.77], size: 0.22, color: "#2f2e33", lift: 0.004 },
-        { kind: "buckle", bone: "upperLeg.L", at: [0, -0.166, 0.092], n: [0.64, 0, 0.77], size: 0.04, color: "#a4a4ab", lift: 0.013 },
+        { kind: "pinBuckle", bone: "upperLeg.L", at: [0, -0.166, 0.092], n: [0.64, 0, 0.77], spin: -90, size: 0.042, color: "#a4a4ab", lift: 0.013 },
         { kind: "tab", bone: "spine", at: [-0.119, -0.012, 0.108], n: [-0.63, 0, 0.78], size: 0.06, color: "#3b3940", lift: 0.003 },
         { kind: "pinBuckle", bone: "spine", at: [-0.106, -0.014, 0.119], n: [-0.55, 0, 0.83], size: 0.034, color: "#a4a4ab", lift: 0.005 },
       ],

@@ -1207,6 +1207,7 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - The accessory `strap`: a narrow strip hanging down, 1 long (a belt's end); `tab` is short and wide, at a strap's length a board.
 - Boots with `body.proportion.feet` over 1 and a thick shell (`shoes.offset` 0.018 at feet 1.1): the toe reaches past the feet's box (parts.js `FZ`, grown only past feet 1.1) and is cut open, the foot showing through the sole's front. Keep the offset at 0.012 there.
 - Her face is drawn in code (pictures after the sheet: a thick lash ending in a point toward the nose, a pale gold iris darker under the lid with a slit pupil): the sheet's own eye is under 100 px.
+- Long locks all flicked out fan into wings (twin tails from the front): the flick bends each from its middle, and side locks rooted over the shoulders (`long.span` past 90) also slide out along the arms. Hers: span 90, flick −0.01 (in) with three out (`edits` fl), and no stiff `hair.drawn` strand before the shoulders (it turns with the head: before the face when running).
 
 ## The base body's bottom, legs and stance (every character)
 
