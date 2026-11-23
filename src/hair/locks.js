@@ -138,6 +138,10 @@ export function whorlLongLocks(L, W, bk, { center, coll, ellipsoid: ell, toHeadY
     if (s.hang) for (let it = 0; it < 160; it++) { for (let i = k0 + 1; i < N; i++) P[i][1] -= 0.002;   // drape's steps, the part on the head held
       for (let k = 0; k < 3; k++) { for (let i = k0 + 1; i < N; i++) { const a = P[i - 1], b = P[i], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dl = Math.hypot(...d) || 1; for (let q = 0; q < 3; q++) b[q] = a[q] + d[q] * seg[i] / dl; }
         for (let i = k0 + 1; i < N; i++) { pushOutEllipsoid(P[i], ell.c, ell.r, r[i]); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r[i]); } } }
+    // long.fan (m at the tips): the hanging part out from the head's axis, more toward the tips (a wider silhouette down the back);
+    // long.wave (m), waves: it sways sideways, each lock from its own phase (a wavy outline, not a straight curtain)
+    if (s.hang && (L.fan || L.wave)) for (let i = k0 + 1; i < N; i++) { const t = (i - k0) / (N - 1 - k0), p = P[i], dx = p[0] - center[0], dz = p[2] - center[2], dl = Math.hypot(dx, dz) || 1, f = (L.fan ?? 0) * t ** 1.5;
+      p[0] += dx / dl * f + (L.wave ?? 0) * Math.sin(2 * Math.PI * (L.waves ?? 1.5) * t + l * 2.4) * sstep(0, 0.3, t); p[2] += dz / dl * f; }
     const fl = (L.flick ?? 0) + (editOf(L, l).fl ?? 0); if (fl) s.pts = bendLock(P, fl, { center, keepOut, from: (k0 + 0.5 * (N - 1 - k0)) / (N - 1) });
     Object.assign(s, { stiff: 1, group: `ring${Math.min(2, Math.floor(l / n * 3))}`, cohere: L.cohere ?? 0.45 }); });   // the left, the back and the right each swinging as one
   return specs;

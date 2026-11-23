@@ -338,11 +338,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const axis = ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], t = (TOP - a[1]) / (b[1] - a[1]); return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]; });
     return (x, y, z) => { const c = axis[x >= 0 ? 0 : 1]; if (z < c[1]) return -1; return (y - (TOP - TILT * z - D) - k * Math.abs(x - c[0])) / kn; }; })() : null;
   // shoes.toeCap (boots, for アステル): a round toe box, toeCap times the last's height over it (the last alone tapers to a low, long toe)
+  const SHOE_LOW = PUMPS ? -0.003 : HBOOTS ? 0.004 : -0.003 + SHOE.sole * 0.6;   // the upper's bottom: on the sole
   const TOE_CAP = BOOTS && !HBOOTS && (OPT.outfit.shoes.toeCap ?? 0) > 0 ? ["L", "R"].map((s) => { const l = P[`shoeLast.${s}`], ry = l.ry * (1 + OPT.outfit.shoes.toeCap);
     return E([l.cx, l.cy - l.ry + ry, l.cz + l.rz * 0.48], [l.rx * 0.94, ry, l.rz * 0.54], `foot.${s}`); }) : null;
-  const shoeSdf0 = (x, y, z) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF && !TUBE ? (OPT.outfit.shoes.cuffOut ?? 0.006) * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
+  const shoeSdf0 = (x, y, z, low = SHOE_LOW) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF && !TUBE ? (OPT.outfit.shoes.cuffOut ?? 0.006) * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
     if (TOE_CAP) c = smin(c, dPrim(TOE_CAP[x >= 0 ? 0 : 1], x, y, z) - SHOE_OFF, 0.012);
-    let d = Math.max(c, y - (TOP - TILT * z), PUMPS ? -0.003 - y : HBOOTS ? 0.004 - y : -0.003 + SHOE.sole * 0.6 - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
+    let d = Math.max(c, y - (TOP - TILT * z), low - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z));
     // (its outer edges rounded wider than a cell: cut sharp, the mesh's points fell on one face or the other in a saw.) Its top a funnel, from
     // a 3 mm rim down inward to FD under it, the shaft's top lowered to that floor: hollow, its 8 mm wall and the gap inside it were about a
@@ -358,11 +359,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       for (const [k, dx, dz] of [[0, 1, 0], [0, -1, 0], [1, 0, 1], [1, 0, -1]]) { let t = 0.01; while (t < 0.2 && shoeSdf0(c[0] + dx * m * t, y, c[2] + dz * t) < 0) t += 0.001; wide[k] = Math.max(wide[k], t); } }
     const OUT = OPT.outfit.shoes.cuffOut ?? 0.006, rx = wide[0] + OUT - CW / 2, rz = wide[1] + OUT - CW / 2;
     return { a, u, l: u[1], rx, rz, r: (rx + rz) / 2 }; });
+  const ARCH = !HEELS ? Math.min(OPT.outfit.shoes.archCut ?? 0, SHOE.sole * 0.7) : 0, ARCH_L = 0.03 * FK;   // (m) the notch's height, its length front to back
   const HEEL_B = BOOTS && !HBOOTS ? OPT.outfit.shoes.heelBlock ?? 0 : 0, HEEL_Z = P["shoeLast.L"].cz - P["shoeLast.L"].rz * 0.3;   // (m; the step's place)
-  const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : shoeSdf0;   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
+  const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : (x, y, z) => shoeSdf0(x, y, z);   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
   const soleSdf0 = PUMPS ? () => 1 : HBOOTS ? (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - 0.004, y - 0.009, -0.007 - y)   // (heel boots: a thin sole, a little wider than the boot, its bottom under the socks' (2.5 mm under the foot): they showed white under it)
     : (x, y, z) => { const c = soleCore(x, y, z) - SHOE.off - SHOE.rim, d = Math.max(c, y - (-0.003 + SHOE.sole), -0.007 - y);   // (heels: none) (its bottom under the socks', as the heel boots')
-      return HEEL_B ? Math.min(d, Math.max(c, y - (-0.003 + SHOE.sole + HEEL_B), -0.007 - y, z - HEEL_Z)) : d; };   // shoes.heelBlock: higher under the heel, its front a step
+      const e = HEEL_B ? Math.min(d, Math.max(c, y - (-0.003 + SHOE.sole + HEEL_B), -0.007 - y, z - HEEL_Z)) : d; if (!ARCH) return e;
+      const up = -0.007 + ARCH - y, n = Math.max(-up, HEEL_Z - 0.5 * up - z, z - (HEEL_Z + ARCH_L) - 0.5 * up); return -smin(-e, n, 0.003); };   // shoes.archCut: a notch up into the sole before the heel, wider toward the floor   // shoes.heelBlock: higher under the heel, its front a step
   const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends
@@ -640,6 +643,6 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const ST_TOP = OPT.outfit.shorts?.on ? OPT.outfit.shorts.top ?? PANTS_TOP : null;
   const shirtMesh = SKIRT && SK.dress && SLIT && ST_TOP != null ? (x, y, z, B, noBell, noHole) => { const d = shirtSdf(x, y, z, B, noBell, noHole), ax = Math.abs(x);
     return ax > 0.19 ? d : Math.max(d, ST_TOP - PANTS_TILT * z - 0.01 - y - 2 * sstep(0.16, 0.19, ax)); } : shirtSdf;
-  return { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
+  return { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeCover: ARCH ? apart((x, y, z) => shoeSdf0(x, y, z, -0.03)) : null, shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
     garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)), legsSdf, outerSdf, sleeveEnd }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }
