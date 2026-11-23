@@ -118,6 +118,30 @@ vec4 tSample() {
   m.customProgramCacheKey = () => "tex|" + key;
   return m;
 }
+/** A drawn picture on a garment part (a part with `picture` in its definePart: the jacket's gloss and shadows). One image: its upper half
+ *  is the part seen from the front, its lower half from the back, both in the part's frame (U.frame: half the width, the lowest and the
+ *  highest height shown; base space, so 1 px is the same cloth whatever the body's proportions). Projected along z from picP / picN, each
+ *  vertex's base place and normal when made (it moves with the pose); the two halves blend where the surface turns sideways (U.soft: the
+ *  normal's z over which they do), so draw the same tone on both at the outline. The map is premultiplied (no dark fringe round strokes).
+ *  U: { on, map, frame (vec3), opacity, blend (0 = over, 1 = multiply), soft } as shared uniforms. */
+export function withPicture(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { dOn: U.on, dMap: U.map, dFrame: U.frame, dOpacity: U.opacity, dBlend: U.blend, dSoft: U.soft });
+    sh.vertexShader = "attribute vec3 picP;\nattribute vec3 picN;\nvarying vec3 vPicP;\nvarying vec3 vPicN;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPicP = picP; vPicN = picN;");
+    sh.fragmentShader = `uniform float dOn, dOpacity, dBlend, dSoft;
+uniform vec3 dFrame;
+uniform sampler2D dMap;
+varying vec3 vPicP;
+varying vec3 vPicN;
+vec4 dLin(vec4 c) { return vec4(pow(c.rgb / max(c.a, 1e-4), vec3(2.2)) * c.a, c.a); }
+` + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  if (dOn > 0.5) { vec2 q = vec2(vPicP.x / (2.0 * dFrame.x) + 0.5, clamp((vPicP.y - dFrame.y) / (dFrame.z - dFrame.y), 0.004, 0.996));
+    vec4 dc = mix(dLin(texture2D(dMap, vec2(1.0 - q.x, 0.5 * q.y))), dLin(texture2D(dMap, vec2(q.x, 0.5 + 0.5 * q.y))), smoothstep(-dSoft, dSoft, normalize(vPicN).z)) * dOpacity;
+    diffuseColor.rgb = dBlend > 0.5 ? diffuseColor.rgb * (1.0 - dc.a) + diffuseColor.rgb * dc.rgb : diffuseColor.rgb * (1.0 - dc.a) + dc.rgb; }`); };
+  m.customProgramCacheKey = () => "pic|" + key;
+  return m;
+}
 /** Paint over everything (src/paint.js): the part's atlas, looked up from paintP / paintN (each vertex's place, base proportions, and normal
  *  when the mesh was made). Drawn after the color, the picture and the gradient (it hooks in at the alpha map, after them all).
  *  U: { on, map } as uniforms / glsl: paintGLSL(layout) */

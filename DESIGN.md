@@ -207,14 +207,14 @@ Still missing in the engine before the editor: `avatar.rebuild()` (today a body 
 - It is built from DEFAULTS, so a new option is never missing: about 80 main values are described by hand (`MAIN` in `src/schema.js`); every other value (the sculpt tuning) gets an entry made from its default, with a guessed range marked `soft` and an English label from its key. To promote a value to the editor's main panels, add it to `MAIN`.
 - `checkOptions(options)` lists unknown paths, wrong types, enum values that don't exist and numbers outside a described range. `createAvatar` prints them as a warning (typos used to be ignored silently).
 
-### Cloth textures (2026-10-02, Saori; plan)
+### Cloth textures (Saori; 1 and 3 exist, 3 on the jacket only; 2 is a plan)
 
 Clothes get pictures the way the face does. Three layers, bottom to top:
 1. **Base color** (exists).
 2. **Pattern**: stripes, checks, dots… drawn in the shader from the angle around the body and the height (like the hair strands), so no texture and no UVs.
-3. **Drawn picture**: like the face template, the editor exports a front and a back template of each garment; the drawing is read back and projected from the front and the back. Logos and one-point marks go here too.
+3. **Drawn picture** (`outfit.jacket.picture: { src, opacity, blend }`, `avatar.setPicture`, `withPicture` in materials.js): one image, its upper half the part from the front and its lower half from the back, projected along z from each vertex's base place (`picP`: it moves with the pose, and 1 px is the same cloth whatever the body's proportions). A part takes one by `picture: { frame }` in its definePart (⛔ changing a frame moves every picture drawn so far); its material is dressed only once a src is set, so a part without one keeps its plain shader. The template is `pictureTemplate(avatar, part)` (src/picture.js; `node tools/picture.mjs <preset>`): draw on a layer over it and save that layer alone. `--make art` makes a first picture from the shape (angular light planes, creases, the shadow cast under the collar and the bands): スバル's jacket carries that one as a file (img/presets/), so a `?o=` link holds only its address. Not yet: the editor's export / load buttons, other garments.
 
-The garments have no UVs (surface nets); layers 2 and 3 are projections, so they don't need any. The hard part is the seam at the sides where the front and back pictures meet.
+The garments have no UVs (surface nets); layers 2 and 3 are projections, so they don't need any. At the sides the two halves of a drawn picture are blended by the base normal's z (over ±0.35), and a picture made from the shape lights both halves with the same light, so they agree at the outline; a hand-drawn one must carry the same tone on both there. Along the sides the picture is stretched (a projection): keep fine detail off them.
 
 ## Reference presets
 

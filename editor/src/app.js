@@ -107,6 +107,7 @@ function applyInstant(av, p, v) {
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }, k[2]); return true;   // hair.sculpt.<nendo | hime | side>.<key>
     case "setPaint": av.setPaint(k[1], v); return true;
     case "setTexture": av.setTexture(k[1], { [last]: v }); return true;
+    case "setPicture": av.setPicture(k[1], { [last]: v }); return true;   // a part's drawn picture (outfit.jacket.picture)
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
