@@ -145,7 +145,7 @@ export const CHARACTERS = {
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
-        head: { scale: 0.84, width: 0.94, depth: 0.85, jawLength: 0.82 },   // depth: thinner front to back (at 1 the side view read thicker than シルヴィ's)   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
+        head: { scale: 0.84, width: 0.94, depth: 0.95, jawLength: 0.82 },   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { hipX: 0.11, footX: 0.13, kneeX: 0.118 },   // (his hip joints as before the default came in: the legs stand apart in his boots)
@@ -239,7 +239,7 @@ export const CHARACTERS = {
         // over itself when they came down), its sides ending behind the arms (sideEdge) and its hem lowest at those front corners (tilt < 0).
         // Flared out past the hands (at 0.65 its sides ran just behind the fists in the rest pose, through them at -0.02)
         // The hood lies down as a cowl standing round the neck (cowl, up to collar), rolled into two rings (cowlRoll, cowlRoll2), the lower drooping behind into the hood's point, as on the sheet
-        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.755, closeX: 0.046, open: 1.45, sideEdge: -0.045, hem: 0.225, tilt: -0.3, flare: 0.9, hood: true, hoodSize: 1.3, cowl: 0.075, cowlRoll: 0.045, cowlRoll2: 0.04, collar: 0.825 },
+        cape: { on: true, color: "#aa5861", front: "closed", over: "body", close: 0.755, closeX: 0.046, open: 1.45, sideEdge: -0.045, hem: 0.12, tilt: -0.5, flare: 0.9, folds: 8, foldDepth: 0.05, foldHem: 0.1, hood: true, hoodSize: 1.3, cowl: 0.075, cowlRoll: 0.045, cowlRoll2: 0.04, collar: 0.825 },
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built; measured on the meshes: they aren't put onto the surface) the clasp on the cloak's closure; the buckle on the belt
