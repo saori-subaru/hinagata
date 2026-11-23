@@ -255,12 +255,17 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
  * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
+ * curl (m: the stroke becomes the axis of a ringlet of this radius, 0 = none), turns (of the ringlet, default 2), twist (rad, root to tip: the
+ * ribbon turns about its own line); both need center (root space: the head's, for the side that faces out),
  * fromWhorl (with W = { d, surf, center, rootW }, hair.sculpt.whorl on): a path from the whorl over the head, under the other locks, to the
  * stroke's first point goes before it, narrow at the whorl and full from that point (a sidelock drawn from the temple showed its root's stub) }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
  */
-export function drawnLocks(list, { toRoot, N = 16, W = null }) {
-  const out = [];
+export function drawnLocks(list, { toRoot, N: N0 = 16, W = null, center = null, rigid = 0 }) {   // rigid: the hair's (hair.rigid), for the locks beside a ringlet (see coiled)
+  const out = [], N = Math.max(N0, ...(list ?? []).map((d) => d?.curl > 0 ? Math.min(40, Math.ceil(8 * (d.turns ?? 2)) + 1) : 0));   // 8 points a turn
+  const nz = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }, dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const rot = (v, k, a) => { const c = Math.cos(a), s = Math.sin(a), kv = dot(k, v); return [0, 1, 2].map((i) => v[i] * c + (k[(i + 1) % 3] * v[(i + 2) % 3] - k[(i + 2) % 3] * v[(i + 1) % 3]) * s + k[i] * kv * (1 - c)); };
+  const tan = (P, q) => nz(P[Math.min(P.length - 1, q + 1)].map((v, k) => v - P[Math.max(0, q - 1)][k]));
   for (const d of list ?? []) {
     if (!d?.pts || d.pts.length < 2) continue;
     for (const m of d.mirror ? [1, -1] : [1]) {
@@ -274,13 +279,23 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
       const pts = []; let j = 0;
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
+      let nrm;
+      if (center && (d.curl > 0 || d.twist)) { const R = Math.max(0, d.curl ?? 0), TU = d.turns ?? 2, TW = d.twist ?? 0, C = pts.map((p) => [...p]); let po = null;
+        nrm = C.map((p, q) => { const T = tan(C, q), t = q / (N - 1), o0 = [p[0] - center[0], Math.max(0, p[1] - center[1]), p[2] - center[2]], ol = Math.hypot(...o0) || 1;
+          let o = o0.map((v, k) => v - T[k] * dot(o0, T)); if (po && Math.hypot(...o) < 0.3 * ol) o = po.map((v, k) => v - T[k] * dot(po, T));   // the stroke runs along "out" there: the last point's
+          o = po = nz(o); if (!R) return o;
+          const e = rot(o, T, m * 2 * Math.PI * TU * t), r = R * sstep(0, 0.12, t); pts[q] = p.map((v, k) => v + e[k] * r); return e; });   // the ribbon's flat side faces away from the axis (a mirrored one winds the other way)
+        if (TW) nrm = nrm.map((e, q) => rot(e, tan(pts, q), m * TW * q / (N - 1)));
+        nrm = nrm.map((e, q) => { const T = tan(pts, q), k = dot(e, T); return nz(e.map((v, i) => v - T[i] * k)); }); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
       const tp = Math.min(1, Math.max(0, d.taper ?? 0)), p1 = tp ? (t) => width(t) * (1 - tp) + (1 - t) * tp : width;   // taper (0..1): narrowing evenly from the root to the point (a cone, a wing of hair), not full to the middle
-      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, prof: t0 ? (t) => t < t0 ? W.rootW + (1 - W.rootW) * sstep(0, t0, t) : p1((t - t0) / (1 - t0)) : tp ? p1 : undefined });
+      out.push({ root: pts[0], pts, len, w: d.width ?? 0.03, thick: d.thick ?? 0.3, layer: 0, curl: 0, rise: true, stiff: d.stiff ?? 1, nrm, keepPts: d.curl > 0, rigid: d.curl > 0 ? 1 : rigid, prof: t0 ? (t) => t < t0 ? W.rootW + (1 - W.rootW) * sstep(0, t0, t) : p1((t - t0) / (1 - t0)) : tp ? p1 : undefined });
     }
   }
   return out;
 }
+/** a ringlet among the drawn locks: a rope's links unwind it, so the part is built rigid (each lock's share: spec.rigid) and with all its points */
+export const coiled = (list) => (list ?? []).some((d) => d?.curl > 0 && d.pts?.length >= 2);
 
 /**
  * Tufts (options.hair.tufts): few big blocks of hair from the whorl, each lying on the hair to where its tip ends (the other locks are
@@ -520,7 +535,7 @@ export function colliders(J, BI, sdf) {
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
 export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
-  if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => { if (!s.curv) return { ...s, pts: resample(s.pts, points, bendPts) }; const Q = resample(s.pts.map((p, i) => [...p, s.curv[i], s.tk[i], ...(s.nrm?.[i] ?? [])]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), curv: Q.map((p) => p[3]), tk: Q.map((p) => p[4]), nrm: s.nrm && Q.map((p) => p.slice(5, 8)) }; });
+  if (points >= 3 && points < (specs[0]?.pts.length ?? 0) && !specs.some((s) => s.keepPts)) specs = specs.map((s) => { if (!s.curv && s.nrm) { const Q = resample(s.pts.map((p, i) => [...p, ...s.nrm[i]]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), nrm: Q.map((p) => p.slice(3, 6)) }; } if (!s.curv) return { ...s, pts: resample(s.pts, points, bendPts) }; const Q = resample(s.pts.map((p, i) => [...p, s.curv[i], s.tk[i], ...(s.nrm?.[i] ?? [])]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), curv: Q.map((p) => p[3]), tk: Q.map((p) => p[4]), nrm: s.nrm && Q.map((p) => p.slice(5, 8)) }; });
   const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   // tufts (tuftLocks: every spec of the part has cols): a ring is M points across the top and M - 2 back along the underside; column c of
   // ring r is at sv along the tuft (the columns end one by one: the points of its cut end)

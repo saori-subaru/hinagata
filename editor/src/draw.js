@@ -13,9 +13,9 @@ import * as THREE from "three";
 
 /** vp: the viewport / store: the recipe / onChange(): the tool's state changed (the panel redraws) */
 export function createDrawTool({ vp, store, onChange = () => {} }) {
-  const S = { on: false, move: false, width: 0.03, thick: 0.3, stiff: 1, taper: 0, mirror: false };
-  try { Object.assign(S, JSON.parse(localStorage.getItem("hinagata.editor.draw")) ?? {}, { on: false, move: false }); } catch {}
-  const save = () => { try { localStorage.setItem("hinagata.editor.draw", JSON.stringify({ ...S, on: false, move: false })); } catch {} };
+  const S = { on: false, move: false, width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, twist: 0, mirror: false, sel: null };   // sel: the drawn lock the sliders change (null: the brush for the next one)
+  try { Object.assign(S, JSON.parse(localStorage.getItem("hinagata.editor.draw")) ?? {}, { on: false, move: false, sel: null }); } catch {}
+  const save = () => { try { localStorage.setItem("hinagata.editor.draw", JSON.stringify({ ...S, on: false, move: false, sel: null })); } catch {} };
   let av = null, stroke = null;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(), v = new THREE.Vector3();
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x4b4acf, depthTest: false }));
@@ -57,7 +57,7 @@ export function createDrawTool({ vp, store, onChange = () => {} }) {
     if (!stroke) return; const s = stroke; stroke = null; vp.controls.enabled = true; show();
     let len = 0; for (let i = 1; i < s.world.length; i++) len += s.world[i].distanceTo(s.world[i - 1]);
     if (s.world.length < 3 || len < 0.02) return;   // a click, not a stroke
-    const lock = { pts: s.world.map(toHead), width: S.width, thick: S.thick, stiff: S.stiff, mirror: S.mirror, ...(S.taper ? { taper: S.taper } : {}) };
+    const lock = { pts: s.world.map(toHead), width: S.width, thick: S.thick, stiff: S.stiff, mirror: S.mirror, ...(S.taper ? { taper: S.taper } : {}), ...(S.curl ? { curl: S.curl, turns: S.turns } : {}), ...(S.twist ? { twist: S.twist } : {}) };
     store.set({ "hair.drawn": [...(store.get("hair.drawn") ?? []), lock] }, { commit: true });
   };
   vp.canvas.addEventListener("pointerup", up); vp.canvas.addEventListener("pointercancel", up);
@@ -120,10 +120,11 @@ export function createDrawTool({ vp, store, onChange = () => {} }) {
     refresh() { placeDots(); },
     toggle(on = !S.on) { S.on = on; if (on) S.move = false; vp.controls.enableRotate = !(S.on || S.move); placeDots(); onChange(); },   // drawing: the left button draws (the right button still pans)
     toggleMove(on = !S.move) { S.move = on; if (on) S.on = false; vp.controls.enableRotate = !(S.on || S.move); placeDots(); onChange(); },   // moving: the dots
-    set(k, val) { S[k] = val; save(); onChange(); },
+    set(k, val) { if (S.sel != null && locks()[S.sel]) return this.edit(S.sel, { [k]: val }); S[k] = val; save(); onChange(); },
+    select(i) { S.sel = S.sel === i || !locks()[i] ? null : i; onChange(); },
     /** remove one drawn lock (index), or the last one */
-    remove(i = (store.get("hair.drawn") ?? []).length - 1) { const L = [...(store.get("hair.drawn") ?? [])]; if (i < 0 || i >= L.length) return; L.splice(i, 1); store.set({ "hair.drawn": L }, { commit: true }); },
-    clear() { store.set({ "hair.drawn": [] }, { commit: true }); },
+    remove(i = (store.get("hair.drawn") ?? []).length - 1) { const L = [...(store.get("hair.drawn") ?? [])]; if (i < 0 || i >= L.length) return; S.sel = null; L.splice(i, 1); store.set({ "hair.drawn": L }, { commit: true }); },
+    clear() { S.sel = null; store.set({ "hair.drawn": [] }, { commit: true }); },
     /** change a drawn lock's own values (width, thick, stiff, taper, mirror) */
     edit(i, ch) { const L = structuredClone(store.get("hair.drawn") ?? []); if (!L[i]) return; Object.assign(L[i], ch); store.set({ "hair.drawn": L }, { commit: true }); },
   };

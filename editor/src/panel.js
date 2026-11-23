@@ -265,7 +265,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     { const id = `f${uid++}`, inp = h("input", { id, type: "color", value: S.color }); inp.addEventListener("change", () => P.set("color", inp.value));
       kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t("paintColor"))), h("div", { class: "row" }, inp))); }
     for (const [k, key, min, max, step] of [["size", "paintSize", 0.002, 0.06, 0.001], ["opacity", "paintOpacity", 0.05, 1, 0.01], ["soft", "paintSoft", 0, 1, 0.01]]) {
-      const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
+      const id = `f${uid++}`, val = V[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
       rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
       rng.addEventListener("change", () => P.set(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) P.set(k, +num.value); });
@@ -362,20 +362,22 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       h("div", { class: "help" }, t("myHairHelp")));
   }
   function drawBlock() {
-    const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [];
+    const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [], cur = S.sel != null ? list[S.sel] : null, V = cur ? { width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, twist: 0, ...cur } : S;
     const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("drawTitle")), h("span", { class: "cost" }, t("drawN", list.length))),
       h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => { stopTools(D); D.toggle(); } }, t("drawOn")),
         list.length ? h("button", { class: "chip", type: "button", "aria-pressed": String(S.move), onclick: () => { stopTools(D); D.toggleMove(); } }, t("drawMove")) : null,
-        check(t("drawMirror"), S.mirror, (v) => D.set("mirror", v)))];
+        check(t("drawMirror"), !!V.mirror, (v) => D.set("mirror", v)))];
+    kids.push(h("div", { class: "help" }, cur ? t("drawSel", S.sel + 1) : t("drawBrush")));
     if (S.on) kids.push(h("div", { class: "help" }, t("drawHelp")));
     if (S.move) kids.push(h("div", { class: "help" }, t("drawMoveHelp")));
-    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1], ["taper", "drawTaper", 0, 1, 0.05]]) {   // the brush for the next lock
+    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1], ["taper", "drawTaper", 0, 1, 0.05], ["curl", "drawCurl", 0, 0.06, 0.002], ["turns", "drawTurns", 0.5, 8, 0.25], ["twist", "drawTwist", -12.6, 12.6, 0.1]]) {   // the brush for the next lock, or the chosen lock's own
+      if (k === "turns" && !V.curl) continue;
       const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
       rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
       rng.addEventListener("change", () => D.set(k, +rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) D.set(k, +num.value); });
       kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
-    if (list.length) kids.push(h("div", { class: "chips" }, list.map((_, i) => h("button", { class: "chip", type: "button", title: t("drawDel"), onclick: () => D.remove(i) }, `${t("drawLock", i + 1)} ×`)),
+    if (list.length) kids.push(h("div", { class: "chips" }, list.flatMap((_, i) => [h("button", { class: "chip", type: "button", "aria-pressed": String(S.sel === i), onclick: () => D.select(i) }, t("drawLock", i + 1)), h("button", { class: "chip", type: "button", title: t("drawDel"), "aria-label": `${t("drawDel")}: ${t("drawLock", i + 1)}`, onclick: () => D.remove(i) }, "×")]),
       h("button", { class: "btn small ghost", type: "button", onclick: () => { if (confirm(t("drawClear") + "?")) D.clear(); } }, t("drawClear"))));
     return h("div", { class: "sec" }, kids);
   }

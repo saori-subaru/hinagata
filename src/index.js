@@ -20,7 +20,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
+import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, coiled, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
 import { tailSpec } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -791,7 +791,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         for (const [key, col] of [["tailTie", TL.tie.color], ["tailLeaf", TL.tie.leaf ?? "#7fbf62"]]) { const list = geos.filter(([, c]) => c === col).map(([q]) => q); if (!list.length || (key === "tailLeaf" && col === TL.tie.color)) continue;
           out[key] = skinned(merged(list), col, 0.003); out[key].sim = { update() {}, rest() {} }; } }
     }
-    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, floor: true, stiff: 1, damping: 0.86 });   // floor: blown, a sidelock along the cheek went into the face and the ear (no head among its colliders)
+    if (drawnOn) out.drawn = part(drawnLocks(OPT.hair.drawn, { toRoot: (x, y, z) => HTr.fromHead(x, y, z), center: c, rigid: OPT.hair.rigid ?? 0, W: WHORL ? { d: whorlOf().whorl.d, surf: bangKit().surf, center: bangKit().center, rootW: WHORL.rootW } : null }), { coll: lockColliders(Jr, BI, bodySdfR), ell: null, floor: true, stiff: 1, damping: 0.86, ...(coiled(OPT.hair.drawn) ? { rigid: 1 } : {}) });   // floor: blown, a sidelock along the cheek went into the face and the ear (no head among its colliders)
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
