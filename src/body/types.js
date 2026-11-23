@@ -42,10 +42,13 @@ const ADULT = {
 // legShape: the tall types' knees and calves at 1; the chibi's short legs at 0 (CHIBI_LEGS below).
 // hand.slim: the chibi's round hand (0); the others' slender one (null: 1)
 const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.1, footX: 0.09, kneeX: 0.08 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1, hand: { slim: null } } };
-const plain = (b, legShape = 1, slim = null) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape, hand: { slim } }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
+const plain = (b, legShape = 1, slim = null, waist = TALL_WAIST) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape, hand: { slim }, waist }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
 // the chibi types keep the legs they had before the hips were narrowed for legs that close in (that was for the tall ones): the hips' and
 // the thigh tops' widths, the joints apart, no legShape. Narrowed, a chibi's torso was a barrel with no hips, its short legs close together
 const CHIBI_LEGS = { standard: [0.85, 0.73], toddler: [1, 0.9], girl: [0.92, 0.73], sturdy: [0.95, 1.05] };   // [torso.hips, thickness.thighTop]
+// and the waist's cut as it was before the short one at the true waist (made for the tall ones): long, from under the chest. With the short
+// cut a chibi's ribs stood a centimetre wider a side over a pinch: a swollen chest
+const CHIBI_WAIST = { y: 0.6, height: 0.16, width: 0.08, x: 0.235, blend: 0.08 }, TALL_WAIST = { y: 0.555, height: 0.07, width: 0.09, x: 0.225, blend: 0.04 };
 const chibi = (k, b) => ({ ...CHIBI, ...b, torso: { ...b.torso, hips: CHIBI_LEGS[k][0] }, thickness: { ...b.thickness, thighTop: CHIBI_LEGS[k][1] }, joints: { ...PLAIN.joints, hipX: 0.11, footX: 0.116, kneeX: 0.108 } });
-export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain(chibi(k, b), 0, 0) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
+export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain(chibi(k, b), 0, 0, CHIBI_WAIST) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
   ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));
