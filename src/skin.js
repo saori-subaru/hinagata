@@ -32,3 +32,31 @@ export function joinRecords(a, b) {
   const cat = (x, y) => { const o = new x.constructor(x.length + y.length); o.set(x); o.set(y, x.length); return o; }, n = a.pos.length / 3;
   return { ...a, pos: cat(a.pos, b.pos), nor: cat(a.nor, b.nor), si: cat(a.si, b.si), sw: cat(a.sw, b.sw), idx: cat(a.idx, Uint32Array.from(b.idx, (v) => v + n)) };
 }
+
+// A one-sided sheet's edge has each point twice, the second with its normal out, and between them facets of no area (the outline's rim:
+// sdf/sheet.js). To thin the edge too, the facets are taken off, the sheet thinned, and facets made again along the edge that is left.
+/** src: the sheet's triangles, flat: the facets' → { twin: per vertex its second (-1: none), rev: the facets run against the sheet's
+ *  triangles along the edge, bare: edge points with no second }, or null when the facets are not of that kind */
+export function edgeTwins(pos, src, flat) {
+  const n = pos.length / 3, used = new Uint8Array(n), twin = new Int32Array(n).fill(-1); for (const v of src) used[v] = 1;
+  const same = (a, b) => pos[a * 3] === pos[b * 3] && pos[a * 3 + 1] === pos[b * 3 + 1] && pos[a * 3 + 2] === pos[b * 3 + 2];
+  const dir = new Set(); for (let t = 0; t < src.length; t += 3) for (let k = 0; k < 3; k++) dir.add(src[t + k] * n + src[t + (k + 1) % 3]);
+  let along = 0, against = 0;
+  for (let t = 0; t < flat.length; t += 3) for (let k = 0; k < 3; k++) { const a = flat[t + k], b = flat[t + (k + 1) % 3];
+    if (same(a, b)) { if (used[a] && !used[b]) twin[a] = b; else if (used[b] && !used[a]) twin[b] = a; else if (used[a] && used[b]) return null; }
+    else if (used[a] && used[b]) { if (dir.has(a * n + b)) along++; else if (dir.has(b * n + a)) against++; } }
+  if (!along && !against) return null;
+  const bare = []; for (const [a, b] of openEdges(src, n)) { if (twin[a] < 0) bare.push(a); if (twin[b] < 0) bare.push(b); }
+  return { twin, rev: against >= along, bare };
+}
+/** the edges only one triangle has, as that triangle runs them: [a, b] */
+function openEdges(idx, n) {
+  const c = new Map(); for (let t = 0; t < idx.length; t += 3) for (let k = 0; k < 3; k++) { const a = idx[t + k], b = idx[t + (k + 1) % 3], key = a < b ? a * n + b : b * n + a, e = c.get(key); if (e) e[2]++; else c.set(key, [a, b, 1]); }
+  return [...c.values()].filter((e) => e[2] === 1);
+}
+/** the facets along the thinned sheet's edge (corner indices) */
+export function edgeFacets(idx, pos, { twin, rev }) {
+  const out = []; for (const [a, b] of openEdges(idx, pos.length / 3)) { const A = twin[a], B = twin[b]; if (A < 0 || B < 0) continue;
+    if (rev) out.push(b, a, A, b, A, B); else out.push(a, b, B, a, B, A); }
+  return out;
+}

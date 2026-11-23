@@ -12,7 +12,7 @@ import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { seenVertices } from "./visible.js";
-import { outsideAir, outerVerts, subRecord, joinRecords } from "./skin.js";
+import { outsideAir, outerVerts, subRecord, joinRecords, edgeTwins, edgeFacets } from "./skin.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands, withPicture } from "./materials.js";
@@ -219,7 +219,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // the garment parts (src/garments) say how: "keep" (the hip strings, a few mm wide, came out in dashes thinned to 7 %, 2026-10-10),
     // "cloth" (the scarf, the collar, the headband's bow), or as the body
     const thin = partNamed(name)?.thin, trim = thin === "keep" ? 1 : thin === "cloth" ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
-    const share = over ? (thin === "keep" ? 1 : Math.min(1, over.share * (cloth || thin === "cloth" ? 2 : 1)))
+    const share = over ? Math.min(1, over.share * (cloth || thin ? 2 : 1))   // (a budget thins "keep" too, as cloth and at half the error: a jacket kept whole was most of a baked character)
       : trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
@@ -245,14 +245,23 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > S.bootHeight - 0.12 * pos[v * 3 + 2] - 0.008) lock[v] = 1; } }
     // a budget: triangles of no area set aside and put back, their corners kept (a sheet's edge has each point twice, the second with its
     // normal out: the facet its outline needs. meshoptimizer drops them, locked or not: the cape's opening lost its line)
-    let flat = null, src = idx;
+    // (a sheet's edge, each point twice: thinned with the sheet, and its facets made again along what is left of it: src/skin.js)
+    let flat = null, src = idx, hem = null;
     if (over) { lock ??= new Uint8Array(pos.length / 3); flat = []; const rest = [];
       for (let t = 0; t < idx.length; t += 3) { const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3, u = [0, 1, 2].map((k) => pos[b + k] - pos[a + k]), w = [0, 1, 2].map((k) => pos[c + k] - pos[a + k]);
-        if (Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) < 1e-9) { lock[idx[t]] = lock[idx[t + 1]] = lock[idx[t + 2]] = 1; flat.push(idx[t], idx[t + 1], idx[t + 2]); } else rest.push(idx[t], idx[t + 1], idx[t + 2]); }
-      src = Uint32Array.from(rest); if (src.length < 3) return rec; }
+        if (Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) < 1e-9) flat.push(idx[t], idx[t + 1], idx[t + 2]); else rest.push(idx[t], idx[t + 1], idx[t + 2]); }
+      src = Uint32Array.from(rest); if (src.length < 3) return rec;
+      hem = flat.length ? edgeTwins(pos, src, flat) : null; for (const v of hem ? hem.bare : flat) lock[v] = 1; if (hem) flat = null; }
     let kept = 0; if (lock) for (let i = 0; i < src.length; i += 3) if (lock[src[i]] && lock[src[i + 1]] && lock[src[i + 2]]) kept += 3;
     const target = Math.min(src.length, Math.max(3, kept + Math.floor((src.length - kept) * share / 3) * 3));
-    let [out] = MS.simplifyWithAttributes(src, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, over?.error ?? THIN_ERROR, over ? ["LockBorder", "ErrorAbsolute"] : []);   // (a budget: open edges kept; the error in metres: layers a few mm apart (the sole in the boot) thinned apart by a share of each mesh's size came through each other)
+    const NF = nor instanceof Float32Array ? nor : Float32Array.from(nor), flags = hem ? ["ErrorAbsolute"] : over ? ["LockBorder", "ErrorAbsolute"] : [], err = over ? over.error * (thin === "keep" ? 0.5 : 1) : THIN_ERROR;   // (a budget: open edges kept; the error in metres: layers a few mm apart (the sole in the boot) thinned apart by a share of each mesh's size came through each other)
+    let out;
+    if (hem) {   // without the edge's second points: at the same places as the first, meshoptimizer took the edge for a seam and kept it whole
+      const to = new Int32Array(pos.length / 3).fill(-1), back = []; for (const v of src) if (to[v] < 0) { to[v] = back.length; back.push(v); }
+      const P = new Float32Array(back.length * 3), Q = new Float32Array(back.length * 3), L = new Uint8Array(back.length); back.forEach((v, i) => { for (let k = 0; k < 3; k++) { P[i * 3 + k] = pos[v * 3 + k]; Q[i * 3 + k] = NF[v * 3 + k]; } L[i] = lock[v]; });
+      out = MS.simplifyWithAttributes(Uint32Array.from(src, (v) => to[v]), P, 3, Q, 3, [0.4, 0.4, 0.4], L, target, err, flags)[0].map((v) => back[v]);
+    } else [out] = MS.simplifyWithAttributes(src, pos, 3, NF, 3, [0.4, 0.4, 0.4], lock, target, err, flags);
+    if (hem) flat = edgeFacets(out, pos, hem);
     if (flat?.length) { const o = new Uint32Array(out.length + flat.length); o.set(out); o.set(flat, out.length); out = o; }
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
@@ -1331,12 +1340,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
      *  bake({ triangles: 8000, face?: true, error?: 0.006 (m: past 1 cm the sole came through the boot), 0.01 with hidden }) → Promise of the file thinned to about that many triangles over its meshes (the
      *  hidden: true drops first what never shows from all round in a set of poses (a sole inside a boot; such a baked character can't take
      *  clothes off: the body under them is gone). skin: 2500 makes the body and the close clothes one skin of that many triangles
-     *  (oneSkin below; skinError 0.02 m, ends 0.002 m for the head and the hands; the same loss of the clothes), and triangles is then the
-     *  budget of the rest (a skirt, a cape). The hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
+     *  (oneSkin below; skinError 0.02 m, ends 0.002 m for the head and the hands, face 0.003 m for the face's front; the same loss of the clothes), and triangles is then the
+     *  budget of the rest (a skirt, a cape). rest: 0.3 (restError 0.004 m) has the loader thin what the file
+     *  doesn't hold (the hair's locks, the accessories) to that share. The hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
     bake(thin) {
       let parts = { ...(hit ?? {}), ...built };
-      if (!thin?.triangles && !thin?.hidden && !thin?.skin) return encodeBake({ key: cacheKey, parts });
+      if (!thin?.triangles && !thin?.hidden && !thin?.skin && !thin?.rest) return encodeBake({ key: cacheKey, parts });
       return (async () => {
+        if (thin.rest) parts.rest = { share: thin.rest, error: thin.restError ?? 0.004 };   // (read at load: thinRest)
         const first = parts; let skin = [];
         if (thin.hidden) { parts = { ...parts, ...unseenDropped(parts) }; parts.cover = null; }   // (the body's cover bits are per vertex: recomputed at load)
         if (thin.skin) { MS ??= await loadMS(); const r = oneSkin(parts, thin); parts = { ...parts, ...r.recs }; parts.cover = null; skin = r.names;
@@ -1397,7 +1408,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function oneSkin(recs, thin) {
     const S = ["body", ...CLOTHES].filter((k) => recs[k]?.idx?.length >= 3 && parts[k]?.m?.visible && !LATER.has(k))
       .map((k) => ({ k, ...partSpec(k, { OPT, H, clothH, sheetK, one: ONE, kit, bodyAt }) })).filter((s) => !s.make && s.h >= H * 0.55 && s.hi[0] - s.lo[0] > 0.02);
-    const lo = [0, 1, 2].map((a) => Math.min(...S.map((s) => s.lo[a]))), hi = [0, 1, 2].map((a) => Math.max(...S.map((s) => s.hi[a])));
+    const lo = [0, 1, 2].map((a) => Math.min(...S.map((s) => s.lo[a])) - 2 * H), hi = [0, 1, 2].map((a) => Math.max(...S.map((s) => s.hi[a])));   // (two cells more below: the mesher makes no faces in a box's first layer, and the soles' bottom fell there)
     const inb = (s, x, y, z) => x >= s.lo[0] && x <= s.hi[0] && y >= s.lo[1] && y <= s.hi[1] && z >= s.lo[2] && z <= s.hi[2];
     for (const s of S) s.quick = s.k === "body" ? bodyAt : s.fast ?? s.sdf;
     const union = (f) => (x, y, z) => { let d = 1; for (const s of S) if (inb(s, x, y, z)) { const v = s[f](x, y, z); if (v < d) d = v; } return d; }, sdf = union("sdf");
@@ -1428,12 +1439,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // the bones by the part's rule; a point between parts by the first one's for all its copies (each by its own, the seam would part moving)
     S.forEach((s, q) => { const cs = []; for (let c = 0; c < m; c++) if (Math.min(...mine[from[c]]) === q) cs.push(c); const sub = new Float32Array(cs.length * 3); cs.forEach((c, i) => { for (let a = 0; a < 3; a++) sub[i * 3 + a] = P2[c * 3 + a]; });
       const r = skinOf(sub, weightsAt, BI, s.bone1, s.only, s.soft); cs.forEach((c, i) => { for (let a = 0; a < 4; a++) { si[c * 4 + a] = r.si[i * 4 + a]; sw[c * 4 + a] = r.sw[i * 4 + a]; } }); });
-    const [out] = MS.simplifyWithAttributes(I2, P2, 3, N2, 3, [0.4, 0.4, 0.4], null, Math.max(3, (thin.skin === true ? 2500 : thin.skin) * 3), thin.skinError ?? 0.02, ["LockBorder", "ErrorAbsolute"]);
+    const [out] = MS.simplifyWithAttributes(I2, P2, 3, N2, 3, [0.4, 0.4, 0.4], null, Math.min(I2.length, Math.max(3, (thin.skin === true ? 2500 : thin.skin) * 3)), thin.skinError ?? 0.02, ["LockBorder", "ErrorAbsolute"]);
     const tris = S.map(() => []); for (const c of out) tris[lab[c]].push(c);
     const whole = { pos: P2, nor: N2, si, sw }, o = {}, over = { share: 0, error: thin.ends ?? 0.002, face: false };
     S.forEach((s, q) => { let r = subRecord(whole, tris[q]);
       if (s.k === "body") { const R = recs.body, I = R.idx, e = []; for (let t = 0; t < I.length; t += 3) if (end(R.pos, I[t]) || end(R.pos, I[t + 1]) || end(R.pos, I[t + 2])) e.push(I[t], I[t + 1], I[t + 2]);
-        let E = subRecord(R, e); if (over.error > 0) E = simplified(E, "ends", over); r = joinRecords(r, E); }
+        // (the face's front apart, finer: thin.face, metres. The face's layers are cut from its triangles, and from big ones an eye lost a corner)
+        const hy = J.head[1] - 0.06, fr = (v) => R.pos[v * 3 + 1] > hy && R.pos[v * 3 + 2] > 0.02 && Math.abs(R.pos[v * 3]) < 0.22, ef = [], eo = [];
+        for (let t = 0; t < e.length; t += 3) (fr(e[t]) && fr(e[t + 1]) && fr(e[t + 2]) ? ef : eo).push(e[t], e[t + 1], e[t + 2]);
+        for (const [tr, err] of [[ef, thin.face ?? 0.003], [eo, over.error]]) { if (tr.length < 3) continue; let E = subRecord(R, tr); if (err > 0) E = simplified(E, "ends", { ...over, error: err }); r = joinRecords(r, E); } }
       if (s.bells) { const m = sheetsMesh(s.bells.sheets, null, null, s.bells.h, s.bells.one), mp = Float32Array.from(m.pos);
         r = joinRecords(r, simplified({ pos: mp, nor: Float32Array.from(m.nor), idx: Uint32Array.from(m.idx), ...skinOf(mp, weightsAt, BI, s.bone1, s.only, s.soft) }, "sheet", { share: thin.sheets ?? 0.5, error: thin.error ?? 0.01 })); }
       o[s.k] = r; });
@@ -1443,5 +1457,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
   building = false; Object.assign(built, fresh);
   if (useCache && Object.keys(fresh).length) cachePut(cacheKey, fresh);   // not awaited: storing happens after the avatar is already on screen
+  // a bake's rest (bake({ rest: share })): what the file doesn't hold (the hair's locks, the accessories, the mouth's inside) is thinned
+  // here as loaded, to that share of its triangles or as far as the error (metres) lets. Only the triangles change: the points stay
+  if (bakeHit && hit.rest) { MS ??= await loadMS(); const held = new Set(Object.keys(hit).map((k) => parts[k.startsWith("hair:") ? "hair" : k]?.m?.geometry)), done = new Set();
+    for (const k of [...LOCK_PARTS, "extraTail"]) parts[k]?.sim?.rest();   // (the locks' points are written by their motion: as they hang at rest)
+    root.updateMatrixWorld(true);
+    root.traverse((o) => { const g = o.geometry, P = g?.attributes?.position; if (!o.isMesh || !g.index || held.has(g) || done.has(g) || g.index.count < 180 || g.groups.length || !(P.array instanceof Float32Array) || P.isInterleavedBufferAttribute) return; done.add(g);
+      // (a shape made face by face has each corner once per triangle: the same point with the same normal counts as one, or nothing folds)
+      const Nn = g.attributes.normal?.array, one = new Map(), I = Uint32Array.from(g.index.array, (v) => { const key = `${P.array[v * 3]},${P.array[v * 3 + 1]},${P.array[v * 3 + 2]},${Nn ? Math.round(Nn[v * 3] * 50) + "," + Math.round(Nn[v * 3 + 1] * 50) + "," + Math.round(Nn[v * 3 + 2] * 50) : ""}`; let w = one.get(key); if (w == null) one.set(key, w = v); return w; });
+      const k = o.isSkinnedMesh ? 1 : o.matrixWorld.getMaxScaleOnAxis() || 1, lock = !!g.attributes.hairUV;   // (a lock of hair: half at most and finer. A flat lock over an eye folded away whole)
+      const [out] = MS.simplify(I, P.array, 3, Math.max(3, Math.floor(I.length / 3 * (lock ? Math.max(0.5, hit.rest.share) : hit.rest.share)) * 3), hit.rest.error * (lock ? 0.4 : 1) / k, ["ErrorAbsolute"]);
+      g.setIndex(new THREE.BufferAttribute(out, 1)); }); }
   return avatar;
 }
