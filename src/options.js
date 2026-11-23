@@ -542,6 +542,7 @@ export const DEFAULTS = {
       "hem": 0.16,
       "flare": 0.3,
       "wrap": 0.05,
+      "shape": [],
       "collar": 0.78,
       "thick": 0.018,
       "sway": 1,

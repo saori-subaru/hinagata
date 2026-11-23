@@ -289,6 +289,7 @@ const QUICK = ["idle", "walk", "run", "wave", "cheer", "guard", "aPose", "tPose"
 const MOTION_GROUPS = [
   ["demo", null],
   ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
+  ["stand", ["standSylvie", "standAstel", "standSubaru"]],
   ["sit", ["sitChair", "sitChairGirl", "sitFloor", "hugKnees", "sleep"]],
   ["jump", ["jumpCrouch", "jumpRise", "jumpLeap", "jumpAir", "jumpLand", "fall", "hardLand", "stumble", "roll", "knockdown"]],
   ["climb", ["climb", "mantleReach", "mantlePull", "mantleKnee", "climbOver", "vault", "hang", "shimmy", "glide", "balance", "balanceWalk", "slide"]],
@@ -345,7 +346,7 @@ function renderLibrary() {
   // プリセット（src/presets.js）：押すと、そのキャラの写しが一覧に増える
   const L = (x) => x[getLang()] ?? x.ja;
   $("libPresets").replaceChildren(h("div", { class: "lib-presets-h" }, t("fromPreset")), ...Object.values(CHARACTERS).map((p) => h("button", { class: "chip", type: "button", title: L(p.about),
-    onclick: () => { store.commit(); persist(); const s = recipeIn(p.file); switchTo(addChar(lib, L(p.name), s.recipe)); } }, `${L(p.name)}（${L(p.about)}）`)));
+    onclick: () => { store.commit(); persist(); if (p.stand) pickMotion(p.stand); const s = recipeIn(p.file); switchTo(addChar(lib, L(p.name), s.recipe)); } }, `${L(p.name)}（${L(p.about)}）`)));
 }
 const drawer = (on) => { $("drawer").hidden = $("scrim").hidden = !on; if (on) { renderLibrary(); $("libClose").focus(); } else $("libBtn").focus(); };
 $("libBtn").addEventListener("click", () => drawer(true));

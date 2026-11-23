@@ -1139,7 +1139,7 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - `shoes.straps` / `strapColor` / `strapAt` / `strapWidth` / `strapGap`: boots' straps, bands 2.5 mm out under the top (strapRanges).
 - `texture.mode: "hem"` (「すそに沿って」): around the body, up from the garment's own hem (texH, as built), a whole number of repeats round it (no seam at the back): a border along a slanted or shaped hem.
 - Accessories `cross` (an X), `tassel` and `tab` (hanging from where they are put), `buckle`, `cord` (a rod across, `size` long). シルヴィ's prints are PNG data URLs in presets.js; their offsets, as the accessories', are in the built space.
-- The sheet's head, ears, hair and face are the preset `sylvie2` (シルヴィ v2, presets.js: `sylvie`'s options with those four replaced); `sylvie` stays as first made. "Her" below is v2 for those parts.
+- The sheet's head, ears, hair and face are the preset `sylvie` (シルヴィ, presets.js: the first one's options with those four replaced); the first one stays as `sylvieOld` (シルヴィ(旧)).
 - Her face: eyes `tall`, brows `thin`, mouth `small` (face/index.js). The `tall` eye's highlight stays on the same side of both eyes (read from the canvas's flip), so don't mirror it. A character with its own eyes needs `face.expressions`: without it `setFace("sad")` swaps in the stock round eyes and brows.
 - `face.lashHatch`: the tall eyes' lashes (tall, tallClosed, tallHappy) a pale opaque fill (half see-through, the iris showed through) with short strokes along the lash's curve and a thin edge (lashFill in face/index.js). `face.openSize` scales the open mouth openSoft.
 - `face.blush.cheeks.hatch`: thin upright strokes over the cheek blush, each broken in 2–3 pieces (a pencil drawing's cheeks), drawn in drawBlush; 0 = none.

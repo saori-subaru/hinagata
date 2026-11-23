@@ -12,7 +12,8 @@
 <script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
 <script type="module">
 // Shots of a preset from given sides, in a row (for fitting a character to its design sheet: shoot, compare, change, shoot again).
-// Run: node tools/shot.mjs subaru [--views 0,90,180] [--y 0,0.5] [--w 0.3] [--x 0] [--px 900] [--pose idle|aPose|walk…] [--quality fine] [--patch '{"outfit":{…}}'] [--name boots]
+// Run: node tools/shot.mjs subaru [--views 0,90,180] [--y 0,0.5] [--w 0.3] [--x 0] [--px 900] [--pose idle|aPose|walk…] [--quality fine] [--patch '{"outfit":{…}}'] [--name boots] [--lean 1]
+//   lean: lines at the head's middle (red) and the ankles' (blue); the table gives the lean in mm (+ = forward; a stance stands upright near 0)
 //   views: degrees round the figure (0 front, 90 her left side, 180 back, -90 her right), y: the heights shown (m), w: half the width shown (m),
 //   x: the middle of the picture sideways in the view (m), patch: options merged over the preset's (to try a value without editing presets.js)
 import * as THREE from "three";
@@ -34,8 +35,14 @@ try {
   const views = nums("views", "0,90,180"), sheet = document.createElement("canvas"); sheet.width = W * views.length; sheet.height = H; const g = sheet.getContext("2d");
   views.forEach((deg, i) => { const a = deg * Math.PI / 180, cam = new THREE.OrthographicCamera(-hw, hw, half, -half, 0.01, 20), r = [Math.cos(a), 0, -Math.sin(a)];   // r: the picture's right
     cam.position.set(Math.sin(a) * 4 + r[0] * cx, cy, Math.cos(a) * 4 + r[2] * cx); cam.lookAt(r[0] * cx, cy, r[2] * cx); av.update(0, { camera: cam }); renderer.render(scene, cam); g.drawImage(renderer.domElement, i * W, 0); });
+  // lean (mm, + = forward): the head's middle against the ankles' middle, front to back (she faces +z). Upright reads about 0
+  const P = (k, v = new THREE.Vector3()) => av.bones[k].getWorldPosition(v), hq = av.bones.head.getWorldQuaternion(new THREE.Quaternion());
+  const headMid = P("head").add(new THREE.Vector3(0, (box.max.y - P("head").y) * 0.45, 0).applyQuaternion(hq)), ankles = P("foot.L").add(P("foot.R")).multiplyScalar(0.5);
+  const lean = Math.round((headMid.z - ankles.z) * 1000);
+  if (Q.get("lean")) views.forEach((deg, i) => { const a = deg * Math.PI / 180, r = [Math.cos(a), 0, -Math.sin(a)], X = (p) => i * W + W / 2 + (p.x * r[0] + p.z * r[2] - cx) / hw * W / 2, Y = (p) => H / 2 - (p.y - cy) / half * H / 2;
+    g.lineWidth = 2; for (const [p, c] of [[headMid, "#e0306a"], [ankles, "#2a7de0"]]) { g.strokeStyle = c; g.beginPath(); g.moveTo(X(p), 0); g.lineTo(X(p), H); g.stroke(); g.fillStyle = c; g.beginPath(); g.arc(X(p), Y(p), 5, 0, 7); g.fill(); } });
   const png = sheet.toDataURL("image/png"); document.getElementById("sheet").src = png; document.getElementById("state").textContent = "done";
-  window.RESULT = { ok: true, png, sheetName: Q.get("name") || name, table: `${name}: views ${views.join(", ")}  y ${y0.toFixed(3)}–${y1.toFixed(3)}  ${W}×${H} each`, box: { min: box.min.toArray(), max: box.max.toArray() } };
+  window.RESULT = { ok: true, png, sheetName: Q.get("name") || name, table: `${name}: views ${views.join(", ")}  y ${y0.toFixed(3)}–${y1.toFixed(3)}  ${W}×${H} each  lean ${lean} mm`, box: { min: box.min.toArray(), max: box.max.toArray() } };
 } catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; }
 </script>
 </body>
