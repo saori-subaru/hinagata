@@ -540,6 +540,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
+  // its own normals smoothed (twice SOFT_R: a long cloth): it moves as cloth, so it can't take a shadeN, and the mesh's bumps stained its shading in blotches
+  if (CA.on) { const g = parts.cape.m.geometry, it = Math.round((2 * SOFT_R * OPT.shading.soften / H) ** 2); if (it > 0) g.attributes.normal.array.set(smoothNormals(g.attributes.normal.array, g.index.array, it)); }
   if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)

@@ -440,22 +440,23 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const capeBody = COWL ? (x, y, z) => smin(bodySdf(x, y, z), cowlCol(x, y, z), 0.02) : bodySdf;
     // the cape's outside before its cuts (S): the cone, and the body pushed out
     // over a skirt the cone's own flare is raised as far as needed to clear it all the way down down to its hem (a straight line from the shoulders): only
-    // the skirt's line under it, the cape bent out where the skirt began and flared on below its hem (a kink halfway down, worst at a small flare)
+    // the skirt's line under it (2 cm over it: level with it, the two blended into a crease), the cape bent out where the skirt began and flared on below its hem (a kink halfway down, worst at a small flare)
     const [FX, FZ] = (() => { let fx = CA.flare, fz = CA.flare; if (!sk) return [fx, fz];
-      for (let y = SK_Y0; y > Math.max(CA.hem, SK.hem - 0.02); y -= 0.01) { const d = CAPE_Y - y, q = sk(y); if (d > 0.05) { fx = Math.max(fx, (q[0] - ax0) / (0.6 * d)); fz = Math.max(fz, (q[1] - az0) / d); } } return [fx, fz]; })();
-    const radii = (y) => { const drop = Math.max(0, CAPE_Y - y), s = !sk ? null : y > SK.hem ? sk(y) : (() => { const h = sk(SK.hem), d = SK.hem - y; return [h[0] + FX * 0.6 * d, h[1] + FZ * d]; })(),   // under the skirt's hem: its hem's size, widening as the cone does (cut off there, the step creased the cloth)
+      for (let y = SK_Y0; y > Math.max(CA.hem, SK.hem - 0.02); y -= 0.01) { const d = CAPE_Y - y, q = sk(y); if (d > 0.05) { fx = Math.max(fx, (q[0] + 0.02 - ax0) / (0.6 * d)); fz = Math.max(fz, (q[1] + 0.02 - az0) / d); } } return [fx, fz]; })();
+    // the flare eases in over the first 8 cm under the shoulders: starting at full slope, the cone's top stood off the body as a ledge (black shards of the outline across the back)
+    const radii = (y) => { const d0 = Math.max(0, CAPE_Y - y), drop = d0 < 0.08 ? d0 * d0 / 0.16 : d0 - 0.04, s = !sk ? null : y > SK.hem ? sk(y) : (() => { const h = sk(SK.hem), d = SK.hem - y; return [h[0] + FX * 0.6 * d, h[1] + FZ * d]; })(),   // under the skirt's hem: its hem's size, widening as the cone does (cut off there, the step creased the cloth)
       ax1 = ax0 + FX * 0.6 * drop, ax0_ = CLOSED ? smax(ax1, armX(y), 0.03) : ax1, az0_ = az0 + FZ * drop;
       return [s ? smax(ax0_, s[0]) : ax0_, s ? smax(az0_, s[1]) : az0_]; };
     // cape.shape's push at a point (fd, m) and where the point was before it (zb): the hem's height is the unpushed cloth's (with tilt, a
     // hem rising behind went up as far as the cloth was pushed back, and cut off most of it). Full at the hem, straight from the shoulders
     const pushAt = (x, y, z) => { if (!SHP.length) return { fd: 0, zb: z }; const az = radii(y)[1], drop = Math.max(0, CAPE_Y - y); let fd = 0, zb = z;
-      for (let i = 0; i < 3; i++) { zb = z * az / Math.max(0.05, az + fd); const S = shapeAt(x, zb), u = Math.min(1, drop / Math.max(0.1, CAPE_Y - hemY(zb, x))); fd = S.out * sstep(S.from, 1, u); } return { fd, zb }; };   // from: where down the cape (0 shoulders, 1 hem) the fold begins, rising smoothly (a steep start creased the cloth: black shards of its outline)
+      for (let i = 0; i < 3; i++) { zb = z * az / Math.max(0.05, az + fd); const S = shapeAt(x, zb), u = Math.min(1, drop / Math.max(0.1, CAPE_Y - hemY(zb, x))); fd = S.out * sstep(Math.max(S.from, 0.15), 1, u); } return { fd, zb }; };   // from: where down the cape (0 shoulders, 1 hem) the fold begins, rising smoothly, and not over the top 15 % where the cloth lies on the body (a steep start, or one up there, creased the cloth: black shards of its outline)
     const outside = (x, y, z, B = bodySdf, col = true) => {
       const [ax, az] = radii(y), fd = pushAt(x, y, z).fd;
       const q = Math.hypot(x / (ax + fd * 0.6), z / (az + fd)), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
       const m0 = OVER_BODY ? torso(x, y, z) - off : CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);   // (over the body: not round the arms, which stand out of its sides in the rest pose)
       const mantle = COWL && col ? smin(m0, cowlCol(x, y, z) - off, 0.02) : m0;
-      return smin(cone, mantle, k); };
+      return smin(cone, mantle, 0.08); };   // (8 cm: where the cone came out of the body pushed out, a 2 cm blend left a crease across the back, black shards of the outline)
     // cape.neckOpen (シルヴィ): the neckline cut low and wide (the clothes' shoulders show inside it): level round the body, a little
     // higher behind, neckOpen out from the neck at its sides; closed, it dips in front to the closure's ends (XF, at cape.close).
     // null: the collar round the neck (with a hood: 0.07). Its cut goes across the cloth, not level: level, the thick shell lying nearly
