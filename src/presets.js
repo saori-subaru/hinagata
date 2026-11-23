@@ -37,6 +37,7 @@ const SUBARU_MOUTH_FROWN = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAA
 // the jacket's gloss and shadows, drawn (outfit.jacket.picture). A file, not a data URL: a link (?o=) carries only its address.
 // Painted by Gemini on the jacket's template in the sheet's style, fitted back with tools/picture-fit.py: ⛔ make it again when the jacket's shape options change
 const SUBARU_JACKET = new URL("../img/presets/subaru_jacket.png", import.meta.url).href;
+const SUBARU_SHIRT = new URL("../img/presets/subaru_shirt.png", import.meta.url).href, SUBARU_PANTS = new URL("../img/presets/subaru_pants.png", import.meta.url).href;   // (the same way: the shading under her turtleneck, her trousers folds)
 export const CHARACTERS = {
   sylvie: {
     name: { ja: "シルヴィ", en: "Sylvie" },
@@ -315,8 +316,8 @@ export const CHARACTERS = {
         },
       },
       outfit: {
-        shirt: { color: "#2c2b30", sleeve: "none", armhole: 0.01, collar: { y: 0.83 }, length: "crop", crop: 0.5 },   // the turtleneck: up the neck, bare shoulders
-        pants: { color: "#4b5053", length: "long", top: 0.49, offset: 0.007 },
+        shirt: { color: "#2c2b30", sleeve: "none", armhole: 0.01, collar: { y: 0.83 }, length: "crop", crop: 0.5, picture: { src: SUBARU_SHIRT } },   // the turtleneck: up the neck, bare shoulders
+        pants: { color: "#4b5053", length: "long", top: 0.49, offset: 0.007, picture: { src: SUBARU_PANTS } },
         socks: { on: false },
         // engineer boots: a straight shaft with the heel in line with its back, a narrow foot, a blunt toe a little lower at its tip, the sole notched before the heel (a round last under a leg-shaped shaft read as rain boots)
         shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, archCut: 0.021, archSlant: 2.6, width: 0.72, shaft: 0.85, toeLow: 0.12 },

@@ -486,6 +486,7 @@ export const DEFAULTS = {
         "opacity": 1,
         "blend": "over"
       },
+      "picture": { "src": null, "opacity": 1, "blend": "over" },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -622,6 +623,7 @@ export const DEFAULTS = {
         "opacity": 1,
         "blend": "over"
       },
+      "picture": { "src": null, "opacity": 1, "blend": "over" },
       "gradient": {
         "on": false,
         "color": "#ffffff",

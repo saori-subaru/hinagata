@@ -1,11 +1,11 @@
-// The template of a garment part's drawn picture (materials.js withPicture; a part with `picture`: the jacket): the part alone in the
+// The template of a garment part's drawn picture (materials.js withPicture; garments/registry.js pictureParts: the jacket, the shirt, the pants): the part alone in the
 // frame the picture is read in. Left column: from the front (above) and from the back (below). Right column, when the part has side views:
 // what they cover (the jacket's sleeves: each seen square on from outside, the shoulder above, her front to the left for her left sleeve
 // and to the right for her right one), her left (above) and her right (below).
 // Drawn from the base positions (not the pose, not the body's stretch), so what is drawn at a pixel lands on the cloth shown at that pixel.
 // Draw on a layer over it and save that layer alone (clear where nothing is drawn): the template itself is not part of the picture.
 import * as THREE from "three";
-import { PARTS, partNamed } from "./garments/index.js";
+import { PARTS, pictureParts } from "./garments/index.js";
 
 // a side view shows only what the side views cover, on the near side (uSide: 0 = everything, 1 / -1 = the +x / -x side)
 const sided = (m, U, more = "") => { m.onBeforeCompile = (sh) => { sh.uniforms.uSide = U;
@@ -20,9 +20,9 @@ export const PICTURE_PX = 1000;   // the template's pixels per metre (a picture 
  *  not what goes with it), g (its geometry at the base positions, with picS) }], camera(s) (s 1: from the front, -1: from the back),
  *  sideCamera(s) (1: the +x side's view, her left; -1: the -x side's), dispose() }. For the template, and for a tool that reads the shape. */
 export function pictureView(avatar, part, { px = PICTURE_PX } = {}) {
-  const P = partNamed(part); if (!P?.picture) throw new Error(`"${part}" takes no drawn picture. Available: ${PARTS.filter((p) => p.picture).map((p) => p.name).join(", ")}`);
+  const P = pictureParts().find((p) => p.name === part); if (!P) throw new Error(`"${part}" takes no drawn picture. Available: ${pictureParts().map((p) => p.name).join(", ")}`);
   const [X, y0, y1, Z = 0] = P.picture.frame, items = [], side = avatar.internals.picSide(part);
-  for (const p of PARTS) { const src = avatar.parts[p.name]?.m.geometry; if (p.group !== P.group || !src?.index || !src.attributes.position?.count) continue;
+  for (const p of [P, ...PARTS.filter((q) => q !== P && q.group === P.group)]) { const src = avatar.parts[p.name]?.m.geometry; if (!src?.index || !src.attributes.position?.count) continue;
     const g = new THREE.BufferGeometry(), n = src.attributes.position.count; g.setAttribute("position", new THREE.BufferAttribute(src.userData.basePos ?? src.attributes.position.array, 3)); g.setAttribute("normal", src.attributes.normal); g.setIndex(src.index);
     g.setAttribute("picS", new THREE.BufferAttribute(p === P ? side.weight : new Float32Array(n), 1));
     items.push({ own: p === P, g }); }

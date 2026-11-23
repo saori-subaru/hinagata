@@ -1,5 +1,5 @@
 # A generated or scanned painting of a part's template (tools/picture.mjs) → the part's drawn picture (outfit.jacket.picture.src).
-#   python tools/picture-fit.py <painting> <template.png (clear round the part)> <out.png> [colors=64]
+#   python tools/picture-fit.py <painting> <template.png (clear round the part)> <out.png> [colors=64]   (0: all colors; soft shading in dark cloth bands into hard lines at 64)
 # The painting is fitted to the template's size; its outline and paper are left out (6 px in from the template's outline: stretched over the
 # sides they showed as dark streaks) and the inside's colors spread out to 5 px past it (the picture is read between pixels).
 import sys, os
@@ -18,5 +18,5 @@ for _ in range(16):
         s += np.roll(col * known[..., None], (dy, dx), (0, 1)); n += np.roll(known, (dy, dx), (0, 1))
     new = (~known) & (n > 0); col[new] = s[new] / n[new][:, None]; known = known | new
 im = Image.fromarray(np.dstack([col, np.where(dil & known, 255, 0)]).astype(np.uint8), "RGBA")
-im.quantize(colors, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(out, optimize=True)
+(im.quantize(colors, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE) if colors else im).save(out, optimize=True)
 print(out, os.path.getsize(out))

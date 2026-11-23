@@ -35,6 +35,14 @@ export function definePart(d) {
   PARTS.push(p); return p;
 }
 export const partNamed = (name) => PARTS.find((p) => p.name === name) ?? null;
+// the garments made outside definePart (clothes/index.js; their meshes are the parts of these names) that take a drawn picture too
+// ⛔ changing a frame moves every picture drawn so far. fade: no side views, so the picture fades to the plain color on the sides (materials.js)
+export const PICTURED = [
+  { name: "shirt", path: "outfit.shirt", group: "shirt", picture: { frame: [0.48, 0.38, 0.92, 0], fade: 0.3 } },
+  { name: "pants", path: "outfit.pants", group: "pants", picture: { frame: [0.24, 0, 0.62, 0], fade: 0.3 } },
+];
+/** every part that takes a drawn picture: definePart parts with `picture`, then PICTURED */
+export const pictureParts = () => [...PARTS.filter((p) => p.picture), ...PICTURED];
 export const getPath = (o, path) => path.split(".").reduce((a, k) => a?.[k], o);
 export const partOptions = (OPT, p) => getPath(OPT, p.path) ?? {};
 /** merge every part's defaults into the defaults (options.js, once) */

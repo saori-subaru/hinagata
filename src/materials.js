@@ -126,13 +126,14 @@ vec4 tSample() {
  *  made (it moves with the pose). Front and back blend where the surface turns sideways (U.soft: the normal's z over which they do); a side
  *  view takes over where the surface faces it and picS (per vertex, 0..1: the sleeves) says so, and only where it is drawn (left clear: front and back stay).
  *  The map is premultiplied (no dark fringe round strokes).
- *  U: { on, map, frame (vec4), opacity, blend (0 = over, 1 = multiply), soft } as shared uniforms. */
+ *  U.fade (> 0): the picture fades out where the normal's z is under it, to the plain color (the sides, where front and back views stretch).
+ *  U: { on, map, frame (vec4), opacity, blend (0 = over, 1 = multiply), soft, fade } as shared uniforms. */
 export function withPicture(m, U) {
   const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    Object.assign(sh.uniforms, { dOn: U.on, dMap: U.map, dFrame: U.frame, dAxes: U.axes, dOpacity: U.opacity, dBlend: U.blend, dSoft: U.soft });
+    Object.assign(sh.uniforms, { dOn: U.on, dMap: U.map, dFrame: U.frame, dAxes: U.axes, dOpacity: U.opacity, dBlend: U.blend, dSoft: U.soft, dFade: U.fade });
     sh.vertexShader = "attribute vec3 picP;\nattribute vec3 picN;\nattribute float picS;\nvarying vec3 vPicP;\nvarying vec3 vPicN;\nvarying float vPicS;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPicP = picP; vPicN = picN; vPicS = picS;");
-    sh.fragmentShader = `uniform float dOn, dOpacity, dBlend, dSoft;
+    sh.fragmentShader = `uniform float dOn, dOpacity, dBlend, dSoft, dFade;
 uniform vec4 dFrame;
 uniform vec4 dAxes[2];
 uniform sampler2D dMap;
@@ -146,7 +147,7 @@ vec4 dLin(vec4 c) { return vec4(pow(c.rgb / max(c.a, 1e-4), vec3(2.2)) * c.a, c.
     vec4 dax = vPicP.x > 0.0 ? dAxes[0] : dAxes[1];
     vec4 dc = mix(dLin(texture2D(dMap, vec2((1.0 - q.x) * dfx, 0.5 * q.y))), dLin(texture2D(dMap, vec2(q.x * dfx, 0.5 + 0.5 * q.y))), smoothstep(-dSoft, dSoft, dn.z));
     vec4 ds = dLin(texture2D(dMap, vec2(dfx + clamp(0.5 - dsg * vPicP.z / (2.0 * max(dFrame.w, 1e-4)), 0.006, 0.994) * (1.0 - dfx), (dsd + clamp(1.0 - dot(vPicP.xy - dax.xy, dax.zw) / (dFrame.z - dFrame.y), 0.004, 0.996)) * 0.5)));
-    dc = mix(dc, ds, dFrame.w > 0.0 ? vPicS * ds.a * smoothstep(0.35, 0.65, dsg * dot(dn.xy, vec2(-dax.w, dax.z))) : 0.0) * dOpacity;
+    dc = mix(dc, ds, dFrame.w > 0.0 ? vPicS * ds.a * smoothstep(0.35, 0.65, dsg * dot(dn.xy, vec2(-dax.w, dax.z))) : 0.0) * dOpacity * (dFade > 0.0 ? smoothstep(0.4 * dFade, dFade, abs(dn.z)) : 1.0);
     diffuseColor.rgb = dBlend > 0.5 ? diffuseColor.rgb * (1.0 - dc.a) + diffuseColor.rgb * dc.rgb : diffuseColor.rgb * (1.0 - dc.a) + dc.rgb; }`); };
   m.customProgramCacheKey = () => "pic|" + key;
   return m;
