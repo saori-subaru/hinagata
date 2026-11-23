@@ -524,7 +524,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         const g = -0.005 + 0.016 * (1 - sstep(Math.min(1.75, END - 0.25), Math.min(2, END), th)) * sstep(NK.ra - 0.002, NK.ra + 0.008, rN);   // (sunk 5 mm: nothing left)
         const r = neck.ray(x, z), inside = r ? rN - r.t - 0.004 : 0;   // (past the rays it has sunk)
         return Math.max(B - g, -(B + 0.004), neck.at(x, z) - 0.008 - y, y - neck.at(x, z) - 0.055 + 0.3 * Math.max(0, rN - NK.ra), inside); };
-      const LS = Math.min(HS, 1.3), yT = half[0].p[1], hw = 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind
+      // over one roll the bag starts 1.5 cm over the neckline, up over the roll (at the neckline a dip showed between them; 3 cm hid the hood's outline)
+      const LS = Math.min(HS, 1.3), yT = half[0].p[1] + (COWL && !(CA.cowlRoll2 > 0) ? 0.015 : 0), hw = 0.16 * LS, hd = 0.15 * LS;   // the bag hangs from the neckline behind
       // with a cowl its top SH (m, at x = 0.004 i) 2.5 cm under the shoulders' top as if no cowl stood there, coming down no steeper than 45°: higher, its
       // corners stood on the shoulders and beside the ring (seen from the front and either side); steeper, its edge stood upright under the ring
       const ONE_ROLL = COWL && !(CA.cowlRoll2 > 0);   // over one roll the bag's top goes 2 cm over the shoulders' top, onto the roll (2.5 cm under it, it hung under the roll as a flap stuck on)
