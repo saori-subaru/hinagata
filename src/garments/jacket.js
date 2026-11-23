@@ -63,12 +63,15 @@ function shape({ O, P, J }) {
   // where the cloth is (< 0): above the hem, short of the wrists, under the neckline, outside the opening in front.
   // dHem, dEdge, dTop: the same cut reaching that much further (a band's rim over the jacket's own edge)
   const cutOf = (dHem = 0, dEdge = 0, dTop = 0) => (x, y, z) => { const u = Math.abs(x);
-    return Math.max(HEM - dHem - y - 3 * Math.max(0, u - HEM_X), along(x, y, z, armOf(x)) - (arms[0].Lf + END), y - top(x, z) - dTop, Math.min(E(y) + (slipped(x) ? DX : 0) - dEdge - u, z)); };
+    return Math.max(HEM - dHem - y - 3 * Math.max(0, u - HEM_X), along(x, y, z, armOf(x)) - (arms[0].Lf + END), y - top(x, z) - dTop, Math.min(E(y) + (slipped(x) ? dx(y) : 0) - dEdge - u, z)); };
   // the pattern's own coordinates (u, v): the body's |x| and height on the side that sits right; on the slipped side the collar and the
   // lapel's top are DROP lower and DX further out (the lapel's lower end and the hem only further out)
   const YG0 = 0.58, YG1 = 0.68, drop = (y) => DROP * sstep(YG0, YG1, y);
-  const toUV = (x, y) => slipped(x) ? [Math.abs(x) - DX, y + drop(y)] : [Math.abs(x), y];
-  const fromUV = (u, v, sgn) => { if (!(SLIP && sgn === SLIP)) return [sgn * u, v]; let lo = v - DROP, hi = v; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (m + drop(m) < v) lo = m; else hi = m; } return [sgn * (u + DX), (lo + hi) / 2]; };
+  const toUV = (x, y) => slipped(x) ? [Math.abs(x) - dx(y), y + drop(y)] : [Math.abs(x), y];
+  const fromUV = (u, v, sgn) => { if (!(SLIP && sgn === SLIP)) return [sgn * u, v]; let lo = v - DROP, hi = v; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (m + drop(m) < v) lo = m; else hi = m; } const yy = (lo + hi) / 2; return [sgn * (u + dx(yy)), yy]; };
+  // the slipped side's front edge: DX further out at the collar, DXH from the lapel's end down (as far out all the way down, the panel hung
+  // beside the arm and the chest was bare on that side: the sheet's panel comes back in over the chest)
+  const DXH = DX * (O.slipOpenHem ?? 1), dx = (y) => DXH + (DX - DXH) * sstep(YL - 0.02, YL + 0.08, y);
   const LW = O.lapel ?? 0.06, YL = O.lapelEnd ?? 0.61, CW = O.collar ?? 0.062, FW = 0.014, ZS = -0.02, BACK = 0.034;
   const BK = [E(YL) + FW, YL], HK = [E(HEM) + FW, HEM - 0.004], NT = [0.088, 0.728], WT = [0.086 + CW, 0.742];
   // the lapel: from the roll line (the front edge) out to its point, narrowing to a facing strip down to the hem
@@ -97,12 +100,12 @@ function shape({ O, P, J }) {
     let a = z, b = z + 0.004; for (let i = 0; i < 12; i++) { const m = (a + b) / 2; if (f(m) > 0) b = m; else a = m; } z = (a + b) / 2;
     const e = 0.0015, gx = outer(x + e, y, z) - outer(x - e, y, z), gy = outer(x, y + e, z) - outer(x, y - e, z), gz = outer(x, y, z + e) - outer(x, y, z - e), l = Math.hypot(gx, gy, gz) || 1;
     return [x, y, z, gx / l, gy / l, gz / l]; };
-  return { O, outer, tube, along, cutOf, arms, armOf, HEM, RS, END, top, E, slipped, SLIP, lapel, collar, liftS, onFront, tipOf, BK, HK, wingTip: (sgn) => SLIP && sgn === SLIP ? [WTS, LIFT] : [WT, 0], edgeAt: (sgn, y) => E(y) + (SLIP && sgn === SLIP ? DX : 0), lo: [-0.46, Math.min(HEM, 0.44) - 0.03, -0.22], hi: [0.46, 0.86, 0.22] };
+  return { O, outer, tube, along, cutOf, arms, armOf, HEM, RS, END, top, E, slipped, SLIP, lapel, collar, liftS, onFront, tipOf, BK, HK, wingTip: (sgn) => SLIP && sgn === SLIP ? [WTS, LIFT] : [WT, 0], edgeAt: (sgn, y) => E(y) + (SLIP && sgn === SLIP ? dx(y) : 0), lo: [-0.46, Math.min(HEM, 0.44) - 0.03, -0.22], hi: [0.46, 0.86, 0.22] };
 }
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.003, thin: "keep",
-  defaults: { on: false, color: "#3a3a40", hem: 0.505, hemBand: 0.022, out: 0.004, flare: 0.014, sleeve: 0.05, cuff: 0.04, open: 0.07, openTop: 0.05, lapel: 0.06, lapelEnd: 0.61, collar: 0.062, neck: 0.768, slip: "none", slipDrop: 0.065, slipOpen: 0.04, slipCollar: 0.75, slipLift: 0.005, sleeveBag: 0, sleeveFolds: 0 },
+  defaults: { on: false, color: "#3a3a40", hem: 0.505, hemBand: 0.022, out: 0.004, flare: 0.014, sleeve: 0.05, cuff: 0.04, open: 0.07, openTop: 0.05, lapel: 0.06, lapelEnd: 0.61, collar: 0.062, neck: 0.768, slip: "none", slipDrop: 0.065, slipOpen: 0.04, slipCollar: 0.75, slipOpenHem: 1, slipLift: 0.005, sleeveBag: 0, sleeveFolds: 0 },
   schema: [
     ["on", L("ジャケット", "Jacket"), { help: L("シャツの上に着る前開きの上着(襟とラペル、長袖)。着たときだけ作る", "an open jacket over the shirt (a collar and lapels, long sleeves); built only when worn") }],
     ["color", L("ジャケットの色", "Jacket color"), { when: { ".on": true } }],
@@ -125,6 +128,7 @@ definePart({ src: import.meta.url,
     ["slipCollar", L("落ちた側の襟の幅", "Slipped side's collar"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0.4, max: 1.2, step: 0.05, help: L("落ちた襟ぐりに沿って二の腕を回る襟の幅(襟の長さの何倍か)", "the collar folded along the fallen neckline, round the upper arm: its width (× the collar's wing)") }],
     ["slipLift", L("落ちた側の襟の浮き", "Slipped side's collar lift"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 0.02, step: 0.001, help: L("襟の先が袖から浮く量(m)。0 だと袖に貼りついて見える", "how far the collar's free edge stands off the sleeve (m); at 0 it reads as part of the sleeve") }],
     ["slipOpen", L("落ちた側の前の開き", "Slipped side's opening"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 0.07, step: 0.002, help: L("落ちた側の前のふちがさらに外へ寄る量(m)", "how much further out the slipped side's front edge hangs (m)") }],
+    ["slipOpenHem", L("落ちた側の裾の開き", "Slipped side's opening at the hem"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 1, step: 0.05, help: L("襟より下で前のふちが内へ戻る度合い(上の開きの何倍を裾まで残すか)。1 だと前身頃が腕の横に下がる", "how much of that opening is kept from the lapel's end down to the hem (× the opening): at 1 the panel hangs beside the arm, less brings it back over the chest") }],
   ],
   build(ctx) { const S = shape(ctx), { O } = ctx, sheets = [{ o: S.outer, tk: TK, cut: S.cutOf() }];
     const HB = O.hemBand ?? 0.022, CF = O.cuff ?? 0.04, body = S.cutOf(0.003, 0.002);
