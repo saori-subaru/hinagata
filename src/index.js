@@ -300,8 +300,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the hair as one volume, the way anime games shade it: normals from the head's center (above it) or from the vertical line under it
   // (long hair hanging down), mixed into the smoothed ones. Its light and shadow then split the hair cleanly instead of strand by strand
   function hairRound(geo) {
-    const Pa = geo.attributes.position.array, S = geo.attributes.shadeN.array, SK = OPT.body.sculpt.skull, c = HTr.fromHead(0, SK.y, -0.005), w = HAIR_ROUND * Math.min(1, OPT.shading.soften);
-    for (let i = 0; i < Pa.length; i += 3) { const dx = Pa[i] - c[0], dy = Math.max(0, Pa[i + 1] - c[1]), dz = Pa[i + 2] - c[2], dl = Math.hypot(dx, dy, dz) || 1;
+    const Pa = geo.attributes.position.array, S = geo.attributes.shadeN.array, SK = OPT.body.sculpt.skull, c = HTr.fromHead(0, SK.y, -0.005), w0 = HAIR_ROUND * Math.min(1, OPT.shading.soften), MASS = OPT.hair.masses?.length > 0;
+    for (let i = 0; i < Pa.length; i += 3) { let w = w0; if (MASS) { const h = HTr.toHead(Pa[i], Pa[i + 1], Pa[i + 2]); w *= 1 - sstep(0.3, 0.4, Math.hypot(h[0], h[1] - SK.y, h[2] + 0.005)); }   // a mass away from the head keeps its own normals (the head's would light a ponytail as a rim all over)
+      const dx = Pa[i] - c[0], dy = Math.max(0, Pa[i + 1] - c[1]), dz = Pa[i + 2] - c[2], dl = Math.hypot(dx, dy, dz) || 1;
       const sx = S[i] + (dx / dl - S[i]) * w, sy = S[i + 1] + (dy / dl - S[i + 1]) * w, sz = S[i + 2] + (dz / dl - S[i + 2]) * w, sl = Math.hypot(sx, sy, sz) || 1;
       S[i] = sx / sl; S[i + 1] = sy / sl; S[i + 2] = sz / sl; }
   }

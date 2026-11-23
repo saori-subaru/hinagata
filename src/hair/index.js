@@ -225,11 +225,16 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // masses (options.hair.masses, head space): solid bodies of hair joined to the block (a ponytail's bulk, a bun): each { pts: [[x, y, z, r], …]
   // its middle line and its radius there (m), k: how softly it joins the block and its own bends (default 0.03), mirror }. Only meshed: the
   // locks and the bangs still lie on hairSdfOf (a mass behind the head must not become "the hair's surface" for them)
-  const massSdf = () => { const M = (OPT.hair.masses ?? []).filter((m) => m?.pts?.length >= 2).flatMap((m) => (m.mirror ? [1, -1] : [1]).map((s) => ({ k: m.k ?? 0.03, P: m.pts.map(([x, y, z, r]) => [x * s, y, z, r ?? 0.05]) })));
+  const massSdf = () => { const M = (OPT.hair.masses ?? []).filter((m) => m?.pts?.length >= 2).flatMap((m) => (m.mirror ? [1, -1] : [1]).map((s) => { const P = m.pts.map(([x, y, z, r]) => [x * s, y, z, r ?? 0.05]);
+      let cx = 0, cy = 0, cz = 0; for (const p of P) { cx += p[0] / P.length; cy += p[1] / P.length; cz += p[2] / P.length; }
+      return { k: m.k ?? 0.03, P, f: Math.max(0.15, Math.min(1, m.flat ?? 1)), n: m.n ? [m.n[0] * s, m.n[1], m.n[2]] : null, c: [cx, cy, cz], R: Math.max(...P.map((p) => Math.hypot(p[0] - cx, p[1] - cy, p[2] - cz) + p[3])) + 0.08 }; }));
     if (!M.length) return null;
-    return (x, y, z) => { let d = 1e9; for (const { P, k } of M) { let dm = 1e9;
+    return (x, y, z) => { let d = 1e9; for (const { P, k, f, n, c, R } of M) { let dm = 1e9;
+      { const far = Math.hypot(x - c[0], y - c[1], z - c[2]) - R; if (far > 0) { d = Math.min(d, far + 0.08); continue; } }   // far from this mass: skipped (the joins reach 0.08 at most)
       for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], t = Math.max(0, Math.min(1, ((x - a[0]) * bx + (y - a[1]) * by + (z - a[2]) * bz) / (bx * bx + by * by + bz * bz || 1)));
-        const s = Math.hypot(x - a[0] - bx * t, y - a[1] - by * t, z - a[2] - bz * t) - (a[3] + (b[3] - a[3]) * t); dm = i ? smin(dm, s, 0.02) : s; }
+        const qx = a[0] + bx * t, qy = a[1] + by * t, qz = a[2] + bz * t, vx = x - qx, vy = y - qy, vz = z - qz; let len = Math.hypot(vx, vy, vz);
+        if (f < 1) { let nx = n ? n[0] : qx, ny = n ? n[1] : qy - 1.125, nz = n ? n[2] : qz + 0.02; const nl = Math.hypot(nx, ny, nz) || 1, vn = (vx * nx + vy * ny + vz * nz) / nl; len = Math.hypot(Math.sqrt(Math.max(0, len * len - vn * vn)), vn / f) * (0.5 + 0.5 * f); }   // flat: thin along n (default: away from the middle of the head)
+        const s = len - (a[3] + (b[3] - a[3]) * t); dm = i ? smin(dm, s, 0.02) : s; }
       d = smin(d, dm, k); } return d; }; };
   const massBox = () => { const P = (OPT.hair.masses ?? []).flatMap((m) => (m?.pts ?? []).flatMap(([x, y, z, r = 0.05]) => m.mirror ? [[x, y, z, r], [-x, y, z, r]] : [[x, y, z, r]])); return P.length ? P : null; };
   return { massSdf, massBox, BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
