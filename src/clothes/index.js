@@ -601,11 +601,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         return { sdf, lo, hi }; };
       // the roll: thinner over 10 cm to each end; the ellipse's middle lifted 0.45 of its height
       const F1 = frames(P, capeBody), end = (i) => Math.min(LT * i / M, LT * (1 - i / M)), K1 = P.map((q, i) => 1 - 0.6 * (1 - sstep(0, 0.1, end(i))));
-      // the droop (both rolls): EX m, 7 cm at the middle to a point, none from 12 cm out (wider, its fading sides creased)
-      const shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, droop = (Q) => Q.map((q) => { const s = Math.min(1, Math.abs(q[0]) / 0.12); return 0.07 * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
+      // the droop: EX m, len at the middle to a point, none from w out (wider, its fading sides creased). The second roll's: 7 cm, 12 cm; one roll's
+      // is the hood itself: 12 cm, 15 cm times cape.hoodSize (as the bag it replaces)
+      const shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, droop = (Q, len = 0.07, w = 0.12) => Q.map((q) => { const s = Math.min(1, Math.abs(q[0]) / w); return len * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
       const T2 = CA.cowlRoll2 ?? 0, C1 = P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i]));
       // one roll with a hood: the roll itself droops into the hood's point (a bag hung under it read as a flap stuck on under the roll)
-      if (!(T2 > 0)) return CA.hood ? { ...tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1, { X: droop(P), L: P.map(() => 0), surf: shell, F: 0.015 }), two: true } : tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
+      if (!(T2 > 0)) return CA.hood ? { ...tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1, { X: droop(P, 0.12 * (CA.hoodSize ?? 1), 0.15 * (CA.hoodSize ?? 1)), L: P.map(() => 0), surf: shell, F: 0.015 }), two: true } : tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
       const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
       // cape.cowlRoll2 (m): a second roll that thick under it, twice as wide along the cloth, its top under the first and its middle 0.7 of its half
       // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end.
