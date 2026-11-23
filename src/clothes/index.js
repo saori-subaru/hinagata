@@ -606,7 +606,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       // the second roll's droop: EX m, 7 cm at the middle to a point, none from 12 cm out (wider, its fading sides creased)
       const shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, droop = (Q) => Q.map((q) => { const s = Math.min(1, Math.abs(q[0]) / 0.12); return 0.07 * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
       const T2 = CA.cowlRoll2 ?? 0, C1 = P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i]));
-      if (!(T2 > 0)) return tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);   // one roll: the hood's bag goes over it (cape.hood)
+      // one roll with a hood: the hood's bag is part of the roll, blended into it (as two parts, each one's outline drew a line where they met)
+      // its thickness fades to nothing over its top 4 cm, under the roll (cut level there, a ledge or a row of shards showed)
+      if (!(T2 > 0)) { const R0 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1); if (!hood) return R0;
+        const bagV = (x, y, z) => { const S = outside(x, y, z), yc = hood.bagY(x), t = hood.bagTop(x, y) * sstep(yc, yc - 0.04, y); return Math.max(S - t, -S - 0.008, hood.bagOut(x, y, z), y - yc); };
+        return { sdf: (x, y, z) => smin(R0.sdf(x, y, z), bagV(x, y, z), 0.02), lo: [Math.min(R0.lo[0], hood.bag.lo[0]), Math.min(R0.lo[1], hood.bag.lo[1]), Math.min(R0.lo[2], -0.35)], hi: [Math.max(R0.hi[0], hood.bag.hi[0]), R0.hi[1], R0.hi[2]], two: true }; }
       const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
       // cape.cowlRoll2 (m): a second roll that thick under it, twice as wide along the cloth, its top under the first and its middle 0.7 of its half
       // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end.
