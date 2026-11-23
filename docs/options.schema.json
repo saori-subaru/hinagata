@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 516,
+   "order": 518,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -12507,6 +12507,56 @@
     "en": "a notch up into the sole before the heel (m): the arch's cut; 0 = none (not on high heels)"
    }
   },
+  "outfit.shoes.archLen": {
+   "path": "outfit.shoes.archLen",
+   "type": "number",
+   "default": 0.04,
+   "label": {
+    "ja": "切れ込みの長さ",
+    "en": "Sole notch's length"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.02,
+   "max": 0.07,
+   "step": 0.002,
+   "order": 508,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "切れ込みの天井の前後の長さ(m)",
+    "en": "the notch's ceiling, front to back (m)"
+   }
+  },
+  "outfit.shoes.archSlant": {
+   "path": "outfit.shoes.archSlant",
+   "type": "number",
+   "default": 0.3,
+   "label": {
+    "ja": "切れ込みの前の傾き",
+    "en": "Sole notch's front slant"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.8,
+   "step": 0.05,
+   "order": 509,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "前の底の端が床へ向かって前へ倒れる量(高さの何倍か)。0 = 垂直、大きいと角が消えて欠けに見える",
+    "en": "how far the front sole's end leans forward toward the floor (× the notch's height): 0 = upright; large, its top corner goes and it reads as a chip"
+   }
+  },
   "outfit.shoes.heelBlock": {
    "path": "outfit.shoes.heelBlock",
    "type": "number",
@@ -12522,7 +12572,7 @@
    "min": 0,
    "max": 0.03,
    "step": 0.001,
-   "order": 508,
+   "order": 510,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12550,7 +12600,7 @@
    "min": 0,
    "max": 2,
    "step": 1,
-   "order": 509,
+   "order": 511,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12578,7 +12628,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 510,
+   "order": 512,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -12610,7 +12660,7 @@
    "min": 0,
    "max": 0.15,
    "step": 0.002,
-   "order": 511,
+   "order": 513,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12641,7 +12691,7 @@
    "min": 0.004,
    "max": 0.04,
    "step": 0.001,
-   "order": 512,
+   "order": 514,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12672,7 +12722,7 @@
    "min": 0,
    "max": 0.05,
    "step": 0.001,
-   "order": 513,
+   "order": 515,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12703,7 +12753,7 @@
    "min": 0,
    "max": 0.06,
    "step": 0.001,
-   "order": 514,
+   "order": 516,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12734,7 +12784,7 @@
    "min": 0.006,
    "max": 0.06,
    "step": 0.001,
-   "order": 515,
+   "order": 517,
    "section": {
     "ja": "靴",
     "en": "Shoes"

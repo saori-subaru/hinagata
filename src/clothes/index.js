@@ -359,13 +359,13 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       for (const [k, dx, dz] of [[0, 1, 0], [0, -1, 0], [1, 0, 1], [1, 0, -1]]) { let t = 0.01; while (t < 0.2 && shoeSdf0(c[0] + dx * m * t, y, c[2] + dz * t) < 0) t += 0.001; wide[k] = Math.max(wide[k], t); } }
     const OUT = OPT.outfit.shoes.cuffOut ?? 0.006, rx = wide[0] + OUT - CW / 2, rz = wide[1] + OUT - CW / 2;
     return { a, u, l: u[1], rx, rz, r: (rx + rz) / 2 }; });
-  const ARCH = !HEELS ? Math.min(OPT.outfit.shoes.archCut ?? 0, SHOE.sole * 0.7) : 0, ARCH_L = 0.04 * FK;   // (m) the notch's height, its length front to back
+  const ARCH = !HEELS ? Math.min(OPT.outfit.shoes.archCut ?? 0, SHOE.sole * 0.7) : 0, ARCH_L = (OPT.outfit.shoes.archLen ?? 0.04) * FK, ARCH_S = OPT.outfit.shoes.archSlant ?? 0.3;   // (m) the notch's height, its length front to back
   const HEEL_B = BOOTS && !HBOOTS ? OPT.outfit.shoes.heelBlock ?? 0 : 0, HEEL_Z = P["shoeLast.L"].cz - P["shoeLast.L"].rz * 0.3;   // (m; the step's place)
   const HB = heelBend(OPT), shoeSdf = HB ? (x, y, z) => shoeSdf0(x, HB(x, y, z), z) : (x, y, z) => shoeSdf0(x, y, z);   // heels: the forefoot bent up at the ball as the body's is (body/index.js heelBend), flat on the floor once tilted
   const soleSdf0 = PUMPS ? () => 1 : HBOOTS ? (x, y, z) => Math.max(soleCore(x, y, z) - SHOE.off - 0.004, y - 0.009, -0.007 - y)   // (heel boots: a thin sole, a little wider than the boot, its bottom under the socks' (2.5 mm under the foot): they showed white under it)
     : (x, y, z) => { const c = soleCore(x, y, z) - SHOE.off - SHOE.rim, d = Math.max(c, y - (-0.003 + SHOE.sole), -0.007 - y);   // (heels: none) (its bottom under the socks', as the heel boots')
       const e = HEEL_B ? Math.min(d, Math.max(c, y - (-0.003 + SHOE.sole + HEEL_B), -0.007 - y, z - HEEL_Z)) : d; if (!ARCH) return e;
-      const up = -0.007 + ARCH - y, n = Math.max(-up, HEEL_Z - z, z - (HEEL_Z + ARCH_L) - 0.7 * up); return -smin(-e, n, 0.004); };   // shoes.archCut: a notch up into the sole before the heel (the heel's front upright, the front sole's end slanting)   // shoes.heelBlock: higher under the heel, its front a step
+      const up = -0.007 + ARCH - y, n = Math.max(-up, HEEL_Z - z, z - (HEEL_Z + ARCH_L) - ARCH_S * up); return -smin(-e, n, 0.0015); };   // shoes.archCut: a notch up into the sole before the heel (the heel's front upright, the front sole's end leaning archSlant × its height: slanting 0.7 and rounded 4 mm it had no corner at its top and read as a chip off the sole)   // shoes.heelBlock: higher under the heel, its front a step
   const soleSdf = HBOOTS ? (x, y, z) => { let d = soleSdf0(x, HB ? HB(x, y, z) : y, z); for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z)); return d; } : soleSdf0;   // heel boots: the sole bent as the boot is, and the heels
   // laces (shoes.kind "laced"): across the instep in four rows, each from an eyelet over the top to the other (three points on the shoe's
   // surface, a little above it), and a bow at the top row: two loops and two ends

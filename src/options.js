@@ -720,6 +720,8 @@ export const DEFAULTS = {
       "shaft": 0,
       "toeLow": 0,
       "archCut": 0,
+      "archLen": 0.04,
+      "archSlant": 0.3,
       "heelBlock": 0,
       "straps": 0,
       "strapColor": "#f4f1ea",
