@@ -581,13 +581,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a drawn picture on a garment part (materials.js withPicture; a part with `picture`): its material is dressed only once a picture is set
   // (a part without one keeps its plain shader)
   const PIC = Object.fromEntries(PARTS.filter((p) => p.picture).map((p) => { const T = partOptions(OPT, p).picture, t = texObj(); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.premultiplyAlpha = true;
-    return [p.name, { p, on: { value: 0 }, map: { value: t }, frame: { value: new THREE.Vector3(...p.picture.frame) }, opacity: { value: T?.opacity ?? 1 }, blend: { value: TEX_BLEND[T?.blend] ?? 0 }, soft: { value: 0.35 }, src: null, dressed: false, load: Promise.resolve() }]; }));
+    return [p.name, { p, on: { value: 0 }, map: { value: t }, frame: { value: new THREE.Vector4(p.picture.frame[0], p.picture.frame[1], p.picture.frame[2], p.picture.frame[3] ?? 0) }, axes: { value: [new THREE.Vector4(0, 1, 0, -1), new THREE.Vector4(0, 1, 0, -1)] }, opacity: { value: T?.opacity ?? 1 }, blend: { value: TEX_BLEND[T?.blend] ?? 0 }, soft: { value: 0.35 }, src: null, dressed: false, load: Promise.resolve() }]; }));
   const picOf = (k) => partOptions(OPT, PIC[k].p).picture;
+  // the side views (the part's picture.side): { weight (per vertex, on the base positions), axes }; also for the template (picture.js)
+  const picSide = (k) => { const g = parts[k].m.geometry, Pb = basePos(g), S = new Float32Array(Pb.length / 3), sd = PIC[k].p.picture.side && garments[k] ? PIC[k].p.picture.side(garments[k]) : null;
+    if (sd) for (let v = 0; v < S.length; v++) S[v] = sd.weight(Pb[v * 3], Pb[v * 3 + 1], Pb[v * 3 + 2]); return { weight: S, axes: sd?.axes ?? [[0, 1, 0, -1], [0, 1, 0, -1]] }; };
   function loadPic(k) {
     const U = PIC[k], src = picOf(k)?.src ?? null; if (src === U.src) return U.load; U.src = src;
     if (!src) { U.on.value = 0; return (U.load = Promise.resolve()); }
     if (!U.dressed) { const x = parts[k], g = x.m.geometry, w = x.wrap; U.dressed = true;
-      g.setAttribute("picP", new THREE.BufferAttribute(Float32Array.from(basePos(g)), 3)); g.setAttribute("picN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3));
+      g.setAttribute("picP", new THREE.BufferAttribute(Float32Array.from(basePos(g)), 3)); g.setAttribute("picN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3)); { const sd = picSide(k); g.setAttribute("picS", new THREE.BufferAttribute(sd.weight, 1)); sd.axes.forEach((a, i) => U.axes.value[i].set(...a)); }
       x.wrap = (m) => withPicture(w ? w(m) : m, U); x.m.material = withPicture(x.m.material, U); }
     return (U.load = new Promise((ok) => { const im = new Image(); im.crossOrigin = "anonymous";
       im.onload = () => { if (U.src === src) { const t = U.map.value; t.dispose(); t.image = im; t.needsUpdate = true; U.on.value = 1; } ok(); };
@@ -994,7 +997,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, get halo() { return halo; }, cloth, capeCloth,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { TEX, GRAD, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { TEX, GRAD, picSide, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },
@@ -1221,7 +1224,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       return loadTex(target);
     },
     /** A drawn picture on a garment part (instant; materials.js withPicture). part: "jacket". values { src (path or data URL, null = none:
-     *  its upper half the part from the front, its lower half from the back, as pictureTemplate draws them), opacity, blend: "over" | "multiply" }.
+     *  the part's views laid out as pictureTemplate draws them), opacity, blend: "over" | "multiply" }.
      *  Kept in the part's options (outfit.jacket.picture). Resolves when it shows. */
     setPicture(part, values = {}) {
       const U = PIC[part]; if (!U) throw new Error(`Unknown part "${part}" for a drawn picture. Available: ${Object.keys(PIC).join(", ")}`);

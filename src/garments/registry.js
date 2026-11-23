@@ -23,8 +23,10 @@
 //   wrist: (O, OPT) => m,           (optional) how far it stands out round the wrists (a cuff): a cape's cloth keeps that far off the forearm's end
 //   bands: { value: (state) => (x, y, z) => t, ranges: (O) => [[lo, hi, color], ...] }   (optional) colored bands painted by a value per vertex
 //                                   (materials.js withBands; base positions): a collar's line, a cuff. Their options change instantly (setBands)
-//   picture: { frame: [w, y0, y1] } (optional) it takes a drawn picture (materials.js withPicture; options <path>.picture: { src, opacity, blend },
-//                                   avatar.setPicture): the frame its front and back are drawn in (base space: half the width, the lowest and highest height)
+//   picture: { frame: [w, y0, y1, d], side: (state) => ({ weight: (x, y, z) => 0..1, axes }) } (optional) it takes a drawn picture (materials.js
+//                                   withPicture; options <path>.picture: { src, opacity, blend }, avatar.setPicture): the frame its views are drawn in
+//                                   (base space: half the width, the lowest and highest height, half the side views' width; d 0 = no side views),
+//                                   where the side views go and how each looks at it (axes: +x then -x, [ox, oy, dx, dy]: its top and the way down)
 // })
 export const PARTS = [];
 export function definePart(d) {

@@ -15039,8 +15039,8 @@
     "en": "Jacket"
    },
    "help": {
-    "ja": "つやや影を描いた絵(png)。上半分が前から、下半分が後ろから見たジャケット(テンプレートは tools/picture.mjs)。透明な所は下の色",
-    "en": "a picture of its gloss and shadows (png): the upper half the jacket from the front, the lower half from the back (the template: tools/picture.mjs); clear parts show the color under it"
+    "ja": "つやや影を描いた絵(png)。左の列が前(上)と後ろ(下)、右の列が左(上)と右(下)の袖を外側から見た絵(テンプレートは tools/picture.mjs)。透明な所は下の色",
+    "en": "a picture of its gloss and shadows (png): the left column the jacket from the front (above) and the back (below), the right column her left (above) and her right (below) sleeve from outside (the template: tools/picture.mjs); clear parts show the color under it"
    },
    "when": {
     "outfit.jacket.on": true

@@ -46,8 +46,13 @@ function shape({ O, P, J }) {
     return d - BAG * sstep(0.05, 0.55, q) * (1 - 0.6 * sstep(0.8, 1, q)) - fold; };
   const along = (x, y, z, A) => (x - A.F[0]) * A.g[0] + (y - A.F[1]) * A.g[1] + (z - A.F[2]) * A.g[2];   // how far down the forearm
   // its outer side: the body pushed out, hanging straight from the chest down and wider toward the hem (over a belt), and the sleeves' tubes
-  const outer = (x, y, z) => { const fl = FLARE * sstep(YB, HEM, y);
-    return smin(smin(all(x, y, z) - D - fl, torso(x, Math.max(y, YB), z) - D - fl, 0.02), tube(x, y, z, armOf(x)), 0.014); };
+  const trunk = (x, y, z) => { const fl = FLARE * sstep(YB, HEM, y); return smin(all(x, y, z) - D - fl, torso(x, Math.max(y, YB), z) - D - fl, 0.02); };
+  const outer = (x, y, z) => smin(trunk(x, y, z), tube(x, y, z, armOf(x)), 0.014);
+  // the picture's side views: each sleeve seen square on from outside (in the A-pose a view from the side looks into the cuff). weight: how
+  // much a point is a sleeve's (1) rather than the trunk's (0); axes: per side (+x, -x) [ox, oy, dx, dy], the view's top and the way down it
+  const sleeveAt = (x, y, z) => sstep(0.012, -0.012, tube(x, y, z, armOf(x)) - trunk(x, y, z));
+  const sleeveAxes = [1, -1].map((sg) => { const A = arms.find((q) => q.side === sg), ex = A.F[0] + A.g[0] * (A.Lf + END) - A.A[0], ey = A.F[1] + A.g[1] * (A.Lf + END) - A.A[1], l = Math.hypot(ex, ey);
+    return [A.A[0] - ex / l * 0.05, A.A[1] - ey / l * 0.05, ex / l, ey / l]; });
 
   // ── the pattern, by side (u = |x|) ──
   const SLIP = O.slip === "L" ? 1 : O.slip === "R" ? -1 : 0, DROP = SLIP ? O.slipDrop ?? 0.065 : 0, DX = SLIP ? O.slipOpen ?? 0.04 : 0;
@@ -101,15 +106,16 @@ function shape({ O, P, J }) {
     let a = z, b = z + 0.004; for (let i = 0; i < 12; i++) { const m = (a + b) / 2; if (f(m) > 0) b = m; else a = m; } z = (a + b) / 2;
     const e = 0.0015, gx = outer(x + e, y, z) - outer(x - e, y, z), gy = outer(x, y + e, z) - outer(x, y - e, z), gz = outer(x, y, z + e) - outer(x, y, z - e), l = Math.hypot(gx, gy, gz) || 1;
     return [x, y, z, gx / l, gy / l, gz / l]; };
-  return { O, outer, tube, along, cutOf, arms, armOf, HEM, RS, END, top, E, slipped, SLIP, lapel, collar, liftS, onFront, tipOf, BK, HK, wingTip: (sgn) => SLIP && sgn === SLIP ? [WTS, LIFT] : [WT, 0], edgeAt: (sgn, y) => E(y) + (SLIP && sgn === SLIP ? dx(y) : 0), lo: [-0.46, Math.min(HEM, 0.44) - 0.03, -0.22], hi: [0.46, 0.86, 0.22] };
+  return { O, outer, tube, sleeveAt, sleeveAxes, along, cutOf, arms, armOf, HEM, RS, END, top, E, slipped, SLIP, lapel, collar, liftS, onFront, tipOf, BK, HK, wingTip: (sgn) => SLIP && sgn === SLIP ? [WTS, LIFT] : [WT, 0], edgeAt: (sgn, y) => E(y) + (SLIP && sgn === SLIP ? dx(y) : 0), lo: [-0.46, Math.min(HEM, 0.44) - 0.03, -0.22], hi: [0.46, 0.86, 0.22] };
 }
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.003, thin: "keep",
   defaults: { on: false, color: "#3a3a40", hem: 0.505, hemBand: 0.022, out: 0.004, flare: 0.014, sleeve: 0.05, cuff: 0.04, open: 0.07, openTop: 0.05, lapel: 0.06, lapelEnd: 0.61, collar: 0.062, neck: 0.768, slip: "none", slipDrop: 0.065, slipOpen: 0.04, slipCollar: 0.75, slipOpenHem: 1, slipLift: 0.005, sleeveBag: 0, sleeveFolds: 0, picture: { src: null, opacity: 1, blend: "over" } },
-  // a drawn picture (materials.js withPicture): the frame it is drawn in, base space [half the width, the lowest height, the highest].
-  // ⛔ changing it moves every picture drawn so far
-  picture: { frame: [0.48, 0.38, 0.9] },
+  // a drawn picture (materials.js withPicture): the frame it is drawn in, base space [half the width, the lowest height, the highest, half
+  // the side views' width]; side: what the side views show (the sleeves' outer sides).
+  // ⛔ changing the frame moves every picture drawn so far
+  picture: { frame: [0.48, 0.38, 0.9, 0.12], side: (st) => ({ weight: st.S.sleeveAt, axes: st.S.sleeveAxes }) },
   schema: [
     ["on", L("ジャケット", "Jacket"), { help: L("シャツの上に着る前開きの上着(襟とラペル、長袖)。着たときだけ作る", "an open jacket over the shirt (a collar and lapels, long sleeves); built only when worn") }],
     ["color", L("ジャケットの色", "Jacket color"), { when: { ".on": true } }],
@@ -132,7 +138,7 @@ definePart({ src: import.meta.url,
     ["slipCollar", L("落ちた側の襟の幅", "Slipped side's collar"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0.4, max: 1.2, step: 0.05, help: L("落ちた襟ぐりに沿って二の腕を回る襟の幅(襟の長さの何倍か)", "the collar folded along the fallen neckline, round the upper arm: its width (× the collar's wing)") }],
     ["slipLift", L("落ちた側の襟の浮き", "Slipped side's collar lift"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 0.02, step: 0.001, help: L("襟の先が袖から浮く量(m)。0 だと袖に貼りついて見える", "how far the collar's free edge stands off the sleeve (m); at 0 it reads as part of the sleeve") }],
     ["slipOpen", L("落ちた側の前の開き", "Slipped side's opening"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 0.07, step: 0.002, help: L("落ちた側の前のふちがさらに外へ寄る量(m)", "how much further out the slipped side's front edge hangs (m)") }],
-    ["picture.src", L("描いた絵", "Drawn picture"), { when: { ".on": true }, cost: "instant", apply: "setPicture", help: L("つやや影を描いた絵(png)。上半分が前から、下半分が後ろから見たジャケット(テンプレートは tools/picture.mjs)。透明な所は下の色", "a picture of its gloss and shadows (png): the upper half the jacket from the front, the lower half from the back (the template: tools/picture.mjs); clear parts show the color under it") }],
+    ["picture.src", L("描いた絵", "Drawn picture"), { when: { ".on": true }, cost: "instant", apply: "setPicture", help: L("つやや影を描いた絵(png)。左の列が前(上)と後ろ(下)、右の列が左(上)と右(下)の袖を外側から見た絵(テンプレートは tools/picture.mjs)。透明な所は下の色", "a picture of its gloss and shadows (png): the left column the jacket from the front (above) and the back (below), the right column her left (above) and her right (below) sleeve from outside (the template: tools/picture.mjs); clear parts show the color under it") }],
     ["picture.opacity", L("絵の濃さ", "Picture opacity"), { when: { ".on": true, ".picture.src": "*set" }, cost: "instant", apply: "setPicture", min: 0, max: 1, step: 0.01 }],
     ["picture.blend", L("絵の重ね方", "Picture blend"), { when: { ".on": true, ".picture.src": "*set" }, cost: "instant", apply: "setPicture", options: [{ value: "over", label: L("上に重ねる", "Over") }, { value: "multiply", label: L("色にかける(乗算)", "Multiply") }] }],
     ["slipOpenHem", L("落ちた側の裾の開き", "Slipped side's opening at the hem"), { when: { ".on": true, ".slip": ["L", "R"] }, min: 0, max: 1, step: 0.05, help: L("襟より下で前のふちが内へ戻る度合い(上の開きの何倍を裾まで残すか)。1 だと前身頃が腕の横に下がる", "how much of that opening is kept from the lapel's end down to the hem (× the opening): at 1 the panel hangs beside the arm, less brings it back over the chest") }],
