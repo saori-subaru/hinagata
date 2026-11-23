@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// A garment part's drawn picture (tools/picture.html): its template, or a first picture made from its shape. node tools/picture.mjs subaru [--part jacket] [--make template|art] [--paper 1]
-// Writes <out>/<name>.png (default out: thin-check-out/; name: <preset>_<part>_<make>). The options are the page's, passed on as they are.
+// A garment part's drawn picture (tools/picture.html): its template. node tools/picture.mjs subaru [--part jacket] [--paper 1]
+// Writes <out>/<name>.png (default out: thin-check-out/; name: <preset>_<part>_template). The options are the page's, passed on as they are.
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

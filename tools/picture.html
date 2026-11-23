@@ -12,76 +12,18 @@
 <script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
 <script type="module">
 // A part's drawn picture (src/picture.js, materials.js withPicture): the upper half the part from the front, the lower half from the back.
-// Run: node tools/picture.mjs subaru [--part jacket] [--make template|art] [--paper 1] [--name x]
-//   template: what to draw on (draw on a layer over it, save that layer alone). paper: on white (art: on the part's color), to look at.
-//   art: a first picture made from the shape, in the style of leather drawn flat: angular light planes where the cloth faces the light
-//        (from above; from before it, a body's gentle swell lit up as a round patch), dark planes where it turns down, and the shadow the collar, the lapels and the bands cast on what is under them.
-//        Options: --light 0.7 --core 0.9 --dark -0.12 (the cosines the planes are cut at) --crease 0.13 (how much a crease turns from the plane round it) --cell 34 --fine 9 (px: the edges are straight over this) --cast 14 (px)
-import * as THREE from "three";
-import { createAvatar, CHARACTERS, pictureTemplate, pictureView } from "../src/index.js";
-const Q = new URLSearchParams(location.search), name = Q.get("only") || "subaru", part = Q.get("part") || "jacket", make = Q.get("make") || "template", num = (k, d) => +(Q.get(k) ?? d);
+// Run: node tools/picture.mjs subaru [--part jacket] [--paper 1] [--name x]
+//   Draw on a layer over it and save that layer alone, or have a painting made of it (--paper 1: on white, for an image generator) and fit
+//   the painting back with tools/picture-fit.py.
+import { createAvatar, CHARACTERS, pictureTemplate } from "../src/index.js";
+const Q = new URLSearchParams(location.search), name = Q.get("only") || "subaru", part = Q.get("part") || "jacket";
 
-// the shape as numbers, one half: each pixel's normal and depth (toward the eye, m), covered or not
-function measure(V, renderer, s) {
-  const { W, H } = V, rt = new THREE.WebGLRenderTarget(W, H), scene = new THREE.Scene(), buf = new Uint8Array(W * H * 4), cam = V.camera(s);
-  const mat = (frag) => new THREE.ShaderMaterial({ uniforms: { s: { value: s } }, vertexShader: "varying vec3 vN; varying float vZ; void main() { vN = normal; vZ = position.z; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: "uniform float s; varying vec3 vN; varying float vZ;\nvoid main() { " + frag + " }" });
-  const mN = mat("gl_FragColor = vec4(normalize(vN) * 0.5 + 0.5, 1.0);"), mD = mat("float d = clamp(vZ * s * 2.0 + 0.5, 0.0, 0.9999) * 255.0; gl_FragColor = vec4(floor(d) / 255.0, fract(d), 0.0, 1.0);");
-  const meshes = V.items.filter((q) => q.own).map((q) => new THREE.Mesh(q.g, mN)); scene.add(...meshes);
-  const read = (m) => { for (const o of meshes) o.material = m; renderer.setRenderTarget(rt); renderer.setClearColor(0, 0); renderer.clear(); renderer.render(scene, cam); renderer.readRenderTargetPixels(rt, 0, 0, W, H, buf); renderer.setRenderTarget(null); return buf; };
-  const n = new Float32Array(W * H * 3), d = new Float32Array(W * H), cov = new Uint8Array(W * H);
-  let b = read(mN); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, j = ((H - 1 - y) * W + x) * 4; cov[i] = b[j + 3] > 127 ? 1 : 0; for (let k = 0; k < 3; k++) n[i * 3 + k] = b[j + k] / 127.5 - 1; }   // (rows: the top first)
-  b = read(mD); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, j = ((H - 1 - y) * W + x) * 4; d[i] = ((b[j] + b[j + 1] / 255) / 255 - 0.5) / 2; }
-  rt.dispose(); mN.dispose(); mD.dispose();
-  return { n, d, cov };
-}
-// one half's picture: ImageData (straight alpha)
-function paint(V, M, s) {
-  const { W, H } = V, { n, d, cov } = M, T1 = num("light", 0.7), T2 = num("core", 0.9), T0 = num("dark", -0.12), CR = num("crease", 0.13), CAST = num("cast", 14);
-  const L = [0.15, 0.92, 0.3], ll = Math.hypot(...L);   // (before the side seen, its z turned with s below: at the outline both halves get the same tone)
-  // how much each pixel faces the light, read at the corners of a grid of triangles (C px) and filled in flat over each: the tones' edges are
-  // straight lines. A coarse grid for the big planes (the sleeve's creases averaged away: on them the light broke into spots), a fine one for the creases
-  const field = (C) => {
-  const GW = Math.ceil(W / C) + 2, GH = Math.ceil(H / C) + 2, G = new Float32Array(GW * GH).fill(NaN);
-  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const cx = (gx + (gy & 1 ? 0.5 : 0)) * C, cy = gy * C; let sum = 0, cnt = 0;
-    for (let y = Math.max(0, cy - C / 2 | 0); y < Math.min(H, cy + C / 2); y++) for (let x = Math.max(0, cx - C / 2 | 0); x < Math.min(W, cx + C / 2); x++) { const i = y * W + x; if (cov[i]) { sum += (n[i * 3] * L[0] + n[i * 3 + 1] * L[1] + n[i * 3 + 2] * s * L[2]) / ll; cnt++; } }
-    if (cnt) G[gy * GW + gx] = sum / cnt; }
-  for (let it = 0; it < 6; it++) { const P = G.slice(); for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { if (!isNaN(P[gy * GW + gx])) continue; let sum = 0, cnt = 0;   // past the outline: the nearest tone goes on
-    for (const [ax, ay] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const v = P[(gy + ay) * GW + gx + ax]; if (gx + ax >= 0 && gx + ax < GW && gy + ay >= 0 && gy + ay < GH && !isNaN(v)) { sum += v; cnt++; } } if (cnt) G[gy * GW + gx] = sum / cnt; } }
-  const at = (gx, gy) => { const v = G[Math.min(GH - 1, Math.max(0, gy)) * GW + Math.min(GW - 1, Math.max(0, gx))]; return isNaN(v) ? 0.4 : v; };
-  const F = new Float32Array(W * H);   // rows of triangles, every other row half a cell along
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const gy = Math.floor(y / C), v = y / C - gy, odd = gy & 1, uT = x / C - (odd ? 0.5 : 0), uB = x / C - (odd ? 0 : 0.5), i0 = Math.floor(uT), f0 = uT - i0, i1 = Math.floor(uB), f1 = uB - i1;
-    if (Math.abs(f0 - 0.5) <= 0.5 * (1 - v)) { const p = at(i0, gy), q = at(i0 + 1, gy), r = at(odd ? i0 + 1 : i0, gy + 1); F[y * W + x] = p * (1 - v) + r * v + (q - p) * (f0 - 0.5 * v); }   // a triangle pointing down
-    else { const w = 1 - v, p = at(i1, gy + 1), q = at(i1 + 1, gy + 1), r = at(odd ? i1 : i1 + 1, gy); F[y * W + x] = p * (1 - w) + r * w + (q - p) * (f1 - 0.5 * w); } }
-  return F; };
-  const BIG = field(num("cell", 34)), FINE = field(num("fine", 9)), FOLD = new Float32Array(W * H); for (let i = 0; i < FOLD.length; i++) FOLD[i] = FINE[i] - BIG[i];
-  const edge = (F, i, T, x, y) => { const f = F[i], g = Math.max(1e-4, Math.abs(F[i + (x < W - 1 ? 1 : -1)] - f), Math.abs(F[i + (y < H - 1 ? W : -W)] - f)); return Math.min(1, Math.max(0, 0.5 + (f - T) / g / 1.5)); };
-  // the shadow cast from above: what stands nearer the eye within CAST px up toward the light
-  const cast = new Float32Array(W * H);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (!cov[i]) continue; let c = 0;
-    for (let k = 2; k <= CAST; k++) { const yy = y - k, xx = Math.round(x - 0.3 * k); if (yy < 0 || xx < 0 || xx >= W) break; const j = yy * W + xx; if (cov[j] && d[j] - d[i] > 0.0035 + 0.0004 * k) { c = 1; break; } }
-    cast[i] = c; }
-  const soft = new Float32Array(W * H); for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { let a = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) a += cast[(y + v) * W + x + u]; soft[y * W + x] = a / 9; }
-  const im = new ImageData(W, H), px = im.data, over = (i, r, g, b, a) => { const A = px[i + 3] / 255, o = a + A * (1 - a); if (o <= 0) return; px[i] = (r * a + px[i] * A * (1 - a)) / o; px[i + 1] = (g * a + px[i + 1] * A * (1 - a)) / o; px[i + 2] = (b * a + px[i + 2] * A * (1 - a)) / o; px[i + 3] = o * 255; };
-  const near = new Uint8Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (cov[y * W + x]) for (let v = -4; v <= 4; v += 4) for (let u = -4; u <= 4; u += 4) { const yy = y + v, xx = x + u; if (yy >= 0 && yy < H && xx >= 0 && xx < W) near[yy * W + xx] = 1; }   // a little past the outline (the picture is read between pixels)
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, p = i * 4; if (!near[i]) continue;
-    over(p, 10, 10, 14, 0.6 * (1 - edge(BIG, i, T0, x, y)));
-    over(p, 118, 118, 134, 0.38 * edge(BIG, i, T1, x, y));
-    over(p, 176, 176, 194, 0.34 * edge(BIG, i, T2, x, y));
-    over(p, 10, 10, 14, 0.55 * (1 - edge(FOLD, i, -CR, x, y)));
-    over(p, 140, 140, 158, 0.24 * edge(FOLD, i, CR * 1.3, x, y));
-    over(p, 8, 8, 12, 0.6 * soft[i]); }
-  return im;
-}
 try {
   const av = await createAvatar(structuredClone(CHARACTERS[name].file), { quality: "fine", cache: false });
-  let c;
-  if (make === "art") { const V = pictureView(av, part), renderer = new THREE.WebGLRenderer({ antialias: false }), g = (c = Object.assign(document.createElement("canvas"), { width: V.W, height: 2 * V.H })).getContext("2d");
-    [1, -1].forEach((s, i) => g.putImageData(paint(V, measure(V, renderer, s), s), 0, i * V.H)); V.dispose(); renderer.dispose(); }
-  else c = pictureTemplate(av, part);
-  if (Q.get("paper")) { const p = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height }), g = p.getContext("2d"); g.fillStyle = make === "art" ? av.options.outfit[part]?.color ?? "#444" : "#fff"; g.fillRect(0, 0, p.width, p.height); g.drawImage(c, 0, 0); c = p; }
+  let c = pictureTemplate(av, part);
+  if (Q.get("paper")) { const p = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height }), g = p.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, p.width, p.height); g.drawImage(c, 0, 0); c = p; }
   const png = c.toDataURL("image/png"); document.getElementById("sheet").src = png; document.getElementById("state").textContent = "done";
-  window.RESULT = { ok: true, png, sheetName: Q.get("name") || `${name}_${part}_${make}`, table: `${name} ${part} ${make}: ${c.width}×${c.height} (front above, back below)` };
+  window.RESULT = { ok: true, png, sheetName: Q.get("name") || `${name}_${part}_template`, table: `${name} ${part} template: ${c.width}×${c.height} (front above, back below)` };
 } catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; }
 </script>
 </body>

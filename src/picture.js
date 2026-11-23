@@ -13,8 +13,7 @@ const lineMat = (w) => { const m = new THREE.MeshBasicMaterial({ color: 0x30303a
 export const PICTURE_PX = 1000;   // the template's pixels per metre (a picture may be any size: only its proportions count)
 
 /** The part as the picture sees it: { frame: [X, y0, y1], W, H (one half's pixels), items: [{ own (the part itself, not what goes with it), g
- *  (its geometry at the base positions) }], camera(s) (s 1: from the front, -1: from the back), dispose() }. For the template and for tools
- *  that make a picture from the shape (tools/picture.html). */
+ *  (its geometry at the base positions) }], camera(s) (s 1: from the front, -1: from the back), dispose() }. For the template, and for a tool that reads the shape. */
 export function pictureView(avatar, part, { px = PICTURE_PX } = {}) {
   const P = partNamed(part); if (!P?.picture) throw new Error(`"${part}" takes no drawn picture. Available: ${PARTS.filter((p) => p.picture).map((p) => p.name).join(", ")}`);
   const [X, y0, y1] = P.picture.frame, items = [];
