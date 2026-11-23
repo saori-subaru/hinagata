@@ -58,16 +58,19 @@ export async function loadMotion(src, { kind, clip = 0 } = {}) {
 
   return {
     joints, root, clip: C, duration: C.duration, travel,
-    /** Play it on an avatar: { loop = true, speed = 1, move = false (move avatar.object by velocity), grip, clear = true (arms turned out of the body) }. Each frame call update(dt) before
+    /** Play it on an avatar: { loop = true, speed = 1, move = false (move avatar.object by velocity), grip, clear = true (arms turned out of the body), head (how far the neck and head turn, 0–1; by the head's size if left out) }. Each frame call update(dt) before
      *  avatar.update(dt). Returns { update(dt), velocity: [x, z] (the avatar's units / s, its own axes), time, stop() }. */
-    attach(avatar, { loop = true, speed = 1, move = false, grip = null, clear = true } = {}) {
+    attach(avatar, { loop = true, speed = 1, move = false, grip = null, clear = true, head = null } = {}) {
       const J = avatar.internals.J, legA = (J["upperLeg.L"][1] - J["foot.L"][1] + J["upperLeg.R"][1] - J["foot.R"][1]) / 2, k = legA / legOf();
-      avatar.follow(joints, { root, fit: false, hide: true, place: false, motionScale: k, grip, clear: clear && { bodySdf: avatar.internals.bodySdf } });   // (the file at rest now: follow reads its rest)
+      // the head's share above the neck against an adult's (~0.155 of the neck's height): a chibi's head turns about 0.6 as far, a tall one's 0.8
+      let top = 0; for (const x of Object.values(avatar.parts)) if (x?.m?.visible) { const g = x.m.geometry; g.computeBoundingBox(); top = Math.max(top, g.boundingBox.max.y); }
+      const nk = J.neck[1], headK = head ?? Math.min(1, Math.max(0.4, Math.sqrt(0.155 * nk / Math.max(1e-3, top - nk))));
+      avatar.follow(joints, { root, fit: false, hide: true, place: false, motionScale: k, grip, clear: clear && { bodySdf: avatar.internals.bodySdf }, headK });   // (the file at rest now: follow reads its rest)
       const mixer = new THREE.AnimationMixer(root), action = mixer.clipAction(C);
       action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); action.clampWhenFinished = true; action.play(); mixer.update(0);
       const velocity = [travel[0] * k, travel[1] * k], q = new THREE.Quaternion(), d = new THREE.Vector3();
       return {
-        velocity, mixer, action, get time() { return action.time; },
+        velocity, headK, mixer, action, get time() { return action.time; },
         update(dt) { mixer.update(dt * speed);
           if (move && !(action.paused || (!loop && action.time >= C.duration))) { const o = avatar.object; d.set(velocity[0], 0, velocity[1]).multiplyScalar(dt * speed).multiply(o.scale).applyQuaternion(o.getWorldQuaternion(q)); o.position.add(d); } },
         stop() { mixer.stopAllAction(); toRest(); avatar.follow(null); },

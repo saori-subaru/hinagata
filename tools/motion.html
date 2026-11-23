@@ -58,7 +58,7 @@ try {
       }
       c.stop();
       g.fillStyle = "#333"; g.font = "13px sans-serif"; g.fillText(bn, 8, row * H + 20); g.fillText(f, 8, row * H + 38); g.fillText(`slide ${pct(0.5)} / ${pct(0.9)} mm/s`, 8, row * H + 56); g.fillText(`v ${m.travel.map((v) => v.toFixed(2))}`, 8, row * H + 74);
-      lines.push(`${bn} ${f}: ${dur.toFixed(1)} s, slide median ${pct(0.5)}, 90% ${pct(0.9)} mm/s (height ${tall.toFixed(2)} m), velocity ${c.velocity.map((v) => v.toFixed(3))}`);
+      lines.push(`${bn} ${f}: ${dur.toFixed(1)} s, slide median ${pct(0.5)}, 90% ${pct(0.9)} mm/s (height ${tall.toFixed(2)} m), velocity ${c.velocity.map((v) => v.toFixed(3))}, headK ${c.headK.toFixed(2)}`);
       row++;
     }
   }

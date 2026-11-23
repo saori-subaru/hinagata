@@ -22,7 +22,7 @@ const DOWN = new THREE.Vector3(0, -1, 0), I = new THREE.Quaternion();
  *   { height }: that tall in the rig's units (a chibi at the legs of a tall rig was a giant: 2026-10-05); false: as built.
  * Returns the follower: { sync() (copy the joints now; the avatar's update does it), attach(object, bone), scale, stop() }.
  */
-export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, joints, root, fit = true, hide = true, grip = null, place = true, motionScale = null, clear = null }) {   // clear: { bodySdf, gap } — forearms and hands that end up inside the body are turned out of it at the shoulder (a thicker body than the rig's: a chibi's hand on the chest)   // motionScale: the avatar keeps its own size and the hips' moves are scaled by this (the rig's units → the avatar's: its hip height over the rig's), sideways and forward too   // place: false — the avatar's object isn't moved onto the root (the rig is inside it: avatar.joints)
+export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, joints, root, fit = true, hide = true, grip = null, place = true, motionScale = null, clear = null, headK = 1 }) {   // headK: the neck's and head's turns are scaled by this (a big head bowed as far as an adult's hides the face and sinks into the chest)   // clear: { bodySdf, gap } — forearms and hands that end up inside the body are turned out of it at the shoulder (a thicker body than the rig's: a chibi's hand on the chest)   // motionScale: the avatar keeps its own size and the hips' moves are scaled by this (the rig's units → the avatar's: its hip height over the rig's), sideways and forward too   // place: false — the avatar's object isn't moved onto the root (the rig is inside it: avatar.joints)
   root.updateMatrixWorld(true);
   const rootQ = new THREE.Quaternion(), rootP = new THREE.Vector3(), rootS = new THREE.Vector3(), tq = new THREE.Quaternion(), tp = new THREE.Vector3();
   root.matrixWorld.decompose(rootP, rootQ, rootS); const rootQi = rootQ.clone().invert(), rootInv = root.matrixWorld.clone().invert();
@@ -58,7 +58,7 @@ export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, join
   const restDir = {}; for (const s of ["L", "R"]) { const a = J[`upperArm.${s}`], b = J[`lowerArm.${s}`]; restDir[s] = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize(); }
 
   const follower = {
-    pose: name, scale,
+    pose: name, scale, tall,
     /** copy the rig's joints and place now (the avatar's update calls it first) */
     sync() {
       root.updateMatrixWorld(true); root.matrixWorld.decompose(rootP, rootQ, rootS); rootQi.copy(rootQ).invert(); rootInv.copy(root.matrixWorld).invert();   // (the rig moves: its root space now)
@@ -68,6 +68,7 @@ export function createFollower({ avatar, POSES, J, PARENT, BONES, legK = 1, join
         const p = up(b), turn = p ? q.copy(W[p]).invert().multiply(W[b]) : q.copy(W[b]);
         if (share && b === "spine") { for (const [t, k] of TORSO) put(t, q2.copy(I).slerp(turn, k)); continue; }
         put(b, q2.copy(offOf(p)).invert().multiply(turn).multiply(offOf(b)));
+        if (headK !== 1 && (b === "neck" || b === "head")) put(b, q2.slerpQuaternions(I, Q[b], headK));
       }
       for (const s of ["L", "R"]) {   // the collarbone rises with the arm (if the rig has none of its own)
         const ua = `upperArm.${s}`; if (src[`shoulder.${s}`] || !Q[ua]) continue;
