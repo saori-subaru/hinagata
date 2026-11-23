@@ -255,7 +255,7 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
 /**
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
  * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
- * curl (m: the stroke becomes the axis of a ringlet of this radius, 0 = none), turns (of the ringlet, default 2), twist (rad, root to tip: the
+ * curl (m: the stroke becomes the axis of a ringlet of this radius, 0 = none), turns (of the ringlet, default 2), curlFrom (0..1 along the stroke: straight to there, a lock lying on the head first), twist (rad, root to tip: the
  * ribbon turns about its own line); both need center (root space: the head's, for the side that faces out),
  * fromWhorl (with W = { d, surf, center, rootW }, hair.sculpt.whorl on): a path from the whorl over the head, under the other locks, to the
  * stroke's first point goes before it, narrow at the whorl and full from that point (a sidelock drawn from the temple showed its root's stub) }.
@@ -280,11 +280,11 @@ export function drawnLocks(list, { toRoot, N: N0 = 16, W = null, center = null, 
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let nrm;
-      if (center && (d.curl > 0 || d.twist)) { const R = Math.max(0, d.curl ?? 0), TU = d.turns ?? 2, TW = d.twist ?? 0, C = pts.map((p) => [...p]); let po = null;
+      if (center && (d.curl > 0 || d.twist)) { const R = Math.max(0, d.curl ?? 0), TU = d.turns ?? 2, TW = d.twist ?? 0, CF = Math.min(0.9, Math.max(0, d.curlFrom ?? 0)), C = pts.map((p) => [...p]); let po = null;
         nrm = C.map((p, q) => { const T = tan(C, q), t = q / (N - 1), o0 = [p[0] - center[0], Math.max(0, p[1] - center[1]), p[2] - center[2]], ol = Math.hypot(...o0) || 1;
           let o = o0.map((v, k) => v - T[k] * dot(o0, T)); if (po && Math.hypot(...o) < 0.3 * ol) o = po.map((v, k) => v - T[k] * dot(po, T));   // the stroke runs along "out" there: the last point's
           o = po = nz(o); if (!R) return o;
-          const e = rot(o, T, m * 2 * Math.PI * TU * t), r = R * sstep(0, 0.12, t); pts[q] = p.map((v, k) => v + e[k] * r); return e; });   // the ribbon's flat side faces away from the axis (a mirrored one winds the other way)
+          const tc = Math.max(0, (t - CF) / (1 - CF)), e = rot(o, T, m * 2 * Math.PI * TU * tc), r = R * sstep(0, 0.12, tc); pts[q] = p.map((v, k) => v + e[k] * r); return e; });   // the ribbon's flat side faces away from the axis (a mirrored one winds the other way)
         if (TW) nrm = nrm.map((e, q) => rot(e, tan(pts, q), m * TW * q / (N - 1)));
         nrm = nrm.map((e, q) => { const T = tan(pts, q), k = dot(e, T); return nz(e.map((v, i) => v - T[i] * k)); }); }
       let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);

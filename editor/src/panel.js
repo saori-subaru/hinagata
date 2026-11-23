@@ -362,7 +362,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
       h("div", { class: "help" }, t("myHairHelp")));
   }
   function drawBlock() {
-    const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [], cur = S.sel != null ? list[S.sel] : null, V = cur ? { width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, twist: 0, ...cur } : S;
+    const D = ctx.draw; if (!D) return null; const S = D.state, list = store.get("hair.drawn") ?? [], cur = S.sel != null ? list[S.sel] : null, V = cur ? { width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, curlFrom: 0, twist: 0, ...cur } : S;
     const kids = [h("div", { class: "sec-h" }, h("h2", {}, t("drawTitle")), h("span", { class: "cost" }, t("drawN", list.length))),
       h("div", { class: "chips" }, h("button", { class: "chip", type: "button", "aria-pressed": String(S.on), onclick: () => { stopTools(D); D.toggle(); } }, t("drawOn")),
         list.length ? h("button", { class: "chip", type: "button", "aria-pressed": String(S.move), onclick: () => { stopTools(D); D.toggleMove(); } }, t("drawMove")) : null,
@@ -370,8 +370,8 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     kids.push(h("div", { class: "help" }, cur ? t("drawSel", S.sel + 1) : t("drawBrush")));
     if (S.on) kids.push(h("div", { class: "help" }, t("drawHelp")));
     if (S.move) kids.push(h("div", { class: "help" }, t("drawMoveHelp")));
-    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1], ["taper", "drawTaper", 0, 1, 0.05], ["curl", "drawCurl", 0, 0.06, 0.002], ["turns", "drawTurns", 0.5, 8, 0.25], ["twist", "drawTwist", -12.6, 12.6, 0.1]]) {   // the brush for the next lock, or the chosen lock's own
-      if (k === "turns" && !V.curl) continue;
+    for (const [k, key, min, max, step] of [["width", "drawWidth", 0.005, 0.1, 0.001], ["thick", "drawThick", 0.1, 1, 0.01], ["stiff", "drawStiff", 0.3, 4, 0.1], ["taper", "drawTaper", 0, 1, 0.05], ["curl", "drawCurl", 0, 0.06, 0.002], ["turns", "drawTurns", 0.5, 8, 0.25], ["curlFrom", "drawCurlFrom", 0, 0.9, 0.05], ["twist", "drawTwist", -12.6, 12.6, 0.1]]) {   // the brush for the next lock, or the chosen lock's own
+      if ((k === "turns" || k === "curlFrom") && !V.curl) continue;
       const id = `f${uid++}`, val = S[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(val, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: val });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(val));
       rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });

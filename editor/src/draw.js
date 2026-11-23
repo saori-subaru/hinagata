@@ -13,7 +13,7 @@ import * as THREE from "three";
 
 /** vp: the viewport / store: the recipe / onChange(): the tool's state changed (the panel redraws) */
 export function createDrawTool({ vp, store, onChange = () => {} }) {
-  const S = { on: false, move: false, width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, twist: 0, mirror: false, sel: null };   // sel: the drawn lock the sliders change (null: the brush for the next one)
+  const S = { on: false, move: false, width: 0.03, thick: 0.3, stiff: 1, taper: 0, curl: 0, turns: 2, curlFrom: 0, twist: 0, mirror: false, sel: null };   // sel: the drawn lock the sliders change (null: the brush for the next one)
   try { Object.assign(S, JSON.parse(localStorage.getItem("hinagata.editor.draw")) ?? {}, { on: false, move: false, sel: null }); } catch {}
   const save = () => { try { localStorage.setItem("hinagata.editor.draw", JSON.stringify({ ...S, on: false, move: false, sel: null })); } catch {} };
   let av = null, stroke = null;
@@ -57,7 +57,7 @@ export function createDrawTool({ vp, store, onChange = () => {} }) {
     if (!stroke) return; const s = stroke; stroke = null; vp.controls.enabled = true; show();
     let len = 0; for (let i = 1; i < s.world.length; i++) len += s.world[i].distanceTo(s.world[i - 1]);
     if (s.world.length < 3 || len < 0.02) return;   // a click, not a stroke
-    const lock = { pts: s.world.map(toHead), width: S.width, thick: S.thick, stiff: S.stiff, mirror: S.mirror, ...(S.taper ? { taper: S.taper } : {}), ...(S.curl ? { curl: S.curl, turns: S.turns } : {}), ...(S.twist ? { twist: S.twist } : {}) };
+    const lock = { pts: s.world.map(toHead), width: S.width, thick: S.thick, stiff: S.stiff, mirror: S.mirror, ...(S.taper ? { taper: S.taper } : {}), ...(S.curl ? { curl: S.curl, turns: S.turns, ...(S.curlFrom ? { curlFrom: S.curlFrom } : {}) } : {}), ...(S.twist ? { twist: S.twist } : {}) };
     store.set({ "hair.drawn": [...(store.get("hair.drawn") ?? []), lock] }, { commit: true });
   };
   vp.canvas.addEventListener("pointerup", up); vp.canvas.addEventListener("pointercancel", up);
