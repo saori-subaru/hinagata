@@ -145,7 +145,7 @@ export const CHARACTERS = {
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
-        head: { scale: 0.84, width: 0.94, jawLength: 0.82 },   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
+        head: { scale: 0.84, width: 0.94, depth: 0.85, jawLength: 0.82 },   // depth: thinner front to back (at 1 the side view read thicker than シルヴィ's)   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
         proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { hipX: 0.11, footX: 0.13, kneeX: 0.118 },   // (his hip joints as before the default came in: the legs stand apart in his boots)
@@ -154,7 +154,7 @@ export const CHARACTERS = {
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).
         // chin.taper: the jaw in straight lines to a point, as on the sheet (round, the chin's middle hung below them as a knob; chin.sides for a V
         // creased the jaw under the ear)
-        sculpt: { neck: { width: 0.8 }, mouth: { profile: 2 }, chin: { taper: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
+        sculpt: { neck: { width: 0.62 }, mouth: { profile: 2 }, chin: { taper: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
