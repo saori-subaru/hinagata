@@ -316,7 +316,7 @@ export const CHARACTERS = {
         pants: { color: "#4b5053", length: "long", top: 0.49, offset: 0.007 },
         socks: { on: false },
         // engineer boots: a straight shaft with the heel in line with its back, a narrow foot, a blunt toe a little lower at its tip, the sole notched before the heel (a round last under a leg-shaped shaft read as rain boots)
-        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, archCut: 0.021, archSlant: 1.5, width: 0.72, shaft: 0.85, toeLow: 0.12 },
+        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, archCut: 0.021, archSlant: 2.6, width: 0.72, shaft: 0.85, toeLow: 0.12 },
         belt: { on: true, color: "#2f2e33", y: 0.49, width: 0.035 },
         jacket: { on: true, color: "#3b3940", slip: "L", slipOpenHem: 0.25, hem: 0.475, flare: 0.006, lapel: 0.066, collar: 0.07, sleeveBag: 0.016, sleeveFolds: 0.006 },
         weapon: { right: "fist", left: "fist" },
