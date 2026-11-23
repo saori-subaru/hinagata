@@ -256,7 +256,8 @@ export function sideLocks(defs, { surf, center, toRoot, sx = 1, N = 10 }) {
  * Locks drawn by hand (options.hair.drawn). Each: { pts: [[x, y, z], …] the stroke from root to tip (head space), width (m, default 0.03),
  * thick (× width, default 0.3), stiff (default 1: how firmly it keeps its drawn shape; a loop needs it), mirror (also on the other side), taper,
  * curl (m: the stroke becomes the axis of a ringlet of this radius, 0 = none), turns (of the ringlet, default 2), curlFrom (0..1 along the stroke: straight to there, a lock lying on the head first), twist (rad, root to tip: the
- * ribbon turns about its own line); both need center (root space: the head's, for the side that faces out),
+ * ribbon turns about its own line), wave (m: it snakes side to side in its own face, < 0 the other way first), waves (how many, default 1.5);
+ * all need center (root space: the head's, for the side that faces out),
  * fromWhorl (with W = { d, surf, center, rootW }, hair.sculpt.whorl on): a path from the whorl over the head, under the other locks, to the
  * stroke's first point goes before it, narrow at the whorl and full from that point (a sidelock drawn from the temple showed its root's stub) }.
  * The stroke is resampled to N points evenly along its length (every lock of one mesh has the same number of points). toRoot: head → root space
@@ -280,6 +281,9 @@ export function drawnLocks(list, { toRoot, N: N0 = 16, W = null, center = null, 
       for (let q = 0; q < N; q++) { const s = L * q / (N - 1); while (j < P.length - 2 && acc[j + 1] < s) j++; const f = (s - acc[j]) / ((acc[j + 1] - acc[j]) || 1);
         pts.push(toRoot(...[0, 1, 2].map((k) => P[j][k] + (P[j + 1][k] - P[j][k]) * Math.min(1, Math.max(0, f))))); }
       let nrm;
+      if (center && d.wave) { const C = pts.map((p) => [...p]), WN = d.waves ?? 1.5; let po = null;
+        C.forEach((p, q) => { const T = tan(C, q), t = q / (N - 1), o0 = [p[0] - center[0], Math.max(0, p[1] - center[1]), p[2] - center[2]]; let o = o0.map((v, k) => v - T[k] * dot(o0, T)); if (po && Math.hypot(...o) < 0.3 * (Math.hypot(...o0) || 1)) o = po; o = po = nz(o);
+          const a = [T[1] * o[2] - T[2] * o[1], T[2] * o[0] - T[0] * o[2], T[0] * o[1] - T[1] * o[0]], e = m * d.wave * sstep(0.08, 0.4, t) * Math.sin(2 * Math.PI * WN * t); pts[q] = p.map((v, k) => v + a[k] * e); }); }
       if (center && (d.curl > 0 || d.twist)) { const R = Math.max(0, d.curl ?? 0), TU = d.turns ?? 2, TW = d.twist ?? 0, CF = Math.min(0.9, Math.max(0, d.curlFrom ?? 0)), C = pts.map((p) => [...p]); let po = null;
         nrm = C.map((p, q) => { const T = tan(C, q), t = q / (N - 1), o0 = [p[0] - center[0], Math.max(0, p[1] - center[1]), p[2] - center[2]], ol = Math.hypot(...o0) || 1;
           let o = o0.map((v, k) => v - T[k] * dot(o0, T)); if (po && Math.hypot(...o) < 0.3 * ol) o = po.map((v, k) => v - T[k] * dot(po, T));   // the stroke runs along "out" there: the last point's
