@@ -12510,7 +12510,7 @@
   "outfit.shoes.archLen": {
    "path": "outfit.shoes.archLen",
    "type": "number",
-   "default": 0.04,
+   "default": 0,
    "label": {
     "ja": "切れ込みの長さ",
     "en": "Sole notch's length"
@@ -12519,7 +12519,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "min": 0.02,
+   "min": 0,
    "max": 0.07,
    "step": 0.002,
    "order": 508,
@@ -12528,14 +12528,14 @@
     "en": "Shoes"
    },
    "help": {
-    "ja": "切れ込みの天井の前後の長さ(m)",
-    "en": "the notch's ceiling, front to back (m)"
+    "ja": "切れ込みの平らな天井の前後の長さ(m)。0 = 天井なしの三角",
+    "en": "the notch's flat ceiling, front to back (m); 0 = none, a triangle"
    }
   },
   "outfit.shoes.archSlant": {
    "path": "outfit.shoes.archSlant",
    "type": "number",
-   "default": 0.3,
+   "default": 1,
    "label": {
     "ja": "切れ込みの前の傾き",
     "en": "Sole notch's front slant"
@@ -12545,7 +12545,7 @@
    "cost": "clothes",
    "apply": null,
    "min": 0,
-   "max": 0.8,
+   "max": 2,
    "step": 0.05,
    "order": 509,
    "section": {
@@ -12553,8 +12553,8 @@
     "en": "Shoes"
    },
    "help": {
-    "ja": "前の底の端が床へ向かって前へ倒れる量(高さの何倍か)。0 = 垂直、大きいと角が消えて欠けに見える",
-    "en": "how far the front sole's end leans forward toward the floor (× the notch's height): 0 = upright; large, its top corner goes and it reads as a chip"
+    "ja": "前の底の端が、かかとの前へ向かって斜めに上がる長さ(高さの何倍か)。0 = 垂直",
+    "en": "how long the front sole's end slopes up toward the heel's front (× the notch's height); 0 = upright"
    }
   },
   "outfit.shoes.heelBlock": {
