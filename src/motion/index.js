@@ -1,4 +1,4 @@
-// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height,
+// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, x / z?: the hips moved sideways / forward, chair?: true, seat?: height,
 //   air?: the speed (m/s) the pose would go at, for the wind the hair meets while it is played in place }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
@@ -172,6 +172,9 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
     const ft = footTilt();
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;
+    if (P0.x != null || bone.hips.position.x !== HIPS0.x) bone.hips.position.x += (HIPS0.x + (P0.x || 0) - bone.hips.position.x) * k;   // x / z: the hips' sway sideways and front to back (motions loaded from files, motion/import.js)
+    if (P0.z != null || bone.hips.position.z !== HIPS0.z) bone.hips.position.z += (HIPS0.z + (P0.z || 0) - bone.hips.position.z) * k;
+    P0.fix?.();   // a last touch on the bones as posed (follow.js: arms pushed out of the body)
     // the skirt's front bones turn with the thighs (about a point at the front of the waist), less the skirt's own slant: the front already
     // stands that far out, and turned the whole way with a thigh raised (sitting) its flare pointed up, the hem lifted over the lap
     // (2026-10-05, Saori: "座った時前が捲れ上がる")

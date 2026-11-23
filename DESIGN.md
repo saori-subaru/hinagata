@@ -526,12 +526,14 @@ Saori wanted the forest game's character to climb giant trees and fall properly,
 
 Not yet: hanging by the hands; feet finding holds during the pull-up (the legs are posed, not placed).
 
-### Loading Mixamo / VRM motions (2026-10-02, noted)
+### Loading Mixamo / VRM motions (`src/motion/import.js`)
 
-With the standard humanoid names (see "Motions written for any humanoid skeleton"), motions made for other characters can be loaded:
-- Mixamo (FBX/GLB clips) and VRM motions (`.vrma`) go through a bone-name table, a rest-pose correction (their rest is a T-pose, this engine binds in an A-pose), and a proportion correction (hip height and travel scaled by leg length, or the feet slide and float).
-- Expect trouble where the chibi proportions matter: hands near the face sink into the big head; arms folded in front sink into the thick torso. Big-limbed motions (walk, run, swing) transfer well.
-- License: Mixamo motions may be used in games, but the files may not be redistributed. The engine can't ship Mixamo clips; users load the ones they downloaded themselves.
+- `loadMotion` loads the file's skeleton undrawn, plays it with an AnimationMixer, and the avatar follows it (follow.js: each limb turned from the A-pose rest onto the file's T-pose rest, then the joints' turns copied). Names: `BONE_NAMES.vrm` / `.mixamo` (Spine / Spine1 / Spine2 → spine / chest / upperChest).
+- Proportions: follow's `motionScale` = the avatar's hip-to-ankle length over the file's; the hips' up/down and sway (pose `x`/`z`) are scaled by it. The steady travel is taken out of the hips track (straightened between its first and last key, so a loop doesn't jump back) and returned as `velocity`.
+- Mixamo FBX: the stored nodes are not the T-pose; `skeleton.pose()` on the skinned mesh gives it. Some binds have the hips at the origin and the feet under the floor: the hips are lifted to put the ankles 0.09 × the leg off it. 🚧 "Without skin" downloads have no bind pose: untried.
+- Arms into the body (a chibi's hand on the chest, folded arms): follow's `clear` measures the forearm and past the hand against the body SDF through the chest bone and turns the upper arm out along the gradient (pose `fix`, run after the bones are set). The head is not in it: a big head still meets hands at the face, and a bowed head hides the face.
+- An in-place Mixamo walk slides its feet by nature (no travel to move by).
+- License: Mixamo motions may be used in games, but the files may not be redistributed. The engine ships none. The test files go in tools/_motions/ (not committed).
 
 ## Scope: chibi only, but wide within it
 
