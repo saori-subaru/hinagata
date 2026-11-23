@@ -41,7 +41,8 @@ function shape({ O, P, J }) {
   const round = (x, y, z, A) => { const t = dot(x, y, z, A.A, A.u), vx = x - A.A[0] - A.u[0] * t, vy = y - A.A[1] - A.u[1] * t; return Math.atan2(z - A.A[2] - A.u[2] * t, (vx * A.u[1] - vy * A.u[0]) * A.side); };
   const tube = (x, y, z, A) => { const p = [x, y, z], d = smin(seg(p, A.A, A.u, 0.01, A.La), seg(p, A.F, A.g, 0, A.Lf + END + 0.03), 0.02) - RS; if (!BAG && !FOLD) return d;
     const LL = A.La + A.Lf, q = (clamp01(dot(x, y, z, A.A, A.u) / A.La) * A.La + clamp01(dot(x, y, z, A.F, A.g) / A.Lf) * A.Lf) / LL;   // 0 at the shoulder, 1 at the wrist
-    const fold = FOLD ? FOLD * sstep(0.25, 0.45, q) * sstep(0.95, 0.75, q) * Math.sin(2 * Math.PI * q * LL / 0.07 + 2 * round(x, y, z, A)) : 0;
+    // (their spacing and depth wander along the arm and differ between the arms: evenly spaced and as deep, the sleeve read as a spring)
+    const fold = FOLD ? (() => { const l = q * LL, r = round(x, y, z, A); return FOLD * sstep(0.18, 0.38, q) * sstep(0.97, 0.8, q) * (0.9 + 0.45 * Math.sin(2 * Math.PI * l / 0.17 + 2.3 + 0.9 * A.side - r)) * Math.sin(2 * Math.PI * l / 0.075 + 2 * r + 0.9 * Math.sin(2 * Math.PI * l / 0.21 + 1.7 * A.side)); })() : 0;
     return d - BAG * sstep(0.05, 0.55, q) * (1 - 0.6 * sstep(0.8, 1, q)) - fold; };
   const along = (x, y, z, A) => (x - A.F[0]) * A.g[0] + (y - A.F[1]) * A.g[1] + (z - A.F[2]) * A.g[2];   // how far down the forearm
   // its outer side: the body pushed out, hanging straight from the chest down and wider toward the hem (over a belt), and the sleeves' tubes
