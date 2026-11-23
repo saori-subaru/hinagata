@@ -42,6 +42,7 @@ export const CHARACTERS = {
   sylvie: {
     name: { ja: "シルヴィ", en: "Sylvie" },
     about: { ja: "エルフの女の子", en: "An elf girl" },
+    stand: "standSylvie",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
     file: { hinagata: 3, name: "シルヴィ", options: {
       colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#41714d" },
       body: {
@@ -140,6 +141,7 @@ export const CHARACTERS = {
     // As on his design sheet (2026-11-19, Saori: "このイラストに忠実に作り直して"): about 3.6 heads with short legs, a hooded red cloak
     // closed by a star, a white tunic with blue stripes over shorts, a belt, wide sleeves with turned-back cuffs, cuffed boots, fists.
     // Heights were measured off the sheet (tools/measure.mjs --to) and the head's parts in head space off its front view
+    stand: "standAstel",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
@@ -252,6 +254,7 @@ export const CHARACTERS = {
     // As on her design sheet (2026-11-20): long black hair over her right eye, gold half-lidded eyes, a rider's jacket slipped off her
     // left shoulder (outfit.jacket) over a sleeveless turtleneck, a belt whose end hangs down her left thigh, slim trousers, tall boots.
     // Proportions fitted to the sheet (tools/measure.mjs --fit heads=4.47,hip=0.485)
+    stand: "standSubaru",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
     file: { hinagata: 5, name: "スバル", options: {
       colors: { skin: "#f4e2dd", hair: "#38373d", eyes: "#d2ae5c" },
       outline: { color: "#17171b" },

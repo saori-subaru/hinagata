@@ -289,6 +289,7 @@ const QUICK = ["idle", "walk", "run", "wave", "cheer", "guard", "aPose", "tPose"
 const MOTION_GROUPS = [
   ["demo", null],
   ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "banzai", "aPose", "tPose"]],
+  ["stand", ["standSylvie", "standAstel", "standSubaru"]],
   ["sit", ["sitChair", "sitChairGirl", "sitFloor", "hugKnees", "sleep"]],
   ["jump", ["jumpCrouch", "jumpRise", "jumpLeap", "jumpAir", "jumpLand", "fall", "hardLand", "stumble", "roll", "knockdown"]],
   ["climb", ["climb", "mantleReach", "mantlePull", "mantleKnee", "climbOver", "vault", "hang", "shimmy", "glide", "balance", "balanceWalk", "slide"]],

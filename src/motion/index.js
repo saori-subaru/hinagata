@@ -85,6 +85,18 @@ export const POSES = {
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
       // 丸まった背中: 背中の3か所を少しずつ曲げ、肩を前へ巻く。顔は起こして前を見る
       spine: [0.2, 0, 0], chest: [0.2, 0, 0], upperChest: [0.25, 0, 0], "shoulder.L": [0, -0.3, -0.06], "shoulder.R": [0, 0.3, 0.06], neck: [0.04, 0, 0], head: [-0.22 + sin(t * 1.2) * 0.04, 0, 0.12] }, y: -0.31 }),
+  // キャラごとの立ちポーズ(CHARACTERS の stand)
+  // シルヴィ: 内股で、両手を下腹の前で重ね、首を少しかしげる
+  "standSylvie": (t) => ({ b: { "upperLeg.L": [0, 0, -0.06], "upperLeg.R": [0, 0, 0.06], "foot.L": [0, -0.07, 0], "foot.R": [0, 0.07, 0], "upperArm.L": [0, 0, -0.5], "upperArm.R": [0, 0, 0.5], "lowerArm.L": [-1.0, 0, -0.75], "lowerArm.R": [-1.0, 0, 0.75],
+      chest: [sin(t * 1.6) * 0.02, 0, 0], head: [0.06 + sin(t * 0.8) * 0.02, 0, 0.12 + sin(t * 0.6) * 0.03] }, y: 0 }),
+  // アステル: 足を開いて胸を張り、左手を腰に。右腕は下ろす
+  "standAstel": (t) => ({ b: { "upperLeg.L": [0, 0, 0.12], "upperLeg.R": [0, 0, -0.12], "foot.L": [0, 0.15, -0.12], "foot.R": [0, -0.15, 0.12],
+      "upperArm.L": [0.3, 0, -0.1], "lowerArm.L": [0, 0, -1.3], "upperArm.R": [0, 0, 0.48], "lowerArm.R": [-0.1, 0, 0.08],
+      spine: [-0.05, 0, 0], chest: [-0.04 + sin(t * 1.6) * 0.02, 0, 0], head: [-0.08, sin(t * 0.5) * 0.08, 0] }, y: 0 }),
+  // スバル: 右脚に体重をのせ、左ひざをゆるめて、腕を組む。あごを上げて少し横を見る
+  "standSubaru": (t) => ({ b: { hips: [0, 0.1, -0.1], spine: [0, -0.05, 0.08], "upperLeg.L": [-0.12, 0, 0.04], "lowerLeg.L": [0.25, 0, 0], "foot.L": [-0.1, 0, 0], "upperLeg.R": [0, 0, 0.06],
+      "upperArm.L": [-0.55, 0.3, -0.35], "lowerArm.L": [0, 0, -2.0], "upperArm.R": [-0.65, -0.3, 0.35], "lowerArm.R": [0, 0, 2.0],
+      chest: [sin(t * 1.6) * 0.015, 0, 0], head: [-0.06, -0.25 + sin(t * 0.5) * 0.05, -0.08] }, y: 0 }),
 };
 
 // Holding a weapon in the right hand (outfit.weapon.right), standing and walking change that arm (the elbow kept out from the side, not into it):
