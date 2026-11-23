@@ -11,6 +11,7 @@ import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
 import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { encodeBake, decodeBake, openBake } from "./bake.js";
+import { seenVertices } from "./visible.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
@@ -1293,16 +1294,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** GLB of the avatar in the A-pose (outlines left out). */
     /** This build's meshes as a file (ArrayBuffer) for createAvatar(recipe, { baked }): the same recipe at the same quality comes without building.
      *  What was changed after the build (setHair, setWorn) is not in it.
-     *  bake({ triangles: 8000, face?: true, error?: 0.006 (m: past 1 cm the sole came through the boot) }) → Promise of the file thinned to about that many triangles over its meshes (the
-     *  hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
+     *  bake({ triangles: 8000, face?: true, error?: 0.006 (m: past 1 cm the sole came through the boot), 0.01 with hidden }) → Promise of the file thinned to about that many triangles over its meshes (the
+     *  hidden: true drops first what never shows from all round in a set of poses (a sole inside a boot; such a baked character can't take
+     *  clothes off: the body under them is gone). The hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
     bake(thin) {
-      const parts = { ...(hit ?? {}), ...built };
-      if (!thin?.triangles) return encodeBake({ key: cacheKey, parts });
+      let parts = { ...(hit ?? {}), ...built };
+      if (!thin?.triangles && !thin?.hidden) return encodeBake({ key: cacheKey, parts });
       return (async () => {
-        const M = MS ?? (MS = await loadMS());
+        if (thin.hidden) { parts = { ...parts, ...unseenDropped(parts) }; parts.cover = null; }   // (the body's cover bits are per vertex: recomputed at load)
+        if (!thin.triangles) return encodeBake({ key: cacheKey, parts });
+        MS ??= await loadMS();
         const names = Object.keys(parts).filter((k) => parts[k]?.idx?.length >= 3 && parts[k].pos);
         const tris = (o) => names.reduce((a, k) => a + o[k].idx.length / 3, 0), full = tris(parts);
-        const at = (share) => Object.fromEntries(names.map((k) => [k, simplified(parts[k], k, { share, error: thin.error ?? 0.006, face: thin.face })]));
+        const at = (share) => Object.fromEntries(names.map((k) => [k, simplified(parts[k], k, { share, error: thin.error ?? (thin.hidden ? 0.01 : 0.006), face: thin.face })]));
         let lo = 0, hi = 1, best = parts;   // the share whose triangles come under the budget, the largest found (a few passes, each thinning every part)
         if (full > thin.triangles) { best = null;
           for (let i = 0; i < 9; i++) { const s = (lo + hi) / 2, o = at(s); if (tris(o) <= thin.triangles) { lo = s; best = o; } else hi = s; }
@@ -1329,6 +1333,26 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
 
     dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); face.BROWS?.tex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT)]) U.map.value.dispose(); root.removeFromParent(); },
   };
+  // bake({ hidden: true }): the records without the triangles that never show (src/visible.js), in these poses from all round. The
+  // triangles next to one that shows are kept too (an outline's facet of no area along a hem is never drawn itself)
+  const SEEN_POSES = [["aPose", [0]], ["tPose", [0]], ["idle", [0]], ["walk", [0, 0.13, 0.26, 0.39]], ["wave", [0, 0.5]], ["cheer", [0, 0.5]], ["sitChair", [1]], ["sitFloor", [1]], ["guard", [0]], ["hugKnees", [1]]];
+  function unseenDropped(recs) {
+    const meshes = {}, mine = new Set(), outl = new Set(Object.values(parts).map((x) => x?.o).filter(Boolean));
+    for (const k of Object.keys(recs)) { const m = parts[k.startsWith("hair:") ? "hair" : k]?.m; if (!m?.visible || !recs[k]?.idx || m.geometry.attributes.position.count !== recs[k].pos.length / 3) continue; meshes[k] = m; mine.add(m); }
+    // what hides: solid meshes only (the face's layers lie 1.2 mm over the skin: as hiders the face itself went; see-through ones neither)
+    const solid = (o) => !o.renderOrder && ![].concat(o.material).some((m) => m.transparent || m.alphaTest > 0 || !m.colorWrite);
+    const others = []; root.traverse((o) => { if (o.isMesh && o.visible && !o.userData.outline && !mine.has(o) && !outl.has(o) && solid(o)) others.push(o); });
+    const was = poseName, list = SEEN_POSES.flatMap(([n, ts]) => POSES[n] ? ts.map((t) => [n, t]) : []);
+    const seen = seenVertices(meshes, others, (i) => { if (i >= list.length) return false; const [n, t] = list[i]; avatar.play(n); for (let k = 0; k < 20; k++) avatar.update(1 / 30, { t: t + (k - 20) / 30 }); });
+    avatar.play(was); avatar.update(1 / 30, { instant: true });
+    const out = {};
+    for (const [k, S] of Object.entries(seen)) { const r = recs[k], I = r.idx, keep = [];
+      for (let t = 0; t < I.length; t += 3) if (S[I[t]] || S[I[t + 1]] || S[I[t + 2]]) keep.push(I[t], I[t + 1], I[t + 2]);
+      const map = new Int32Array(S.length).fill(-1); let n = 0; for (const v of keep) if (map[v] < 0) map[v] = n++;
+      const pick = (a, w) => { if (!a) return a; const o = new a.constructor(n * w); for (let v = 0; v < S.length; v++) if (map[v] >= 0) for (let q = 0; q < w; q++) o[map[v] * w + q] = a[v * w + q]; return o; };
+      out[k] = { ...r, pos: pick(r.pos, 3), nor: pick(r.nor, 3), si: pick(r.si, 4), sw: pick(r.sw, 4), idx: Uint32Array.from(keep, (v) => map[v]) }; }
+    return out;
+  }
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
   building = false; Object.assign(built, fresh);
