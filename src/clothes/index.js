@@ -456,7 +456,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const q = Math.hypot(x / (ax + fd * 0.6), z / (az + fd)), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
       const m0 = OVER_BODY ? torso(x, y, z) - off : CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);   // (over the body: not round the arms, which stand out of its sides in the rest pose)
       const mantle = COWL && col ? smin(m0, cowlCol(x, y, z) - off, 0.02) : m0;
-      return smin(cone, mantle, 0.08); };   // (8 cm: where the cone came out of the body pushed out, a 2 cm blend left a crease across the back, black shards of the outline)
+      return smin(cone, mantle, k + 0.06 * sstep(0.01, 0.05, CAPE_Y - y)); };   // (8 cm from 5 cm under the shoulders: where the cone came out of the body pushed out, 2 cm left a crease across the back, black shards of the outline; 2 cm over them, or the hood stood up off the back)
     // cape.neckOpen (シルヴィ): the neckline cut low and wide (the clothes' shoulders show inside it): level round the body, a little
     // higher behind, neckOpen out from the neck at its sides; closed, it dips in front to the closure's ends (XF, at cape.close).
     // null: the collar round the neck (with a hood: 0.07). Its cut goes across the cloth, not level: level, the thick shell lying nearly
