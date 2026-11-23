@@ -303,7 +303,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
   let capePt = 0;
   function capeShapeBlock() {
     if (!store.get("outfit.cape.on")) return null;
-    const pts = (store.get("outfit.cape.shape") ?? []).map((p) => ({ a: 0, hem: 0, out: 0, ...p })), write = (arr) => set({ "outfit.cape.shape": arr });
+    const pts = (store.get("outfit.cape.shape") ?? []).map((p) => ({ a: 0, hem: 0, out: 0, from: 0, ...p })), write = (arr) => set({ "outfit.cape.shape": arr });
     if (capePt >= pts.length) capePt = Math.max(0, pts.length - 1);
     const add = () => { const s = [...pts].sort((p, q) => p.a - q.a), i = s.findIndex((p) => p === pts[capePt]), p = s[i] ?? { a: 0, hem: 0, out: 0 }, q = s[(i + 1) % Math.max(1, s.length)] ?? p;
       const span = s.length > 1 ? ((q.a - p.a) % 360 + 360) % 360 || 360 : 90, a = ((p.a + span / 2 + 180) % 360 + 360) % 360 - 180;
@@ -313,7 +313,7 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
         h("button", { class: "btn small", type: "button", onclick: add }, t("capePtAdd")),
         h("button", { class: "btn small ghost", type: "button", disabled: !pts.length, onclick: () => write(pts.filter((_, i) => i !== capePt)) }, t("capePtDel")))];
     const it = pts[capePt];
-    if (it) for (const [k, key, min, max, step] of [["a", "capePtA", -180, 180, 1], ["hem", "capePtHem", -0.1, 0.3, 0.005], ["out", "capePtOut", -0.1, 0.3, 0.005]]) {
+    if (it) for (const [k, key, min, max, step] of [["a", "capePtA", -180, 180, 1], ["hem", "capePtHem", -0.1, 0.3, 0.005], ["out", "capePtOut", -0.1, 0.3, 0.005], ["from", "capePtFrom", 0, 0.95, 0.01]]) {
       const id = `f${uid++}`, v = it[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
       const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
       const put = (x) => write(pts.map((p, i) => i === capePt ? { ...p, [k]: x } : p));

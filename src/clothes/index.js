@@ -420,14 +420,14 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0, CX = CLOSED ? CA.closeX ?? 0 : 0;
     const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x - CX))) : 0);   // the collar a little higher at the back
     // cape.shape: the hem set by hand at points round the body, [{ a, hem, out }]: a = degrees round from the back's middle (+ toward the
-    // character's left, ±180 the front), hem = m lower than cape.hem there, out = m pushed out at the hem (none at the shoulders, growing down).
+    // character's left, ±180 the front), hem = m lower than cape.hem there, out = m pushed out at the hem, growing down from `from` (0 the shoulders, 1 the hem).
     // A smooth curve between the points (level at each): points that go out and in by turns make the cloth wave, a crest at each out
-    const SHP = (CA.shape ?? []).filter((p) => p && Number.isFinite(p.a)).map((p) => ({ a: ((p.a + 180) % 360 + 360) % 360 - 180, hem: p.hem ?? 0, out: p.out ?? 0 })).sort((p, q) => p.a - q.a);
+    const SHP = (CA.shape ?? []).filter((p) => p && Number.isFinite(p.a)).map((p) => ({ a: ((p.a + 180) % 360 + 360) % 360 - 180, hem: p.hem ?? 0, out: p.out ?? 0, from: Math.min(0.95, Math.max(0, p.from ?? 0)) })).sort((p, q) => p.a - q.a);
     const SH_LOW = SHP.reduce((m, p) => Math.max(m, p.hem), 0);
     const shapeAt = (x, z) => { const n = SHP.length; if (!n) return null; if (n === 1) return SHP[0];
       const a = Math.atan2(x, -z) * 180 / Math.PI; let i = SHP.findIndex((p) => p.a > a); if (i < 0) i = 0;
       const q = SHP[i], p = SHP[(i - 1 + n) % n], span = ((q.a - p.a) % 360 + 360) % 360 || 360, u = (((a - p.a) % 360 + 360) % 360) / span, f = (1 - Math.cos(Math.PI * u)) / 2;
-      return { hem: p.hem + (q.hem - p.hem) * f, out: p.out + (q.out - p.out) * f }; };
+      return { hem: p.hem + (q.hem - p.hem) * f, out: p.out + (q.out - p.out) * f, from: p.from + (q.from - p.from) * f }; };
     const hemY = (z, x = 0) => CA.hem + TILT * z - (SHP.length ? shapeAt(x, z).hem : 0);
     // cape.sideEdge: under the opening the sides end this far forward of the body's middle (behind it, アステル's cloak: the arms hang in front of the cape)
     const SE = CA.sideEdge ?? 0.02;
@@ -444,7 +444,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // cape.shape's push at a point (fd, m) and where the point was before it (zb): the hem's height is the unpushed cloth's (with tilt, a
     // hem rising behind went up as far as the cloth was pushed back, and cut off most of it). Full at the hem, straight from the shoulders
     const pushAt = (x, y, z) => { if (!SHP.length) return { fd: 0, zb: z }; const az = radii(y)[1], drop = Math.max(0, CAPE_Y - y); let fd = 0, zb = z;
-      for (let i = 0; i < 3; i++) { zb = z * az / Math.max(0.05, az + fd); fd = shapeAt(x, zb).out * Math.min(1, drop / Math.max(0.1, CAPE_Y - hemY(zb, x))); } return { fd, zb }; };
+      for (let i = 0; i < 3; i++) { zb = z * az / Math.max(0.05, az + fd); const S = shapeAt(x, zb), u = Math.min(1, drop / Math.max(0.1, CAPE_Y - hemY(zb, x))); fd = S.out * sstep(S.from, 1, u) ** 0.5; } return { fd, zb }; };   // from: where down the cape (0 shoulders, 1 hem) the fold begins
     const outside = (x, y, z, B = bodySdf, col = true) => {
       const [ax, az] = radii(y), fd = pushAt(x, y, z).fd;
       const q = Math.hypot(x / (ax + fd * 0.6), z / (az + fd)), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
