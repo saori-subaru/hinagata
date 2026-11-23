@@ -635,7 +635,9 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.edge = (x, y, z) => Math.min((y - hemY(pushAt(x, y, z).zb, x)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z, x);
     f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
-    f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : roll;   // the hood's fold and lining, or the cowl's roll (parts.js "hood")
+    f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : roll;
+    // one roll's hood: how far outside its bag's outline (m, < 0 inside), under the roll's 3 cm: the line drawn along its edge (it has no outline of its own: it is blended into the roll and lies on the cape)
+    f.hoodLine = hood && roll && !(CA.cowlRoll2 > 0) ? (x, y, z) => y > hood.bagY(x) - 0.03 || outside(x, y, z) < 0.009 ? 1 : hood.bagOut(x, y, z) : null;   // (only along the rim's top: down its 14 mm wall the band read thick from the side)   // the hood's fold and lining, or the cowl's roll (parts.js "hood")
     // as a sheet (sdf/sheet.js), and the hood's bag on its back as a sheet of its own over it, its underside 1 cm into the cloth (out of sight):
     // its rim cut exactly along its outline. As a lump at 8 mm cells its 8 mm edge melted into a slope (a soft blob instead of the V)
     f.sheets = (B = bodySdf) => [{ o: (x, y, z) => outside(x, y, z), of: (x, y, z) => outside(x, y, z, B), tk: CA.thick, cut: cutOf }];
