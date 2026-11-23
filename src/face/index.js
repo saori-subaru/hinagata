@@ -376,12 +376,12 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       if (own) { fctx = mainCtx; BROWS.tex.needsUpdate = true; } }
     faceTex.needsUpdate = true;
   }
-  function faceLayerGeometry(src, FACE_WRAP, toHead = null, F = FACE) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled). F: the picture's heights (the brows' own: BROWS.frame)
+  function faceLayerGeometry(src, FACE_WRAP, toHead = null, F = FACE, clip = null) {   // clip: { y0, y1, x } (head space) keeps only that part of the front   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled). F: the picture's heights (the brows' own: BROWS.frame)
     const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, NS = src.attributes.shadeN?.array ?? N0, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
     const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
     // (the head's front down to where it faces 80° aside: from 72° (normal z 0.3) and z 0.05 the blush ended square on the cheek and the brows'
     // outer ends were cut off, seen from aside or on a narrower head, 2026-10-09, Saori. The picture is clear outside its parts, so a wider layer costs nothing)
-    const ok = (v) => { const [x, y, z] = H(v); return y > F.y0 + 0.004 && y < F.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17; };
+    const ok = (v) => { const [x, y, z] = H(v); return y > F.y0 + 0.004 && y < F.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17 && (!clip || (y > clip.y0 && y < clip.y1 && Math.abs(x) < clip.x)); };
     const map = new Map(), pos = [], nor = [], uv = [], col = [], si = [], sw = [], idx = [];
     const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
       pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で

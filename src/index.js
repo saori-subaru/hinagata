@@ -209,6 +209,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the outer side's nearest points, and from big triangles the inside showed through in holes (2026-10-05, the lite quality)
   const THIN_ERROR = 0.01;   // 1% of the mesh's size (meshoptimizer's target_error)
   // over (avatar.bake's budget): { share, error, face } in place of the quality's share and brake; face false thins the face too
+  const FEET = new Set(["shoes", "soles", "socks", "laces"]);
   function simplified(rec, name, over = null) {
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
@@ -216,13 +217,18 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // the garment parts (src/garments) say how: "keep" (the hip strings, a few mm wide, came out in dashes thinned to 7 %, 2026-10-10),
     // "cloth" (the scarf, the collar, the headband's bow), or as the body
     const thin = partNamed(name)?.thin, trim = thin === "keep" ? 1 : thin === "cloth" ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
-    const share = over ? (thin === "keep" ? 1 : Math.min(1, over.share * (cloth || thin === "cloth" ? 2 : 1)))
+    // (a budget: the feet's layers at 0.6 at least: thinned apart, the sole came through the boot in pale spots)
+    const share = over ? (thin === "keep" ? 1 : FEET.has(name) ? Math.max(0.6, over.share) : Math.min(1, over.share * (cloth || thin === "cloth" ? 2 : 1)))
       : trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
     let lock = null;
     if (name === "body" && over?.face !== false) { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
-      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1; }
+      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1;
+      // a budget (bake) thins far past the quality's share: an elf ear's thin blade fell flat into one plane of outline. Kept as built then
+      // and the hands past the wrist (the fingers' rings came out as spikes)
+      if (over) { const hx = Math.abs(J["hand.L"][0]) - 0.005; for (let v = 0; v < lock.length; v++) if (Math.abs(pos[v * 3]) > hx) lock[v] = 1; }
+      if (over && OPT.body.sculpt.ears.elf?.on) for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy - 0.1 && Math.abs(pos[v * 3]) > 0.17) lock[v] = 1; }
     // the share is of what may be thinned: the face's triangles come on top of it. Counted over the whole mesh (until 2026-10-06), the face
     // kept as built took the share away from the rest: a chibi's face is a fifth of its body, and at 0.15 the rest went to nearly nothing
     // (the forest's chibi paper-thin from the side, spikes from the shoulders to the thighs, shins gone; tools/thin-check.mjs).
@@ -236,9 +242,17 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // down its side spread the rim's normals in light flames
     { const S = OPT.outfit.shoes; if (name === "shoes" && S.cuffTube && S.kind === "boots" && (S.cuff ?? 0) > 0) { lock = new Uint8Array(pos.length / 3);
       for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > S.bootHeight - 0.12 * pos[v * 3 + 2] - 0.008) lock[v] = 1; } }
-    let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
-    const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
-    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, over?.error ?? THIN_ERROR, []);
+    // a budget: triangles of no area set aside and put back, their corners kept (a sheet's edge has each point twice, the second with its
+    // normal out: the facet its outline needs. meshoptimizer drops them, locked or not: the cape's opening lost its line)
+    let flat = null, src = idx;
+    if (over) { lock ??= new Uint8Array(pos.length / 3); flat = []; const rest = [];
+      for (let t = 0; t < idx.length; t += 3) { const a = idx[t] * 3, b = idx[t + 1] * 3, c = idx[t + 2] * 3, u = [0, 1, 2].map((k) => pos[b + k] - pos[a + k]), w = [0, 1, 2].map((k) => pos[c + k] - pos[a + k]);
+        if (Math.hypot(u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]) < 1e-9) { lock[idx[t]] = lock[idx[t + 1]] = lock[idx[t + 2]] = 1; flat.push(idx[t], idx[t + 1], idx[t + 2]); } else rest.push(idx[t], idx[t + 1], idx[t + 2]); }
+      src = Uint32Array.from(rest); if (src.length < 3) return rec; }
+    let kept = 0; if (lock) for (let i = 0; i < src.length; i += 3) if (lock[src[i]] && lock[src[i + 1]] && lock[src[i + 2]]) kept += 3;
+    const target = Math.min(src.length, Math.max(3, kept + Math.floor((src.length - kept) * share / 3) * 3));
+    let [out] = MS.simplifyWithAttributes(src, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, over?.error ?? THIN_ERROR, over ? ["LockBorder"] : []);   // (a budget: open edges kept, a sheet's hem carries the facet its outline needs)
+    if (flat?.length) { const o = new Uint32Array(out.length + flat.length); o.set(out); o.set(flat, out.length); out = o; }
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
     for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }
@@ -874,11 +888,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const mat = faceLayer ? faceLayer.material : face.faceMat;   // setShading で替えた材質を引きつぐ
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); bindTo(faceLayer);
-    if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); bindTo(holeLayer); }
+    // a baked character (a game: the layout stays put) gets the mouth's and the brows' layers only round their places (each a whole copy of the face's front: 2.8 千 triangles on Sylvie v2); moved past the margin by setLayout, they are cut off
+    const near = (y, lo, hi, x) => bakeHit ? { y0: y + face.FACE.dy - lo, y1: y + face.FACE.dy + hi, x } : null;
+    if (face.HOLE) { if (holeLayer) { root.remove(holeLayer); if (holeLayer.geometry !== g) holeLayer.geometry.dispose(); }
+      holeLayer = new THREE.SkinnedMesh(bakeHit ? face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, undefined, near(face.MOUTHP.y, 0.07, 0.04, 0.1)) : g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); bindTo(holeLayer); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
-    browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); bindTo(browLayer);
+    browLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.BROWS.frame, near(face.BROW.y, 0.05, 0.06, 0.19)), bm); browLayer.name = "brows"; browLayer.frustumCulled = false; browLayer.renderOrder = 2; root.add(browLayer); bindTo(browLayer);
   }
   buildFaceLayer();
   // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
@@ -1293,7 +1310,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
           for (let i = 0; i < 9; i++) { const s = (lo + hi) / 2, o = at(s); if (tris(o) <= thin.triangles) { lo = s; best = o; } else hi = s; }
           best ??= at(lo || 0.001); }
         const out = { ...parts, ...best }; if (best !== parts && best.body) delete out.cover;   // (the body's cover bits are per vertex: recomputed at load)
-        if (thin.report) thin.report({ before: full, after: tris(out) });
+        if (thin.report) thin.report({ before: full, after: tris(out), parts: Object.fromEntries(names.map((k) => [k, [parts[k].idx.length / 3, out[k].idx.length / 3]])) });
         return encodeBake({ key: cacheKey, parts: out });
       })();
     },
