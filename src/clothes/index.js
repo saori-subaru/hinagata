@@ -421,12 +421,12 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x - CX))) : 0);   // the collar a little higher at the back
     // cape.shape: the hem set by hand at points round the body, [{ a, hem, out }]: a = degrees round from the back's middle (+ toward the
     // character's left, ±180 the front), hem = m lower than cape.hem there, out = m pushed out at the hem (none at the shoulders, growing down).
-    // Straight between the points: each point is a corner (the hem's tip, a fold's edge) and the cloth between them a flat panel
+    // A smooth curve between the points (level at each): points that go out and in by turns make the cloth wave, a crest at each out
     const SHP = (CA.shape ?? []).filter((p) => p && Number.isFinite(p.a)).map((p) => ({ a: ((p.a + 180) % 360 + 360) % 360 - 180, hem: p.hem ?? 0, out: p.out ?? 0 })).sort((p, q) => p.a - q.a);
     const SH_LOW = SHP.reduce((m, p) => Math.max(m, p.hem), 0);
     const shapeAt = (x, z) => { const n = SHP.length; if (!n) return null; if (n === 1) return SHP[0];
       const a = Math.atan2(x, -z) * 180 / Math.PI; let i = SHP.findIndex((p) => p.a > a); if (i < 0) i = 0;
-      const q = SHP[i], p = SHP[(i - 1 + n) % n], span = ((q.a - p.a) % 360 + 360) % 360 || 360, f = (((a - p.a) % 360 + 360) % 360) / span;
+      const q = SHP[i], p = SHP[(i - 1 + n) % n], span = ((q.a - p.a) % 360 + 360) % 360 || 360, u = (((a - p.a) % 360 + 360) % 360) / span, f = (1 - Math.cos(Math.PI * u)) / 2;
       return { hem: p.hem + (q.hem - p.hem) * f, out: p.out + (q.out - p.out) * f }; };
     const hemY = (z, x = 0) => CA.hem + TILT * z - (SHP.length ? shapeAt(x, z).hem : 0);
     // cape.sideEdge: under the opening the sides end this far forward of the body's middle (behind it, アステル's cloak: the arms hang in front of the cape)
