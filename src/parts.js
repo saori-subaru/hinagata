@@ -8,6 +8,7 @@ import { skirtOf, hairForms } from "./options.js";
 import { PARTS, partNamed } from "./garments/index.js";
 import { armReach } from "./body/index.js";
 import { sheetsMesh, joinMeshes } from "./sdf/sheet.js";
+import { smin } from "./sdf/prim.js";
 export const ARMOR = ["armorChest", "armorShoulders", "armorArms", "armorLegs", "armorHelm", "armorVisor", "armorDeco", "armorHands", "armorFeet", "armorMail", "armorWaist"];   // the armor's pieces (one mesh each; helm to mail only in full plate, the waist's plates only in light armor with armor.tassets)
 export const WEAPONS = ["weaponR", "weaponRGrip", "weaponL", "weaponLFace", "weaponLGrip", "weaponSheath", "weaponBelt"];   // in the hands: metal, grip / straps, the shield's face
 export const EXTRAS = ["extraEars", "extraEarsIn", "extraWings"];   // outfit.extras (clothes/extras.js): animal ears (and their inner side), wings
@@ -119,8 +120,11 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));
     { const CR = OPT.hair.sculpt.whorl?.on && OPT.hair.sculpt.whorl.crop; if (CR && hairKit.cropSdf) return { sdf: HT.wrap(hairKit.cropSdf(CR)), lo: [-0.4, 0.6, -0.42], hi: [0.4, 1.3, 0.2], h: H * OPT.quality.hairCell, bone1: "head" }; }   // the cropped nape alone is meshed
+    const MS = hairKit.massSdf(), MB = MS && hairKit.massBox().map(([x, y, z, r]) => [HT.fromHead(x, y, z), r + 0.03]), grow = (lo, hi) => { if (MB) for (const [p, r] of MB) for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k] - r); hi[k] = Math.max(hi[k], p[k] + r); } return { lo, hi }; };
+    if (hairKit.whorlOn(pick) && MS) return { sdf: HT.wrap(MS), ...grow([9, 9, 9], [-9, -9, -9]), h: H * OPT.quality.hairCell, bone1: "head" };
     if (hairKit.whorlOn(pick)) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "head" };   // locks from the whorl: no block, the scalp is painted (index.js scalpOf); the ahoge is joined to this
-    return { sdf: HT.wrap(hairKit.hairSdfOf(pick)), lo: [-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], hi: [0.4, 1.5, 0.38], h: H * OPT.quality.hairCell, bone1: "head" };
+    const HS = hairKit.hairSdfOf(pick);
+    return { sdf: HT.wrap(MS ? (x, y, z) => smin(HS(x, y, z), MS(x, y, z), 0.03) : HS), ...grow([-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], [0.4, 1.5, 0.38]), h: H * OPT.quality.hairCell, bone1: "head" };
   }
   throw new Error(`Unknown part "${name}"`);
 }

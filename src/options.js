@@ -788,6 +788,7 @@ export const DEFAULTS = {
     "bangs": "nendo",
     "drawn": [],
     "tufts": [],
+    "masses": [],
     "whorl": {
       "x": 0,
       "z": 0,

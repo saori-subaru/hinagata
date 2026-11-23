@@ -222,5 +222,15 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     const zb = sstep(z0 - 0.01, z0 - (C.round ?? 0.1), z), tk = C.thick ?? 0.003, t = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, C.top - hem)));
     const base = smin(Math.hypot(x * rz / rx, z - zc) - rz - tk - (C.full ?? 0) * zb * Math.pow(t, C.curve ?? 2), smin(skullOnly(x, y, z), dPrim(P.neck, x, y, z), 0.01) - tk, 0.01);
     return smax(smax(smax(smax(base, y - C.top, 0.004), hem - y, 0.005), z - z0, 0.01), -ear, EAR_GAP.k); }; };
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
+  // masses (options.hair.masses, head space): solid bodies of hair joined to the block (a ponytail's bulk, a bun): each { pts: [[x, y, z, r], …]
+  // its middle line and its radius there (m), k: how softly it joins the block and its own bends (default 0.03), mirror }. Only meshed: the
+  // locks and the bangs still lie on hairSdfOf (a mass behind the head must not become "the hair's surface" for them)
+  const massSdf = () => { const M = (OPT.hair.masses ?? []).filter((m) => m?.pts?.length >= 2).flatMap((m) => (m.mirror ? [1, -1] : [1]).map((s) => ({ k: m.k ?? 0.03, P: m.pts.map(([x, y, z, r]) => [x * s, y, z, r ?? 0.05]) })));
+    if (!M.length) return null;
+    return (x, y, z) => { let d = 1e9; for (const { P, k } of M) { let dm = 1e9;
+      for (let i = 0; i + 1 < P.length; i++) { const a = P[i], b = P[i + 1], bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2], t = Math.max(0, Math.min(1, ((x - a[0]) * bx + (y - a[1]) * by + (z - a[2]) * bz) / (bx * bx + by * by + bz * bz || 1)));
+        const s = Math.hypot(x - a[0] - bx * t, y - a[1] - by * t, z - a[2] - bz * t) - (a[3] + (b[3] - a[3]) * t); dm = i ? smin(dm, s, 0.02) : s; }
+      d = smin(d, dm, k); } return d; }; };
+  const massBox = () => { const P = (OPT.hair.masses ?? []).flatMap((m) => (m?.pts ?? []).flatMap(([x, y, z, r = 0.05]) => m.mirror ? [[x, y, z, r], [-x, y, z, r]] : [[x, y, z, r]])); return P.length ? P : null; };
+  return { massSdf, massBox, BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
 }
