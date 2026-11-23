@@ -308,7 +308,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const EL = OPT.body.sculpt.ears.elf, ELF = !!EL?.on;
     // ear size. Elf ears: the round ear is smaller (0.62), inside the blade's root, which starts lower: the round ear stood out under the blade
     // (2026-10-07, Saori: "エルフ耳が耳に尖りを被せただけで、下の丸い耳が見えちゃってる"); its line and shade (EARS) shrink with it
-    const ES = OPT.body.sculpt.ears.scale * (ELF ? EL.round ?? 0.62 : 1);   // (elf.round: smaller, its bottom no longer stands out under the blade's lower edge with a notch between; on シルヴィ v2 0.3 is clean, 0.45 left holes at the blade's root: try a value in a picture)
+    const ES = OPT.body.sculpt.ears.scale * (ELF ? EL.round ?? 0.62 : 1);   // (elf.round: smaller, its bottom no longer stands out under the blade's lower edge with a notch between; on シルヴィ 0.3 is clean, 0.45 left holes at the blade's root: try a value in a picture)
     // seen from the side, turn the whole ear so its bottom comes forward and its top goes back (the front edge leans like a real ear)
     const ER = OPT.body.sculpt.ears.turn, rotE = (v) => [v[0], v[1] * Math.cos(ER) + v[2] * Math.sin(ER), -v[1] * Math.sin(ER) + v[2] * Math.cos(ER)];
     if (ER) for (const a of [eu, ev, ew]) { const r = rotE(a); a[0] = r[0]; a[1] = r[1]; a[2] = r[2]; }
@@ -360,7 +360,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     const palm = at(w, [D, 0.03], [N, 0.002]);
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
-    // body.sculpt.hand: slim = how far toward that hand (null: all the way: シルヴィ v2's hand; the chibi body types set 0, their round one);
+    // body.sculpt.hand: slim = how far toward that hand (null: all the way: シルヴィ's hand; the chibi body types set 0, their round one);
     // fingers = their thickness (null: by slim, to 0.55 on the adult body, 0.7 on the others: a child's. Open hands get their fingers as rings, smooth at any cells)
     const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? 1, hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, AD ? 0.55 : 0.7), FL = hs(1, 1.45), FS = hs(1, 0.7);
     P[`palm.${s}`] = E(palm, [0.034 * HK, hs(0.05, 0.036) * HK, hs(0.019, 0.012) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)

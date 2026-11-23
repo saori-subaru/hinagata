@@ -39,11 +39,11 @@ const SUBARU_MOUTH_FROWN = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQQAAA
 const SUBARU_JACKET = new URL("../img/presets/subaru_jacket.png", import.meta.url).href;
 const SUBARU_SHIRT = new URL("../img/presets/subaru_shirt.png", import.meta.url).href, SUBARU_PANTS = new URL("../img/presets/subaru_pants.png", import.meta.url).href;   // (the same way: the shading under her turtleneck, her trousers folds)
 export const CHARACTERS = {
-  sylvie: {
-    name: { ja: "シルヴィ", en: "Sylvie" },
-    about: { ja: "エルフの女の子", en: "An elf girl" },
+  sylvieOld: {   // the first シルヴィ; シルヴィ is the one on her design sheet (below)
+    name: { ja: "シルヴィ(旧)", en: "Sylvie (old)" },
+    about: { ja: "最初に作ったエルフの女の子", en: "The first elf girl" },
     stand: "standSylvie",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
-    file: { hinagata: 3, name: "シルヴィ", options: {
+    file: { hinagata: 3, name: "シルヴィ(旧)", options: {
       colors: { skin: "#fff0ea", hair: "#fff7f0", eyes: "#41714d" },
       body: {
         proportion: { legs: 1.65, torso: 1.3, arms: 1.45 },   // arms: made when the tall default was 1.45
@@ -389,8 +389,8 @@ export const CHARACTERS = {
     } },
   },
 };
-// シルヴィ v2: シルヴィ with the head, ears, hair and face of her design sheet (the first one stays as it was made)
-{ const o = structuredClone(CHARACTERS.sylvie.file.options);
+// シルヴィ: the first one (sylvieOld) with the head, ears, hair and face of her design sheet
+{ const o = structuredClone(CHARACTERS.sylvieOld.file.options);
   // hair a shade darker than her skin, as on her design sheet (as pale as the skin, the forehead between the bangs and the hair over it read as
   // one bare patch), and the ring a light highlight (the automatic ring is never lighter than 0.85: on pale hair a skin-colored band across the bangs)
   o.colors.hair = "#f4ece3";
@@ -469,20 +469,24 @@ export const CHARACTERS = {
         drawn: [{ id: "e1", name: "表情1", eye: null, brow: null, mouth: null, cheeks: "none", blink: true }],
       },
   });
-  CHARACTERS.sylvie2 = { name: { ja: "シルヴィ v2", en: "Sylvie v2" }, about: { ja: "設定画に寄せたシルヴィ", en: "Sylvie as on her design sheet" }, file: { hinagata: 3, name: "シルヴィ v2", options: o } }; }
-// シルヴィ v2's back: its outline set first (shortLocks.shape) and the locks laid on it, not an inner layer under flicks lock by lock
-{ const o = CHARACTERS.sylvie2.file.options, SL = o.hair.sculpt.shortLocks;
+  CHARACTERS.sylvie = { name: { ja: "シルヴィ", en: "Sylvie" }, about: { ja: "エルフの女の子(設定画に寄せた形)", en: "An elf girl, as on her design sheet" }, stand: "standSylvie", file: { hinagata: 3, name: "シルヴィ", options: o } }; }
+// シルヴィ's back: its outline set first (shortLocks.shape) and the locks laid on it, not an inner layer under flicks lock by lock
+{ const o = CHARACTERS.sylvie.file.options, SL = o.hair.sculpt.shortLocks;
   SL.shape = { hang: 0.75, flare: [[1.0, 0], [0.9, 0.005], [0.8, 0.02], [0.74, 0.032]], sides: 0.7 };   // (hang 0.4 tucked the hem in to the nape: no flick showed)
   // the hem jagged by turns (her sheet's) and the tips flicked out unevenly over the shape (v2's flicks), the two behind her right ear the wing
   const FL = [0.014, 0.022, 0.008, 0.018, 0.01, 0.02, 0.012, 0.02, 0.009, 0, 0, 0.016, 0.021], DY = [0, -0.03, 0.02, -0.01, 0.025, -0.03, 0, -0.025, 0.02, 0, 0, -0.02, 0.015];
   SL.edits = FL.map((fl, i) => i === 9 || i === 10 ? { ...SL.edits.find((e) => e.i === i), fk: 0 } : { i, fl, dy: DY[i] });
   SL.fork = { n: 3, short: 1 };   // each tip split in two points: her sheet's many short tips at the hem, without more locks (layers under them muddied the outline)
-}// シルヴィ v2 殻 (a try beside v2): the locks over the head as one shell, as a hand-made model's top is one sheet from the whorl with the
+}// シルヴィ 殻 (a try beside her): the locks over the head as one shell, as a hand-made model's top is one sheet from the whorl with the
 // locks only as lines on it: each lock full width from its root (no narrow root), none tilted over its neighbour, none puffed up off the skull;
 // they part only toward their tips
-{ const o = structuredClone(CHARACTERS.sylvie2.file.options);
+{ const o = structuredClone(CHARACTERS.sylvie.file.options);
   Object.assign(o.hair.sculpt.whorl, { rootW: 1, shingle: 0, puff: 0 }); o.hair.sculpt.shortLocks.overlap = 1.6;   // overlap: no gap where they lie side by side
-  CHARACTERS.sylvie2h = { name: { ja: "シルヴィ v2 殻", en: "Sylvie v2 (shell)" }, about: { ja: "頭の上の房をひとつの殻のようにつなげたシルヴィ v2(試し)", en: "Sylvie v2 with the locks over the head joined as one shell (a try)" }, file: { hinagata: 3, name: "シルヴィ v2 殻", options: o } }; }
+  CHARACTERS.sylvieShell = { name: { ja: "シルヴィ 殻", en: "Sylvie (shell)" }, about: { ja: "頭の上の房をひとつの殻のようにつなげたシルヴィ(試し)", en: "Sylvie with the locks over the head joined as one shell (a try)" }, file: { hinagata: 3, name: "シルヴィ 殻", options: o } }; }
+// the list's order (the editor's preset list): シルヴィ first, her old one and the shell try after the rest
+{ const all = { ...CHARACTERS }, first = ["sylvie"], last = ["sylvieShell", "sylvieOld"];
+  for (const k of Object.keys(CHARACTERS)) delete CHARACTERS[k];
+  for (const k of [...first, ...Object.keys(all).filter((k) => !first.includes(k) && !last.includes(k)), ...last]) CHARACTERS[k] = all[k]; }
 
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
