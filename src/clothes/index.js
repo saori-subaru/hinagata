@@ -601,19 +601,22 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
         return { sdf, lo, hi }; };
       // the roll: thinner over 10 cm to each end; the ellipse's middle lifted 0.45 of its height
       const F1 = frames(P, capeBody), end = (i) => Math.min(LT * i / M, LT * (1 - i / M)), K1 = P.map((q, i) => 1 - 0.6 * (1 - sstep(0, 0.1, end(i))));
-      const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i])));
+      // the droop (both rolls): EX m, 7 cm at the middle to a point, none from 12 cm out (wider, its fading sides creased)
+      const shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, droop = (Q) => Q.map((q) => { const s = Math.min(1, Math.abs(q[0]) / 0.12); return 0.07 * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
+      const T2 = CA.cowlRoll2 ?? 0, C1 = P.map((q, i) => q.map((v, m) => v + F1[i].U[m] * 0.45 * RB * K1[i]));
+      // one roll with a hood: the roll itself droops into the hood's point (a bag hung under it read as a flap stuck on under the roll)
+      if (!(T2 > 0)) return CA.hood ? { ...tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1, { X: droop(P), L: P.map(() => 0), surf: shell, F: 0.015 }), two: true } : tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
+      const R1 = tube(F1, K1.map((k) => RA * k), K1.map((k) => RB * k), C1);
       // cape.cowlRoll2 (m): a second roll that thick under it, twice as wide along the cloth, its top under the first and its middle 0.7 of its half
       // thickness out (lower, it lay flat: no crease, no outline); along a line DN down the cloth from the first, coming up to it over 15 cm to each end.
-      // The hood has no bag: behind, this ring's lower half droops into its point (a bag over the ring came up through it in ragged seams; under it, a step)
-      const T2 = CA.cowlRoll2 ?? 0; if (!(T2 > 0)) return R1;
-      const A2 = T2 / 2, B2 = A2 * 2, DN = B2 + 0.55 * RB - 0.01, shell = (x, y, z) => outside(x, y, z) + CA.thick / 2, K2 = P.map((q, i) => sstep(0, 0.15, end(i)));
+      // The hood has no bag: behind, the lower ring's lower half droops into its point (a bag over the ring came up through it in ragged seams; under it, a step)
+      const A2 = T2 / 2, B2 = A2 * 2, DN = B2 + 0.55 * RB - 0.01, K2 = P.map((q, i) => sstep(0, 0.15, end(i)));
       const P2 = P.map((q, i) => { let p = q.map((v, m) => v - F1[i].U[m] * DN * K2[i]);
         for (let it = 0; it < 3; it++) { const g = grad(shell, p), l = Math.hypot(...g) || 1, d = shell(...p); p = p.map((v, m) => v - g[m] / l * d); }   // onto the cloth's middle
         return p; });
       const F2 = frames(P2, shell), S2 = K2.map((k) => 0.3 + 0.7 * k);
-      // the droop: EX m, 7 cm at the middle to a point, none from 12 cm out (wider, its fading sides creased); its lower part lifted off the cloth
-      // up to F at the tip (flat on it, it read as stuck on)
-      const EX = P2.map((q) => { const s = Math.min(1, Math.abs(q[0]) / 0.12); return 0.07 * (1 - s) ** 2 * (1 + s) * sstep(-0.02, -0.06, q[2]); });
+      // the droop's lower part lifted off the cloth up to F at the tip (flat on it, it read as stuck on)
+      const EX = droop(P2);
       const R2 = tube(F2, S2.map((k) => A2 * k), S2.map((k) => B2 * k), P2.map((q, i) => q.map((v, m) => v + F2[i].N[m] * 0.7 * A2 * S2[i])), { X: EX, L: S2.map((k) => 0.7 * A2 * k), surf: shell, F: 0.015 });
       return { sdf: (x, y, z) => Math.min(R1.sdf(x, y, z), R2.sdf(x, y, z)), lo: R1.lo.map((v, m) => Math.min(v, R2.lo[m])), hi: R1.hi.map((v, m) => Math.max(v, R2.hi[m])), two: true };
     })() : null;
