@@ -32,7 +32,7 @@ addEventListener("resize", resize); resize();
 const avatar = await createAvatar(ch.file.options, { quality: q.get("q") || "lite" });
 avatar.update(0, { instant: true });
 avatar.object.scale.setScalar(1.7 / new THREE.Box3().setFromObject(avatar.object).getSize(new THREE.Vector3()).y);
-scene.add(avatar.object);
+scene.add(avatar.object); if (ch.stand) avatar.play(ch.stand);
 document.getElementById("m").textContent = (ch.name?.ja ?? id) + "(指で回す)";
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
