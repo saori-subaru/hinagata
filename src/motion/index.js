@@ -92,11 +92,11 @@ export const POSES = {
   // アステル: 足を開いて胸を張り、左手を腰に。右腕は下ろす(胴に入らないよう少し外へ)
   "standAstel": (t) => ({ b: { "upperLeg.L": [0.12, 0, 0.12], "upperLeg.R": [0.12, 0, -0.12], "foot.L": [-0.12, 0.15, -0.12], "foot.R": [-0.12, -0.15, 0.12],
       "upperArm.L": [0.3, 0, -0.1], "lowerArm.L": [0, 0, -1.3], "upperArm.R": [0, 0, 0.3], "lowerArm.R": [-0.1, 0, 0.06],
-      spine: [-0.06, 0, 0], chest: [0.02 + sin(t * 1.6) * 0.02, 0, 0], head: [0.02, sin(t * 0.5) * 0.08, 0] }, y: 0 }),
+      spine: [-0.11, 0, 0], chest: [0.02 + sin(t * 1.6) * 0.02, 0, 0], head: [0.02, sin(t * 0.5) * 0.08, 0] }, y: 0 }),
   // スバル(設定画の立ち方): 足を広めに開き、左手をパンツの前ポケットへ、右腕はまっすぐ下ろす。あごを少し引く
   "standSubaru": (t) => ({ b: { "upperLeg.L": [0.12, 0, 0.13], "upperLeg.R": [0.12, 0, -0.09], "foot.L": [-0.12, 0.12, -0.13], "foot.R": [-0.12, -0.1, 0.09],
       "upperArm.L": [0.1, 0, -0.33], "lowerArm.L": [-0.25, 0, -0.6], "upperArm.R": [0, 0, 0.42], "lowerArm.R": [-0.05, 0, 0.05],
-      spine: [-0.06, 0, 0], chest: [0.03 + sin(t * 1.6) * 0.015, 0, 0], head: [0.08, sin(t * 0.5) * 0.05, 0.05] }, y: 0 }),
+      spine: [-0.2, 0, 0], chest: [0.03 + sin(t * 1.6) * 0.015, 0, 0], head: [0.08, sin(t * 0.5) * 0.05, 0.05] }, y: 0 }),
 };
 
 // Holding a weapon in the right hand (outfit.weapon.right), standing and walking change that arm (the elbow kept out from the side, not into it):
