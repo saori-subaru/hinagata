@@ -419,12 +419,16 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // cape.closeX (m, アステル's): the closure that far toward the character's left, the right side's flap lying over the middle to it
     const CLOSE = CA.close ?? 0.7, OPEN = CA.open ?? 0.6, ON = Math.hypot(1, OPEN), TILT = CLOSED ? CA.tilt ?? 0 : 0, CX = CLOSED ? CA.closeX ?? 0 : 0;
     const collarTop = (x, z) => CA.collar - 0.12 * z + (CLOSED ? (CLOSE + 0.015 - CA.collar) * sstep(-0.01, 0.07, z) * (1 - sstep(0.03, 0.07, Math.abs(x - CX))) : 0);   // the collar a little higher at the back
-    // cape.folds: that many folds round the whole body (a crest at the back's middle), foldDepth m in and out at the hem, none at the
-    // shoulders; cape.foldHem: the hem that much lower under each crest (pointed tips). Crests round, valleys sharp (|cos|), as cloth hangs; the hem comes to a point under each crest
-    const FN = CA.folds ?? 0, FD = FN ? CA.foldDepth ?? 0 : 0, FH = FN ? CA.foldHem ?? 0 : 0, LEN = Math.max(0.1, CAPE_Y - CA.hem);
-    const crest = (x, z) => Math.abs(Math.cos(FN * Math.atan2(x, -z) / 2));
-    const tip = (x, z) => 1 - Math.abs(Math.sin(FN * Math.atan2(x, -z) / 2));   // sharp at each crest: the hem's points
-    const hemY = (z, x = 0) => CA.hem + TILT * z - FH * tip(x, z);
+    // cape.shape: the hem set by hand at points round the body, [{ a, hem, out }]: a = degrees round from the back's middle (+ toward the
+    // character's left, ±180 the front), hem = m lower than cape.hem there, out = m pushed out at the hem (none at the shoulders, growing down).
+    // Straight between the points: each point is a corner (the hem's tip, a fold's edge) and the cloth between them a flat panel
+    const SHP = (CA.shape ?? []).filter((p) => p && Number.isFinite(p.a)).map((p) => ({ a: ((p.a + 180) % 360 + 360) % 360 - 180, hem: p.hem ?? 0, out: p.out ?? 0 })).sort((p, q) => p.a - q.a);
+    const LEN = Math.max(0.1, CAPE_Y - CA.hem), SH_LOW = SHP.reduce((m, p) => Math.max(m, p.hem), 0);
+    const shapeAt = (x, z) => { const n = SHP.length; if (!n) return null; if (n === 1) return SHP[0];
+      const a = Math.atan2(x, -z) * 180 / Math.PI; let i = SHP.findIndex((p) => p.a > a); if (i < 0) i = 0;
+      const q = SHP[i], p = SHP[(i - 1 + n) % n], span = ((q.a - p.a) % 360 + 360) % 360 || 360, f = (((a - p.a) % 360 + 360) % 360) / span;
+      return { hem: p.hem + (q.hem - p.hem) * f, out: p.out + (q.out - p.out) * f }; };
+    const hemY = (z, x = 0) => CA.hem + TILT * z - (SHP.length ? shapeAt(x, z).hem : 0);
     // cape.sideEdge: under the opening the sides end this far forward of the body's middle (behind it, アステル's cloak: the arms hang in front of the cape)
     const SE = CA.sideEdge ?? 0.02;
     const opening = (x, y, z) => Math.max((Math.abs(x - CX) - 0.004 - OPEN * Math.max(0, CLOSE - y)) / ON, SE - z);   // < 0 in the front's opening
@@ -437,7 +441,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     // the cape's outside before its cuts (S): the cone, and the body pushed out
     const outside = (x, y, z, B = bodySdf, col = true) => {
       const drop = Math.max(0, CAPE_Y - y), s = sk ? sk(y) : null, ax1 = ax0 + CA.flare * 0.6 * drop, ax0_ = CLOSED ? smax(ax1, armX(y), 0.03) : ax1, az0_ = az0 + CA.flare * drop, ax = s ? smax(ax0_, s[0]) : ax0_, az = s ? smax(az0_, s[1]) : az0_;
-      const fd = FD ? FD * (2 * crest(x, z) - 1) * sstep(0, LEN, drop) : 0;
+      const fd = SHP.length ? shapeAt(x, z).out * sstep(0, LEN, drop) : 0;
       const q = Math.hypot(x / (ax + fd * 0.6), z / (az + fd)), cone = Math.max(CLOSED ? (q - 1) * q / Math.max(1e-6, Math.hypot(x / (ax * ax), z / (az * az))) : (q - 1) * Math.min(ax, az), y - CAPE_Y);   // (closed: a flat ellipse, so its distance to first order)
       const m0 = OVER_BODY ? torso(x, y, z) - off : CLOSED ? B(x, y, z) - off : Math.max(B(x, y, z) - off, CAPE_Y - 0.03 - y);   // (over the body: not round the arms, which stand out of its sides in the rest pose)
       const mantle = COWL && col ? smin(m0, cowlCol(x, y, z) - off, 0.02) : m0;
@@ -608,7 +612,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
       const S = outside(x, y, z, B), d = Math.max(S, -(S + CA.thick), cutOf(x, y, z));
       return BAG ? smin(d, hood.layer(x, y, z, S), 0.004) : d; };
     const w = CLOSED ? Math.max(0.3 + CA.flare * 0.6, armX(Math.min(CA.hem, hemY(-0.3))) + 0.05) : 0.3 + CA.flare * 0.6, d = 0.2 + CA.flare * 0.7;
-    f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - FH - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
+    f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - SH_LOW - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
     f.edge = (x, y, z) => Math.min((y - hemY(z, x)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z, x);
     f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
