@@ -483,10 +483,6 @@ export const CHARACTERS = {
 { const o = structuredClone(CHARACTERS.sylvie.file.options);
   Object.assign(o.hair.sculpt.whorl, { rootW: 1, shingle: 0, puff: 0 }); o.hair.sculpt.shortLocks.overlap = 1.6;   // overlap: no gap where they lie side by side
   CHARACTERS.sylvieShell = { name: { ja: "シルヴィ 殻", en: "Sylvie (shell)" }, about: { ja: "頭の上の房をひとつの殻のようにつなげたシルヴィ(試し)", en: "Sylvie with the locks over the head joined as one shell (a try)" }, file: { hinagata: 3, name: "シルヴィ 殻", options: o } }; }
-// the list's order (the editor's preset list): シルヴィ first, her old one and the shell try after the rest
-{ const all = { ...CHARACTERS }, first = ["sylvie"], last = ["sylvieShell", "sylvieOld"];
-  for (const k of Object.keys(CHARACTERS)) delete CHARACTERS[k];
-  for (const k of [...first, ...Object.keys(all).filter((k) => !first.includes(k) && !last.includes(k)), ...last]) CHARACTERS[k] = all[k]; }
 
 
 // ルミナ v2 (2026-10-09, Saori: "ルミナv2をさっき作ったルミナに置き換えて"; until then ルミナ with a longer face in straight lines): ルミナ at about
@@ -509,3 +505,7 @@ export const CHARACTERS = {
   o.outfit.dress = { ...o.outfit.dress, waist: 0.54 };   // (Saori: "ワンピースのスカートの位置が下過ぎる"; 0.46 was lower than Lumina's 0.5)
   o.shading = { ...(o.shading ?? {}), style: "toon", rim: { on: false } };
   CHARACTERS.lumina2 = { name: { ja: "ルミナ v2", en: "Lumina v2" }, about: { ja: "6頭身・大人の体のルミナ", en: "Lumina at about 6 heads, on the adult body" }, file: { hinagata: 3, name: "ルミナ v2", options: o } }; }
+// the list's order (the editor's preset list): シルヴィ first, her old one and the shell try after the rest
+{ const all = { ...CHARACTERS }, first = ["sylvie"], last = ["sylvieShell", "sylvieOld"];
+  for (const k of Object.keys(CHARACTERS)) delete CHARACTERS[k];
+  for (const k of [...first, ...Object.keys(all).filter((k) => !first.includes(k) && !last.includes(k)), ...last]) CHARACTERS[k] = all[k]; }
