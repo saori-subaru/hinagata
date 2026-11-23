@@ -106,6 +106,7 @@ simulated on the CPU every frame. Budget for both:
   `createAvatar(recipe, { quality, baked: file or its URL })` takes the meshes from it instead of building them (about a quarter of the time;
   the hair's locks are still made). Colors may differ; another shape (clothes, body, hair), quality or engine version doesn't match and is
   built as usual, with a console warning: `avatar.baked` says which. Bake again after updating the engine.
+  `await avatar.bake({ triangles: 8000 })` thins the baked meshes to about that many triangles (the hair's locks are not baked or counted).
 - `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, cloth without thickness at its edges, about half the build
   time: crowds, small characters, phones), "fine" (the sharpest shapes, e.g. a nose tip, at about the triangles of
   "game", but about 2.5x as long to build the first time; the default for `body.adult`) or "high" (6.8 mm cells unthinned, 2–3x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.

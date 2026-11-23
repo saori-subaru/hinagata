@@ -111,9 +111,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   let H = cell || { game: 0.0136, fine: 0.0045, lite: 0.0136, high: 0.0068, low: 0.0095 }[quality] || 0.0136;   // mesh cell size
   let simplify = simplifyAsked ?? (LITE ? 0.15 : FINE ? 0.07 : 1);
   let MS = null;   // meshoptimizer's simplifier, only when thinning
+  const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)
+  const loadMS = async () => { const M = (await import("meshoptimizer").catch(() => import(MO))).MeshoptSimplifier; await M.ready; return M; };
   if (simplify < 1) {
-    const MO = "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js";   // (the import map's "meshoptimizer" if there is one, else this)
-    try { MS = (await import("meshoptimizer").catch(() => import(MO))).MeshoptSimplifier; await MS.ready; }
+    try { MS = await loadMS(); }
     catch (e) {
       const why = `the "meshoptimizer" package couldn't be loaded from your import map or ${MO}`;
       if (simplifyAsked != null) throw new Error(`settings.simplify needs it: ${why}. ` + e.message);
@@ -207,18 +208,20 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // follow their vertices: meshoptimizer keeps a subset of the vertices). Cloth (a skirt, a cape) is thinned less: its inner side rides on
   // the outer side's nearest points, and from big triangles the inside showed through in holes (2026-10-05, the lite quality)
   const THIN_ERROR = 0.01;   // 1% of the mesh's size (meshoptimizer's target_error)
-  function simplified(rec, name) {
+  // over (avatar.bake's budget): { share, error, face } in place of the quality's share and brake; face false thins the face too
+  function simplified(rec, name, over = null) {
     const { pos, nor, idx, si, sw } = rec;
     if (idx.length < 3) return rec;   // nothing to thin (a part not built, e.g. armor not worn): asking meshoptimizer for 3 of 0 failed its assert (2026-10-04, found by the forest)
     const cloth = name === "cape" || (name === "pants" && skirtOf(OPT));
     // the garment parts (src/garments) say how: "keep" (the hip strings, a few mm wide, came out in dashes thinned to 7 %, 2026-10-10),
     // "cloth" (the scarf, the collar, the headband's bow), or as the body
     const thin = partNamed(name)?.thin, trim = thin === "keep" ? 1 : thin === "cloth" ? Math.max(simplify, Math.min(1, simplify * 4)) : null;
-    const share = trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
+    const share = over ? (thin === "keep" ? 1 : Math.min(1, over.share * (cloth || thin === "cloth" ? 2 : 1)))
+      : trim ?? (!cloth ? simplify : clothH ? 1 : Math.max(simplify, Math.min(1, simplify * 4)));
     // the face is left as built (thinned, the outline came through on the cheeks in lines: 2026-10-05, Saori), and the normals count as well
     // as the positions, so the toon bands and the outline keep their shape where the surface turns
     let lock = null;
-    if (name === "body") { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
+    if (name === "body" && over?.face !== false) { lock = new Uint8Array(pos.length / 3); const hy = J.head[1] - 0.06;
       for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > hy && pos[v * 3 + 2] > 0.02 && Math.abs(pos[v * 3]) < 0.22) lock[v] = 1; }
     // the share is of what may be thinned: the face's triangles come on top of it. Counted over the whole mesh (until 2026-10-06), the face
     // kept as built took the share away from the rest: a chibi's face is a fifth of its body, and at 0.15 the rest went to nearly nothing
@@ -235,7 +238,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > S.bootHeight - 0.12 * pos[v * 3 + 2] - 0.008) lock[v] = 1; } }
     let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
     const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
-    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);
+    const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, over?.error ?? THIN_ERROR, []);
     const map = new Int32Array(pos.length / 3).fill(-1); let n = 0; for (const v of out) if (map[v] < 0) map[v] = n++;
     const P = new Float32Array(n * 3), N = new Float32Array(n * 3), SI = si ? new si.constructor(n * 4) : null, SW = sw ? new Float32Array(n * 4) : null;
     for (let v = 0; v < map.length; v++) { const m = map[v]; if (m < 0) continue; for (let k = 0; k < 3; k++) { P[m * 3 + k] = pos[v * 3 + k]; N[m * 3 + k] = nor[v * 3 + k]; }
@@ -1274,8 +1277,26 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
 
     /** GLB of the avatar in the A-pose (outlines left out). */
     /** This build's meshes as a file (ArrayBuffer) for createAvatar(recipe, { baked }): the same recipe at the same quality comes without building.
-     *  What was changed after the build (setHair, setWorn) is not in it. */
-    bake() { return encodeBake({ key: cacheKey, parts: { ...(hit ?? {}), ...built } }); },
+     *  What was changed after the build (setHair, setWorn) is not in it.
+     *  bake({ triangles: 8000, face?: true, error?: 0.05 }) → Promise of the file thinned to about that many triangles over its meshes (the
+     *  hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
+    bake(thin) {
+      const parts = { ...(hit ?? {}), ...built };
+      if (!thin?.triangles) return encodeBake({ key: cacheKey, parts });
+      return (async () => {
+        const M = MS ?? (MS = await loadMS());
+        const names = Object.keys(parts).filter((k) => parts[k]?.idx?.length >= 3 && parts[k].pos);
+        const tris = (o) => names.reduce((a, k) => a + o[k].idx.length / 3, 0), full = tris(parts);
+        const at = (share) => Object.fromEntries(names.map((k) => [k, simplified(parts[k], k, { share, error: thin.error ?? 0.05, face: thin.face })]));
+        let lo = 0, hi = 1, best = parts;   // the share whose triangles come under the budget, the largest found (a few passes, each thinning every part)
+        if (full > thin.triangles) { best = null;
+          for (let i = 0; i < 9; i++) { const s = (lo + hi) / 2, o = at(s); if (tris(o) <= thin.triangles) { lo = s; best = o; } else hi = s; }
+          best ??= at(lo || 0.001); }
+        const out = { ...parts, ...best }; if (best !== parts && best.body) delete out.cover;   // (the body's cover bits are per vertex: recomputed at load)
+        if (thin.report) thin.report({ before: full, after: tris(out) });
+        return encodeBake({ key: cacheKey, parts: out });
+      })();
+    },
     baked: bakeHit,   // true: the meshes came from settings.baked
     async exportGLB() {
       const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
