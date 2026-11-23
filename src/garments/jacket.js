@@ -56,7 +56,7 @@ function shape({ O, P, J }) {
   // shoulder joint and rises again along the arm (across the arm: the collar lies round the upper arm, the shoulder bare)
   const top = (x, z) => { const u = Math.abs(x), zz = z - ZC;
     if (!slipped(x)) return NY + NB * (u * u + zz * zz);
-    const uu = Math.min(u, U0); return NY + NB * (uu * uu + 0.5 * zz * zz) - DROP * sstep(U0, UJ, u) + 0.3 * Math.max(0, u - UJ); };
+    const uu = Math.min(u, U0); return NY + NB * (uu * uu + 0.5 * zz * zz) - DROP * sstep(U0, UJ, u) + (O.slipSlope ?? 0) * Math.max(0, u - UJ); };
   // the front edge: the opening's half width, from the neck down to the hem (the slipped side hangs open wider)
   const YT = 0.765, E_T = O.openTop ?? 0.05, E_H = O.open ?? 0.07;
   const E = (v) => E_T + (E_H - E_T) * clamp01((YT - v) / (YT - HEM));
@@ -80,17 +80,16 @@ function shape({ O, P, J }) {
   const lapel = LW > 0 ? (x, y, z) => { const [u, v] = toUV(x, y); return Math.max((slipped(x) ? lapelS : lapelN)(u, v), -z); } : null;
   // the collar: the wing in front and, behind the shoulders' line, a band under the neckline. On the slipped side the band narrows to
   // nothing toward the wing's point (as wide all the way, its end stood off the back of the arm as a square tab)
-  // The slipped side's collar (the sheet's): in front the same wing, longer (WTS: its lower edge level out to a point at the arm's outer side),
-  // standing up to riseS over the sleeve's top beside the bare shoulder and sloping down to its point; behind, a band along the fallen
-  // neckline round the arm (bandS, slipCollar × the wing). It stands off the sleeve toward its free edge (liftS: a wedge, its inner side where
-  // it was). A short wing flat on the sleeve read as a collar of the sleeve's own; a band round the front too hid the notch and the lapel
-  const CS = CW * (O.slipCollar ?? 0.75), LIFT = O.slipLift ?? 0.012, WTS = [0.086 + CW * 1.7, 0.724], RISE = 0.025;
-  const wingS = polygon([[E(0.745) - OV, 0.745], [0.086, 0.722], WTS, [0.1, 0.8], [0.1, 0.9], [E_T - OV, 0.9]]);
+  // The slipped side's collar (the sheet's): in front the other side's wing, larger (WTS), so its point reaches the arm's outer side; behind,
+  // a band along the fallen neckline round the arm (bandS, slipCollar × the wing). It stands a little off the sleeve toward its free edge
+  // (liftS: a wedge, its inner side where it was). The other side's wing as it is, flat on the sleeve, read as a short collar of the sleeve's
+  // own; a band round the front too hid the notch and the lapel; standing over the sleeve's top or 1 cm and more off it, it was a block
+  const CS = CW * (O.slipCollar ?? 0.75), LIFT = O.slipLift ?? 0.005, WTS = [0.086 + CW * 1.45, 0.744];
+  const wingS = polygon([[E(0.745) - OV, 0.745], [0.086, 0.722], WTS, [0.1, 0.8], [0.1, 0.83], [E_T - OV, 0.83]]);
   const bandS = (x) => BACK + (CS - BACK) * sstep(U0, UJ, Math.abs(x));
-  const riseS = (x) => { const u = Math.abs(x); return RISE * sstep(U0 + 0.03, UJ - 0.01, u) * sstep(WTS[0] + DX, UJ + 0.01, u); };
-  const liftS = (x, y, z) => slipped(x) ? LIFT * sstep(U0, UJ, Math.abs(x)) * sstep(-0.02, 0.05, top(x, z) - y) : 0;
+  const liftS = (x, y, z) => slipped(x) ? LIFT * sstep(U0, UJ, Math.abs(x)) * sstep(0.005, 0.05, top(x, z) - y) : 0;
   const collar = CW > 0 ? (x, y, z) => { const [u, v] = toUV(x, y), t = top(x, z);
-    if (slipped(x)) return Math.max(Math.min(Math.max(wingS(u, v), ZS - z), Math.max(t - y - bandS(x), z - ZS)), y - t - OV - riseS(x));
+    if (slipped(x)) return Math.max(Math.min(Math.max(wingS(u, v), ZS - z), Math.max(t - y - bandS(x), z - ZS)), y - t - OV);
     return Math.max(Math.min(Math.max(wingP(u, v), ZS - z), Math.max(t - y - BACK, z - ZS)), y - t - OV); } : null;
   // a point of the pattern on the jacket's front, `lift` off its outer side: [x, y, z, nx, ny, nz] or null (no cloth in front there)
   // (body: u, v are the body's own |x| and height, not moved with a slipped side)
@@ -103,7 +102,7 @@ function shape({ O, P, J }) {
 
 definePart({ src: import.meta.url,
   name: "jacket", path: "outfit.jacket", section: SEC, outline: 0.003, thin: "keep",
-  defaults: { on: false, color: "#3a3a40", hem: 0.505, hemBand: 0.022, out: 0.004, flare: 0.014, sleeve: 0.05, cuff: 0.04, open: 0.07, openTop: 0.05, lapel: 0.06, lapelEnd: 0.61, collar: 0.062, neck: 0.768, slip: "none", slipDrop: 0.065, slipOpen: 0.04, slipCollar: 0.75, slipLift: 0.012, sleeveBag: 0, sleeveFolds: 0 },
+  defaults: { on: false, color: "#3a3a40", hem: 0.505, hemBand: 0.022, out: 0.004, flare: 0.014, sleeve: 0.05, cuff: 0.04, open: 0.07, openTop: 0.05, lapel: 0.06, lapelEnd: 0.61, collar: 0.062, neck: 0.768, slip: "none", slipDrop: 0.065, slipOpen: 0.04, slipCollar: 0.75, slipLift: 0.005, sleeveBag: 0, sleeveFolds: 0 },
   schema: [
     ["on", L("ジャケット", "Jacket"), { help: L("シャツの上に着る前開きの上着(襟とラペル、長袖)。着たときだけ作る", "an open jacket over the shirt (a collar and lapels, long sleeves); built only when worn") }],
     ["color", L("ジャケットの色", "Jacket color"), { when: { ".on": true } }],
@@ -135,9 +134,7 @@ definePart({ src: import.meta.url,
         lo: [0, 1, 2].map((k) => Math.min(a[k], b[k]) - R), hi: [0, 1, 2].map((k) => Math.max(a[k], b[k]) + R) }); }
     const flaps = { lo: [-0.26, S.HEM - 0.02, -0.2], hi: [0.26, 0.86, 0.2], fine: true, lying: true };   // (lying on the jacket: no inner side)
     if (S.lapel) sheets.push({ o: (x, y, z) => S.outer(x, y, z) - L1, tk: L1 + 0.003, cut: S.lapel, ...flaps });
-    if (S.collar) { const o = (x, y, z) => S.outer(x, y, z) - L2 - S.liftS(x, y, z), far = (x) => S.SLIP ? x * S.SLIP : -1;   // (far > 0: the slipped side)
-      sheets.push({ o, tk: L2 - L1 + 0.003, cut: (x, y, z) => Math.max(S.collar(x, y, z), far(x)), ...flaps });
-      if (S.SLIP) sheets.push({ o, tk: 0.007, cut: (x, y, z) => Math.max(S.collar(x, y, z), -far(x)), ...flaps, lying: false }); }   // it stands over the sleeve's top and off it: its inner side shows, a thin sheet of its own
+    if (S.collar) sheets.push({ o: (x, y, z) => S.outer(x, y, z) - L2 - S.liftS(x, y, z), tk: (x, y, z) => L2 - L1 + 0.003 + S.liftS(x, y, z), cut: S.collar, ...flaps });
     return { S, sheets }; },
   // at the cloth sheets' cells (a skirt's, a cape's), its folded parts at half of them; the edges are cut along the pattern's lines whatever the cells
   spec: (st, { H, sheetH, one }) => ({ make: () => sheetsMesh(st.sheets.map((q) => q.fine ? { ...q, h: sheetH * 0.6 } : q), st.S.lo, st.S.hi, sheetH, one), sdf: () => 1, lo: st.S.lo, hi: st.S.hi, h: H, only: /^(hips|spine|chest|upperChest|shoulder|neck|upperArm|lowerArm)/ }),

@@ -269,7 +269,7 @@ export const CHARACTERS = {
           // fan, wave, vary and the sides' edits (shorter, flicked out a little more): the sheet's outline widens over the shoulders in wavy layers; flicked
           // 0.03 and more the sides' tips curled into thorns
           long: { bottom: 0.48, count: 18, span: 100, width: 0.085, thick: 0.14, ph: [20, 4], flick: 0.016, fan: 0.05, wave: 0.012, vary: 0.22,
-            edits: [{ i: 0, da: 16, dy: 0.05, fl: 0.008 }, { i: 1, da: 8, dy: 0.1, fl: 0.014 }, { i: 2, dy: 0.03, fl: 0.008 }, { i: 4, dy: 0.05 }, { i: 13, dy: 0.05 }, { i: 15, dy: 0.03, fl: 0.008 }, { i: 16, dy: 0.1, fl: 0.014 }, { i: 17, dy: 0.05, fl: 0.008 }, { i: 18, da: 14 }] },
+            edits: [{ i: 0, da: 16, dy: 0.05 }, { i: 1, da: 8, dy: 0.1 }, { i: 2, dy: 0.03 }, { i: 4, dy: 0.05 }, { i: 13, dy: 0.05 }, { i: 15, dy: 0.03 }, { i: 16, dy: 0.1 }, { i: 17, dy: 0.05 }, { i: 18, da: 14 }] },
           // her right side (negative angles) long, down over the eye to the jaw; her left short, swept back over the brow
           nendo: {
             tips: [
@@ -286,13 +286,14 @@ export const CHARACTERS = {
             overlap: 1.3, lockThick: 0.16,
           },
         },
-        // flyaways at the shoulders (the sheet's; head space, from under the hair's surface): one a side flying out, one a side curling back in.
+        // wisps at the shoulders (the sheet's; head space, from inside the hair's mass): two a side, each a wide lock narrowing evenly to a point
+        // that turns out and a little up. As thin wires (width 0.015) curling back in they read as loops of wire, not hair.
         // None before the shoulders: a stiff one turned with the head into the face when running, a soft one the arm flung out
         drawn: [
-          { pts: [[-0.21, 0.96, -0.03], [-0.26, 0.82, -0.01], [-0.33, 0.7, 0.01], [-0.42, 0.65, 0.02], [-0.5, 0.66, 0.02]], width: 0.016, thick: 0.35, stiff: 3 },
-          { pts: [[-0.22, 0.92, -0.06], [-0.3, 0.82, -0.05], [-0.38, 0.72, -0.04], [-0.42, 0.62, -0.03], [-0.4, 0.54, -0.02], [-0.35, 0.5, -0.01]], width: 0.014, thick: 0.35, stiff: 3 },
-          { pts: [[0.21, 0.94, -0.07], [0.27, 0.8, -0.07], [0.35, 0.68, -0.06], [0.44, 0.63, -0.05], [0.51, 0.64, -0.05]], width: 0.015, thick: 0.35, stiff: 3 },
-          { pts: [[0.22, 0.86, -0.09], [0.29, 0.74, -0.08], [0.36, 0.63, -0.07], [0.39, 0.53, -0.06], [0.37, 0.46, -0.05], [0.32, 0.43, -0.04]], width: 0.014, thick: 0.35, stiff: 3 },
+          { pts: [[-0.2, 0.9, -0.04], [-0.25, 0.77, -0.03], [-0.31, 0.67, -0.02], [-0.39, 0.62, -0.01], [-0.46, 0.63, 0]], width: 0.038, thick: 0.3, taper: 0.8, stiff: 3 },
+          { pts: [[-0.22, 0.8, -0.06], [-0.27, 0.65, -0.05], [-0.32, 0.53, -0.04], [-0.38, 0.47, -0.03], [-0.43, 0.475, -0.03]], width: 0.032, thick: 0.3, taper: 0.8, stiff: 3 },
+          { pts: [[0.2, 0.88, -0.07], [0.26, 0.75, -0.07], [0.33, 0.65, -0.06], [0.41, 0.6, -0.05], [0.47, 0.61, -0.05]], width: 0.036, thick: 0.3, taper: 0.8, stiff: 3 },
+          { pts: [[0.22, 0.76, -0.09], [0.28, 0.62, -0.08], [0.34, 0.5, -0.07], [0.4, 0.44, -0.06], [0.44, 0.445, -0.06]], width: 0.03, thick: 0.3, taper: 0.8, stiff: 3 },
         ],
       },
       face: {   // her own pictures; the sheet's faces: setFace("happy") eyes shut / ("surprised") / ("angry") the glare
@@ -315,7 +316,7 @@ export const CHARACTERS = {
         pants: { color: "#4b5053", length: "long", top: 0.49, offset: 0.007 },
         socks: { on: false },
         // engineer boots: a straight shaft with the heel in line with its back, a narrow foot, a blunt toe a little lower at its tip, the sole notched before the heel (a round last under a leg-shaped shaft read as rain boots)
-        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, heelBlock: 0.012, archCut: 0.02, width: 0.72, shaft: 0.85, toeLow: 0.12 },
+        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, heelBlock: 0.012, archCut: 0.018, width: 0.72, shaft: 0.85, toeLow: 0.12 },
         belt: { on: true, color: "#2f2e33", y: 0.49, width: 0.035 },
         jacket: { on: true, color: "#3b3940", slip: "L", hem: 0.475, flare: 0.006, lapel: 0.066, collar: 0.07, sleeveBag: 0.016, sleeveFolds: 0.006 },
         weapon: { right: "fist", left: "fist" },

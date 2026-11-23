@@ -14853,7 +14853,7 @@
   "outfit.jacket.slipLift": {
    "path": "outfit.jacket.slipLift",
    "type": "number",
-   "default": 0.012,
+   "default": 0.005,
    "label": {
     "ja": "落ちた側の襟の浮き",
     "en": "Slipped side's collar lift"
