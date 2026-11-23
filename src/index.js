@@ -911,7 +911,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index
   // (the outline shares the geometry). They never show, and skipping them makes drawing lighter. Follows each garment's .m.visible,
   // so taking a garment off (or a clay view) brings the body back. Socks are left alone: the leg sits only ~2 mm inside them.
-  const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeCover ?? shoeSdf]], COVER_DEPTH = 0.006;   // (shoeCover: down to the floor where the sole is notched: the bare foot sits inside the sole and showed in the notch)   // m inside the garment
+  const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeCover ?? shoeSdf]], COVER_DEPTH = 0.006;   // (shoeCover: down to the floor and 12 mm wider at the notch's height where the sole is notched: the bare foot sits inside the sole, and its sides, nearer the upper's surface than COVER_DEPTH, showed in the notch as a shard)   // m inside the garment
   const bodyGeo = parts.body.m.geometry, fullIdx = bodyGeo.index, coverIdx = new Map();
   let coverBits = null, coverSig = -1;
   if (cull) { const Pa = basePos(bodyGeo), kept = building && hit?.cover;   // remembered with the meshes (same shape, same answer; recomputing reads the whole body ~0.25 s)
