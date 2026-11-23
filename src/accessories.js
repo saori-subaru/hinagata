@@ -12,8 +12,8 @@ import * as THREE from "three";
 export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "cord"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
-function flat(shape, depth, bevel = 0.04) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 });
+function flat(shape, depth, bevel = 0.04, curve = 10, bevelSeg = 2) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: bevel, bevelSegments: bevelSeg, curveSegments: curve });
   g.translate(0, 0, depth * 0.6); return g;
 }
 function merge(list) {   // geometries (position + normal, indexed or not) → one
@@ -75,7 +75,7 @@ const SHAPES = {
   // for シルヴィ: an X of two rounded bars (spin 45: a +), 1 across; a tassel hanging 1 down from where it is put (a knot, a collar, a fringe
   // of cords); a buckle's frame, 1 wide; a tab, a strap 0.36 wide hanging 1 down from where it is put, its end cut in a V
   cross: () => { const bar = (a) => { const s = new THREE.Shape(), w = 0.12, l = 0.5; s.moveTo(-l + w, -w); s.lineTo(l - w, -w); s.absarc(l - w, 0, w, -Math.PI / 2, Math.PI / 2, false); s.lineTo(-l + w, w); s.absarc(-l + w, 0, w, Math.PI / 2, Math.PI * 1.5, false);
-      const g = flat(s, 0.06); g.rotateZ(a); return g; };
+      const g = flat(s, 0.06, 0.04, 3, 1); g.rotateZ(a); return g; };   // (a few cm across: 10 segments a round end and 2 a bevel made it 1000 triangles)
     const g = merge([bar(Math.PI / 4), bar(-Math.PI / 4)]); g.computeVertexNormals(); return g; },
   tassel: () => { const parts = [], up = new THREE.Vector3(0, 1, 0);
     const knot = new THREE.SphereGeometry(0.14, 12, 10); knot.translate(0, -0.12, 0); parts.push(knot);
