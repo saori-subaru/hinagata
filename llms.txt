@@ -108,6 +108,7 @@ simulated on the CPU every frame. Budget for both:
   built as usual, with a console warning: `avatar.baked` says which. Bake again after updating the engine.
   `await avatar.bake({ triangles: 8000 })` thins the baked meshes to about that many triangles (the hair's locks are not baked or counted);
   `hidden: true` also drops what never shows in a set of poses (lighter; the baked character then can't take clothes off).
+  `skin: 2500` makes the body and the close clothes one skin of that many triangles (lightest; same loss), `triangles` then budgets the rest (skirt, cape).
 - `createAvatar(recipe, { quality })`: "game" (default), "lite" (a third to a fifth of the vertices, lighter hair, cloth without thickness at its edges, about half the build
   time: crowds, small characters, phones), "fine" (the sharpest shapes, e.g. a nose tip, at about the triangles of
   "game", but about 2.5x as long to build the first time; the default for `body.adult`) or "high" (6.8 mm cells unthinned, 2–3x the vertices). Weight at "game": 35–50k vertices, 70–100k triangles.

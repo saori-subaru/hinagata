@@ -7,11 +7,12 @@
 //
 import * as THREE from "three";
 import { sstep, dPrim, blend } from "./sdf/prim.js";
-import { surfaceNets, gridSampler, smoothNormals } from "./sdf/mesh.js";
+import { surfaceNets, gridSampler, smoothNormals, grad4, gridDims, sampleGrid, fixAmbiguous, extractVerts, projectVerts, quads } from "./sdf/mesh.js";
 import { sheetsMesh } from "./sdf/sheet.js";
 import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { seenVertices } from "./visible.js";
+import { outsideAir, outerVerts, subRecord, joinRecords } from "./skin.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
 import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands, withPicture } from "./materials.js";
@@ -1329,15 +1330,20 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
      *  What was changed after the build (setHair, setWorn) is not in it.
      *  bake({ triangles: 8000, face?: true, error?: 0.006 (m: past 1 cm the sole came through the boot), 0.01 with hidden }) → Promise of the file thinned to about that many triangles over its meshes (the
      *  hidden: true drops first what never shows from all round in a set of poses (a sole inside a boot; such a baked character can't take
-     *  clothes off: the body under them is gone). The hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
+     *  clothes off: the body under them is gone). skin: 2500 makes the body and the close clothes one skin of that many triangles
+     *  (oneSkin below; skinError 0.02 m, ends 0.002 m for the head and the hands; the same loss of the clothes), and triangles is then the
+     *  budget of the rest (a skirt, a cape). The hair's locks are built at load and not counted; the body under the clothes is counted though not drawn). Cloth keeps twice the share. */
     bake(thin) {
       let parts = { ...(hit ?? {}), ...built };
-      if (!thin?.triangles && !thin?.hidden) return encodeBake({ key: cacheKey, parts });
+      if (!thin?.triangles && !thin?.hidden && !thin?.skin) return encodeBake({ key: cacheKey, parts });
       return (async () => {
+        const first = parts; let skin = [];
         if (thin.hidden) { parts = { ...parts, ...unseenDropped(parts) }; parts.cover = null; }   // (the body's cover bits are per vertex: recomputed at load)
+        if (thin.skin) { MS ??= await loadMS(); const r = oneSkin(parts, thin); parts = { ...parts, ...r.recs }; parts.cover = null; skin = r.names;
+          thin.report?.({ skin: Object.fromEntries(skin.map((k) => [k, [first[k].idx.length / 3, parts[k].idx.length / 3]])) }); }
         if (!thin.triangles) return encodeBake({ key: cacheKey, parts });
         MS ??= await loadMS();
-        const names = Object.keys(parts).filter((k) => parts[k]?.idx?.length >= 3 && parts[k].pos);
+        const names = Object.keys(parts).filter((k) => parts[k]?.idx?.length >= 3 && parts[k].pos && !skin.includes(k));
         const tris = (o) => names.reduce((a, k) => a + o[k].idx.length / 3, 0), full = tris(parts);
         const at = (share) => Object.fromEntries(names.map((k) => [k, simplified(parts[k], k, { share, error: thin.error ?? (thin.hidden ? 0.01 : 0.006), face: thin.face })]));
         let lo = 0, hi = 1, best = parts;   // the share whose triangles come under the budget, the largest found (a few passes, each thinning every part)
@@ -1381,10 +1387,57 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const out = {};
     for (const [k, S] of Object.entries(seen)) { const r = recs[k], I = r.idx, keep = [];
       for (let t = 0; t < I.length; t += 3) if (S[I[t]] || S[I[t + 1]] || S[I[t + 2]]) keep.push(I[t], I[t + 1], I[t + 2]);
-      const map = new Int32Array(S.length).fill(-1); let n = 0; for (const v of keep) if (map[v] < 0) map[v] = n++;
-      const pick = (a, w) => { if (!a) return a; const o = new a.constructor(n * w); for (let v = 0; v < S.length; v++) if (map[v] >= 0) for (let q = 0; q < w; q++) o[map[v] * w + q] = a[v * w + q]; return o; };
-      out[k] = { ...r, pos: pick(r.pos, 3), nor: pick(r.nor, 3), si: pick(r.si, 4), sw: pick(r.sw, 4), idx: Uint32Array.from(keep, (v) => map[v]) }; }
+      out[k] = subRecord(r, keep); }
     return out;
+  }
+  // bake({ skin }): the body and the clothes made from a shape at about the body's cells, as one skin (src/skin.js) of thin.skin triangles.
+  // The head and the hands stay the body's own (the face's layers, the ears and the fingers' rings are made on them), thinned a little
+  // (thin.ends, metres), and lap over the skin's edge at the neck and the wrists. Sheets (a skirt, a cape, bell sleeves) are not in it.
+  // → { recs: the parts' new records, names }
+  function oneSkin(recs, thin) {
+    const S = ["body", ...CLOTHES].filter((k) => recs[k]?.idx?.length >= 3 && parts[k]?.m?.visible && !LATER.has(k))
+      .map((k) => ({ k, ...partSpec(k, { OPT, H, clothH, sheetK, one: ONE, kit, bodyAt }) })).filter((s) => !s.make && s.h >= H * 0.55 && s.hi[0] - s.lo[0] > 0.02);
+    const lo = [0, 1, 2].map((a) => Math.min(...S.map((s) => s.lo[a]))), hi = [0, 1, 2].map((a) => Math.max(...S.map((s) => s.hi[a])));
+    const inb = (s, x, y, z) => x >= s.lo[0] && x <= s.hi[0] && y >= s.lo[1] && y <= s.hi[1] && z >= s.lo[2] && z <= s.hi[2];
+    for (const s of S) s.quick = s.k === "body" ? bodyAt : s.fast ?? s.sdf;
+    const union = (f) => (x, y, z) => { let d = 1; for (const s of S) if (inb(s, x, y, z)) { const v = s[f](x, y, z); if (v < d) d = v; } return d; }, sdf = union("sdf");
+    const [nx, ny, nz] = gridDims(lo, hi, H), V = sampleGrid(union("quick"), lo, hi, H, OPT.quality.band); fixAmbiguous(V, sdf, lo, H, nx, ny, nz);
+    const { cell, pos: p0 } = extractVerts(V, lo, H, nx, ny, nz), pos = Float32Array.from(p0), nor = new Float32Array(pos.length), n = pos.length / 3;
+    projectVerts(sdf, pos, nor, OPT.quality.project);
+    const outer = outerVerts(cell, outsideAir({ V, nx, ny, nz }), nx, ny, nz, n);   // (a gap closed in between the skin and a garment: its walls go)
+    // the body's ends: above the neck's middle, past the wrists
+    const yN = (J.neck[1] + J.head[1]) / 2, hx = Math.abs(J["hand.L"][0]) - 0.005, end = (P, v) => P[v * 3 + 1] > yN || Math.abs(P[v * 3]) > hx, B = S.findIndex((s) => s.k === "body");
+    // whose surface each triangle is on (at its middle)
+    const part = (x, y, z) => { let d = Infinity, at = 0; S.forEach((s, q) => { if (!inb(s, x, y, z)) return; const e = s.sdf(x, y, z); if (e < d) { d = e; at = q; } }); return at; };
+    const src = [], tl = []; { const I = quads(V, cell, pos, nor, nx, ny, nz);
+      for (let t = 0; t < I.length; t += 3) { const a = I[t], b = I[t + 1], c = I[t + 2]; if (!outer[a] || !outer[b] || !outer[c]) continue;
+        const q = part((pos[a * 3] + pos[b * 3] + pos[c * 3]) / 3, (pos[a * 3 + 1] + pos[b * 3 + 1] + pos[c * 3 + 1]) / 3, (pos[a * 3 + 2] + pos[b * 3 + 2] + pos[c * 3 + 2]) / 3);
+        if (q === B && end(pos, a) && end(pos, b) && end(pos, c)) continue; src.push(a, b, c); tl.push(q); } }
+    // a point between two parts goes onto the line where their surfaces meet (a cuff's edge on the wrist), so the parts' border follows
+    // that line and not the grid's steps; then each part gets its own copy of it (its own normal: the edge stays sharp). The thinning
+    // (meshoptimizer) takes points at one place as a seam: they are folded along it only, together
+    const mine = Array.from({ length: n }, () => []); src.forEach((v, i) => { const q = tl[(i / 3) | 0]; if (!mine[v].includes(q)) mine[v].push(q); });
+    for (let v = 0; v < n; v++) { if (mine[v].length !== 2) continue; const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]], p0 = [...p];
+      for (let it = 0; it < 4; it++) for (const q of mine[v]) { const g = grad4(S[q].sdf, p[0], p[1], p[2]); p[0] -= g[0] * g[3]; p[1] -= g[1] * g[3]; p[2] -= g[2] * g[3]; }
+      if (Math.hypot(p[0] - p0[0], p[1] - p0[1], p[2] - p0[2]) < H && mine[v].every((q) => Math.abs(S[q].sdf(p[0], p[1], p[2])) < 0.001)) pos.set(p, v * 3); }
+    const copy = new Map(), from = [], lab = [], I2 = new Uint32Array(src.length);
+    src.forEach((v, i) => { const q = tl[(i / 3) | 0], k = v * S.length + q; let c = copy.get(k); if (c == null) { copy.set(k, c = from.length); from.push(v); lab.push(q); } I2[i] = c; });
+    const m = from.length, P2 = new Float32Array(m * 3), N2 = new Float32Array(m * 3), si = new Uint16Array(m * 4), sw = new Float32Array(m * 4);
+    for (let c = 0; c < m; c++) { const v = from[c]; P2.set(pos.subarray(v * 3, v * 3 + 3), c * 3);
+      if (mine[v].length > 1) { const g = grad4(S[lab[c]].sdf, P2[c * 3], P2[c * 3 + 1], P2[c * 3 + 2]); N2.set([g[0], g[1], g[2]], c * 3); } else N2.set(nor.subarray(v * 3, v * 3 + 3), c * 3); }
+    // the bones by the part's rule; a point between parts by the first one's for all its copies (each by its own, the seam would part moving)
+    S.forEach((s, q) => { const cs = []; for (let c = 0; c < m; c++) if (Math.min(...mine[from[c]]) === q) cs.push(c); const sub = new Float32Array(cs.length * 3); cs.forEach((c, i) => { for (let a = 0; a < 3; a++) sub[i * 3 + a] = P2[c * 3 + a]; });
+      const r = skinOf(sub, weightsAt, BI, s.bone1, s.only, s.soft); cs.forEach((c, i) => { for (let a = 0; a < 4; a++) { si[c * 4 + a] = r.si[i * 4 + a]; sw[c * 4 + a] = r.sw[i * 4 + a]; } }); });
+    const [out] = MS.simplifyWithAttributes(I2, P2, 3, N2, 3, [0.4, 0.4, 0.4], null, Math.max(3, (thin.skin === true ? 2500 : thin.skin) * 3), thin.skinError ?? 0.02, ["LockBorder", "ErrorAbsolute"]);
+    const tris = S.map(() => []); for (const c of out) tris[lab[c]].push(c);
+    const whole = { pos: P2, nor: N2, si, sw }, o = {}, over = { share: 0, error: thin.ends ?? 0.002, face: false };
+    S.forEach((s, q) => { let r = subRecord(whole, tris[q]);
+      if (s.k === "body") { const R = recs.body, I = R.idx, e = []; for (let t = 0; t < I.length; t += 3) if (end(R.pos, I[t]) || end(R.pos, I[t + 1]) || end(R.pos, I[t + 2])) e.push(I[t], I[t + 1], I[t + 2]);
+        let E = subRecord(R, e); if (over.error > 0) E = simplified(E, "ends", over); r = joinRecords(r, E); }
+      if (s.bells) { const m = sheetsMesh(s.bells.sheets, null, null, s.bells.h, s.bells.one), mp = Float32Array.from(m.pos);
+        r = joinRecords(r, simplified({ pos: mp, nor: Float32Array.from(m.nor), idx: Uint32Array.from(m.idx), ...skinOf(mp, weightsAt, BI, s.bone1, s.only, s.soft) }, "sheet", { share: thin.sheets ?? 0.5, error: thin.error ?? 0.01 })); }
+      o[s.k] = r; });
+    return { recs: o, names: S.map((s) => s.k) };
   }
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
