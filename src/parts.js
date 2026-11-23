@@ -37,7 +37,8 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
   // foot0: the feet's box, 2 cm under the floor: the mesher makes no faces between a box's first two layers, and the soles' bottom (3 mm
   // under it) and the socks' fell there at the game's cells: no bottom, the foot seen through the boots from below
   // (feet over 1.1, body.proportion.feet, reach past the box: at 1.4 a boot's toe was cut off at it. Up to 1.1 the box is as it was: growing it moves the cells of every character's shoes)
-  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, FKB = Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1.1), FX = 0.22 + 0.06 * FKB, FZ = 0.14 + 0.12 * FKB + Math.max(0, -(OPT.body.proportion?.feetFrom ?? 0)) * Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1), foot0 = [-FX, -0.02, -0.12 - 0.06 * FKB];
+  // (FZ, the box's front, also with any bigger feet and a thicker shoe: only its far end grows, the cells stay. At feet 1.1 with offset 0.018 a boot's toe was cut open there, the foot showing)
+  const { bodySdf, HT, hairKit, clothes: C } = kit, B = bodyAt || bodySdf, FKB = Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1.1), FX = 0.22 + 0.06 * FKB, FZ = 0.14 + 0.12 * FKB + (0.2 + Math.max(0, -(OPT.body.proportion?.feetFrom ?? 0))) * Math.max(0, (OPT.body.proportion?.feet ?? 1) - 1) + 2 * Math.max(0, (OPT.outfit?.shoes?.offset ?? 0.012) - 0.012), foot0 = [-FX, -0.02, -0.12 - 0.06 * FKB];
   const { x: ax, y: ay } = armReach(OPT);   // longer arms, wider shoulders, bigger hands (body.proportion) reach further: the boxes around the arms grow by it
   switch (name) {
     case "body": return { sdf: bodySdf, lo: [-0.47 - ax, -0.02, -0.3], hi: [0.47 + ax, 1.43, 0.34], h: H };
@@ -114,11 +115,11 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
   // the garment parts (src/garments): their own entries, from the shapes buildClothes made (an empty part when not built)
   const GP = partNamed(name);
   if (GP) { const st = C.garments[name]; if (!st) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
-    return GP.spec(st, { OPT, H, B, ax, ay, kit, hairCap: () => hairKit.hairSdfOf(hairForms(OPT.hair)) }); }
+    return GP.spec(st, { OPT, H, B, ax, ay, kit, hairCap: () => hairKit.hairSdfOf(hairForms(OPT.hair)), sheetH: sheetCell(H, clothH, sheetK), one }); }   // sheetH, one: the cloth sheets' cells and sides at this quality (a part made of sheets: the jacket)
   if (name.startsWith("hair:")) {   // long hair reaches down the back
     const pick = JSON.parse(name.slice(5));
     { const CR = OPT.hair.sculpt.whorl?.on && OPT.hair.sculpt.whorl.crop; if (CR && hairKit.cropSdf) return { sdf: HT.wrap(hairKit.cropSdf(CR)), lo: [-0.4, 0.6, -0.42], hi: [0.4, 1.3, 0.2], h: H * OPT.quality.hairCell, bone1: "head" }; }   // the cropped nape alone is meshed
-    if (OPT.hair.sculpt.whorl?.on) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "head" };   // locks from the whorl: no block, the scalp is painted (index.js scalpOf); the ahoge is joined to this
+    if (hairKit.whorlOn(pick)) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "head" };   // locks from the whorl: no block, the scalp is painted (index.js scalpOf); the ahoge is joined to this
     return { sdf: HT.wrap(hairKit.hairSdfOf(pick)), lo: [-0.4, pick.back === "long" && !OPT.hair.sculpt.long.locks ? 0.4 : 0.8, -0.42], hi: [0.4, 1.5, 0.38], h: H * OPT.quality.hairCell, bone1: "head" };
   }
   throw new Error(`Unknown part "${name}"`);

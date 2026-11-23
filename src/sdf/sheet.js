@@ -21,9 +21,10 @@ function onto(f, p, n = 3, lim = 0.03) { for (let i = 0; i < n; i++) { const g =
  * (x, y, z) → (the inner side at o = -tk); cut(x, y, z): < 0 where the cloth is; smooth: rounds of averaging the push directions (0) }. lo, hi: a box holding the cloth; h: the middle's cells.
  * Returns { pos, nor, idx } (Float32Array, Float32Array, Uint32Array): the outer side, the inner side and the rim along the cut.
  * sheet.line: the outline's facet along the outer side's edge on the two-sided sheet too (a hood's bag: its rim lies on the cape, no silhouette).
+ * sheet.lying: a sheet lying on another (a jacket's lapel): its outer side and its rim alone, no inner side (it never shows).
  * one (the lite quality): the outer side alone, to be drawn double-sided, and along the cut a lip of no width for the outline (below).
  */
-export function sheetMesh({ o, of = o, tk, cut, smooth = 0, line = false }, lo, hi, h, one = false) {
+export function sheetMesh({ o, of = o, tk, cut, smooth = 0, line = false, lying = false }, lo, hi, h, one = false) {
   const T = typeof tk === "function" ? tk : () => tk, mid = (x, y, z) => o(x, y, z) + T(x, y, z) / 2;
   // the middle and, past the cut, two cells more (cut away below: there it ends in the cells' steps)
   const r = surfaceNets((x, y, z) => Math.max(mid(x, y, z), cut(x, y, z) - 2 * h), lo, hi, h, { proj: 2, fast: (x, y, z) => Math.max(of(x, y, z) + T(x, y, z) / 2, cut(x, y, z) - 2 * h) });
@@ -90,7 +91,7 @@ export function sheetMesh({ o, of = o, tk, cut, smooth = 0, line = false }, lo, 
       if (f < 0) L.push(a, b, lb, a, lb, la); else L.push(a, lb, b, a, la, lb); } return L; };
   if (one) return { pos: pos.slice(0, (nm + nr) * 3), nor: nor.slice(0, (nm + nr) * 3), idx: Uint32Array.from(lips([...I], -nm)) };
   const idx = [];
-  for (let t = 0; t < I.length; t += 3) idx.push(I[t], I[t + 1], I[t + 2], nm + I[t], nm + I[t + 2], nm + I[t + 1]);
+  for (let t = 0; t < I.length; t += 3) { idx.push(I[t], I[t + 1], I[t + 2]); if (!lying) idx.push(nm + I[t], nm + I[t + 2], nm + I[t + 1]); }
   const face = (a, b, c, n) => { const ux = pos[b * 3] - pos[a * 3], uy = pos[b * 3 + 1] - pos[a * 3 + 1], uz = pos[b * 3 + 2] - pos[a * 3 + 2], wx = pos[c * 3] - pos[a * 3], wy = pos[c * 3 + 1] - pos[a * 3 + 1], wz = pos[c * 3 + 2] - pos[a * 3 + 2];
     return (uy * wz - uz * wy) * nor[n * 3] + (uz * wx - ux * wz) * nor[n * 3 + 1] + (ux * wy - uy * wx) * nor[n * 3 + 2]; };
   for (const [a, b] of edges) { const ra = rimOf.get(a), rb = rimOf.get(b), q = [[a, b, rb, ra], [ra, rb, nm + b, nm + a]];

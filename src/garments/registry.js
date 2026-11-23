@@ -16,12 +16,17 @@
 //   build(ctx) → state | null       the shapes (a distance function, a band's value...) from ctx: { OPT, O (its options), P, J, bodySdf, shirtSdf,
 //                                   slope (y → how many times a base height is stretched there), legsSdf(hem, off) (pants with their own hem),
 //                                   outerSdf (the clothes' outside round the torso), sleeveEnd(side) (a long or bell sleeve's end: out, up, lo, hi) }
-//   spec(state, { OPT, H, B, ax, ay, kit, none }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js)
+//   spec(state, { OPT, H, B, ax, ay, kit, none, sheetH, one }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js);
+//                                   sheetH, one: a cloth sheet's cells at this quality, and whether sheets are one-sided (lite)
 //   outline: 0.003, soft: true,     the outline's width (m at outline.width 1); shading by softened normals
 //   thin: null | "cloth" | "keep",  how the "fine" and "lite" builds thin it: as the body / as cloth (less) / not at all
 //   wrist: (O, OPT) => m,           (optional) how far it stands out round the wrists (a cuff): a cape's cloth keeps that far off the forearm's end
 //   bands: { value: (state) => (x, y, z) => t, ranges: (O) => [[lo, hi, color], ...] }   (optional) colored bands painted by a value per vertex
 //                                   (materials.js withBands; base positions): a collar's line, a cuff. Their options change instantly (setBands)
+//   picture: { frame: [w, y0, y1, d], side: (state) => ({ weight: (x, y, z) => 0..1, axes }) } (optional) it takes a drawn picture (materials.js
+//                                   withPicture; options <path>.picture: { src, opacity, blend }, avatar.setPicture): the frame its views are drawn in
+//                                   (base space: half the width, the lowest and highest height, half the side views' width; d 0 = no side views),
+//                                   where the side views go and how each looks at it (axes: +x then -x, [ox, oy, dx, dy]: its top and the way down)
 // })
 export const PARTS = [];
 export function definePart(d) {
@@ -30,6 +35,14 @@ export function definePart(d) {
   PARTS.push(p); return p;
 }
 export const partNamed = (name) => PARTS.find((p) => p.name === name) ?? null;
+// the garments made outside definePart (clothes/index.js; their meshes are the parts of these names) that take a drawn picture too
+// ⛔ changing a frame moves every picture drawn so far. fade: no side views, so the picture fades to the plain color on the sides (materials.js)
+export const PICTURED = [
+  { name: "shirt", path: "outfit.shirt", group: "shirt", picture: { frame: [0.48, 0.38, 0.92, 0], fade: 0.3 } },
+  { name: "pants", path: "outfit.pants", group: "pants", picture: { frame: [0.24, 0, 0.62, 0], fade: 0.3 } },
+];
+/** every part that takes a drawn picture: definePart parts with `picture`, then PICTURED */
+export const pictureParts = () => [...PARTS.filter((p) => p.picture), ...PICTURED];
 export const getPath = (o, path) => path.split(".").reduce((a, k) => a?.[k], o);
 export const partOptions = (OPT, p) => getPath(OPT, p.path) ?? {};
 /** merge every part's defaults into the defaults (options.js, once) */

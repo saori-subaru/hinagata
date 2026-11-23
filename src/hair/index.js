@@ -4,6 +4,8 @@ import { smin, E, C, G, dPrim, blend, sstep } from "../sdf/prim.js";
 import { grad } from "../sdf/mesh.js";
 import { makeStretch } from "../body/index.js";
 
+const WHORL_SHELL = 0.004;   // what locks from the whorl lie on (m over the skull, not meshed): on lockShell's 1.6 cm they lay over a helmet
+
 export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = () => 1, bodySdf }) {
   // hair.sculpt.long.bottom is a height in base space (the body before body.proportion stretches it; recipe version 5): the block's curtain
   // takes it as built (as it did the number before), so the same long hair looks the same
@@ -199,7 +201,10 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
   // with locks over it (the back's and the bangs' both) the block is only what shows between them: thin (lockShell), else the locks on top
   // of a full-thickness block made the head swell (2026-10-04, Saori). The bangs alone (a bob behind them) keep the block as it is
   const backAsLocks = (pick) => (["short", "hang", "bob", "flip"].includes(pick.back) && OPT.hair.sculpt.shortLocks?.on) || (pick.back === "long" && OPT.hair.sculpt.long.locks);
-  const shellOf = (pick) => bangsAsLocks(pick) && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null ? OPT.hair.sculpt.lockShell : SHELL;   // the block's thickness
+  // the whorl (hair.sculpt.whorl.on: every lock from it, no block meshed) only where every lock has a way from it: nendo or hime bangs and the
+  // back hanging short or long, all in locks; else (side bangs, none, lying, bob, flip, a block) the block as before. crop (アステル): always
+  const whorlOn = (pick) => { const W = OPT.hair.sculpt.whorl; return !!W?.on && (!!W.crop || (["nendo", "hime"].includes(pick.bangs) && bangsAsLocks(pick) && ["hang", "long"].includes(pick.back) && backAsLocks(pick))); };
+  const shellOf = (pick) => bangsAsLocks(pick) && backAsLocks(pick) && OPT.hair.sculpt.lockShell != null ? (whorlOn(pick) ? WHORL_SHELL : OPT.hair.sculpt.lockShell) : SHELL;   // the block's thickness (from the whorl: what the locks lie on, not meshed)
   const tuftsOn = () => (OPT.hair.tufts ?? []).some((d) => Array.isArray(d?.to));   // tufts (hair/locks.js tuftLocks) lie over the block
   const hairSdfOf = (pick) => { const L = bangsAsLocks(pick), sh = shellOf(pick), thin = sh !== SHELL;
     let o = BACKS[pick.back]; if ((pick.back === "bob" || pick.back === "flip") && backAsLocks(pick)) o = BACKS.short;   // a bob or a flip in locks: the locks over the short hair's block (the bob's own reaches the jaw)
@@ -217,5 +222,5 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     const zb = sstep(z0 - 0.01, z0 - (C.round ?? 0.1), z), tk = C.thick ?? 0.003, t = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, C.top - hem)));
     const base = smin(Math.hypot(x * rz / rx, z - zc) - rz - tk - (C.full ?? 0) * zb * Math.pow(t, C.curve ?? 2), smin(skullOnly(x, y, z), dPrim(P.neck, x, y, z), 0.01) - tk, 0.01);
     return smax(smax(smax(smax(base, y - C.top, 0.004), hem - y, 0.005), z - z0, 0.01), -ear, EAR_GAP.k); }; };
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
+  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
 }

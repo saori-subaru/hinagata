@@ -108,7 +108,8 @@ export function surfaceLocks(L, { cap, center, bottom, N = 8 }) {
 // long hair: down to L.bottom, the sides a little shorter (the hem curves up toward the face)
 // split (0..1; 2026-10-10, Saori, with 島風's figure from behind: "うしろがみは…二股にわかれてもちあげる"): the long hair parted down the
 // back into two bundles, each lifted out to its side and a little back, its locks gathered toward the tips and swinging as one
-export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bottom: (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5 });   // kit.hugY: see drape
+const hemOf = (L) => (th) => L.bottom + 0.18 * Math.sin(th) ** 2 * 0.5;   // L.bottom: root space
+export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bottom: hemOf(L) });   // kit.hugY: see drape
   const S = L.split ?? 0; if (!(S > 0)) return specs;
   const A = S * (L.splitAngle ?? 55) * Math.PI / 180, GAP = 0.03 * S, rotZ = (v, t) => [v[0] * Math.cos(t) - v[1] * Math.sin(t), v[0] * Math.sin(t) + v[1] * Math.cos(t), v[2]], rotX = (v, t) => [v[0], v[1] * Math.cos(t) - v[2] * Math.sin(t), v[1] * Math.sin(t) + v[2] * Math.cos(t)];
   for (const s of specs) { const side = s.root[0] >= 0 ? 1 : -1, P = s.pts, N = P.length, Q = [P[0]];
@@ -119,6 +120,32 @@ export const longLocks = (L, kit) => { const specs = ringLocks(L, { ...kit, bott
     for (let i = 1; i < N; i++) { const m = [0, 1, 2].map((k) => B.reduce((a, s) => a + s.pts[i][k], 0) / B.length), g = 0.55 * S * (i / (N - 1)) ** 1.4;
       for (const s of B) for (let k = 0; k < 3; k++) s.pts[i][k] += (m[k] - s.pts[i][k]) * g; } }
   return specs; };
+/**
+ * Long hair from the whorl (hair.sculpt.whorl on, no block): the outer locks laid over the head from the whorl as the bangs are (bangLocks,
+ * one per row round the back, the tips on the hem), and where they leave the head let fall against it and the body as drape does (bangLocks
+ * hangs them straight down: through the shoulders), flicked from that part's middle. No inner layer: the ring's, draped as thick as it is,
+ * lay over these. L: as longLocks / W: bangLocks' whorl options / bk: bangKit() (head space) / toHeadY: a root-space height in head space
+ */
+export function whorlLongLocks(L, W, bk, { center, coll, ellipsoid: ell, toHeadY, N = 16 }) {
+  const bottom = hemOf(L), n = Math.max(3, Math.round(L.count ?? 13)), span = L.span ?? 110, tips = [];
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < n; i++) { const E = editOf(L, i), a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0), b = bottom((180 + a) * Math.PI / 180);   // a: from the back
+    tips.push([a, toHeadY(b - 0.04 - (L.vary ?? 0.12) * (rnd() - 0.5) * (center[1] - b) + (E.dy ?? 0)), null, null, null, 0, 0, 0, E.w ?? 1, 0, 0]); }   // 4 cm past the hem as the ring's (draped, they rise)
+  const specs = bangLocks({ span, lockSpan: 360, overlap: L.overlap ?? 1.3, lockBand: L.band ?? 0.3, lockHangY: L.hangY ?? 0.86, aOff: 180, noFront: true, N, tips, lockThick: L.thick ?? 0.22, puff: L.puff ?? 0.004, ...W }, bk);
+  const keepOut = (p) => { pushOutEllipsoid(p, ell.c, ell.r, 0.004); for (const c of coll) pushOutSphere(p, c.c, c.r + 0.004); };
+  specs.forEach((s, l) => { const P = s.pts, k0 = Math.max(1, Math.floor(s.frontFrom * (N - 1))), seg = P.map((p, i) => i ? Math.hypot(p[0] - P[i - 1][0], p[1] - P[i - 1][1], p[2] - P[i - 1][2]) : 0);
+    const r = P.map((_, i) => 0.5 * s.w * s.thick * (s.prof ?? width)(i / (N - 1)) + 0.003);
+    if (s.hang) for (let it = 0; it < 160; it++) { for (let i = k0 + 1; i < N; i++) P[i][1] -= 0.002;   // drape's steps, the part on the head held
+      for (let k = 0; k < 3; k++) { for (let i = k0 + 1; i < N; i++) { const a = P[i - 1], b = P[i], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], dl = Math.hypot(...d) || 1; for (let q = 0; q < 3; q++) b[q] = a[q] + d[q] * seg[i] / dl; }
+        for (let i = k0 + 1; i < N; i++) { pushOutEllipsoid(P[i], ell.c, ell.r, r[i]); for (const c of coll) pushOutSphere(P[i], c.c, c.r + r[i]); } } }
+    // long.fan (m at the tips): the hanging part out from the head's axis, more toward the tips (a wider silhouette down the back);
+    // long.wave (m), waves: it sways sideways, each lock from its own phase (a wavy outline, not a straight curtain)
+    if (s.hang && (L.fan || L.wave)) for (let i = k0 + 1; i < N; i++) { const t = (i - k0) / (N - 1 - k0), p = P[i], dx = p[0] - center[0], dz = p[2] - center[2], dl = Math.hypot(dx, dz) || 1, f = (L.fan ?? 0) * t ** 1.5;
+      p[0] += dx / dl * f + (L.wave ?? 0) * Math.sin(2 * Math.PI * (L.waves ?? 1.5) * t + l * 2.4) * sstep(0, 0.3, t); p[2] += dz / dl * f; }
+    const fl = (L.flick ?? 0) + (editOf(L, l).fl ?? 0); if (fl) s.pts = bendLock(P, fl, { center, keepOut, from: (k0 + 0.5 * (N - 1 - k0)) / (N - 1) });
+    Object.assign(s, { stiff: 1, group: `ring${Math.min(2, Math.floor(l / n * 3))}`, cohere: L.cohere ?? 0.45 }); });   // the left, the back and the right each swinging as one
+  return specs;
+}
 
 /** How far from c along the unit direction d the surface of f is (c inside it): halving the range, inside → outside. */
 export function surfaceAlong(f, c, d, t0 = 0, t1 = 0.6) {
@@ -146,9 +173,10 @@ export function bangLocks(B, { surf, center, toRoot, sx = 1, N: N0 = 8 }) {
   const out = [], horiz = (y, th) => { const c = [0, y, center[2]], d = [Math.sin(th + A0), 0, Math.cos(th + A0)], t = surfaceAlong(surf, c, d); return [c[0] + d[0] * t, y, c[2] + d[2] * t]; };
   // where a tuft leaves the head to hang: at its height, but no closer in than the head is anywhere above it (at the sides HY is below the
   // jaw, and the surface there is the neck: a side tuft hung from the neck, as narrow as the neck's radius made it, a row of strings)
-  // (with a shape: on the shape at that height, so the tips and the locks' widths follow it, not the neck under it)
+  // (with a shape: on the shape at that height, so the tips and the locks' widths follow it, not the neck under it). noTuck: above HY too
+  // (the back from the whorl without a shape: a tip at the nape's height lay under the skull, a strand as thin as a thread along the neck)
   const shWof = (th) => SH ? (SH.sides ?? 1) + (1 - (SH.sides ?? 1)) * sstep(0.2, 0.7, -Math.cos(th + A0)) : 0;
-  const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
+  const leave = (y, th) => { const p = horiz(y, th); if (y > HY && !SH && !B.noTuck) return p; const hs = Math.hypot(p[0], p[2] - center[2]); let R = hs;
     for (let yy = y + 0.03; yy <= center[1]; yy += 0.03) { const q = horiz(yy, th); R = Math.max(R, Math.hypot(q[0], q[2] - center[2])); }
     if (SH) R = hs + (R - hs) * (SH.hang ?? 0) + flareAt(y) * shWof(th);
     return [Math.sin(th + A0) * R, y, center[2] + Math.cos(th + A0) * R]; };
