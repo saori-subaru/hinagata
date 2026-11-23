@@ -39,9 +39,13 @@ const ADULT = {
     sculpt: { neck: { width: 0.612 }, bustX: 0.038, thigh: { topDrop: 0.06 }, legShape: 1.5, hand: { slim: null } } },
 };
 // what the adult type sets, at the defaults: the chibi and tall types set it too, so choosing one after the adult takes it all back
-// legShape: the tall types' knees and calves at 1; the chibi's short legs at 0.6 (at 1 their calves stood out sideways: bowed legs from the front).
+// legShape: the tall types' knees and calves at 1; the chibi's short legs at 0 (CHIBI_LEGS below).
 // hand.slim: the chibi's round hand (0); the others' slender one (null: 1)
 const PLAIN = { adult: { on: false, knee: 0.53 }, joints: { hipY: 0.44, hipX: 0.1, footX: 0.09, kneeX: 0.08 }, sculpt: { neck: { width: 0.85 }, bustX: null, thigh: { topDrop: 0.03 }, legShape: 1, hand: { slim: null } } };
 const plain = (b, legShape = 1, slim = null) => ({ ...PLAIN, ...b, sculpt: { ...PLAIN.sculpt, legShape, hand: { slim } }, proportion: { chest: 0.3, feet: 1, ...b.proportion }, head: { width: 1, ...b.head } });
-export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain({ ...CHIBI, ...b }, 0.6, 0) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
+// the chibi types keep the legs they had before the hips were narrowed for legs that close in (that was for the tall ones): the hips' and
+// the thigh tops' widths, the joints apart, no legShape. Narrowed, a chibi's torso was a barrel with no hips, its short legs close together
+const CHIBI_LEGS = { standard: [0.85, 0.73], toddler: [1, 0.9], girl: [0.92, 0.73], sturdy: [0.95, 1.05] };   // [torso.hips, thickness.thighTop]
+const chibi = (k, b) => ({ ...CHIBI, ...b, torso: { ...b.torso, hips: CHIBI_LEGS[k][0] }, thickness: { ...b.thickness, thighTop: CHIBI_LEGS[k][1] }, joints: { ...PLAIN.joints, hipX: 0.11, footX: 0.116, kneeX: 0.108 } });
+export const BODY_TYPES = Object.fromEntries(Object.entries(base).flatMap(([k, b]) => [[k, { body: plain(chibi(k, b), 0, 0) }], ...(NO_TALL.has(k) ? [] : [[`${k}Tall`, { body: plain(tall(b, k)) }]]),
   ...(ADULT[k] ? [[`${k}Adult`, { body: ADULT[k] }]] : [])]));
