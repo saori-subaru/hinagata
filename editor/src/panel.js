@@ -298,30 +298,6 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     }
     return h("div", { class: "sec" }, kids);
   }
-  // the cape's hem set by hand (outfit.cape.shape): its points as chips, the picked one's angle, drop and push; a new point goes halfway
-  // round to the next one, with their values between
-  let capePt = 0;
-  function capeShapeBlock() {
-    if (!store.get("outfit.cape.on")) return null;
-    const pts = (store.get("outfit.cape.shape") ?? []).map((p) => ({ a: 0, hem: 0, out: 0, ...p })), write = (arr) => set({ "outfit.cape.shape": arr });
-    if (capePt >= pts.length) capePt = Math.max(0, pts.length - 1);
-    const add = () => { const s = [...pts].sort((p, q) => p.a - q.a), i = s.findIndex((p) => p === pts[capePt]), p = s[i] ?? { a: 0, hem: 0, out: 0 }, q = s[(i + 1) % Math.max(1, s.length)] ?? p;
-      const span = s.length > 1 ? ((q.a - p.a) % 360 + 360) % 360 || 360 : 90, a = ((p.a + span / 2 + 180) % 360 + 360) % 360 - 180;
-      const arr = [...pts, { a: Math.round(a), hem: +((p.hem + q.hem) / 2).toFixed(3), out: +((p.out + q.out) / 2).toFixed(3) }]; capePt = arr.length - 1; write(arr); };
-    const kids = [h("div", { class: "help" }, t("capeShapeHelp")),
-      h("div", { class: "chips" }, pts.map((p, i) => h("button", { class: "chip", type: "button", "aria-pressed": String(i === capePt), onclick: () => { capePt = i; render(); } }, `${t("capePt")} ${i + 1} (${Math.round(p.a)}°)`)),
-        h("button", { class: "btn small", type: "button", onclick: add }, t("capePtAdd")),
-        h("button", { class: "btn small ghost", type: "button", disabled: !pts.length, onclick: () => write(pts.filter((_, i) => i !== capePt)) }, t("capePtDel")))];
-    const it = pts[capePt];
-    if (it) for (const [k, key, min, max, step] of [["a", "capePtA", -180, 180, 1], ["hem", "capePtHem", -0.1, 0.3, 0.005], ["out", "capePtOut", -0.1, 0.3, 0.005]]) {
-      const id = `f${uid++}`, v = it[k], num = h("input", { id, class: "num", type: "number", step, value: fmt(v, step) }), rng = h("input", { class: "rng full", type: "range", min, max, step, value: v });
-      const pct = (x) => `${((x - min) / (max - min)) * 100}%`; rng.style.setProperty("--p", pct(v));
-      const put = (x) => write(pts.map((p, i) => i === capePt ? { ...p, [k]: x } : p));
-      rng.addEventListener("input", () => { num.value = fmt(+rng.value, step); rng.style.setProperty("--p", pct(+rng.value)); });
-      rng.addEventListener("change", () => put(+rng.value)); num.addEventListener("change", () => { if (isFinite(+num.value)) put(+num.value); });
-      kids.push(h("div", { class: "field" }, h("label", { class: "lab", for: id }, h("span", {}, t(key))), h("div", { class: "row" }, num), rng)); }
-    return kids;
-  }
   // the tails' ties by hand (editor/src/ties.js): only with tails
   function tiesBlock() {
     const T = ctx.ties; if (!T || !T.usable) return null;
@@ -406,10 +382,10 @@ export function createPanel({ tabsEl, panelEl, footEl, resetEl }, ctx) {
     const pre = presetBlock(); if (pre) panelEl.append(pre);
     if (tab !== "face" && faceShown) { ctx.showFace?.(null); faceShown = false; }   // left the face tab: the character's own face again
     const secEl = new Map();   // the sections on screen, by their English name
-    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories" && e.path !== "outfit.cape.shape" && !EXPR_PARTS.has(e.path)))) {
+    for (const [name, es] of sections(main.filter((e) => shown(e) && !isDrawn(e) && e.path !== "accessories" && !EXPR_PARTS.has(e.path)))) {
       const el = h("div", { class: "sec" }, h("div", { class: "sec-h" }, h("h2", {}, name), costNote(es)), es.map(fieldOf)); panelEl.append(el); secEl.set(es[0].section?.en, el); }
     if (tab === "face") panelEl.append(h("div", { class: "note" }, t("imageNote")));
-    if (tab === "outfit") { const cs = capeShapeBlock(), ce = secEl.get("Cape"); if (cs && ce) ce.append(...cs); for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
+    if (tab === "outfit") { for (const b of [accBlock(), paintBlock()]) if (b) panelEl.append(b); }
     if (tab === "hair") {
       let prev = secEl.get("Style");   // a tool without its section stands after the one before it (the bangs' after the style)
       for (const [b, sec] of [[bangsBlock(), "Bang tufts"], [tuftsBlock(), null], [backsBlock(), "Back locks"], [tiesBlock(), "Tails"]]) {   // (the whorl's tufts have no section of sliders: always a section of their own)
