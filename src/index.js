@@ -1351,6 +1351,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const first = parts; let skin = [];
         if (thin.hidden) { parts = { ...parts, ...unseenDropped(parts) }; parts.cover = null; }   // (the body's cover bits are per vertex: recomputed at load)
         if (thin.skin) { MS ??= await loadMS(); const r = oneSkin(parts, thin); parts = { ...parts, ...r.recs }; parts.cover = null; skin = r.names;
+          // (what isn't worn can't be put on a skin: left in the file as next to nothing, so the loader doesn't build it, and out of the budget)
+          for (const k of Object.keys(parts)) if (parts[k]?.idx?.length >= 3 && parts[k].pos && !skin.includes(k) && !wornNow(k)) { parts[k] = simplified(parts[k], k, { share: 0, error: 0.05, face: false }); skin.push(k); }
           thin.report?.({ skin: Object.fromEntries(skin.map((k) => [k, [first[k].idx.length / 3, parts[k].idx.length / 3]])) }); }
         if (!thin.triangles) return encodeBake({ key: cacheKey, parts });
         MS ??= await loadMS();
@@ -1405,8 +1407,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // The head and the hands stay the body's own (the face's layers, the ears and the fingers' rings are made on them), thinned a little
   // (thin.ends, metres), and lap over the skin's edge at the neck and the wrists. Sheets (a skirt, a cape, bell sleeves) are not in it.
   // → { recs: the parts' new records, names }
+  function wornNow(k) { return !!parts[k.startsWith("hair:") ? "hair" : k]?.m?.visible; }
   function oneSkin(recs, thin) {
-    const S = ["body", ...CLOTHES].filter((k) => recs[k]?.idx?.length >= 3 && parts[k]?.m?.visible && !LATER.has(k))
+    const S = ["body", ...CLOTHES].filter((k) => recs[k]?.idx?.length >= 3 && parts[k]?.m?.visible && !LATER.has(k) && k !== "cape" && !(k === "pants" && skirtOf(OPT)))   // (a skirt and a cape move as cloth, and a skirt's pleats are finer than the skin's cells)
       .map((k) => ({ k, ...partSpec(k, { OPT, H, clothH, sheetK, one: ONE, kit, bodyAt }) })).filter((s) => !s.make && s.h >= H * 0.55 && s.hi[0] - s.lo[0] > 0.02);
     const lo = [0, 1, 2].map((a) => Math.min(...S.map((s) => s.lo[a])) - 2 * H), hi = [0, 1, 2].map((a) => Math.max(...S.map((s) => s.hi[a])));   // (two cells more below: the mesher makes no faces in a box's first layer, and the soles' bottom fell there)
     const inb = (s, x, y, z) => x >= s.lo[0] && x <= s.hi[0] && y >= s.lo[1] && y <= s.hi[1] && z >= s.lo[2] && z <= s.hi[2];
