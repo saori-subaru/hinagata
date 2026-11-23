@@ -146,7 +146,7 @@ vec4 dLin(vec4 c) { return vec4(pow(c.rgb / max(c.a, 1e-4), vec3(2.2)) * c.a, c.
     vec4 dax = vPicP.x > 0.0 ? dAxes[0] : dAxes[1];
     vec4 dc = mix(dLin(texture2D(dMap, vec2((1.0 - q.x) * dfx, 0.5 * q.y))), dLin(texture2D(dMap, vec2(q.x * dfx, 0.5 + 0.5 * q.y))), smoothstep(-dSoft, dSoft, dn.z));
     vec4 ds = dLin(texture2D(dMap, vec2(dfx + clamp(0.5 - dsg * vPicP.z / (2.0 * max(dFrame.w, 1e-4)), 0.006, 0.994) * (1.0 - dfx), (dsd + clamp(1.0 - dot(vPicP.xy - dax.xy, dax.zw) / (dFrame.z - dFrame.y), 0.004, 0.996)) * 0.5)));
-    dc = mix(dc, ds, dFrame.w > 0.0 ? vPicS * smoothstep(0.35, 0.65, dsg * dot(dn.xy, vec2(-dax.w, dax.z))) : 0.0) * dOpacity;
+    dc = mix(dc, ds, dFrame.w > 0.0 ? vPicS * smoothstep(0.47, 0.53, dsg * dot(dn.xy, vec2(-dax.w, dax.z))) : 0.0) * dOpacity;
     diffuseColor.rgb = dBlend > 0.5 ? diffuseColor.rgb * (1.0 - dc.a) + diffuseColor.rgb * dc.rgb : diffuseColor.rgb * (1.0 - dc.a) + dc.rgb; }`); };
   m.customProgramCacheKey = () => "pic|" + key;
   return m;
