@@ -404,10 +404,10 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
       P[`kneeBack.${s}`] = fin(E([k[0], yK + 0.005, k[2] - 0.012], [0.05 * tc, 0.07, 0.045 * tc], `lowerLeg.${s}`, 0.04)); }
     // in high heels the foot is narrower (a pump holds it in; the shoe is made around it, and around the round chibi foot it stood out to the
     // sides seen from the front: 2026-10-07, Saori: "ハイヒールもスニーカーの使い回しなので正面から見ると横に膨らみすぎ")
-    { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", HBOOT = OPT.outfit?.shoes?.kind === "heelBoots", n = heelsWorn(OPT) ? 0.68 : 1;
+    { const fx = m * (FOOT_X - 0.002), HEELS = OPT.outfit?.shoes?.kind === "heels", HBOOT = OPT.outfit?.shoes?.kind === "heelBoots", n = heelsWorn(OPT) ? 0.68 : 1, SW = OPT.outfit?.shoes?.width ?? 1;   // SW: the shoes' width (outfit.shoes.width): the last's alone, the foot under it isn't drawn
       // shoeLast: what shoes (and the plate's sabatons) are made around: the round foot of before (clothes/index.js). Not part of the body
       // (adult: the last's back with the foot's, 1.4 cm in: the shoes stood out behind the adult heel; 2026-10-08, Saori: "ハイヒールがまだかかと後ろに出てる")
-      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.023], [HEELS ? 0.035 : HBOOT ? 0.042 : 0.052, FOOT_H, AD ? 0.072 : 0.067], `foot.${s}`, 0.04);   // (its back at the bare heel's, 1.6 cm in: the shoes' heels stood out behind the shaft)
+      P[`shoeLast.${s}`] = E([fx, -0.003 + FOOT_H, AD ? 0.02 : 0.023], [(HEELS ? 0.035 : HBOOT ? 0.042 : 0.052) * SW, FOOT_H, AD ? 0.072 : 0.067], `foot.${s}`, 0.04);   // (its back at the bare heel's, 1.6 cm in: the shoes' heels stood out behind the shaft)
       // the bare foot (2026-10-07, Saori: "裸足の造形が変、元の丸い足に脚の指をつけただけ"): a narrow heel, a long middle, the forefoot wide and
       // flat under the toes (the ball, a little toward the big toe); all within the shoe's last, so a shoe still covers it
       // The sole is flat on the floor (the parts reach 4 mm under it and FOOT_FLAT cuts them level there), and the instep runs from the ankle
@@ -426,7 +426,7 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     { const TS = OPT.body.sculpt.foot.toes; if (TS?.on) { const cx = m * (FOOT_X - 0.002), z0 = AD ? 0.035 : 0.015, k = TS.size ?? 1, hx = heelsWorn(OPT) ? 0.68 : 1, ky = AD ? 0.8 : 1;   // (adult: further forward, flatter)   // hx: in heels the toes close up (with the narrower foot)
       [[-0.027, 0.06, 0.015, 0.0105, 0.02], [-0.005, 0.062, 0.0115, 0.0095, 0.017], [0.014, 0.057, 0.011, 0.009, 0.016], [0.031, 0.047, 0.0105, 0.0085, 0.015]].forEach(([dx, dz, rx, ry, rz], i) =>   // four: smaller than the grid the fifth only blurred the edge
         P[`toe${i}.${s}`] = E([cx + m * dx * k * hx, -0.003 + ry * k * ky + 0.001, z0 + dz * k], [rx * k * hx, ry * k * ky, rz * k], `foot.${s}`, 0.004));
-      P[`toeBox.${s}`] = E([cx, 0.011, z0 + 0.058 * k], [0.05 * hx, 0.015, 0.032 * k], `foot.${s}`, 0.03);
+      P[`toeBox.${s}`] = E([cx, 0.011, z0 + 0.058 * k], [0.05 * hx * (OPT.outfit?.shoes?.width ?? 1), 0.015, 0.032 * k], `foot.${s}`, 0.03);
       FOOT_CUT.push(cut(E([cx, 0.068, z0 + 0.085], [0.08, 0.04, 0.06], `foot.${s}`, 0.012))); } }
     // the feet's size (body.proportion.feet, ×): every part of the foot grown about the ankle, the sole kept on the floor (shoes are made
     // around them: they grow too). feetFrom (m, front to back): the point they grow from; at the heel (-0.04) they grow forward only, from

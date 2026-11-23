@@ -254,8 +254,8 @@ export const CHARACTERS = {
       body: {
         head: { scale: 0.62 },
         proportion: { legs: 1.86, torso: 0.95, shoulders: 0.8, feet: 1.1 },
-        torso: { hips: 0.72 },
-        thickness: { thigh: 0.45, thighTop: 0.5, calf: 0.46, upperArm: 0.66, forearm: 0.66 },
+        torso: { hips: 0.56, butt: 0.45 },   // narrow hips and a flat bottom: the sheet's silhouette is a man's, sharp
+        thickness: { thigh: 0.45, thighTop: 0.46, calf: 0.46, upperArm: 0.66, forearm: 0.66 },
         joints: { hipX: 0.095, kneeX: 0.08, footX: 0.1 },   // the thighs close in to the knees, the boots apart, as on her sheet
         sculpt: { chin: { taper: 1 } },
       },
@@ -311,9 +311,10 @@ export const CHARACTERS = {
         shirt: { color: "#2c2b30", sleeve: "none", armhole: 0.01, collar: { y: 0.83 }, length: "crop", crop: 0.5 },   // the turtleneck: up the neck, bare shoulders
         pants: { color: "#4b5053", length: "long", top: 0.49, offset: 0.007 },
         socks: { on: false },
-        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, toeCap: 0.4, heelBlock: 0.012 },
+        // engineer boots: a straight shaft with the heel in line with its back, a narrow foot, the toe a low wedge (a round last under a leg-shaped shaft read as rain boots)
+        shoes: { kind: "boots", color: "#333237", soleColor: "#2a292e", bootHeight: 0.208, sole: 0.03, rim: 0.004, heelBlock: 0.012, width: 0.72, shaft: 0.7, toeLow: 0.35 },
         belt: { on: true, color: "#2f2e33", y: 0.49, width: 0.035 },
-        jacket: { on: true, color: "#3b3940", slip: "L", hem: 0.475, lapel: 0.066, collar: 0.07 },
+        jacket: { on: true, color: "#3b3940", slip: "L", hem: 0.475, flare: 0.006, lapel: 0.066, collar: 0.07 },
         weapon: { right: "fist", left: "fist" },
       },
       accessories: [   // (offsets from the bone's joint, as built) the belt's buckle, its end hanging down her left thigh with a buckle, the jacket's hem strap on her right

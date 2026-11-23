@@ -287,12 +287,27 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const KIND = OPT.outfit.shoes.kind ?? "sneaker", HBOOTS = KIND === "heelBoots", BOOTS = KIND === "boots" || HBOOTS, HEELS = KIND === "heels" || HBOOTS, PUMPS = KIND === "heels";
   const FK = OPT.body.proportion?.feet ?? 1;   // the feet's size (body.proportion.feet): the heels' own pieces grow with them
   const TOP = BOOTS ? OPT.outfit.shoes.bootHeight : HEELS ? 0.058 : SHOE.top, TILT = BOOTS ? 0.12 : HEELS ? 0.3 : SHOE.tilt;
-  const SHOE_PARTS = ["shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
+  const SHOE_PARTS = ["shoeLast", "calf", "toeBox", ...(BOOTS ? ["calfO", "calfB", "calfOut", "calfInner", "calfBack", "achilles", ...(HBOOTS ? ["calfLow", "heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])] : [])], SOLE_PARTS = ["shoeLast", "toeBox", ...(HBOOTS ? ["heel", "ball", "toe0", "toe1", "toe2", "toe3"] : [])];   // (heel boots: over the bare foot's own heel and toes too: they stood out under the boot)   // toeBox: over bare toes (body foot.toes), none without them
   // each foot's from its own side's pieces only: blended together, the two heel boots' cuffs met between the knees and stretched into a web
   // when the legs parted (2026-10-10, 島風 in the official picture's pose), and so did any shoes on feet set close (the adult type's,
   // ankles 7 cm from the middle: Saori, "大人体形で歩くと足同士がくっついています")
   const bySide = (names) => { const L = blend(names.flatMap((n) => P[`${n}.L`] ? [P[`${n}.L`]] : [])), R = blend(names.flatMap((n) => P[`${n}.R`] ? [P[`${n}.R`]] : [])); return (x, y, z) => x >= 0 ? L(x, y, z) : R(x, y, z); };
-  const shoeCore = bySide(SHOE_PARTS), soleCore = bySide(SOLE_PARTS);
+  const shoeCore0 = bySide(SHOE_PARTS), soleCore0 = bySide(SOLE_PARTS);
+  // shoes.shaft (boots, for スバル): leather doesn't follow a leg that narrows to the ankle. A straight tube down the leg's line from under the
+  // top to the floor: at the ankle this much (0–1) of the way to as wide as the leg is under the top. Measured round the leg's axis (the calf
+  // sits behind it); the sole is under it too (its back is the heel's)
+  const SHAFT = BOOTS && !HBOOTS ? OPT.outfit.shoes.shaft ?? 0 : 0;
+  const shafts = SHAFT > 0 ? ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], ax = (y) => { const t = (y - a[1]) / (b[1] - a[1]); return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]; };
+    const ring = (y) => { const c = ax(y), far = (dx, dz) => { let t = 0.005; while (t < 0.15 && shoeCore0(c[0] + dx * t, y, c[1] + dz * t) < 0) t += 0.001; return t; }, x0 = far(-1, 0), x1 = far(1, 0), z0 = far(0, -1), z1 = far(0, 1);
+      return [(x1 - x0) / 2, (z1 - z0) / 2, (x0 + x1) / 2, (z0 + z1) / 2]; };   // its middle off the axis (x, z), its radii (x, z)
+    const y1 = TOP - 0.035, y0 = a[1] + 0.03, R1 = ring(y1), R0 = ring(y0).map((v, i) => v + (R1[i] - v) * SHAFT);
+    return { ax, y0, y1, R0, R1 }; }) : null;
+  const shaftD = shafts ? (x, y, z) => { const T = shafts[x >= 0 ? 0 : 1], f = Math.min(1, Math.max(0, (y - T.y0) / (T.y1 - T.y0))), c = T.ax(y), q = (i) => T.R0[i] + (T.R1[i] - T.R0[i]) * f, rx = q(2), rz = q(3);
+    return (Math.hypot((x - c[0] - q(0)) / rx, (z - c[1] - q(1)) / rz) - 1) * Math.min(rx, rz); } : null;
+  // shoes.toeLow (boots): the toe lower toward its tip (its height over the sole × 1 − toeLow there): a wedge from the side, not a dome
+  const TOE_LOW = BOOTS && !HBOOTS ? OPT.outfit.shoes.toeLow ?? 0 : 0, LAST = P["shoeLast.L"], TZ0 = LAST.cz + 0.2 * LAST.rz, TZ1 = LAST.cz + LAST.rz, TY0 = -0.003 + SHOE.sole * 0.6;
+  const shoeCore = shafts || TOE_LOW ? (x, y, z) => { const c = shoeCore0(x, TOE_LOW ? TY0 + (y - TY0) / (1 - TOE_LOW * sstep(TZ0, TZ1, z)) : y, z); return shafts ? smin(c, shaftD(x, y, z), 0.015) : c; } : shoeCore0;
+  const soleCore = shafts ? (x, y, z) => Math.min(soleCore0(x, y, z), shaftD(x, y, z)) : soleCore0;
   const HP = HEELS ? heelPose(OPT, J) : null, heelSpikes = HEELS ? ["L", "R"].map((s) => { const f = P[`shoeLast.${s}`], a = [f.cx, -0.001, f.cz - 0.05 * FK], d = [0, -Math.cos(HP.theta), Math.sin(HP.theta)];
     if (HBOOTS) { const L = HP.heel - 0.01, w = [0, d[2], -d[1]];   // a block: thin across, long front to back (tapering toward the floor), along d; w: forward across it
       return { t: 3, bx0: a[0], by0: a[1] - L / 2, bz0: a[2], br: L, k: 0.004, f: (x, y, z) => { const q = [x - a[0], y - a[1] + 0.012, z - a[2] - 0.004], u = q[1] * d[1] + q[2] * d[2], v = q[1] * w[1] + q[2] * w[2], t = Math.min(1, Math.max(0, u / L));

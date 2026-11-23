@@ -24,7 +24,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setAccessories",
-   "order": 505,
+   "order": 510,
    "section": {
     "ja": "アクセサリー",
     "en": "Accessories"
@@ -11594,7 +11594,7 @@
      }
     }
    ],
-   "order": 480,
+   "order": 482,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11612,7 +11612,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 481,
+   "order": 483,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11635,7 +11635,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 482,
+   "order": 484,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11683,7 +11683,7 @@
      }
     }
    ],
-   "order": 483,
+   "order": 485,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11701,7 +11701,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 484,
+   "order": 486,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11727,7 +11727,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 485,
+   "order": 487,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11745,7 +11745,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 486,
+   "order": 488,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11763,7 +11763,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 487,
+   "order": 489,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11804,7 +11804,7 @@
      }
     }
    ],
-   "order": 488,
+   "order": 490,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -11822,7 +11822,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 489,
+   "order": 491,
    "nullable": true,
    "section": {
     "ja": "付けもの",
@@ -11848,7 +11848,7 @@
    "min": 0.5,
    "max": 2,
    "step": 0.05,
-   "order": 490,
+   "order": 492,
    "section": {
     "ja": "付けもの",
     "en": "Extras"
@@ -12166,7 +12166,7 @@
      }
     }
    ],
-   "order": 475,
+   "order": 477,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12184,7 +12184,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 477,
+   "order": 479,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12208,7 +12208,7 @@
    "min": 0.12,
    "max": 0.3,
    "step": 0.005,
-   "order": 478,
+   "order": 480,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12239,7 +12239,7 @@
    "min": 8,
    "max": 45,
    "step": 1,
-   "order": 479,
+   "order": 481,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12270,7 +12270,7 @@
    "min": 0,
    "max": 0.08,
    "step": 0.002,
-   "order": 492,
+   "order": 494,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12301,7 +12301,7 @@
    "min": 0.002,
    "max": 0.03,
    "step": 0.001,
-   "order": 493,
+   "order": 495,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12330,7 +12330,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 494,
+   "order": 496,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -12359,7 +12359,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 495,
+   "order": 497,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12388,7 +12388,7 @@
    "min": 0,
    "max": 1,
    "step": 0.02,
-   "order": 496,
+   "order": 498,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12396,6 +12396,87 @@
    "help": {
     "ja": "つま先を高く丸くする(0 = なし)",
     "en": "a higher, rounder toe (0 = none)"
+   },
+   "when": {
+    "outfit.shoes.kind": "boots"
+   }
+  },
+  "outfit.shoes.width": {
+   "path": "outfit.shoes.width",
+   "type": "number",
+   "default": 1,
+   "label": {
+    "ja": "靴の幅",
+    "en": "Shoe width"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.6,
+   "max": 1.2,
+   "step": 0.01,
+   "order": 499,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "靴の足の幅(倍)。小さいほど細身(ハイヒールは元から細い)",
+    "en": "the shoes' width at the foot (×): lower is slimmer (high heels are narrow already)"
+   }
+  },
+  "outfit.shoes.shaft": {
+   "path": "outfit.shoes.shaft",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "筒をまっすぐに",
+    "en": "Straight shaft"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 1,
+   "step": 0.05,
+   "order": 500,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "ブーツの筒を足首で絞らず、はき口の下の太さへ寄せる(0 = 脚の形のまま、1 = まっすぐな筒)。かかとは筒の後ろにそろう",
+    "en": "the boots' shaft not drawn in at the ankle but toward as wide as it is under the top (0 = follows the leg, 1 = a straight tube); the heel in line with its back"
+   },
+   "when": {
+    "outfit.shoes.kind": "boots"
+   }
+  },
+  "outfit.shoes.toeLow": {
+   "path": "outfit.shoes.toeLow",
+   "type": "number",
+   "default": 0,
+   "label": {
+    "ja": "つま先を低く",
+    "en": "Lower toe"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.6,
+   "step": 0.02,
+   "order": 501,
+   "section": {
+    "ja": "靴",
+    "en": "Shoes"
+   },
+   "help": {
+    "ja": "つま先の先へ向けて甲を低くする(0 = 丸い山のまま)。横から見てくさび形",
+    "en": "the toe lower toward its tip (0 = a dome): a wedge from the side"
    },
    "when": {
     "outfit.shoes.kind": "boots"
@@ -12416,7 +12497,7 @@
    "min": 0,
    "max": 0.03,
    "step": 0.001,
-   "order": 497,
+   "order": 502,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12444,7 +12525,7 @@
    "min": 0,
    "max": 2,
    "step": 1,
-   "order": 498,
+   "order": 503,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12472,7 +12553,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setBands",
-   "order": 499,
+   "order": 504,
    "nullable": true,
    "section": {
     "ja": "靴",
@@ -12504,7 +12585,7 @@
    "min": 0,
    "max": 0.15,
    "step": 0.002,
-   "order": 500,
+   "order": 505,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12535,7 +12616,7 @@
    "min": 0.004,
    "max": 0.04,
    "step": 0.001,
-   "order": 501,
+   "order": 506,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12566,7 +12647,7 @@
    "min": 0,
    "max": 0.05,
    "step": 0.001,
-   "order": 502,
+   "order": 507,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12597,7 +12678,7 @@
    "min": 0,
    "max": 0.06,
    "step": 0.001,
-   "order": 503,
+   "order": 508,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12628,7 +12709,7 @@
    "min": 0.006,
    "max": 0.06,
    "step": 0.001,
-   "order": 504,
+   "order": 509,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12656,7 +12737,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setWorn",
-   "order": 474,
+   "order": 476,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12674,7 +12755,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 476,
+   "order": 478,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -12692,7 +12773,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 491,
+   "order": 493,
    "section": {
     "ja": "靴",
     "en": "Shoes"
@@ -14695,7 +14776,7 @@
    "min": 0,
    "max": 0.07,
    "step": 0.002,
-   "order": 468,
+   "order": 470,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
@@ -14703,6 +14784,70 @@
    "help": {
     "ja": "落ちた側の前のふちがさらに外へ寄る量(m)",
     "en": "how much further out the slipped side's front edge hangs (m)"
+   },
+   "when": {
+    "outfit.jacket.on": true,
+    "outfit.jacket.slip": [
+     "L",
+     "R"
+    ]
+   }
+  },
+  "outfit.jacket.slipCollar": {
+   "path": "outfit.jacket.slipCollar",
+   "type": "number",
+   "default": 0.75,
+   "label": {
+    "ja": "落ちた側の襟の幅",
+    "en": "Slipped side's collar"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0.4,
+   "max": 1.2,
+   "step": 0.05,
+   "order": 468,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "落ちた襟ぐりに沿って二の腕を回る襟の幅(襟の長さの何倍か)",
+    "en": "the collar folded along the fallen neckline, round the upper arm: its width (× the collar's wing)"
+   },
+   "when": {
+    "outfit.jacket.on": true,
+    "outfit.jacket.slip": [
+     "L",
+     "R"
+    ]
+   }
+  },
+  "outfit.jacket.slipLift": {
+   "path": "outfit.jacket.slipLift",
+   "type": "number",
+   "default": 0.01,
+   "label": {
+    "ja": "落ちた側の襟の浮き",
+    "en": "Slipped side's collar lift"
+   },
+   "group": "outfit",
+   "tier": "main",
+   "cost": "clothes",
+   "apply": null,
+   "min": 0,
+   "max": 0.02,
+   "step": 0.001,
+   "order": 469,
+   "section": {
+    "ja": "ジャケット",
+    "en": "Jacket"
+   },
+   "help": {
+    "ja": "襟の先が袖から浮く量(m)。0 だと袖に貼りついて見える",
+    "en": "how far the collar's free edge stands off the sleeve (m); at 0 it reads as part of the sleeve"
    },
    "when": {
     "outfit.jacket.on": true,
@@ -14724,7 +14869,7 @@
    "tier": "main",
    "cost": "clothes",
    "apply": null,
-   "order": 469,
+   "order": 471,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
@@ -14749,7 +14894,7 @@
    "tier": "main",
    "cost": "instant",
    "apply": "setColors",
-   "order": 470,
+   "order": 472,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
@@ -14775,7 +14920,7 @@
    "min": 0,
    "max": 0.012,
    "step": 0.001,
-   "order": 471,
+   "order": 473,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
@@ -14804,7 +14949,7 @@
    "min": 0,
    "max": 0.014,
    "step": 0.001,
-   "order": 472,
+   "order": 474,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
@@ -14833,7 +14978,7 @@
    "min": 0,
    "max": 0.09,
    "step": 0.002,
-   "order": 473,
+   "order": 475,
    "section": {
     "ja": "ジャケット",
     "en": "Jacket"
