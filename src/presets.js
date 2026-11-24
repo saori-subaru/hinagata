@@ -441,7 +441,7 @@ export const CHARACTERS = {
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.008 },
+        sculpt: { whorl: { on: true }, shell: 0.008, dome: { on: true } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },

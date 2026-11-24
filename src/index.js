@@ -679,7 +679,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
   // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (commit 119beb1 has the code)
-  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tufts", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tufts", "dome", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
   // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
   // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
   const TR = { c: new THREE.Color(), ink: new THREE.Color(), hsl: {} };
@@ -702,7 +702,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tufts", "tails", "tailLine", "tailTie", "tailLeaf"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tufts", "dome", "tails", "tailLine", "tailTie", "tailLeaf"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [], tuftSpots = [];   // tailAnchors: where the tails are tied now (avatar.tailTies) / tuftSpots: where the tufts and their spikes end (avatar.tuftSpots)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
@@ -810,8 +810,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
-    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
-      out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 }); }
+    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, dome: OPT.hair.sculpt.dome?.on ? OPT.hair.sculpt.dome : null, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
+      out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 });
+      if (TF.dome) { const D = TF.dome, g = new THREE.BufferGeometry(), nv = D.pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), uv = new Float32Array(nv * 2);   // the sheet over their roots (hair.sculpt.dome): the head's
+        for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; uv.set(ringUV(D.pos[v * 3], D.pos[v * 3 + 1], D.pos[v * 3 + 2]), v * 2); }
+        for (const [k, a, n] of [["position", D.pos, 3], ["normal", D.nor, 3], ["shadeN", D.shn, 3], ["gradT", new Float32Array(nv), 1], ["hairUV", uv, 2], ["skinIndex", si, 4], ["skinWeight", sw, 4]]) g.setAttribute(k, new THREE.BufferAttribute(a, n)); g.setIndex(D.idx);
+        const x = skinned(g, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), GRAD.hair); x.m.material = x.wrap(x.m.material); x.sim = { update() {}, rest() {} }; out.dome = x; } }
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();

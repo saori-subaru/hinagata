@@ -983,6 +983,7 @@ export const DEFAULTS = {
       },
       "shortBack": 0.86,
       "shell": 0.036,
+      "dome": { "on": false, "front": 45, "back": 115, "soft": 40 },
       "cap": {
         "thick": 0,
         "r": 50

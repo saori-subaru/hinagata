@@ -293,7 +293,7 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
  * spike (-1: the tuft itself), the mirrored copy (m -1)
  */
-export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], lineFrom = 0, N = 9, cols = 7 }) {
+export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], lineFrom = 0, dome = null, N = 9, cols = 7 }) {
   const deg = Math.PI / 180, out = [], L = (list ?? []).filter((d) => Array.isArray(d?.to)), M = Math.max(cols, ...L.map((d) => 2 * (d.tips?.length ?? 1) + 1));
   const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
@@ -365,6 +365,32 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
       const kap = t.CV[bi] + (t.CV[bi + 1] - t.CV[bi]) * bf, ph = kap > 1e-3 ? Math.asin(clamp(kap * x, -0.95, 0.95)) : 0, u = kap > 1e-3 ? ph / (kap * hw) : x / hw; if (Math.abs(u) > 1) continue;
       const h = thickAt(t, sv, u, bi, bf); if (h != null) best = Math.max(best, h * Math.cos(ph) - (kap > 1e-3 ? (1 - Math.cos(ph)) / kap : 0) - dot(P.map((v, k) => v - C[k]), o)); }
     return best; };
+  // the dome (hair.sculpt.dome): one smooth sheet over the tufts' roots, from the whorl down to `front` / `back` degrees from it. Over the
+  // crown it lies on the tufts' highest tops (the dips and steps between them filled); over its last `soft` degrees it comes down onto each tuft
+  // (as near as the grid reads them) and then under it: no rim. The tufts' tops are read into a grid round the whorl (rings × spokes), widened, then blurred
+  if (dome && TS.length) { const A = norm(over(whorl[0], whorl[1]).map((v, q) => v - center[q])), fd = A[2], Fv = norm([-A[0] * fd, -A[1] * fd, 1 - A[2] * fd]), Sv = cross(A, Fv);
+    const NP = 56, NT = 96, fr = (dome.front ?? 45) * deg, bk = (dome.back ?? 115) * deg, soft = (dome.soft ?? 40) * deg, PM = Math.max(fr, bk), ix = (i, j) => i * NT + ((j % NT) + NT) % NT;
+    const dirOf = (i, j) => { const ph = PM * i / (NP - 1), th = -Math.PI + 2 * Math.PI * j / NT, c = Math.cos(ph), sn = Math.sin(ph), ct = Math.cos(th), st = Math.sin(th); return A.map((v, k) => v * c + (Fv[k] * ct + Sv[k] * st) * sn); };
+    const env = new Float32Array(NP * NT).fill(-1);
+    for (const t of TS) { const sM = Math.min(...t.K.map((c) => c[1])) - 0.03;
+      for (let a = 0; a <= 120; a++) for (let b = -24; b <= 24; b++) { const p = topAt(t, sM * a / 120, b / 24).p, v = p.map((x, k) => x - center[k]), r = Math.hypot(...v), ph = Math.acos(clamp(dot(v, A) / r, -1, 1)); if (ph > PM) continue;
+        const i = Math.round(ph / PM * (NP - 1)), j = Math.round((Math.atan2(dot(v, Sv), dot(v, Fv)) + Math.PI) / (2 * Math.PI) * NT), q = ix(i, j); if (r > env[q]) env[q] = r; } }
+    for (let it = 0; it < 2; it++) { const e2 = env.slice(); for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { if (env[ix(i, j)] >= 0) continue; let n = 0, sum = 0; for (const [di, dj] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const v = i + di < 0 || i + di >= NP ? -1 : env[ix(i + di, j + dj)]; if (v >= 0) { n++; sum += v; } } if (n >= 2) e2[ix(i, j)] = sum / n; } env.set(e2); }
+    const bare = new Float32Array(NP * NT); for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) if (env[ix(i, j)] < 0) { env[ix(i, j)] = surfaceAlong(surf, center, dirOf(i, j)) - 0.012; bare[ix(i, j)] = 1; }   // no tuft there: under the scalp
+    const spread = (src, pick, di, dj) => { const o = new Float32Array(NP * NT); for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { let v = src[ix(i, j)]; const wj = i < 3 ? NT : Math.min(NT / 2, Math.round(dj * (NP - 1) / (i * 2.2)));   // (the spokes close toward the whorl: as far round in m)
+        for (let a = -di; a <= di; a++) { if (i + a < 0 || i + a >= NP) continue; for (let b = -wj; b <= wj; b++) v = pick(v, src[ix(i + a, j + b)]); } o[ix(i, j)] = v; } return o; };
+    const blur = (src, n = 4) => { let s = src; for (let it = 0; it < n; it++) { const o = new Float32Array(NP * NT); for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const u = s[ix(Math.max(0, i - 1), j)], d = s[ix(Math.min(NP - 1, i + 1), j)]; o[ix(i, j)] = 0.25 * (u + d) + 0.125 * (s[ix(i, j - 1)] + s[ix(i, j + 1)]) + 0.25 * s[ix(i, j)]; }
+        let m = 0; for (let j = 0; j < NT; j++) m += o[j] / NT; o.fill(m, 0, NT); s = o; } return s; };
+    const hi = blur(spread(env, Math.max, 5, 3)), lo = blur(env, 1), gap = blur(spread(bare, Math.max, 2, 2), 2);   // gap: by a place with no tuft (the forehead between the bangs): the sheet stays under
+    const pos = new Float32Array(NP * NT * 3), nor = new Float32Array(NP * NT * 3), idx = [], c0 = toRoot(...center);
+    for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const th = -Math.PI + 2 * Math.PI * j / NT, lim = fr + (bk - fr) * (0.5 - 0.5 * Math.cos(th)), w = sstep(lim - soft, lim, PM * i / (NP - 1)), R = hi[ix(i, j)] + 0.002 + (lo[ix(i, j)] - 0.003 - hi[ix(i, j)]) * w - 0.014 * sstep(lim - 0.2 * soft, lim, PM * i / (NP - 1)) - 0.04 * sstep(0.05, 0.6, gap[ix(i, j)]), u = dirOf(i, j);
+      pos.set(toRoot(center[0] + u[0] * R, center[1] + u[1] * R, center[2] + u[2] * R), ix(i, j) * 3); }
+    const P = (i, j) => { const q = ix(Math.min(NP - 1, Math.max(0, i)), j) * 3; return [pos[q], pos[q + 1], pos[q + 2]]; };
+    for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const a = P(i + 1, j), b = P(i - 1, j), c = P(i, j + 1), d = P(i, j - 1), p = P(i, j); let n = i ? norm(cross(c.map((v, k) => v - d[k]), a.map((v, k) => v - b[k]))) : null;
+      const o = norm(p.map((v, k) => v - c0[k])); if (!n || !isFinite(n[0])) n = o; else if (dot(n, o) < 0) n = n.map((v) => -v); nor.set(n, ix(i, j) * 3); }
+    for (let i = 0; i + 1 < NP; i++) for (let j = 0; j < NT; j++) { const a = ix(i, j), b = ix(i + 1, j), c = ix(i + 1, j + 1), d = ix(i, j + 1); idx.push(a, b, c, a, c, d); }
+    const shn = nor.slice(); for (let q = 0; q < NP * NT; q++) { const o = norm([pos[q * 3] - c0[0], pos[q * 3 + 1] - c0[1], pos[q * 3 + 2] - c0[2]]); shn.set(norm([0, 1, 2].map((k) => 0.3 * nor[q * 3 + k] + 0.7 * o[k])), q * 3); }   // shaded mostly as a ball: the toon band's edge wandered over its small waves
+    out.dome = { pos, nor, shn, idx }; }
   // spikes: bent three-sided points growing out of a tuft. A spike's base lies on the tuft's top, `length` up it from where it leaves
   // (y: its point's height, or at: 0..1 along the tuft), as wide as `width`; its ridge goes from the base's upper end to the point, `out`
   // off the tuft, bending upward on its way: a flick (a ridge following the head down bends downward). Its underside goes from the base's
