@@ -26,7 +26,7 @@ export const SHADINGS = ["toon", "soft", "smooth", "flat", "figure"];
 export function shaded(style, c, bands = 2) {
   if (style === "smooth") return new THREE.MeshLambertMaterial({ color: c });
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
-  if (style === "figure") return new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.52, clearcoat: 0.35, clearcoatRoughness: 0.3 });
+  if (style === "figure") return new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.85 })   // (index.js figureLook: its finish by what the part is);
   if (style === "soft") return softToon(c);
   return toon(c, bands);
 }
@@ -192,12 +192,20 @@ export function outlineMat(w, color = 0x3a2a3a) {
 export const CLAY = "#d6d6d4";
 export const clayMat = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.62, metalness: 0 });
 
-/** The page's light for shading.style "figure" (on) or as it was (off): a room to mirror and light from all round (scene.environment),
- *  the scene's own lights lowered (the room lights most of it; the sun keeps its shadow). Nothing in the engine calls it: the renderer
- *  and the scene are the page's. The engine's meshes take shadows in this style (createAvatar), so a sun with castShadow shades them. */
+/** The page's light for shading.style "figure" (on) or as it was (off): a photo studio's. A room to mirror (scene.environment), a warm key
+ *  light with a soft shadow, a cool light from behind for the edges; the scene's own lights are put out meanwhile. Nothing in the engine
+ *  calls it: the renderer and the scene are the page's (its renderer.shadowMap.enabled gives the shadows). */
 let roomEnv = null;
 export async function figureStage(renderer, scene, on = true) {
   if (on && !roomEnv) { const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js"); const p = new THREE.PMREMGenerator(renderer); roomEnv = p.fromScene(new RoomEnvironment(), 0.04).texture; p.dispose(); }
-  scene.environment = on ? roomEnv : null; 
-  scene.traverse((x) => { if (!x.isLight) return; x.userData.stageI ??= x.intensity; x.intensity = x.userData.stageI * (!on ? 1 : x.isDirectionalLight ? 0.75 : 0.12); });
+  let G = scene.userData.figureLights;
+  if (on && !G) { G = scene.userData.figureLights = new THREE.Group(); G.userData.figure = true;
+    const key = new THREE.DirectionalLight(0xfff1e2, 2.1); key.position.set(-1.6, 3.2, 2.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.blurSamples = 16;
+    Object.assign(key.shadow.camera, { left: -1.3, right: 1.3, top: 1.9, bottom: -0.5, near: 0.5, far: 9 }); key.shadow.bias = -0.0006; key.shadow.normalBias = 0.012;
+    const back = new THREE.DirectionalLight(0xdfe8ff, 2.4); back.position.set(1.8, 2.2, -2.6);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(2.4, 0.8, 1.6);
+    G.add(key, back, fill); }
+  if (G) { if (on) scene.add(G); else scene.remove(G); }
+  scene.environment = on ? roomEnv : null;
+  scene.traverse((x) => { if (!x.isLight || x.parent?.userData.figure) return; x.userData.stageI ??= x.intensity; x.intensity = on ? 0 : x.userData.stageI; });
 }

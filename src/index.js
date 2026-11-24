@@ -667,6 +667,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         "{ float rf = 1.0 - max(dot(normalize(normal), normalize(vViewPosition)), 0.0); outgoingLight += rimColor * rimOn * rimStrength * smoothstep(1.0 - rimWidth, 1.0, rf); }\n#include <opaque_fragment>"); };
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
+  // the figure's finish by what a part is (shading.style "figure"): skin matt with a warm bloom at its edges, hair a satin coat, shoes
+  // glossy, cloth dry. Checked each update, as the rim is (materials are replaced by rebuilds)
+  const FIG = { skin: { roughness: 0.58, clearcoat: 0.1, clearcoatRoughness: 0.55, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.4, clearcoat: 0.55, clearcoatRoughness: 0.22 },
+    shoe: { roughness: 0.3, clearcoat: 0.8, clearcoatRoughness: 0.15 }, cloth: { roughness: 0.82, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
+  function figureLook() {
+    if (OPT.shading.style !== "figure") return;
+    for (const k in parts) { const m = parts[k].toonMat ?? parts[k].m.material; if (!m.isMeshPhysicalMaterial || m.userData.fig) continue; m.userData.fig = true;
+      const { sheenColor, ...f } = FIG[k === "body" ? "skin" : /hair|locks|bangs|drawn|tufts|tails/.test(k) ? "hair" : /shoe|boot|sole/i.test(k) ? "shoe" : "cloth"]; Object.assign(m, f); if (sheenColor) m.sheenColor.set(sheenColor); }
+  }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
   // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (commit 119beb1 has the code)
@@ -1022,7 +1031,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
-      syncCover(); hairLines(); traceLines(); rims();
+      syncCover(); hairLines(); traceLines(); rims(); figureLook();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
       if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
