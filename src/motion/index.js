@@ -97,6 +97,10 @@ export const POSES = {
   "standSubaru": (t) => ({ b: { "upperLeg.L": [0.12, 0, 0.13], "upperLeg.R": [0.12, 0, -0.09], "foot.L": [-0.12, 0.12, -0.13], "foot.R": [-0.12, -0.1, 0.09],
       "upperArm.L": [0.1, 0, -0.33], "lowerArm.L": [-0.25, 0, -0.6], "upperArm.R": [0, 0, 0.42], "lowerArm.R": [-0.05, 0, 0.05],
       spine: [-0.2, 0, 0], chest: [0.03 + sin(t * 1.6) * 0.015, 0, 0], head: [0.08, sin(t * 0.5) * 0.05, 0.05] }, y: 0 }),
+  // ずんだもん(設定画の立ち方): まっすぐ立ち、腕は体から離して下ろす(下ろしきると、ふくらんだパンツに手が入る)。首を少しかしげる
+  "standZundamon": (t) => ({ b: { "upperLeg.L": [0, 0, 0.03], "upperLeg.R": [0, 0, -0.03], "foot.L": [0, 0.06, -0.03], "foot.R": [0, -0.06, 0.03],
+      "upperArm.L": [0, 0, -0.12], "upperArm.R": [0, 0, 0.12], "lowerArm.L": [-0.1, 0, -0.05], "lowerArm.R": [-0.1, 0, 0.05],
+      chest: [sin(t * 1.6) * 0.02, 0, 0], head: [0.02 + sin(t * 0.8) * 0.02, 0, 0.07 + sin(t * 0.6) * 0.03] }, y: 0 }),
 };
 
 // Holding a weapon in the right hand (outfit.weapon.right), standing and walking change that arm (the elbow kept out from the side, not into it):

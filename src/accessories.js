@@ -9,7 +9,7 @@
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "strap", "cord"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "strap", "cord", "dome", "ribbonEnd"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth, bevel = 0.04) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
@@ -97,6 +97,11 @@ const SHAPES = {
     const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
   // a strap (for スバル's belt end): a narrow strip hanging down, 1 long and 0.13 wide, cut square (the tab is short and wide: at a strap's length it was a board)
   strap: () => { const s = new THREE.Shape(), w = 0.065; s.moveTo(-w, 0.03); s.lineTo(w, 0.03); s.lineTo(w, -1); s.lineTo(-w, -1); s.lineTo(-w, 0.03);
+    const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
+  // a dome (for ずんだもん's brooch: a round stone on a button's rim): smooth and low, 1 across
+  dome: () => { const pts = []; for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI / 2; pts.push(new THREE.Vector2(0.5 * Math.cos(a), 0.3 * Math.sin(a))); } const g = new THREE.LatheGeometry(pts, 24); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
+  // a ribbon's end (ずんだもん's): a strip hanging down, 1 long and 0.36 wide, its end cut aslant (lower on its +x side; mirrored for the other one)
+  ribbonEnd: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.04); s.lineTo(w, 0.04); s.lineTo(w, -1); s.lineTo(-w, -0.8); s.lineTo(-w, 0.04);
     const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
   button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },

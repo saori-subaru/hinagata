@@ -1,5 +1,9 @@
 # 宿題 (TODO)
 
+## ずんだもんを設定画どおりに作る（ブランチ claude/relaxed-meitner-et3qoz、⏳サオリの確認待ち）
+- 済み: プリセット CHARACTERS.zundamon(約3.9頭身)。足した部品: かぼちゃパンツ(pants.puffTop・cuff)、サスペンダー、丸襟とパフスリーブ(garments/blouse.js)、葉っぱ形のブーツの口(shoes.leaf)、頭のさやと背中のさや(extras の pod)、アクセサリーの dome・ribbonEnd、立ち方 standZundamon。目・眉・口は設定画のアップから形を測って描いた絵。作り方のコツは DESIGN.md「ずんだもん's design sheet」。
+- 🚧 まだ: 設定画に後ろ姿が無いのでサスペンダーの後ろは交差にしてある(仮)。ブーツの葉は正面図に合わせた(横図とは形が違う)。尻尾のつやの点は無い。表情は にっこり・びっくり だけ絵がある(怒り・悲しみは眉だけ差し替え)。
+
 ## 素体の見直し（全キャラ適用。ブランチ claude/youthful-brown-gq3wje、⏳サオリの確認待ち）
 - 済み: 尻の張り出しを控えめに(横から肩甲骨より約2.5cm)、尻から太ももの裏へ段なしでつなぐ(buttFold)、脚の起伏を既定に(legShape: 高頭身 1・ちび 0.6)、大きい足はかかとから前へ伸びる(feetFrom -0.04)、待機ポーズを腰を前に出した緩いS字に、細い足首の上でかかとが2cm出た段をアキレス腱で埋める(足の大きいアステルとハイヒールは除く)。仕組みは DESIGN.md "The base body's bottom, legs and stance"。
 - 済み: 背中のS字(腰の後ろのくぼみ body.sculpt.lumbar 0.03)、尻の下の折り目(body.sculpt.buttCrease)、首の後ろと背中の上を内側へ(nape・trap、標準体型の背中の厚み 0.9)、手はシルヴィ v2 の細い指を既定に(ちびの体型は丸い手)。脚の付け根だけを寄せると腰が広いのに足幅が狭くて変。

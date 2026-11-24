@@ -15,7 +15,8 @@
 //   built: (O) => O.on,             (optional) built only when this is true (it goes into the cache's key); default: O.on
 //   build(ctx) → state | null       the shapes (a distance function, a band's value...) from ctx: { OPT, O (its options), P, J, bodySdf, shirtSdf,
 //                                   slope (y → how many times a base height is stretched there), legsSdf(hem, off) (pants with their own hem),
-//                                   outerSdf (the clothes' outside round the torso), sleeveEnd(side) (a long or bell sleeve's end: out, up, lo, hi) }
+//                                   outerSdf (the clothes' outside round the torso), sleeveEnd(side) (a long or bell sleeve's end: out, up, lo, hi),
+//                                   necklineY(x, y, z) (the height the shirt's neckline is cut at there) }
 //   spec(state, { OPT, H, B, ax, ay, kit, none, sheetH, one }) → { sdf, fast, lo, hi, h, bone1, only, soft, make }   its entry in the part table (parts.js);
 //                                   sheetH, one: a cloth sheet's cells at this quality, and whether sheets are one-sided (lite)
 //   outline: 0.003, soft: true,     the outline's width (m at outline.width 1); shading by softened normals

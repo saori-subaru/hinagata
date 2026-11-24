@@ -84,6 +84,8 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const t = (x - A.fx) * A.gx + (y - A.fy) * A.gy + (z - A.fz) * A.gz, px = x - A.fx - t * A.gx, py = y - A.fy - t * A.gy, pz = z - A.fz - t * A.gz, s = px * A.dx + py * A.dy + pz * A.dz;
     if (t < A.Lf * 0.3 || Math.hypot(px, py, pz) > 0.038 + BR + BELL * 1.6) continue;
     return BELL ? (A.Lf + 0.01 + SLANT * Math.max(0, s) - t) / (s > 0 && SLANT ? 1.22 : 1) : A.Lf - 0.012 - t; } return 1; } : null;
+  // the neckline's height at a point (shirtSdf's cut below, the same numbers: a part lying round the neck reads where the shirt ends)
+  const necklineY = (x, y, z) => { const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz; return COLLAR.y - COLLAR.tilt * nz + COLLAR.bowl * (x * x + rz * rz); };
   const shirtSdf = (x, y, z, B = bodySdf, noBell = false, noHole = false) => {   // noHole: without shirt.armhole (the sailor collar lies on over the bare shoulder: cut with the shirt it ended halfway along the shoulder)
       // B: 体の距離(服を作るときは格子から読む速い版を渡す)
     const t = Math.min(1, Math.max(0, (y - 0.725) / 0.12)), nx = x, nz = z - (-0.032 + 0.038 * t + COLLAR.fwd), rz = nz > 0 ? nz * (1 + COLLAR.front) : nz;   // 首の柱(少し前に傾く)からの位置
@@ -117,11 +119,32 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // the legs' shape (pants.puff: balloon legs, gathered toward the hem; pants.bell: widening toward the hem; 2026-10-07, Saori: "ズボンを膨らませたり、
   // 先端を広げたり"): the cloth further out around each leg, not across the middle (the legs would join)
   const PUFF = OPT.outfit.pants.puff ?? 0, BELLB = OPT.outfit.pants.bell ?? 0, LSPAN = Math.max(0.05, 0.4 - PANTS_HEM);
-  const legGrow = (x, y) => { if (!PUFF && !BELLB) return 0; const t = (0.4 - y) / LSPAN; if (t <= 0) return 0;
+  // pants.puffTop (ずんだもん's pumpkin shorts): the balloon starts at this height (a waistband's bottom edge), is fullest puffAt of the way down
+  // and comes back in to the leg at the hem band's top (pants.cuff: a band round each leg at the hem, cuffOut off it). null: the balloon from the hips (0.4)
+  const PUFF_TOP = PL === "shorts" && PUFF > 0 ? OPT.outfit.pants.puffTop ?? null : null, PUFF_AT = OPT.outfit.pants.puffAt ?? 0.55, PCUFF = PL === "shorts" ? OPT.outfit.pants.cuff ?? 0 : 0, PCUFF_OUT = OPT.outfit.pants.cuffOut ?? 0.004;
+  const legGrow = (x, y) => { if (PUFF_TOP != null || (!PUFF && !BELLB)) return 0; const t = (0.4 - y) / LSPAN; if (t <= 0) return 0;
     return sstep(0.02, 0.07, Math.abs(x)) * (PUFF * 0.045 * Math.sin(Math.PI * Math.min(1, t) * 0.92) + BELLB * 0.07 * sstep(0.55, 1, t)); };
-  const pantsShape = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024 - legGrow(x, y);
+  const pantsPlain = (x, y, z, B = bodySdf) => { const top = PANTS_TOP - PANTS_TILT * z; let d = pantsCore(x, y, z, B) - 0.024 - legGrow(x, y);
     if (BAND && y > top - BAND) { const w = sstep(top - BAND, top - 0.015, y) * (1 - sstep(0.17, 0.21, Math.abs(x))); d += (shirtSdf(x, y, z, B, true) - 0.007 - d) * w; }   // (the torso only: not round a long sleeve hanging beside it)
     return Math.max(d, y - top, PANTS_HEM - y); };
+  // The balloon is its own shape, not the body pushed out (pushed out 6 cm, the hands hanging by the hips came out as lumps on its sides):
+  // a tube round each leg, the two one ellipse at the top (the pants' own outline there) and apart toward the hem (the thighs' there), the
+  // bulge (puff x 4.5 cm at the sides, x puffFront / puffBack before and behind) added between. Where they meet down the middle is the seam's groove
+  const balloon = PUFF_TOP != null ? (() => {
+    const y0 = PUFF_TOP, y1 = PANTS_HEM + PCUFF, A = PUFF * 0.045, AF = A * (OPT.outfit.pants.puffFront ?? 1), AB = A * (OPT.outfit.pants.puffBack ?? 1);
+    const reach = (f, o, d) => { let t = 0; while (t < 0.4 && f(o[0] + d[0] * t, o[1], o[2] + d[1] * t) < 0) t += 0.004; let lo = Math.max(0, t - 0.004), hi = t; for (let i = 0; i < 8; i++) { const m = (lo + hi) / 2; if (f(o[0] + d[0] * m, o[1], o[2] + d[1] * m) < 0) lo = m; else hi = m; } return hi; };
+    const f0 = reach(pantsPlain, [0, y0, 0], [0, 1]), b0 = reach(pantsPlain, [0, y0, 0], [0, -1]), zc0 = (f0 - b0) / 2, d0 = (f0 + b0) / 2, w0 = reach(pantsPlain, [0, y0, zc0], [1, 0]);
+    const U = J["upperLeg.L"], K = J["lowerLeg.L"], k = (U[1] - y1) / (U[1] - K[1]), c1 = U[0] + (K[0] - U[0]) * k, zc1 = U[2] + (K[2] - U[2]) * k, off = PANTS_OFF + 0.004 + (PCUFF ? PCUFF_OUT + 0.006 : 0);   // (over a hem band the balloon's end stands 6 mm past it: its edge draws the line between them)
+    const r1 = reach(bodySdf, [c1, y1, zc1], [1, 0]) + off, rf = reach(bodySdf, [c1, y1, zc1], [0, 1]) + off, rb = reach(bodySdf, [c1, y1, zc1], [0, -1]) + off;
+    const f = (x, y, z) => { const t = Math.min(1, Math.max(0, (y0 - y) / (y0 - y1))), s = t < PUFF_AT ? Math.sin(Math.PI / 2 * t / PUFF_AT) : Math.cos(Math.PI / 2 * (t - PUFF_AT) / (1 - PUFF_AT));
+      const c = c1 * Math.pow(t, 1.5), rx = w0 + (c1 + r1 - w0) * t + A * s - c, zc = zc0 + (zc1 - zc0) * t, dz = z - zc, rz = dz > 0 ? d0 + (rf - d0) * t + AF * s : d0 + (rb - d0) * t + AB * s;
+      const q = Math.hypot((Math.abs(x) - c) / rx, dz / rz);
+      return Math.max((q - 1) * Math.min(rx, rz), y - (y0 + 0.006), y1 - PCUFF * 0.5 - y); };
+    // the waist over the balloon stays within its top's outline (a high waist reaches the elbows' height: the mask's margin left a scrap of pants on each forearm)
+    return { f, waist: (x, y, z) => y > y0 - 0.01 ? (Math.hypot(x / (w0 + 0.015), (z - zc0) / (d0 + 0.015)) - 1) * (w0 + 0.015) : -1 }; })() : null;
+  const pantsShape = (x, y, z, B = bodySdf) => { if (!balloon) return pantsPlain(x, y, z, B);
+    const d = Math.min(Math.max(pantsPlain(x, y, z, B), balloon.waist(x, y, z)), balloon.f(x, y, z));   // (with the plain pants under it: the balloon's top is an ellipse, and the shirt showed at its corners)
+    return PCUFF ? Math.min(d, Math.max(pantsCore(x, y, z, B) - 0.024 - PCUFF_OUT, y - (PANTS_HEM + PCUFF), PANTS_HEM - y)) : d; };
   // skirt (pants.kind "skirt"): a pleated cone hanging from the waist, a thin shell (open at the bottom, so the legs come out of it).
   // Its cross-section is an ellipse around the hips that widens toward the hem (flare per m of drop); pleats are folds around it that
   // deepen toward the hem. Where the body sticks out of the cone (the bottom at the back) the cloth drapes over it: from the top straight to
@@ -337,13 +360,20 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const SNOTCH = BOOTS && (OPT.outfit.shoes.notch ?? 0) > 0 ? (() => { const D = OPT.outfit.shoes.notch, k = D / Math.max(0.003, (OPT.outfit.shoes.notchWidth ?? 0.024) / 2), kn = Math.hypot(1, k);
     const axis = ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], t = (TOP - a[1]) / (b[1] - a[1]); return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]; });
     return (x, y, z) => { const c = axis[x >= 0 ? 0 : 1]; if (z < c[1]) return -1; return (y - (TOP - TILT * z - D) - k * Math.abs(x - c[0])) / kn; }; })() : null;
+  // shoes.leaf (boots, for ずんだもん): the top cut as two leaves standing round the leg, their points at leafAt degrees from the front on
+  // both sides and a V down between them in front and behind, leaf deep (m, base). The top is hollowed toward the leg (leafDip, from a
+  // 4 mm rim in): solid to its rim the leaves read as one plug round the leg. Give it a cuff as tall (cuffColor: the leaves' color)
+  const LEAF = BOOTS && !HBOOTS ? OPT.outfit.shoes.leaf ?? 0 : 0, LEAF_AT = (OPT.outfit.shoes.leafAt ?? 90) * Math.PI / 180, LEAF_DIP = OPT.outfit.shoes.leafDip ?? 0.015;
+  const leafAxis = LEAF ? ["L", "R"].map((s) => { const a = J[`foot.${s}`], b = J[`lowerLeg.${s}`], t = (TOP - a[1]) / (b[1] - a[1]); return [a[0] + (b[0] - a[0]) * t, a[2] + (b[2] - a[2]) * t]; }) : null;
+  const leafCut = (x, z, c) => { const a = leafAxis[x >= 0 ? 0 : 1], th = Math.abs(Math.atan2(x - a[0], z - a[1])), u = th < LEAF_AT ? (LEAF_AT - th) / LEAF_AT : (th - LEAF_AT) / (Math.PI - LEAF_AT);
+    return LEAF * (0.3 * u + 0.7 * u * u * u) + LEAF_DIP * sstep(0.004, 0.02, -c); };   // (its edge full near the point and steep into the V: a petal's; straight, the leaves were two horns over a wide V)
   // shoes.toeCap (boots, for アステル): a round toe box, toeCap times the last's height over it (the last alone tapers to a low, long toe)
   const SHOE_LOW = PUMPS ? -0.003 : HBOOTS ? 0.004 : -0.003 + SHOE.sole * 0.6;   // the upper's bottom: on the sole
   const TOE_CAP = BOOTS && !HBOOTS && (OPT.outfit.shoes.toeCap ?? 0) > 0 ? ["L", "R"].map((s) => { const l = P[`shoeLast.${s}`], ry = l.ry * (1 + OPT.outfit.shoes.toeCap);
     return E([l.cx, l.cy - l.ry + ry, l.cz + l.rz * 0.48], [l.rx * 0.94, ry, l.rz * 0.54], `foot.${s}`); }) : null;
   const shoeSdf0 = (x, y, z, low = SHOE_LOW) => { let c = shoeCore(x, y, z) - SHOE_OFF - (BOOTS ? (HBOOTS ? 0.001 + 0.006 : 0.004 + 0.008) * sstep(TOP - 0.04, TOP, y) + (HBOOTS ? 0.001 : 0.004) * (1 - sstep(TOP - 0.04, TOP, y)) : 0) - (CUFF && !TUBE ? (OPT.outfit.shoes.cuffOut ?? 0.006) * sstep(CUFF + 0.004, CUFF - 0.004, shoeTop(x, y, z)) : 0) - (STRAPS.length ? 0.0025 * strapIn(shoeTop(x, y, z)) : 0); for (const t of toePoints) c = smin(c, t(x, y, z), 0.02);   // (boots: a little looser, flared at the top; a cuff a little further out)
     if (TOE_CAP) c = smin(c, dPrim(TOE_CAP[x >= 0 ? 0 : 1], x, y, z) - SHOE_OFF, 0.012);
-    let d = Math.max(c, y - (TOP - TILT * z), low - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
+    let d = Math.max(c, y - (TOP - TILT * z - (LEAF ? leafCut(x, z, c) : 0)), low - y, SNOTCH ? SNOTCH(x, y, z) : -1);   // はき口は前が低い / 甲は底の上にのる (heels: down to the floor, no sole under it)
     if (!HBOOTS) for (const h of heelSpikes) d = Math.min(d, dPrim(h, x, y, z));
     // (its outer edges rounded wider than a cell: cut sharp, the mesh's points fell on one face or the other in a saw.) Its top a funnel, from
     // a 3 mm rim down inward to FD under it, the shaft's top lowered to that floor: hollow, its 8 mm wall and the gap inside it were about a
@@ -676,5 +706,5 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   const shirtMesh = SKIRT && SK.dress && SLIT && ST_TOP != null ? (x, y, z, B, noBell, noHole) => { const d = shirtSdf(x, y, z, B, noBell, noHole), ax = Math.abs(x);
     return ax > 0.19 ? d : Math.max(d, ST_TOP - PANTS_TILT * z - 0.01 - y - 2 * sstep(0.16, 0.19, ax)); } : shirtSdf;
   return { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat: !!PETTI, skirtHem: SKIRT ? (x, z) => hemAt(x, z - SK_ZC) : null, shoeSdf: apart(shoeSdf), shoeCover: ARCH ? apart((x, y, z) => shoeSdf0(x, y, z, -0.03) - 0.012 * sstep(ARCH + 0.02, ARCH + 0.005, y)) : null, shoeTop, sockSdf, soleSdf: apart(soleSdf), lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras: buildExtras(OPT),   // extras: animal ears, wings (extras.js)
-    garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)), legsSdf, outerSdf, sleeveEnd }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
+    garments: buildGarments(OPT, { P, J, bodySdf, shirtSdf, slope: ((ST) => (y) => ST.slope(y))(makeStretch(OPT, J)), legsSdf, outerSdf, sleeveEnd, necklineY }) };   // the garment parts (src/garments: a sailor collar and scarf, gloves, hip strings, a headband...)
 }

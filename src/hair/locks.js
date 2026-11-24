@@ -22,6 +22,8 @@ export const TAIL_HOLD = 0.06, TAIL_VDAMP = 0.8;
 const TIER_STEP = 0.25, TIER_OUT = 0.3;   // hair.tail.tiers: each step of the tail's tips this share of its length shorter than the next
 // rigid hanging locks: the inner layer held 4x as firmly and kept whole, so a run lifts the outer one over hair, not over the block (its smooth dome, as pale as the skin, read as a bald head)
 export const INNER_HOLD = 4, INNER_RIGID = 2;
+// a round cross-section (createLocks' ring: the pod tail, clothes/extras.js): as a lens a fat lock was a six-sided bar
+export const RING_ROUND = Array.from({ length: 12 }, (_, k) => { const a = Math.PI - k * Math.PI / 6; return [Math.cos(a), Math.sin(a)]; }), RING_ROUND_LITE = Array.from({ length: 8 }, (_, k) => { const a = Math.PI - k * Math.PI / 4; return [Math.cos(a), Math.sin(a)]; });
 const RING_LITE = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // quality "lite": a diamond, and 2 rings per link (the locks were a quarter of a light avatar's vertices)
 const DRAG = 10, VDAMP = 0.25;   // the wind's pull per m/s of it (m/s²) / how much of its own up-and-down a lock keeps against the head's (per step)
 // falling and rising (2026-10-07, Saori: "下に行ったら空気におされて全体的に外側に膨らんで、上に行ったら直線体にくっつくみたいに、横向きに大きく動く"):
@@ -519,9 +521,9 @@ export function colliders(J, BI, sdf) {
 // rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP, round = false }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => { if (!s.curv) return { ...s, pts: resample(s.pts, points, bendPts) }; const Q = resample(s.pts.map((p, i) => [...p, s.curv[i], s.tk[i], ...(s.nrm?.[i] ?? [])]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), curv: Q.map((p) => p[3]), tk: Q.map((p) => p[4]), nrm: s.nrm && Q.map((p) => p.slice(5, 8)) }; });
-  const RG = lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
+  const RG = round ? (lite ? RING_ROUND_LITE : RING_ROUND) : lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   // tufts (tuftLocks: every spec of the part has cols): a ring is M points across the top and M - 2 back along the underside; column c of
   // ring r is at sv along the tuft (the columns end one by one: the points of its cut end)
   const TM = specs[0]?.cols ? specs[0].cols.u.length : 0, RN = TM ? 2 * TM - 2 : RG.length, colOf = (k) => k < TM ? k : 2 * TM - 2 - k;
@@ -657,7 +659,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         // the face's middle closes to a notch one ring in, then its two sides run apart, each to its edge's point: two flat teeth (the faces
         // between them are emptied where the triangles are listed). Their normals lie across, so the outline goes round each tooth. Not at lite (no points to spare)
         const FK = lite ? null : s.fork, fr = FK ? r - (ringsPer - 1 - FK.n) : 0, fhw = FK && fr > 0 ? 0.5 * s.w * (s.prof ?? width)((ringsPer - 1 - FK.n) / (ringsPer - 1)) : 0;
-        for (let k = 0; k < RG.length; k++) { const [u0, w0] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w0 > 0 ? 1 : 0.6;   // the outer face rounder than the inner
+        for (let k = 0; k < RG.length; k++) { const [u0, w0] = RG[k], v = (l * VPL + r * RG.length + k) * 3, bulge = w0 > 0 || round ? 1 : 0.6;   // the outer face rounder than the inner
           let u = u0, w = w0, hwk = hw, fn = 0;   // fn: a tooth's point, its normal across (toward the notch or outward)
           if (fr > 0) { const mid = Math.abs(u0) < 0.99;
             const end = FK.n - (u0 * FK.side > 0 ? FK.short : 0);

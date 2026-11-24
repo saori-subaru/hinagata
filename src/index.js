@@ -21,7 +21,7 @@ import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fing
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
 import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
-import { tailSpec } from "./clothes/extras.js";
+import { tailSpec, TAIL_BONE } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
@@ -806,9 +806,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   parts.extraEars = skinned(meshPart("extraEars"), XC.ears(), 0.004);
   parts.extraEarsIn = skinned(meshPart("extraEarsIn"), XC.earsIn(), 0.0015);
   parts.extraWings = skinned(meshPart("extraWings"), XC.wings(), 0.004);
-  { const spec = tailSpec(XO.tail, { hips: Jr.hips, back: surfaceAlong(bodySdfR, Jr.hips, [0, 0, -1]), size: XO.tailSize ?? 1 }), c = Jr.hips;
+  { const TB = TAIL_BONE[XO.tail] ?? "hips", spec = tailSpec(XO.tail, { hips: Jr[TB], back: surfaceAlong(bodySdfR, Jr[TB], [0, 0, -1]), size: XO.tailSize ?? 1 }), c = Jr[TB];
     if (spec) { const outward = (x, y, z, M) => { const e = M.elements; return [x - (e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12]), y - (e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13]), z - (e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14])]; };
-      const sim = createLocks({ specs: [spec], head: BI.hips, skeleton, root, outward, lite: LITE, coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.88 });
+      const sim = createLocks({ specs: [spec], head: BI[TB], skeleton, root, outward, lite: LITE, coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.88, round: !!spec.round, rigid: spec.keep ?? 0 });   // (round, keep: the pod's, clothes/extras.js)
       parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant

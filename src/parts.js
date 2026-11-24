@@ -57,7 +57,7 @@ export function partSpec(name, { OPT, H, clothH = 0, sheetK = 1, one = false, ki
         const lo = [-w, hem - 0.02, -w], hi = [w, top + 0.05, w];
         return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo, hi, h: clothCell(clothH || partClothCell(H), SK.thick), make: C.skirtSheets ? () => sheetsMesh(C.skirtSheets(B), lo, hi, sheetCell(H, clothH, sheetK), one) : null, only: /^(hips|upperLeg)/, soft: { bone: "hips", front: (z) => Math.min(1, Math.max(0, (z + 0.02) / 0.1)), k: (x, y) => FOL * Math.min(1, Math.max(0, (top - 0.04 - y) / (top - 0.04 - hem))) } }; }
       const y0 = Math.min({ knee: 0.17, long: 0.07 }[PT.length] ?? 0.2, (OPT.fit?.pantsHem ?? 1) - 0.03);   // long pants reach the ankles (the adult body's hems: OPT.fit)
-      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }
+      return { sdf: C.pantsSdf, fast: (x, y, z) => C.pantsSdf(x, y, z, B), lo: [-0.28, y0, -0.2], hi: [0.28, Math.max(0.55, (OPT.fit?.pantsTop ?? 0) + 0.05, (PT.top ?? 0) > 0.51 ? PT.top + 0.05 : 0), 0.22], h: H * 1.2, only: /^(hips|spine|upperLeg|lowerLeg)/ }; }   // (a high waist, pants.top over 0.51: the box up to it)
     case "cape": { const CA = OPT.outfit.cape;   // only built when worn (outfit.cape.on rebuilds the clothes)
       if (!C.capeSdf) return { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, bone1: "hips" };
       const BG = C.capeSdf.bag, bag = () => sheetsMesh([BG.sheet(B, one)], BG.lo, BG.hi, sheetCell(H, clothH, sheetK) / 2, one);   // the hood's bag: a sheet over the cape's (half its cells: its dome is small)
