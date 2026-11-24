@@ -235,6 +235,7 @@ const MAIN = [
   ["hair.tail.kind", L("結び髪", "Tails"), { options: opts({ none: ["なし", "None"], pony: ["ポニーテール", "Ponytail"], twin: ["ツインテール", "Twin tails"], side: ["サイドテール", "Side tail"], curl: ["うなじで結んで毛先がくるん", "Low tail curling up at its end"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.side", L("結ぶ側", "Side"), { when: { "hair.tail.kind": ["side", "curl"] }, options: opts({ L: ["左", "Left"], R: ["右", "Right"] }), section: L("結び髪", "Tails") }],
   ["hair.tail.curlSize", L("巻きの大きさ", "Curl size"), { when: { "hair.tail.kind": "curl" }, min: 0.02, max: 0.12, step: 0.002, section: L("結び髪", "Tails"), help: L("毛先の巻きの半径(束のまん中まで、m)。長さは結び目から巻きの下までの高さ", "the roll's radius to the bundle's middle (m); the length is from the tie down to the roll's bottom") }],
+  ["hair.tail.reach", L("巻きの離れ", "Curl reach"), { when: { "hair.tail.kind": "curl" }, min: 0.05, max: 0.3, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から巻きの下までの、後ろへの距離(m)", "how far out behind the tie the roll's bottom is (m)") }],
   ["hair.tail.length", L("長さ", "Length"), { min: 0.1, max: 0.9, step: 0.01, section: L("結び髪", "Tails") }],
   ["hair.tail.size", L("太さ", "Thickness"), { min: 0.5, max: 2, step: 0.05, section: L("結び髪", "Tails"), help: L("束ごと太く・細く(倍)。髪ゴムも合わせて変わる", "the whole bundle thicker or thinner (×); the tie follows") }],
   ["hair.tail.lift", L("はね上がり", "Lift"), { min: 0, max: 0.12, step: 0.005, section: L("結び髪", "Tails"), help: L("結び目から外へ張り出してから落ちるまで(m)", "how far it stands out from the tie before falling (m)") }],

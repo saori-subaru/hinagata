@@ -443,11 +443,11 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
 }
 
 /** hair.tail kind "curl" (ずんだもん's): one round bundle from a tie at the nape, down and back (a little toward T.side: the roll faces the side views) and rolled up into about a turn,
- *  its end thick and round so the roll is solid to its middle. T.length: from the tie to the roll's bottom (m), T.curlSize: the roll's radius to
+ *  its end thick and round so the roll is solid to its middle. T.length: from the tie down to the roll's bottom, T.reach: out behind to it (m), T.curlSize: the roll's radius to
  *  its bundle's middle (m), T.width: the bundle's width. Its points are the path itself; keep it rigid (createLocks rigid), or it uncoils as a rope */
 export function curlTail(T, { p, o }) {
   const S = T.size ?? 1, sd = T.side === "R" ? -1 : 1, e1 = [0.3 * sd, 0, -0.954], e2 = [0, 1, 0], R0 = (T.curlSize ?? 0.05) * S, TURN = 2 * Math.PI, NS = 24;
-  const at = (q, a, b) => q.map((c, i) => c + e1[i] * a + e2[i] * b), bot = at(p, 0.14 * S, -T.length * S), C = at(bot, 0, R0), pts = [];
+  const at = (q, a, b) => q.map((c, i) => c + e1[i] * a + e2[i] * b), bot = at(p, (T.reach ?? 0.14) * S, -T.length * S), C = at(bot, 0, R0), pts = [];
   const B = [p, at(p, 0.06 * S, -0.03 * S), at(bot, -0.09 * S, 0.01 * S), bot];   // out behind first, then a long arc down into the roll
   for (let q = 0; q < 8; q++) { const t = q / 8, m = 1 - t; pts.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
   for (let q = 0; q <= NS; q++) { const a = TURN * q / NS, r = R0 * (1 - 0.78 * q / NS); pts.push(at(C, r * Math.sin(a), -r * Math.cos(a))); }
