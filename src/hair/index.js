@@ -222,5 +222,11 @@ export function buildHair(OPT, { P, J = null, CUT = {}, PLANES = [], faceWarp = 
     const zb = sstep(z0 - 0.01, z0 - (C.round ?? 0.1), z), tk = C.thick ?? 0.003, t = Math.min(1, Math.max(0, (y - hem) / Math.max(0.01, C.top - hem)));
     const base = smin(Math.hypot(x * rz / rx, z - zc) - rz - tk - (C.full ?? 0) * zb * Math.pow(t, C.curve ?? 2), smin(skullOnly(x, y, z), dPrim(P.neck, x, y, z), 0.01) - tk, 0.01);
     return smax(smax(smax(smax(base, y - C.top, 0.004), hem - y, 0.005), z - z0, 0.01), -ear, EAR_GAP.k); }; };
-  return { BANGS, BACKS, SIDE, hairSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
+  // hair.sculpt.cap { thick, r } (with tufts): the block thicker round the whorl, a smooth dome the tufts' roots are under (they come out of
+  // it where it thins). Only in the mesh: the tufts lie on the block without it (on the cap they would heap up at the whorl again)
+  const meshSdfOf = (pick) => { const f = hairSdfOf(pick), CAP = OPT.hair.sculpt.cap; if (!(CAP?.thick > 0) || !tuftsOn()) return f;
+    const W = OPT.hair.whorl ?? {}, c = [0, OPT.body.sculpt.skull.y, -0.005], wx = W.x ?? 0, wz = W.z ?? 0; let lo = c[1], hi = c[1] + 0.6; for (let k = 0; k < 30; k++) { const m = 0.5 * (lo + hi); if (f(wx, m, wz) < 0) lo = m; else hi = m; }
+    const d = [wx - c[0], lo - c[1], wz - c[2]], dl = Math.hypot(...d) || 1, r0 = (CAP.r ?? 50) * Math.PI / 180;
+    return (x, y, z) => { const vx = x - c[0], vy = y - c[1], vz = z - c[2], a = Math.acos(Math.max(-1, Math.min(1, (vx * d[0] + vy * d[1] + vz * d[2]) / (dl * (Math.hypot(vx, vy, vz) || 1))))); return f(x, y, z) - CAP.thick * sstep(r0, 0.4 * r0, a); }; };
+  return { BANGS, BACKS, SIDE, hairSdfOf, meshSdfOf, bangsAsLocks, backAsLocks, whorlOn, tuftsOn, ahogeMesh, cropSdf: SHELL ? cropSdf : null };
 }

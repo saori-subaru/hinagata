@@ -287,7 +287,7 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
 /**
  * Tufts (options.hair.tufts): few big blocks of hair from the whorl, each lying on the hair to where its tip ends (the other locks are
  * ribbons, flat on the head). Wide (the mesh bends round the head: createLocks' cols and curv), solid from the hair out (thick), its end a
- * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, flick, flickFrom, hug, from,
+ * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, flick, flickFrom, hug, from, round,
  * band, ridge, rootWidth, wide, endWidth, shade, stiff, mirror, spikes: [{ y | at, length, out, up, width, side, ridge }] }]
  * (head space; schema.js hair.tufts). whorl: [x, z], where they grow from, from the top's middle. surf / center / toRoot / sx: as bangLocks.
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
@@ -321,7 +321,8 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
     // its width along it: narrow where it leaves the whorl, full by `wide`, then straight to one point over the last `point` of its length
     // (band: how late; a block with a point, not a leaf) or wide to its cut end
     const rootW = d.rootWidth ?? 0.25, wide = d.wide ?? 0.45, band = clamp(d.band ?? 0.5, 0, 1), endW = d.endWidth ?? 0.6, point = n === 1 ? 0.75 - 0.5 * band : clamp(notch + 0.12, 0.15, 0.4);
-    const prof = (s) => (rootW + (1 - rootW) * sstep(0, wide, s)) * (n === 1 ? (s < 1 - point ? 1 : Math.pow(Math.max(0, (1 - s) / point), 0.9)) : 1 - (1 - endW) * s * s * s);
+    const RN = clamp(d.round ?? 0, 0, 1), bulge = (x) => x * (1 + RN * (1 - x));
+    const prof = (s) => (rootW + (1 - rootW) * sstep(0, wide, s)) * (n === 1 ? (s < 1 - point ? 1 : Math.pow(bulge(Math.max(0, (1 - s) / point)), 0.9)) : 1 - (1 - endW) * s * s * s);   // round: its sides bulge on their way to the point (a leaf's outline, not straight lines)
     const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg, hook = (d.hook ?? 0) * m * deg, flick = d.flick ?? 0, flickFrom = clamp(d.flickFrom ?? 0.6, 0.2, 0.9);
     const a = d.to[0] * m * deg, R0 = d.from ? over(d.from[0] * m, d.from[1]) : over(whorl[0], whorl[1]), rd = norm(R0.map((v, q) => v - center[q]));
     let H, U, F, FO;   // the points (head space), their directions from the head's middle, the hair under each, how far each has left the hair (0..1)

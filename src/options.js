@@ -980,6 +980,10 @@ export const DEFAULTS = {
       },
       "shortBack": 0.86,
       "shell": 0.036,
+      "cap": {
+        "thick": 0,
+        "r": 50
+      },
       "lockShell": 0.016,
       "whorl": {
         "on": true,

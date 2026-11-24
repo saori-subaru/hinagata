@@ -423,7 +423,7 @@ export const CHARACTERS = {
         knees: { blush: { on: true }, line: { on: true } },   // as シルヴィ's
       },
       hair: {
-        // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's): no block under them (sculpt.whorl.on)
+        // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's), their roots under a smooth round crown (sculpt.cap)
         bangs: "none", back: "short", backForm: "block", ahoge: false,
         whorl: { x: 0, z: -0.03 },
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
@@ -436,13 +436,13 @@ export const CHARACTERS = {
           { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
           { to: [108, 0.87], thickFrom: 0.04, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
           { to: [72, 0.875], thickFrom: 0.04, width: 0.25, thick: 0.039, tips: [1, 0.85], notch: 0.12, endWidth: 0.7, hook: -8, hug: 0.3, mirror: true },   // over the ears, to the jaw, its end turned in toward the cheek (wide: the ear's lobe showed before it)
-          // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
-          { to: [45, 0.915], thickFrom: 0.04, width: 0.22, thick: 0.03, hook: 8, mirror: true },
-          { to: [0, 0.99], thickFrom: 0.04, width: 0.2, thick: 0.024, tips: [0.96, 1], notch: 0.035, rootWidth: 0.2, wide: 0.5, endWidth: 0.25 }   // the middle one a rounded diamond, short of the eyes,
+          // the bangs, their outlines curved (round): a block over each temple turning in to the cheek, and the middle one a rounded diamond to between the eyes
+          { to: [45, 0.9], thickFrom: 0.04, width: 0.26, thick: 0.03, bow: 8, hook: -10, round: 1, band: 0.2, mirror: true },
+          { to: [0, 0.99], thickFrom: 0.04, width: 0.3, thick: 0.024, round: 1, band: 0.1, rootWidth: 0.2, wide: 0.5 }
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.008 },
+        sculpt: { whorl: { on: true }, shell: 0.008, cap: { thick: 0.032, r: 62 } },
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },
@@ -450,7 +450,7 @@ export const CHARACTERS = {
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "dot" }, browsOverHair: true,
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
-        layout: { eyeX: 0.092, eyeY: 0.998, browX: 0.06, browY: 1.115, mouthY: 0.896 },   // (the sheet's eyes and mouth are about where the default's are; the brows short, over the eyes' inner halves)
+        layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.896 },   // (the brows short, well over the eyes' middles)
         drawn: [
           { id: "happy", name: "にっこり", eye: ZUNDA_EYE_HAPPY, brow: null, mouth: ZUNDA_MOUTH_OPEN, cheeks: "none", blink: false },
           { id: "surprised", name: "びっくり", eye: null, eyeL: ZUNDA_EYE_L, brow: null, mouth: ZUNDA_MOUTH_O, cheeks: "none", blink: true },
