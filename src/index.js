@@ -674,7 +674,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   function figureLook() {
     if (OPT.shading.style !== "figure") return;
     for (const k in parts) { const m = parts[k].toonMat ?? parts[k].m.material; if (!m.isMeshPhysicalMaterial || m.userData.fig) continue; m.userData.fig = true;
-      const { sheenColor, ...f } = FIG[k === "body" ? "skin" : /hair|locks|bangs|drawn|tufts|tails/.test(k) ? "hair" : /shoe|boot|sole/i.test(k) ? "shoe" : "cloth"]; Object.assign(m, f); if (sheenColor) m.sheenColor.set(sheenColor); }
+      const { sheenColor, ...f } = FIG[k === "body" ? "skin" : /hair|locks|bangs|drawn|tufts|dome|tails/.test(k) ? "hair" : /shoe|boot|sole/i.test(k) ? "shoe" : "cloth"]; Object.assign(m, f); if (sheenColor) m.sheenColor.set(sheenColor); }
   }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
