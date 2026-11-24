@@ -476,10 +476,9 @@ export const CHARACTERS = {
         shoes: { kind: "boots", color: "#799d55", soleColor: "#e5abb7", bootHeight: 0.176, cuff: 0.055, cuffOut: 0.003, cuffColor: "#bedb88", leaf: 0.047, leafAt: 100, shaft: 0.35, width: 0.9, toeCap: 0.6, heelBlock: 0.008, sole: 0.022, rim: 0.003 },
       },
       accessories: [   // (offsets from the bone's joint, as built, measured on the clothes: tools/surface.mjs)
-        // the brooch where the collar's lobes meet: a pea pod lying across, over two pink ribbon ends
-        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.0792, 0.0766], n: [0.05, 0.37, 0.93], spin: 22, size: 0.05, color: "#cf7aa3", mirror: true, lift: 0.003 },
-        { kind: "ribbonEnd", bone: "upperChest", at: [0.004, 0.0813, 0.0752], n: [0.05, 0.37, 0.93], spin: 145, size: 0.036, color: "#cf7aa3", mirror: true, lift: 0.002 },   // a loop tie: the same ribbon up to under the collar
-        { kind: "peaPod", bone: "upperChest", at: [0, 0.0813, 0.0752], n: [0, 0.37, 0.93], size: 0.075, color: "#b6da8c", lift: 0.004 },
+        // the brooch where the collar's lobes meet: a loop tie, its pod right under the collar (the ribbon round the neck hidden), over two pink ribbon ends
+        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.0866, 0.0736], n: [0.05, 0.37, 0.93], spin: 22, size: 0.05, color: "#cf7aa3", mirror: true, lift: 0.003 },
+        { kind: "peaPod", bone: "upperChest", at: [0, 0.0887, 0.0722], n: [0, 0.37, 0.93], size: 0.075, color: "#b6da8c", lift: 0.004 },
         { kind: "button", bone: "foot.L", at: [0, 0.048, 0.0317], n: [0.01, -0.19, 0.98], size: 0.022, color: "#e6a8b6", mirror: true, lift: 0.019 },   // at the tip of each boot cuff's front notch
         // the waistband's buttons, a pair under each strap, in front and behind (lift: the band flares out toward its bottom)
         { kind: "button", bone: "spine", at: [0.05, 0.0766, 0.0822], n: [0.41, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.016 },
