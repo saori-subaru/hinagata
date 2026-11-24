@@ -454,7 +454,10 @@ export function curlTail(T, { p, o }) {
   for (let q = 0; q <= NS; q++) { const a = TURN * q / NS, r = R0 * (1 - 0.78 * q / NS); pts.push(at(C, r * Math.sin(a), -r * Math.cos(a))); }
   let len = 0; for (let q = 1; q < pts.length; q++) len += Math.hypot(...[0, 1, 2].map((k) => pts[q][k] - pts[q - 1][k]));
   const T0 = 8 / (pts.length - 1), prof = (t) => t < T0 ? 0.3 + 0.7 * sstep(0, T0, t)   /* narrow at the tie, full where it rolls */ : t < 0.93 ? 1 : Math.max(0.35, Math.sqrt(Math.max(0, 1 - ((t - 0.93) / 0.07) ** 2)));
-  return [{ root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof }];
+  const tail = { root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof };
+  // T.line (m, the line's width): the roll's turn drawn on both its sides, a thin strand along the same path at the bundle's edge (index.js paints it the outline's color)
+  const LW = T.line ?? 0, lprof = (t) => sstep(T0 * 1.05, T0 * 1.5, t) * (1 - sstep(0.86, 0.97, t));
+  return { tail: [tail], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, w: LW, thick: 1, prof: lprof, shift: (t) => m * 0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.9, T0 * 1.05, t)) })) : [] };
 }
 
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
@@ -669,7 +672,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         px = ox; py = oy; pz = oz;
         let ax = dy * oz - dz * oy, ay = dz * ox - dx * oz, az = dx * oy - dy * ox; if (s.nrm) { const al = Math.hypot(ax, ay, az) || 1; ax /= al; ay /= al; az /= al; }   // across
         if (TM) { const F = r * 12; FR[F] = cx; FR[F + 1] = cy; FR[F + 2] = cz; FR[F + 3] = ox; FR[F + 4] = oy; FR[F + 5] = oz; FR[F + 6] = ax; FR[F + 7] = ay; FR[F + 8] = az; FR[F + 9] = rx; FR[F + 10] = ry; FR[F + 11] = rz; continue; }
-        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
+        const hw = 0.5 * s.w * (s.prof ?? width)(t), ht = Math.max(0.0012, hw * s.thick * (s.rise ? sstep(0, 0.2, t) : 1) * (s.blunt ? 1 - 0.9 * sstep(1 - s.blunt, 1, t) : 1)), cu = s.curl * t * t + (s.lean ? s.lean * Math.max(0, 0.5 * s.w - hw) : 0) + (s.shift ? s.shift(t) : 0);   // half width / half thickness; curl: the tip bends a little sideways; lean: where the lock narrows it goes to one edge, which stays straight to the point; blunt (a share of the length): as wide to the end and thinning there into a straight edge (a cut fringe, the hime's)
         // fork (spec.fork { n: rings, short: rings the shorter tooth ends early, side: which }): the tip split in two points. Over the last n rings
         // the face's middle closes to a notch one ring in, then its two sides run apart, each to its edge's point: two flat teeth (the faces
         // between them are emptied where the triangles are listed). Their normals lie across, so the outline goes round each tooth. Not at lite (no points to spare)

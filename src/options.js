@@ -826,6 +826,7 @@ export const DEFAULTS = {
       "y": null,
       "length": 0.34,
       "curlSize": 0.05,
+      "line": 0,
       "reach": 0.14,
       "volume": 0.04,
       "count": 14,
