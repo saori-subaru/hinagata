@@ -672,6 +672,7 @@ export const DEFAULTS = {
       "puff": 0,
       "puffTop": null,
       "puffAt": 0.55,
+      "puffStart": 0,
       "puffFront": 1,
       "puffBack": 1,
       "cuff": 0,

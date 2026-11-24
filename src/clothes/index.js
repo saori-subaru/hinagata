@@ -131,17 +131,17 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
   // a tube round each leg, the two one ellipse at the top (the pants' own outline there) and apart toward the hem (the thighs' there), the
   // bulge (puff x 4.5 cm at the sides, x puffFront / puffBack before and behind) added between. Where they meet down the middle is the seam's groove
   const balloon = PUFF_TOP != null ? (() => {
-    const y0 = PUFF_TOP, y1 = PANTS_HEM + PCUFF, A = PUFF * 0.045, AF = A * (OPT.outfit.pants.puffFront ?? 1), AB = A * (OPT.outfit.pants.puffBack ?? 1);
+    const y0 = PUFF_TOP, y1 = PANTS_HEM + PCUFF, A = PUFF * 0.045, AF = A * (OPT.outfit.pants.puffFront ?? 1), AB = A * (OPT.outfit.pants.puffBack ?? 1), PS = OPT.outfit.pants.puffStart ?? 0;
     const reach = (f, o, d) => { let t = 0; while (t < 0.4 && f(o[0] + d[0] * t, o[1], o[2] + d[1] * t) < 0) t += 0.004; let lo = Math.max(0, t - 0.004), hi = t; for (let i = 0; i < 8; i++) { const m = (lo + hi) / 2; if (f(o[0] + d[0] * m, o[1], o[2] + d[1] * m) < 0) lo = m; else hi = m; } return hi; };
     const f0 = reach(pantsPlain, [0, y0, 0], [0, 1]), b0 = reach(pantsPlain, [0, y0, 0], [0, -1]), zc0 = (f0 - b0) / 2, d0 = (f0 + b0) / 2, w0 = reach(pantsPlain, [0, y0, zc0], [1, 0]);
     const U = J["upperLeg.L"], K = J["lowerLeg.L"], k = (U[1] - y1) / (U[1] - K[1]), c1 = U[0] + (K[0] - U[0]) * k, zc1 = U[2] + (K[2] - U[2]) * k, off = PANTS_OFF + 0.004 + (PCUFF ? PCUFF_OUT + 0.006 : 0);   // (over a hem band the balloon's end stands 6 mm past it: its edge draws the line between them)
     const r1 = reach(bodySdf, [c1, y1, zc1], [1, 0]) + off, rf = reach(bodySdf, [c1, y1, zc1], [0, 1]) + off, rb = reach(bodySdf, [c1, y1, zc1], [0, -1]) + off;
-    const f = (x, y, z) => { const t = Math.min(1, Math.max(0, (y0 - y) / (y0 - y1))), s = t < PUFF_AT ? Math.sin(Math.PI / 2 * t / PUFF_AT) : Math.cos(Math.PI / 2 * (t - PUFF_AT) / (1 - PUFF_AT));
-      const c = c1 * Math.pow(t, 1.5), rx = w0 + (c1 + r1 - w0) * t + A * s - c, zc = zc0 + (zc1 - zc0) * t, dz = z - zc, rz = dz > 0 ? d0 + (rf - d0) * t + AF * s : d0 + (rb - d0) * t + AB * s;
+    const f = (x, y, z) => { const t = Math.min(1, Math.max(0, (y0 - y) / (y0 - y1))), s = t < PUFF_AT ? Math.sin(Math.PI / 2 * t / PUFF_AT) : Math.cos(Math.PI / 2 * (t - PUFF_AT) / (1 - PUFF_AT)), e = t < PUFF_AT ? PS * (1 - s) : 0;   // e: puffStart, gone at the fullest
+      const c = c1 * Math.pow(t, 1.5), rx = w0 + (c1 + r1 - w0) * t + A * s + e - c, zc = zc0 + (zc1 - zc0) * t, dz = z - zc, rz = (dz > 0 ? d0 + (rf - d0) * t + AF * s : d0 + (rb - d0) * t + AB * s) + e;
       const q = Math.hypot((Math.abs(x) - c) / rx, dz / rz);
       return Math.max((q - 1) * Math.min(rx, rz), y - (y0 + 0.006), y1 - PCUFF * 0.5 - y); };
     // the waist over the balloon stays within its top's outline (a high waist reaches the elbows' height: the mask's margin left a scrap of pants on each forearm)
-    return { f, waist: (x, y, z) => y > y0 - 0.01 ? (Math.hypot(x / (w0 + 0.015), (z - zc0) / (d0 + 0.015)) - 1) * (w0 + 0.015) : -1 }; })() : null;
+    return { f, waist: (x, y, z) => y > y0 - 0.01 ? (Math.hypot(x / (w0 + 0.015 + PS), (z - zc0) / (d0 + 0.015 + PS)) - 1) * (w0 + 0.015 + PS) : -1 }; })() : null;
   const pantsShape = (x, y, z, B = bodySdf) => { if (!balloon) return pantsPlain(x, y, z, B);
     const d = Math.min(Math.max(pantsPlain(x, y, z, B), balloon.waist(x, y, z)), balloon.f(x, y, z));   // (with the plain pants under it: the balloon's top is an ellipse, and the shirt showed at its corners)
     return PCUFF ? Math.min(d, Math.max(pantsCore(x, y, z, B) - 0.024 - PCUFF_OUT, y - (PANTS_HEM + PCUFF), PANTS_HEM - y)) : d; };

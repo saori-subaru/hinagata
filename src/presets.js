@@ -467,7 +467,7 @@ export const CHARACTERS = {
         shirt: { color: "#f1eee9", sleeve: "none", armhole: 0, length: "crop", crop: 0.56, collar: { y: 0.83, tilt: 0.95 },
           puff: { on: true, color: "#f1eee9", cap: 0.054, frillOut: 0.018, wave: 0.006, line: "#46433c", lineWidth: 0.003 }, roundCollar: { on: true, color: "#d9dcdd", front: 0.032, side: 0.024, back: 0.03, line: "#46433c" } },   // its hem behind the waistband (tucked, it showed under the band where the balloon starts)
         // pumpkin shorts: a high waist under the waistband (the belt, in their color), the balloon from its bottom edge to the hem bands
-        pants: { color: "#7fa56a", top: 0.58, tilt: 0, hem: 0.33, cuff: 0.02, puff: 1.58, puffTop: 0.556, puffAt: 0.548, puffFront: 0.7, puffBack: 0.63, picture: { src: ZUNDA_PANTS } },
+        pants: { color: "#7fa56a", top: 0.58, tilt: 0, hem: 0.33, cuff: 0.02, puff: 1.58, puffTop: 0.556, puffAt: 0.548, puffStart: 0.02, puffFront: 0.7, puffBack: 0.63, picture: { src: ZUNDA_PANTS } },
         belt: { on: true, color: "#7fa56a", y: 0.58, width: 0.062, thick: 0.004, flare: 0.01 },
         suspenders: { on: true, color: "#7fa56a", x: 0.056, xTop: 0.052, xBack: 0.048, width: 0.038, thick: 0.002, back: "straight" },   // thin: the collar lies over them
         socks: { color: "#f2efea", top: 0.13, edge: "scallop", edgeCount: 8, edgeDepth: 0.012 },
@@ -480,12 +480,12 @@ export const CHARACTERS = {
         // the bow where the collar's lobes meet: a pale green bow over two pink ends
         { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.068, 0.081], n: [0.05, 0.37, 0.93], spin: 28, size: 0.062, color: "#cf7aa3", mirror: true, lift: 0.003 },
         { kind: "ribbon", bone: "upperChest", at: [0, 0.0701, 0.0796], n: [0, 0.37, 0.93], size: 0.066, color: "#b6da8c", lift: 0.007 },
-        { kind: "button", bone: "foot.L", at: [0.062, -0.045, 0.03], n: [1, 0, 0.15], size: 0.02, color: "#e6a8b6", mirror: true, lift: 0.002 },   // on each shoe's outer side
+        { kind: "button", bone: "foot.L", at: [0, 0.048, 0.0317], n: [0.01, -0.19, 0.98], size: 0.022, color: "#e6a8b6", mirror: true, lift: 0.019 },   // at the tip of each boot cuff's front notch
         // the waistband's buttons, a pair under each strap, in front and behind (lift: the band flares out toward its bottom)
-        { kind: "button", bone: "spine", at: [0.05, 0.0767, 0.0828], n: [0.4, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.02 },
-        { kind: "button", bone: "spine", at: [0.05, 0.0497, 0.0878], n: [0.4, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.024 },
-        { kind: "button", bone: "spine", at: [0.048, 0.0767, -0.0899], n: [0.31, 0.32, -0.89], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.02 },
-        { kind: "button", bone: "spine", at: [0.048, 0.0497, -0.0899], n: [0.31, 0.32, -0.89], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.024 },
+        { kind: "button", bone: "spine", at: [0.05, 0.0767, 0.0828], n: [0.4, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.03 },
+        { kind: "button", bone: "spine", at: [0.05, 0.0497, 0.0878], n: [0.4, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.034 },
+        { kind: "button", bone: "spine", at: [0.048, 0.0767, -0.0899], n: [0.31, 0.32, -0.89], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.025 },
+        { kind: "button", bone: "spine", at: [0.048, 0.0497, -0.0899], n: [0.31, 0.32, -0.89], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.029 },
       ],
     } },
   },
