@@ -492,7 +492,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // lies thin under the locks. The locks carry it too, by where each of their points was when they were made (hairUV, as the block's)
   const RING = { color: { value: new THREE.Color() } }, ringColor = (c) => RING.color.value.copy(OPT.hair.paint.ring.color ? new THREE.Color(OPT.hair.paint.ring.color) : ringOf(c));
   ringColor(OPT.colors.hair);
-  const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on) return m; const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on || OPT.shading.style === "figure") return m;   /* (a figure's shine is its light's) */ const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.ringColor = RING.color;
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
@@ -669,8 +669,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   // the figure's finish by what a part is (shading.style "figure"): skin matt with a warm bloom at its edges, hair and shoes a faint
   // satin, cloth dry. Checked each update, as the rim is (materials are replaced by rebuilds)
-  const FIG = { skin: { roughness: 0.7, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.62, clearcoat: 0.12, clearcoatRoughness: 0.5 },
-    shoe: { roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.35 }, cloth: { roughness: 0.82, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
+  const FIG = { skin: { roughness: 0.82, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.8 },
+    shoe: { roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.4 }, cloth: { roughness: 0.92, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
   function figureLook() {
     if (OPT.shading.style !== "figure") return;
     for (const k in parts) { const m = parts[k].toonMat ?? parts[k].m.material; if (!m.isMeshPhysicalMaterial || m.userData.fig) continue; m.userData.fig = true;

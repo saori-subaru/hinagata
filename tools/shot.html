@@ -33,6 +33,16 @@ try {
   scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
   const FIG = av.options.shading.style === "figure"; let draw = (cam) => renderer.render(scene, cam);
   if (FIG) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap; await figureStage(renderer, scene);   // the figure look: the studio's light, shade in the creases (GTAO)
+    scene.background = new THREE.Color(Q.get("bg") || "#a3a6ab");
+    { // ⏳ a try: a glossy lens over each eye (a clear dome that only adds its reflections), placed by the face picture's eye position
+      const F = av.internals.face, L = av.faceLayer, [rx, ry, rz] = nums("lens", "0.031,0.043,0.013"), hi = av.skeleton.bones.indexOf(av.bones.head), hold = new THREE.Group();
+      hold.matrixAutoUpdate = false; hold.matrix.copy(av.skeleton.boneInverses[hi]); av.bones.head.add(hold);
+      const uv = L.geometry.attributes.uv, P = L.geometry.attributes.position, N = L.geometry.attributes.normal, v0 = 1 - F.py(F.EYE.y) / F.faceCanvas.height;
+      const mat = new THREE.MeshPhysicalMaterial({ color: 0x000000, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, envMapIntensity: +(Q.get("lensEnv") ?? 4) });
+      for (const sx of [1, -1]) { const u0 = F.px(sx * F.EYE.x) / F.faceCanvas.width; let b = 0, bd = 9;
+        for (let i = 0; i < uv.count; i++) { const d = Math.hypot(uv.getX(i) - u0, uv.getY(i) - v0); if (d < bd) { bd = d; b = i; } }
+        const m = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), mat), n = new THREE.Vector3().fromBufferAttribute(N, b).normalize(), p = new THREE.Vector3().fromBufferAttribute(P, b);
+        m.scale.set(rx, ry, rz); m.position.copy(p).addScaledVector(n, +(Q.get("lensOut") ?? 0.002)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n); m.renderOrder = 3; hold.add(m); } }
     const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 48), new THREE.ShadowMaterial({ opacity: 0.28 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
     const [{ EffectComposer }, { RenderPass }, { GTAOPass }, { OutputPass }] = await Promise.all(["EffectComposer", "RenderPass", "GTAOPass", "OutputPass"].map((n) => import(`three/addons/postprocessing/${n}.js`)));
     draw = (cam) => { const c = new EffectComposer(renderer), ao = new GTAOPass(scene, cam, W, H); ao.updateGtaoMaterial({ radius: 0.05, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 16 }); ao.blendIntensity = +(Q.get("ao") ?? 1);

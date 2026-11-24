@@ -200,11 +200,11 @@ export async function figureStage(renderer, scene, on = true) {
   if (on && !roomEnv) { const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js"); const p = new THREE.PMREMGenerator(renderer); roomEnv = p.fromScene(new RoomEnvironment(), 0.04).texture; p.dispose(); }
   let G = scene.userData.figureLights;
   if (on && !G) { G = scene.userData.figureLights = new THREE.Group(); G.userData.figure = true;
-    const key = new THREE.DirectionalLight(0xfff1e2, 2.1); key.position.set(-1.6, 3.2, 2.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.blurSamples = 16;
+    const key = new THREE.DirectionalLight(0xfff1e2, 1.7); key.position.set(-1.6, 3.2, 2.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 14; key.shadow.blurSamples = 25;
     Object.assign(key.shadow.camera, { left: -1.3, right: 1.3, top: 1.9, bottom: -0.5, near: 0.5, far: 9 }); key.shadow.bias = -0.0006; key.shadow.normalBias = 0.012;
-    const back = new THREE.DirectionalLight(0xdfe8ff, 2.4); back.position.set(1.8, 2.2, -2.6);
+    const back = new THREE.DirectionalLight(0xdfe8ff, 1.6); back.position.set(1.8, 2.2, -2.6);
     const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(2.4, 0.8, 1.6);
-    G.add(key, back, fill); }
+    G.add(key, back, fill, new THREE.HemisphereLight(0xffffff, 0xcfc6c0, 0.25)); }
   if (G) { if (on) scene.add(G); else scene.remove(G); }
   scene.environment = on ? roomEnv : null;
   scene.traverse((x) => { if (!x.isLight || x.parent?.userData.figure) return; x.userData.stageI ??= x.intensity; x.intensity = on ? 0 : x.userData.stageI; });
