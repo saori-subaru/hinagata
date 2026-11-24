@@ -810,7 +810,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
-    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, dome: OPT.hair.sculpt.dome?.on ? OPT.hair.sculpt.dome : null, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
+    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, taper: W.taper ?? 0, dome: OPT.hair.sculpt.dome?.on ? OPT.hair.sculpt.dome : null, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
       out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 });
       if (TF.dome) { const D = TF.dome, g = new THREE.BufferGeometry(), nv = D.pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), uv = new Float32Array(nv * 2);   // the sheet over their roots (hair.sculpt.dome): the head's
         for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; uv.set(ringUV(D.pos[v * 3], D.pos[v * 3 + 1], D.pos[v * 3 + 2]), v * 2); }

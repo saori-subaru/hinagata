@@ -34,7 +34,6 @@ const SPREAD_OUT = 0.35, SPREAD_IN = 0.07, SPREAD_V0 = 0.6, SPREAD_V = 0.8, SPRE
 // (to nothing over the last `point` of its length, straight: with its width, a point with flat sides)
 const UNDER = 0.45, TOP = 0.35, tuftThick = (t, point, from = 0.22) => sstep(0, Math.max(1e-3, from), t) * Math.pow(Math.min(1, Math.max(0, (1 - t) / point)), 0.8);
 const LEAVE = 0.2, SPIKE_TIP = 32;   // a spike's ridge leaves the tuft at this slope (a three-sided point from all its base, not a thorn out of the tuft's side) / the angle of its point (degrees)
-const girth = (uy) => sstep(0.8, 0.25, uy);   // 0 on top of the head … 1 round its widest part and below (uy: how far up a direction from the head's middle points)
 const OWN = 0.4;   // how much a lock's own roundness shows in its shading (its edges turn toward the shadow, so each lock reads apart)   // drawn rings per link (a Catmull-Rom curve through the chain's points)
 
 /**
@@ -293,7 +292,9 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
  * spike (-1: the tuft itself), the mirrored copy (m -1)
  */
-export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], lineFrom = 0, dome = null, N = 9, cols = 7 }) {
+export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], lineFrom = 0, dome = null, taper = 0, N = 9, cols = 7 }) {
+  const girth = (uy) => sstep(0.8 - 0.25 * taper, 0.25 - 0.2 * taper, uy);   // 0 on top of the head … 1 round its widest part and below (uy: how far up a direction from the head's middle points)
+  // (taper, hair.whorl.taper 0..1: that thickness reached further down the sides: the head's upper corners shaved, rounder from the front)
   const deg = Math.PI / 180, out = [], L = (list ?? []).filter((d) => Array.isArray(d?.to)), M = Math.max(cols, ...L.map((d) => 2 * (d.tips?.length ?? 1) + 1));
   const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);

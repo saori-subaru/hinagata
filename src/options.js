@@ -809,6 +809,7 @@ export const DEFAULTS = {
       "x": 0,
       "z": 0,
       "lineFrom": 0,
+      "taper": 0,
       "stiff": 4
     },
     "gradient": {
