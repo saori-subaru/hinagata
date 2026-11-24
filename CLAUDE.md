@@ -17,6 +17,7 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
   2026-10-06、原生林の2頭身が 0.15 で紙のように薄く潰れたのを、使う側が見つけるまで誰も気づかなかったため。
   クラウドでは CDN に出られず止まるので、`npm install three@0.160.0 meshoptimizer@1` した場所を `--npm <node_modules>`、ブラウザを `--chrome /opt/pw-browsers/chromium` で渡す。
 - **キャラを設定画に寄せる時は `node tools/shot.mjs <プリセット名> --views 0,90,180 --y 0,0.4 --name 名前`** で撮る(向き・高さの範囲を選べ、`--patch` でプリセットに値を重ねて試せる。絵は thin-check-out/)。
+- 2人並べた夕景のムービー風の1枚は `node tools/thin-check.mjs --page scene --only x --query "shot=two|wide|ots&a=astel&b=sylvie"`(tools/scene.html。絵は thin-check-out/scene-*.png)。
 - 服に貼る絵(今はジャケットだけ)の下絵は `node tools/picture.mjs <プリセット名> [--paper 1]`(thin-check-out/ に出る)、塗った絵を戻すのは `python tools/picture-fit.py`。ジャケットの形を変えたら絵を作り直す。
 
 ## 断捨離と棚卸し(リモートでは全体の CLAUDE.md が読まれないので、ここにも置く)
