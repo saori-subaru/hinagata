@@ -13,7 +13,7 @@ import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands, withPicture } from "./materials.js";
+import { shaded, metal, SHADINGS, figureStage, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands, withPicture } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
@@ -30,7 +30,7 @@ import { accessoryGeometries } from "./accessories.js";
 import { createFollower } from "./follow.js";
 import { PARTS, partNamed, partOptions, builtKey, pictureParts } from "./garments/index.js";
 
-export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
+export { DEFAULTS, POSES, SHADINGS, figureStage, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
@@ -279,10 +279,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const I = new Uint32Array(kept.length + EB.idx.length); for (let i = 0; i < kept.length; i++) I[i] = map[kept[i]]; for (let i = 0; i < EB.idx.length; i++) I[kept.length + i] = EB.idx[i] + m;
     return { pos: P2, nor: N2, idx: I, si: SI, sw: SW };
   }
+  const linesOn = () => OPT.outline.on && OPT.shading.style !== "figure";   // (a figure has no drawn lines)
   function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
     if (soft) addSoftNormals(soft, geo);
-    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); bindTo(m);
-    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
+    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.receiveShadow = OPT.shading.style === "figure"; m.frustumCulled = false; root.add(m); bindTo(m);
+    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = linesOn();   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
     const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); bindTo(o);
     return { m, o, on: true };
   }
@@ -659,7 +660,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const RO = OPT.shading.rim ?? {}, RIM = { rimOn: { value: RO.on ? 1 : 0 }, rimColor: { value: new THREE.Color(RO.color ?? "#fff4e0") }, rimWidth: { value: RO.width ?? 0.35 }, rimStrength: { value: RO.strength ?? 0.5 } };
   let rimUsed = !!RO.on;
   function withRim(m) {
-    if (!m || m.userData.rim || !(m.isMeshToonMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
+    if (!m || m.userData.rim || !(m.isMeshToonMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial || m.isMeshStandardMaterial)) return;
     const prev = m.onBeforeCompile, key = m.customProgramCacheKey(); m.userData.rim = true;
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); Object.assign(sh.uniforms, RIM);
       sh.fragmentShader = "uniform float rimOn, rimWidth, rimStrength;\nuniform vec3 rimColor;\n" + sh.fragmentShader.replace("#include <opaque_fragment>",
@@ -1157,7 +1158,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Outline (instant, no rebuild): { on, width (1 = default), color, trace (0–1: each part's line in its own color, darkened) }. Some art styles want none: { on: false }. */
     setOutline({ on, width, color, hairInner, trace } = {}) {
       Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner, trace }).filter(([, v]) => v !== undefined))); hairLines();
-      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = linesOn(); m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
       traceLines();
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
@@ -1182,6 +1183,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
+      root.traverse((x) => { if (x.userData.outline) x.material.visible = linesOn(); else if (x.isSkinnedMesh) x.receiveShadow = style === "figure"; });
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     /** The knees' blush and line (instant): { blush: { on, color, strength, size }, line: { on, color, strength, width, radius } }. */

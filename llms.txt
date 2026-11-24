@@ -186,7 +186,7 @@ chibi from a chibi body type. The user can check it in the editor with a referen
 - Switching to a fast move: `avatar.play(name, { blend: 0 })`. By default a switch eases over about 0.35 s, which softens a swing's start.
 - Hands or feet onto a point after the pose: `ik2(avatar.bones, LIMBS["hand.R"], target, pole)` (`import { ik2, LIMBS }`), after `update`.
 - Instant changes at runtime (no rebuild): `setColors({ hair, shirt, … })`, `setWorn({ shoes: false })`, `setFace(…)`, `setOutline`,
-  `setShading("toon" | "soft" | "smooth" | "flat")`, `setRim({ on, color, width, strength })`, `setGradient`, `setAccessories(list)`,
+  `setShading("toon" | "soft" | "smooth" | "flat" | "figure")` ("figure": a painted figure, no outlines; the page lights it with `await figureStage(renderer, scene)`, a sun with castShadow shades it), `setRim({ on, color, width, strength })`, `setGradient`, `setAccessories(list)`,
   `setBands({ "outfit.socks.stripes.color": … })` (the collar's line, the gloves' and boots' cuffs, the stripes). Anything else: build a new avatar from the changed recipe.
 - A breeze through the hair: `avatar.update(dt, { camera, wind: [2, 0, 0] })` (m/s, world axes, in the avatar's own size; its own motion streams the hair anyway).
 

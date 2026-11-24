@@ -20,11 +20,13 @@ export const toon = (c, bands = 2) => { const m = new THREE.MeshToonMaterial({ c
 const SOFT_RAMP = "uniform sampler2D gradientMap;\nvec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) { float d = dot( normal, lightDirection ); vec3 sh = texture2D( gradientMap, vec2( 0.0, 0.0 ) ).rgb;\n  return mix( sh, vec3( 1.0 ), smoothstep( -0.19, 0.36, d ) ) * mix( 0.78, 1.0, smoothstep( 0.0, 1.0, d ) ); }";
 export const softToon = (c) => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMPS[2] });
   m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <gradientmap_pars_fragment>", SOFT_RAMP); }; return m; };
-// shading styles (options.shading.style): "toon" = flat bands (anime) / "soft" = the toon's colors, blended / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors
-export const SHADINGS = ["toon", "soft", "smooth", "flat"];
+// shading styles (options.shading.style): "toon" = flat bands (anime) / "soft" = the toon's colors, blended / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors /
+// "figure" = a painted figure (physically based, a thin gloss coat; no outlines). It wants the page's light as figureStage sets it
+export const SHADINGS = ["toon", "soft", "smooth", "flat", "figure"];
 export function shaded(style, c, bands = 2) {
   if (style === "smooth") return new THREE.MeshLambertMaterial({ color: c });
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
+  if (style === "figure") return new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.52, clearcoat: 0.35, clearcoatRoughness: 0.3 });
   if (style === "soft") return softToon(c);
   return toon(c, bands);
 }
@@ -170,6 +172,7 @@ export function withPaint(m, U, glsl) {
 const metalRamp = (() => { const d = new Uint8Array([78, 78, 86, 255, 180, 180, 186, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
+  if (style === "figure") return new THREE.MeshStandardMaterial({ color: c, metalness: 1, roughness: 0.28 });
   const m = style === "smooth" ? new THREE.MeshPhongMaterial({ color: c, shininess: 60, specular: 0x666666 }) : new THREE.MeshToonMaterial({ color: c, gradientMap: metalRamp });
   if (style !== "smooth") m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <opaque_fragment>", `{ vec3 n = normalize(normal); float f = n.z, g = dot(n, normalize(vec3(-0.35, 0.55, 0.76)));
       outgoingLight *= mix(0.5, 1.0, smoothstep(0.18, 0.32, f));   // darker rim where the plate turns away
@@ -188,3 +191,13 @@ export function outlineMat(w, color = 0x3a2a3a) {
 }
 export const CLAY = "#d6d6d4";
 export const clayMat = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.62, metalness: 0 });
+
+/** The page's light for shading.style "figure" (on) or as it was (off): a room to mirror and light from all round (scene.environment),
+ *  the scene's own lights lowered (the room lights most of it; the sun keeps its shadow). Nothing in the engine calls it: the renderer
+ *  and the scene are the page's. The engine's meshes take shadows in this style (createAvatar), so a sun with castShadow shades them. */
+let roomEnv = null;
+export async function figureStage(renderer, scene, on = true) {
+  if (on && !roomEnv) { const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js"); const p = new THREE.PMREMGenerator(renderer); roomEnv = p.fromScene(new RoomEnvironment(), 0.04).texture; p.dispose(); }
+  scene.environment = on ? roomEnv : null; 
+  scene.traverse((x) => { if (!x.isLight) return; x.userData.stageI ??= x.intensity; x.intensity = x.userData.stageI * (!on ? 1 : x.isDirectionalLight ? 0.75 : 0.12); });
+}

@@ -246,6 +246,13 @@
      }
     },
     {
+     "value": "figure",
+     "label": {
+      "ja": "フィギュア",
+      "en": "Figure"
+     }
+    },
+    {
      "value": "flat",
      "label": {
       "ja": "べた塗り",

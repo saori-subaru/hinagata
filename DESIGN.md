@@ -93,7 +93,7 @@ Two tiers, so the common knobs stay short and the sculpt details stay out of the
 {
   "colors": { "skin": "#ffe0c8", "hair": "#6a4a30", "eyes": "#4f6a9a" },
   "outline": { "on": true, "width": 1, "color": "#3a2a3a" },   // art style: some games want no outline. avatar.setOutline() changes it instantly
-  "shading": { "style": "toon", "bands": 2, "soften": 1 },   // "toon" (2 flat bands: light / shadow; bands: 3 adds a mid tone) | "smooth" (soft light falloff) | "flat" (no lighting). avatar.setShading() changes it instantly
+  "shading": { "style": "toon", "bands": 2, "soften": 1 },   // "toon" (2 flat bands: light / shadow; bands: 3 adds a mid tone) | "smooth" (soft light falloff) | "flat" (no lighting) | "figure" (a painted figure: physically based, no outlines; the page calls figureStage(renderer, scene) for its light). avatar.setShading() changes it instantly
   "face": {
     "parts": { "eyes": "round", "brows": "normal", "mouth": "smile", "cheeks": "none", "nose": null },   // ids in PART_LABELS (with ja / en names); "image" = a drawn part. nose null = follow noseShadow.on
     "images": { "eye": { "src": null }, "brow": { "src": null }, "mouth": { "src": null } },   // drawn parts (null = the bundled img/parts/*.png)

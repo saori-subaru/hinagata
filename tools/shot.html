@@ -17,7 +17,7 @@
 //   views: degrees round the figure (0 front, 90 her left side, 180 back, -90 her right), y: the heights shown (m), w: half the width shown (m),
 //   x: the middle of the picture sideways in the view (m), patch: options merged over the preset's (to try a value without editing presets.js)
 import * as THREE from "three";
-import { createAvatar, CHARACTERS } from "../src/index.js";
+import { createAvatar, CHARACTERS, figureStage } from "../src/index.js";
 
 const Q = new URLSearchParams(location.search), name = Q.get("only") || "subaru", nums = (k, d) => (Q.get(k) ?? d).split(",").map(Number);
 const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === "object" && !Array.isArray(v) && a[k] && typeof a[k] === "object" ? merge(a[k], v) : v; return a; };
@@ -31,6 +31,8 @@ try {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(W, H); renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
   scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+  if (av.options.shading.style === "figure") { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);   // the figure look: the room's light and the sun's shadow
+    Object.assign(sun.shadow.camera, { left: -1.2, right: 1.2, top: 1.8, bottom: -0.4, near: 0.5, far: 8 }); sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.004; sun.shadow.radius = 3; await figureStage(renderer, scene); }
   scene.add(av.object);
   const views = nums("views", "0,90,180"), sheet = document.createElement("canvas"); sheet.width = W * views.length; sheet.height = H; const g = sheet.getContext("2d");
   views.forEach((deg, i) => { const a = deg * Math.PI / 180, cam = new THREE.OrthographicCamera(-hw, hw, half, -half, 0.01, 20), r = [Math.cos(a), 0, -Math.sin(a)];   // r: the picture's right
