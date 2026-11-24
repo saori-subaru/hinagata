@@ -146,7 +146,7 @@ export const CHARACTERS = {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
         head: { scale: 0.84, width: 0.94, depth: 0.95, jawLength: 0.82 },   // a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
-        proportion: { legs: 1.35, torso: 1.4, feet: 1.5, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
+        proportion: { legs: 1.35, torso: 1.4, feet: 1.22, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { hipX: 0.11, footX: 0.13, kneeX: 0.118 },   // (his hip joints as before the default came in: the legs stand apart in his boots)
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): width 0.94, the neck, and profile, a dip under
@@ -154,7 +154,7 @@ export const CHARACTERS = {
         // napeCut: the back of his head scooped in to the neck in a hollow curve under the hair's hem (a ball down to the collar, the hair ended in a step over it).
         // chin.taper: the jaw in straight lines to a point, as on the sheet (round, the chin's middle hung below them as a knob; chin.sides for a V
         // creased the jaw under the ear)
-        sculpt: { neck: { width: 0.62 }, mouth: { profile: 2 }, chin: { taper: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
+        sculpt: { neck: { width: 0.62 }, mouth: { profile: 1 }, nose: { tipZ: 0.25 }, chin: { taper: 1 }, napeCut: { round: { y: 0.86, z: -0.31, r: 0.2, k: 0.05 } } },
       },
       hair: {
         // tufts (hair.tufts): on his sheet the hair is few big blocks from a whorl over his right brow, solid from the head out, their ends
@@ -201,7 +201,7 @@ export const CHARACTERS = {
       face: {   // his own pictures (the code's eyes have no lash this thick); the brows show over the bangs, as on the sheet
         parts: { eyes: "image", brows: "thinRoot", mouth: "image" },
         images: { eye: { src: ASTEL_EYE, dx: 0, dy: 0 }, eyeClosed: { src: ASTEL_EYE_CLOSED, dx: 0, dy: 0 }, mouth: { src: ASTEL_MOUTH } },
-        layout: { eyeX: 0.088, browX: 0.125, browY: 1.104, mouthY: 0.91 },   // the eyes where シルヴィ's are (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
+        layout: { eyeX: 0.098, browX: 0.133, browY: 1.104, mouthY: 0.91 },   // the eyes apart as シルヴィ's are for the head's width (0.088 left wide cheeks outside them beside her); their height hers (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
         browsOverHair: true,
         blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
