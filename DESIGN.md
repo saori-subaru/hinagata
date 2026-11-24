@@ -1232,11 +1232,13 @@ Saori, on 島風 as a chibi: "島風は後ろ髪みじかいんでしたっけ",
 - `outfit.suspenders` (garments/suspenders.js): ribbons on the clothes' outside (`outerSdf`), going out from a pivot in the chest at each angle from front over the shoulder to behind, x by the height (crossed: to the other side). Thin (2 mm): the collar lies over them at 5 mm.
 - `shoes.leaf`: the top's cut lowered by the angle round the leg (points at `leafAt`, a V in front and behind), its edge full near the points and steep into the V (straight: two horns over a wide V), the top hollowed from a 4 mm rim toward the leg (`leafDip`). On her sheet the side view's leaves differ from the front view's: hers follow the front.
 - `extras.ears "pod"`: an egg lying out from the head's top corner with a bent cone on its end; the inner mesh is its spots (the pod's surface 1.5 mm out inside small balls). `extras.tail "pod"`: one lock from the chest's back (`TAIL_BONE`), a stalk then the pod (`prof`), with a round ring (`createLocks` `round`: the lens ring made a fat lock a six-sided bar) and `keep` 0.7 (as a rope its bulb folded at every link).
+- What her sheet draws like a tail is hair: `hair.tail "curl"` (hair/locks.js `curlTail`), one round lock from a tie at the nape whose points are the roll's path itself, rigid 0.97 (or it uncoils); its end stays thick so the roll is solid to its middle. Its plane faces the side views (the sheet's front and back views disagree on its side).
+- Her brows lie under thick tufts: `face.browsOverHair` needs `face.browsPull` 0.18 (the default 0.045 stays under the bangs).
 - Her eyes are pictures at 2560 px per head unit (drawn from shapes off the sheet's close-up, 4× enlarged). `images.eyeL` is the other eye's own picture: mirrored, the highlight changes sides. Her eyes and mouth are where the default `face.layout` puts them.
 - Her hair is tufts (as アステル's), a bob: `hug` tucks the ends in under the head's widest part (straight down they hung as curtains beside the face), an inner layer under them with `shade`. `notch` over 0.2 cut the ends into long thin points, a broom.
-- One band at a sock's top: `socks.stripes.gap` wider than the sock is tall (the stripes repeat down from the top).
+- `socks.edge "scallop"`: the socks' top cut by `|sin|` of the angle round the shin's axis: pointed tips, round dips.
 - Arms hanging in `idle` go into the shorts' balloon: her stance (`standZundamon`) keeps them off the body.
-- Her sheet is not in the repository. 🚧 It has no back view: the suspenders are crossed behind by choice (`back "straight"` for the other way).
+- Her sheets are not in the repository. The second one (about 3.1 heads) replaced the first; its back view has the suspenders straight.
 
 ## The base body's bottom, legs and stance (every character)
 

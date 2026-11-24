@@ -442,6 +442,20 @@ export function tailLocks(T, { anchors, coll, ell, N = 14 }) {
   return out;
 }
 
+/** hair.tail kind "curl" (ずんだもん's): one round bundle from a tie at the nape, down and back (a little toward T.side: the roll faces the side views) and rolled up into about a turn,
+ *  its end thick and round so the roll is solid to its middle. T.length: from the tie to the roll's bottom (m), T.curlSize: the roll's radius to
+ *  its bundle's middle (m), T.width: the bundle's width. Its points are the path itself; keep it rigid (createLocks rigid), or it uncoils as a rope */
+export function curlTail(T, { p, o }) {
+  const S = T.size ?? 1, sd = T.side === "R" ? -1 : 1, e1 = [0.3 * sd, 0, -0.954], e2 = [0, 1, 0], R0 = (T.curlSize ?? 0.05) * S, TURN = 2 * Math.PI, NS = 24;
+  const at = (q, a, b) => q.map((c, i) => c + e1[i] * a + e2[i] * b), bot = at(p, 0.14 * S, -T.length * S), C = at(bot, 0, R0), pts = [];
+  const B = [p, p.map((c, i) => c + o[i] * 0.04 * S - (i === 1 ? 0.04 * S : 0)), at(bot, -0.05 * S, 0), bot];
+  for (let q = 0; q < 8; q++) { const t = q / 8, m = 1 - t; pts.push([0, 1, 2].map((k) => m * m * m * B[0][k] + 3 * m * m * t * B[1][k] + 3 * m * t * t * B[2][k] + t * t * t * B[3][k])); }
+  for (let q = 0; q <= NS; q++) { const a = TURN * q / NS, r = R0 * (1 - 0.78 * q / NS); pts.push(at(C, r * Math.sin(a), -r * Math.cos(a))); }
+  let len = 0; for (let q = 1; q < pts.length; q++) len += Math.hypot(...[0, 1, 2].map((k) => pts[q][k] - pts[q - 1][k]));
+  const T0 = 8 / (pts.length - 1), prof = (t) => t < T0 ? 0.55 + 0.45 * sstep(0, T0, t) : t < 0.93 ? 1 : Math.max(0.35, Math.sqrt(Math.max(0, 1 - ((t - 0.93) / 0.07) ** 2)));
+  return [{ root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof }];
+}
+
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
  *  just outside the hair and the head there. For an editor's handles (the same surface the bang locks lie on). */
 export function bangTipAt(angle, y, { surf, center, toRoot, hangY = 0.86 }) {   // below hangY the tuft hangs straight down: the tip is under where it leaves the head

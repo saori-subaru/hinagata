@@ -36,7 +36,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const faceMat = faceMatFor(OPT.shading.style);
   // face.browsOverHair: the brows on their own picture (the layer over the hair must show nothing else), BROWS.up higher on the head than the
   // face picture (a high brow, past its top at 1.12, isn't cut), on a layer drawn BROWS.pull nearer the camera than it is (index.js browLayer)
-  const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: 0.045 } : null;
+  const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: OPT.face.browsPull ?? 0.045 } : null;
   if (BROWS) { const c = BROWS.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; BROWS.ctx = c.getContext("2d");
     BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
   const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);

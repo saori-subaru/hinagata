@@ -20,7 +20,7 @@ import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
+import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, curlTail, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
 import { tailSpec, TAIL_BONE } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
@@ -760,14 +760,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     }
     if (tailsOn) {   // the ties: on the hair at an angle around the head (degrees, 0 = front; twin tails mirrored) and a height (head space)
       const K = bangKit(), D2R = Math.PI / 180, sd = TL.side === "R" ? -1 : 1;
-      const def = { pony: [[180, 1.13]], twin: [[105, 1.1], [-105, 1.1]], side: [[sd * 100, 1.07]] }[TL.kind] ?? [];
+      const def = { pony: [[180, 1.13]], twin: [[105, 1.1], [-105, 1.1]], side: [[sd * 100, 1.07]], curl: [[180, 0.86]] }[TL.kind] ?? [];
       const anchors = def.map(([a0, y0]) => { const a = (TL.angle ?? Math.abs(a0)) * (a0 < 0 ? -1 : 1) * (TL.kind === "side" ? sd * Math.sign(a0) : 1), y = TL.y ?? y0;
         const d = [Math.sin(a * D2R), 0, Math.cos(a * D2R)], c0 = [0, y, -0.005], t = surfaceAlong(K.surf, c0, d) + 0.004;
-        const up = TL.kind === "pony" ? 0.35 : 0.12, ol = Math.hypot(d[0], up, d[2]);   // outward: away from the head, a little up (a ponytail more)
+        const up = TL.kind === "pony" ? 0.35 : TL.kind === "curl" ? -0.3 : 0.12, ol = Math.hypot(d[0], up, d[2]);   // outward: away from the head, a little up (a ponytail more)
         return { p: HTr.fromHead(c0[0] + d[0] * t, c0[1], c0[2] + d[2] * t), o: [d[0] / ol, up / ol, d[2] / ol] }; });
       tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
-      out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
+      out.tails = TL.kind === "curl" ? part(curlTail(TL, anchors[0]), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, round: true, rigid: 0.97 })   // (a rope uncoils its roll)
+        : part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
         const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
           g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026);

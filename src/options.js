@@ -756,6 +756,9 @@ export const DEFAULTS = {
       "on": true,
       "color": "#f7f3ea",
       "top": 0.15,
+      "edge": "plain",
+      "edgeCount": 8,
+      "edgeDepth": 0.012,
       "stripes": {
         "on": false,
         "color": "#d8403a",
@@ -817,6 +820,7 @@ export const DEFAULTS = {
       "angle": null,
       "y": null,
       "length": 0.34,
+      "curlSize": 0.05,
       "volume": 0.04,
       "count": 14,
       "width": 0.055,
@@ -1106,6 +1110,7 @@ export const DEFAULTS = {
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,
+    "browsPull": 0.045,
     "parts": {
       "eyes": "round",
       "brows": "normal",

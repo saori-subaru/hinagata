@@ -414,7 +414,11 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     return (x, y, z) => { let d = 1; for (const q of parts) d = Math.min(d, dPrim(q, x, y, z)); return d; }; })() : null;   // (the top found from inside the shoe: lo starts above the sole, where it is inside)
   // 靴下: 形は足のまま、色だけ変える(体の表面にごく薄くかぶせる)
   const SOCK_TOP = FIT.socksTop ?? OPT.outfit.socks.top;   // 靴下のはき口の高さ
-  const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - SOCK_TOP);
+  // socks.edge "scallop": the top in points round the leg (count; depth m down to the round dips), angles round the shin's axis at the top
+  const SX = OPT.outfit.socks, SCAL = SX.edge === "scallop" ? { n: SX.edgeCount ?? 8, d: SX.edgeDepth ?? 0.012 } : null;
+  const skAxis = SCAL ? (() => { const a = J["lowerLeg.L"], b = J["foot.L"], k = (a[1] - SOCK_TOP) / (a[1] - b[1]); return [a[0] + (b[0] - a[0]) * k, a[2] + (b[2] - a[2]) * k]; })() : null;
+  const sockTop = SCAL ? (x, z) => SOCK_TOP - SCAL.d * Math.abs(Math.sin(SCAL.n / 2 * Math.atan2(Math.abs(x) - skAxis[0], z - skAxis[1]))) : () => SOCK_TOP;
+  const sockSdf = (x, y, z, B = bodySdf) => Math.max(B(x, y, z) - 0.0025, y - sockTop(x, z));
   // the full-body suit (outfit.suit; 2026-10-07, Saori: "プラグスーツのような全身スーツ"): the body itself 2.5 mm out (as the socks are), from a
   // high collar (higher at the back) down over the feet, cut off at the wrists. Its second color (collar, cuffs, boots, side panels): index.js
   const WRISTS = ["L", "R"].map((s) => { const h = J[`hand.${s}`], a = J[`lowerArm.${s}`], l = Math.hypot(h[0] - a[0], h[1] - a[1], h[2] - a[2]); return { h, d: [0, 1, 2].map((i) => (h[i] - a[i]) / l) }; });
