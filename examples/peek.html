@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hinagata peek</title>
+<!-- スマホでプリセットを1人だけ見る口。?p=astel(src/presets.js の名前)、?q=lite|game。エディタは重くてスマホで落ちる -->
+<style>html, body { margin: 0; height: 100%; background: #f0ece4; overflow: hidden; } canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#m { position: fixed; left: 8px; top: 8px; font: 13px sans-serif; color: #555; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas><div id="m">組み立て中…</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { createAvatar } from "../src/index.js";
+import { CHARACTERS } from "../src/presets.js";
+
+const q = new URLSearchParams(location.search), id = q.get("p") || "astel", ch = CHARACTERS[id];
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 50), A = +(q.get("a") ?? 204) * Math.PI / 180;   // ?a=向き(度。0=正面・90=横・180=後ろ。既定は後ろ斜めでマントが見える)
+camera.position.set(4 * Math.sin(A), 1.2, 4 * Math.cos(A));
+const controls = new OrbitControls(camera, renderer.domElement); controls.target.set(0, 0.85, 0); controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+const resize = () => { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
+addEventListener("resize", resize); resize();
+
+const avatar = await createAvatar(ch.file.options, { quality: q.get("q") || "lite" });
+avatar.update(0, { instant: true });
+avatar.object.scale.setScalar(1.7 / new THREE.Box3().setFromObject(avatar.object).getSize(new THREE.Vector3()).y);
+scene.add(avatar.object); if (ch.stand) avatar.play(ch.stand);
+document.getElementById("m").textContent = (ch.name?.ja ?? id) + "(指で回す)";
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => { avatar.update(clock.getDelta(), { camera }); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

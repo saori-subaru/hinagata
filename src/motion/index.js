@@ -18,6 +18,11 @@ import { LIMBS, ik2 } from "./ik.js";
 
 const sin = Math.sin, cos = Math.cos, mx = Math.max;
 const ARMS_DOWN = { "upperArm.L": [0, 0, -0.45], "upperArm.R": [0, 0, 0.45], "lowerArm.L": [0, 0, -0.08], "lowerArm.R": [0, 0, 0.08] };
+// standing at ease (idle): the pelvis tipped back and pushed forward over the feet, the legs slanting back from it (feet flat), the head
+// brought forward again: a slight S seen from the side, as illustrations stand. Straight up it read as a mannequin
+const STAND = (() => { const tilt = 0.05, leg = 0.08, arm = -0.06;   // radians: the pelvis back, the legs back of vertical, the arms forward (they hang as the torso leans)
+  return { hips: [-tilt, 0, 0], chest: [0.02, 0, 0], neck: [0.03, 0, 0], head: [0.03, 0, 0], "upperLeg.L": [tilt + leg, 0, 0], "upperLeg.R": [tilt + leg, 0, 0], "foot.L": [-leg, 0, 0], "foot.R": [-leg, 0, 0],
+    "upperArm.L": [arm, 0, -0.45], "upperArm.R": [arm, 0, 0.45] }; })();
 // 手をふる: 肩と二の腕は上げたまま止め、肘から先だけを体の正面の面で(z軸のまわりに)左右に振る。
 // 前腕をそのまま回すと(前腕の向きのまわりに回ると)前後に振れて見えるので、肘を中心に「正面から見た回転」をかけた向きを毎フレーム作る
 // 二の腕・前腕・手の向きは、手のひらが正面を向くように手首のひねりを小さく抑えて選んだ(上げた腕全体をひねると、ぐねって見えた)
@@ -52,7 +57,7 @@ const CHEER = { T: 1.4, H: 0.15, thigh: 0.75, knee: 1.3, LT: 0.19, LS: 0.165, po
 export const POSES = {
   "aPose": () => ({ b: {}, y: 0 }),
   "tPose": () => ({ b: { "shoulder.L": [0, 0, 0.15], "shoulder.R": [0, 0, -0.15], "upperArm.L": [0, 0, 0.65], "upperArm.R": [0, 0, -0.65] }, y: 0 }),   // arms straight out to the sides (the A-pose arm is about 46° down). The shoulders take a little of the lift (else the seam by the neck stretches into a step)
-  "idle": (t) => ({ b: { ...ARMS_DOWN, chest: [sin(t * 1.6) * 0.02, 0, 0], head: [sin(t * 0.8) * 0.04, sin(t * 0.5) * 0.12, sin(t * 0.7) * 0.05] }, y: 0 }),
+  "idle": (t) => ({ b: { ...ARMS_DOWN, ...STAND, chest: [STAND.chest[0] + sin(t * 1.6) * 0.02, 0, 0], head: [STAND.head[0] + sin(t * 0.8) * 0.04, sin(t * 0.5) * 0.12, sin(t * 0.7) * 0.05] }, y: 0 }),
   "walk": (t) => { const ph = t * 6.2, s = sin(ph), kL = 0.12 + 0.75 * mx(0, sin(ph + 1.9)), kR = 0.12 + 0.75 * mx(0, sin(ph + 1.9 + Math.PI));
     return { b: { hips: [0, s * 0.12, 0], spine: [0.05, -s * 0.08, 0], head: [0.02, -s * 0.05, 0], "upperLeg.L": [-0.5 * s, 0, 0], "upperLeg.R": [0.5 * s, 0, 0], "lowerLeg.L": [kL, 0, 0], "lowerLeg.R": [kR, 0, 0], "foot.L": [-0.25 * s - kL * 0.3, 0, 0], "foot.R": [0.25 * s - kR * 0.3, 0, 0],
       "upperArm.L": [0.5 * s, 0, -0.36], "upperArm.R": [-0.5 * s, 0, 0.36], "lowerArm.L": [-0.25 + 0.22 * s, 0, -0.05], "lowerArm.R": [-0.25 - 0.22 * s, 0, 0.05] }, y: Math.abs(cos(ph)) * 0.02, air: 1 }; },   // 腕は体から少し離し、後ろへ振ったときは肘を伸ばす
@@ -88,6 +93,22 @@ export const POSES = {
       "upperArm.L": [-1.25, 0, -0.25], "upperArm.R": [-1.25, 0, 0.25], "lowerArm.L": [0, 0, -1.25], "lowerArm.R": [0, 0, 1.25],
       // 丸まった背中: 背中の3か所を少しずつ曲げ、肩を前へ巻く。顔は起こして前を見る
       spine: [0.2, 0, 0], chest: [0.2, 0, 0], upperChest: [0.25, 0, 0], "shoulder.L": [0, -0.3, -0.06], "shoulder.R": [0, 0.3, 0.06], neck: [0.04, 0, 0], head: [-0.22 + sin(t * 1.2) * 0.04, 0, 0.12] }, y: -0.31 }),
+  // キャラごとの立ちポーズ(CHARACTERS の stand)
+  // シルヴィ: 内股で、腕は体から少し離して下ろし(Aポーズ寄り)、首をかしげる
+  "standSylvie": (t) => ({ b: { "upperLeg.L": [0, 0, -0.06], "upperLeg.R": [0, 0, 0.06], "foot.L": [0, -0.07, 0], "foot.R": [0, 0.07, 0], "upperArm.L": [0, 0, -0.28], "upperArm.R": [0, 0, 0.28], "lowerArm.L": [-0.08, 0, -0.06], "lowerArm.R": [-0.08, 0, 0.06],
+      chest: [sin(t * 1.6) * 0.02, 0, 0], head: [0.04 + sin(t * 0.8) * 0.02, 0, 0.17 + sin(t * 0.6) * 0.03] }, y: 0 }),
+  // アステル: 足を開いて胸を張り、左手を腰に。右腕は下ろす(胴に入らないよう少し外へ)
+  "standAstel": (t) => ({ b: { "upperLeg.L": [0.12, 0, 0.12], "upperLeg.R": [0.12, 0, -0.12], "foot.L": [-0.12, 0.15, -0.12], "foot.R": [-0.12, -0.15, 0.12],
+      "upperArm.L": [0.3, 0, -0.1], "lowerArm.L": [0, 0, -1.3], "upperArm.R": [0, 0, 0.3], "lowerArm.R": [-0.1, 0, 0.06],
+      spine: [-0.11, 0, 0], chest: [0.02 + sin(t * 1.6) * 0.02, 0, 0], head: [0.02, sin(t * 0.5) * 0.08, 0] }, y: 0 }),
+  // スバル(設定画の立ち方): 足を広めに開き、左手をパンツの前ポケットへ、右腕はまっすぐ下ろす。あごを少し引く
+  "standSubaru": (t) => ({ b: { "upperLeg.L": [0.12, 0, 0.13], "upperLeg.R": [0.12, 0, -0.09], "foot.L": [-0.12, 0.12, -0.13], "foot.R": [-0.12, -0.1, 0.09],
+      "upperArm.L": [0.1, 0, -0.33], "lowerArm.L": [-0.25, 0, -0.6], "upperArm.R": [0, 0, 0.42], "lowerArm.R": [-0.05, 0, 0.05],
+      spine: [-0.2, 0, 0], chest: [0.03 + sin(t * 1.6) * 0.015, 0, 0], head: [0.08, sin(t * 0.5) * 0.05, 0.05] }, y: 0 }),
+  // ずんだもん(設定画の立ち方): まっすぐ立ち、腕は体から離して下ろす(下ろしきると、ふくらんだパンツに手が入る)。首を少しかしげる
+  "standZundamon": (t) => ({ b: { "upperLeg.L": [0, 0, 0.03], "upperLeg.R": [0, 0, -0.03], "foot.L": [0, 0.06, -0.03], "foot.R": [0, -0.06, 0.03],
+      "upperArm.L": [0, 0, 0.12], "upperArm.R": [0, 0, -0.12], "lowerArm.L": [-0.1, 0, -0.05], "lowerArm.R": [-0.1, 0, 0.05],
+      chest: [sin(t * 1.6) * 0.02, 0, 0], head: [0.02 + sin(t * 0.8) * 0.02, 0, 0.07 + sin(t * 0.6) * 0.03] }, y: 0 }),
 };
 
 // Holding a weapon in the right hand (outfit.weapon.right), standing and walking change that arm (the elbow kept out from the side, not into it):

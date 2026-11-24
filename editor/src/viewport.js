@@ -1,7 +1,7 @@
 // The 3D view: camera and view buttons, light and floor, display aids (clay, wireframe, bones), background, motion clock, PNG capture.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { clayMat } from "hinagata/materials.js";
+import { clayMat, figureStage } from "hinagata/materials.js";
 import { createDemos } from "./demos.js";
 
 const VIEWS = {   // [camera position, target]
@@ -98,12 +98,14 @@ export function createViewport(canvas, stage) {
   // ── motion clock ──
   const M = { pose: "idle", playing: true, speed: 1 };
   let last = performance.now();
+  let figOn = false;
   const hooks = [];   // called after each frame is drawn (overlays that follow the camera: reference.js)
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (tween) { const k = Math.min(1, (now - tween.s) / 380), e = 1 - (1 - k) ** 3; camera.position.lerpVectors(tween.p0, tween.p1, e); controls.target.lerpVectors(tween.t0, tween.t1, e); if (k >= 1) tween = null; }
     if (avatar) { const d = M.playing ? dt * M.speed : 0; if (!demos.step(avatar, d)) avatar.update(d); chair.visible = !!avatar.lastPose?.chair; }
+    { const fig = avatar?.options.shading.style === "figure"; if (fig !== figOn) { figOn = fig; figureStage(renderer, scene, fig); } }   // the figure look brings its own light
     controls.update(); renderer.render(scene, camera);
     for (const f of hooks) f();
   }

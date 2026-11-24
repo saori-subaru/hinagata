@@ -32,14 +32,15 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const mainCtx = faceCanvas.getContext("2d"); let fctx = mainCtx;   // (the brows' own picture swaps in while they are drawn: BROWS)
   const faceTex = new THREE.CanvasTexture(faceCanvas); faceTex.colorSpace = THREE.SRGBColorSpace; faceTex.anisotropy = 4;
   // 顔の絵も体と同じ陰影で(光を無視すると暗い場所で目だけ光って見える)。setShading で作り直す
-  const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(shaded(style, 0xffffff, bands), { map: faceTex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const flatCoat = (m) => m.isMeshPhysicalMaterial ? Object.assign(m, { clearcoat: 0, roughness: 1, specularIntensity: 0 }) : m;   // (the pictures lie over the skin, which has the gloss)
+  const faceMatFor = (style, bands = OPT.shading.bands) => Object.assign(flatCoat(shaded(style, 0xffffff, bands)), { map: faceTex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
   const faceMat = faceMatFor(OPT.shading.style);
   // face.browsOverHair: the brows on their own picture (the layer over the hair must show nothing else), BROWS.up higher on the head than the
   // face picture (a high brow, past its top at 1.12, isn't cut), on a layer drawn BROWS.pull nearer the camera than it is (index.js browLayer)
-  const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: 0.045 } : null;
+  const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: OPT.face.browsPull ?? 0.045 } : null;
   if (BROWS) { const c = BROWS.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; BROWS.ctx = c.getContext("2d");
     BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
-  const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(shaded(style, 0xffffff, bands), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
+  const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(flatCoat(shaded(style, 0xffffff, bands)), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
   // ⏳ face.mouth3d (a try): an open mouth is a hole into a mouth made in 3D (index.js mouthInside), not a picture of its inside: from aside
   // the tongue lies behind the lips, not on the cheek like a sticker. The mouth's shape goes on HOLE's own picture; a layer drawn from it marks
   // the pixels (stencil bit 4: the hair takes 1 and 2, index.js) where the inside shows through the head. The lips' lines stay on the face's picture, over it

@@ -6,4 +6,7 @@ import "./headband.js";
 import "./shorts.js";
 import "./belt.js";
 import "./cuffs.js";
+import "./jacket.js";
+import "./suspenders.js";
+import "./blouse.js";
 export * from "./registry.js";

@@ -14,8 +14,8 @@ export function skirtOf(OPT) {
   // the hem's shape (2026-10-07, Saori: "スカートやワンピースの先を、おおきなギザギザにしたり、丸っこい段々にしたり、先端を上にカールさせて広げたり、逆にすぼめたり"):
   // hemShape "plain" | "zigzag" | "scallop" (round lobes) | "tiers" (stacked like ruffles), hemCount (around / tiers), hemDepth (m), curl (-1..1: + the hem flares out and up, − draws in)
   const PT = OPT.outfit.pants, D = OPT.outfit.dress, F = OPT.fit ?? {}, base = { hem: 0.3, flare: 0.4, pleats: 16, pleatDepth: 0.008, thick: 0.018, follow: 0.85, hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, ...(PT.skirt ?? {}), ...(F.skirtHem != null ? { hem: F.skirtHem } : {}) };   // (OPT.fit: the heights on the adult body, body/index.js adultFit)
-  const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl", "under", "underColor", "underPleats", "sideDrop", "sideAt", "sideOut", "middleBack", "cinch", "cinchAt", "tabDrop", "tabAt", "tabWidth"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, under: 0, underColor: null, underPleats: 24, sideDrop: 0, sideAt: 0.4, sideOut: 0.005, middleBack: true, cinch: 0, cinchAt: 0.55, tabDrop: 0, tabAt: 0.1, tabWidth: 0.04 }[k]]));
-  if (D?.on) return { ...base, ...shape(D), hem: F.dressHem ?? D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: F.dressWaist ?? D.waist ?? F.pantsTop ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
+  const shape = (o) => Object.fromEntries(["hemShape", "hemCount", "hemDepth", "curl", "under", "underColor", "underPleats", "sideDrop", "sideAt", "sideOut", "slit", "slitWidth", "slitX", "slitLean", "middleBack", "cinch", "cinchAt", "tabDrop", "tabAt", "tabWidth"].map((k) => [k, o?.[k] ?? { hemShape: "plain", hemCount: 10, hemDepth: 0.05, curl: 0, under: 0, underColor: null, underPleats: 24, sideDrop: 0, sideAt: 0.4, sideOut: 0.005, slit: 0, slitWidth: 0.012, slitX: null, slitLean: 0, middleBack: true, cinch: 0, cinchAt: 0.55, tabDrop: 0, tabAt: 0.1, tabWidth: 0.04 }[k]]));
+  if (D?.on) return { ...base, ...shape(D), thick: D.thick ?? base.thick, hem: F.dressHem ?? D.hem ?? base.hem, flare: D.flare ?? base.flare, pleats: D.pleats ?? base.pleats, pleatDepth: D.pleatDepth ?? base.pleatDepth, follow: D.follow ?? base.follow, top: F.dressWaist ?? D.waist ?? F.pantsTop ?? PT.top, tilt: D.tilt ?? PT.tilt, color: D.color ?? OPT.outfit.shirt.color, dress: true };
   return PT.kind === "skirt" ? { ...base, top: F.pantsTop ?? PT.top, tilt: PT.tilt, color: PT.color, dress: false } : null;
 }
 export const DEFAULTS = {
@@ -51,6 +51,7 @@ export const DEFAULTS = {
       "arms": 1.17,
       "hands": 1.1,
       "feet": 1,
+      "feetFrom": -0.04,
       "shoulders": 1
     },
     "head": {
@@ -71,16 +72,16 @@ export const DEFAULTS = {
       "chest": 0.95,
       "belly": 0.62,
       "waist": 0.028,
-      "hips": 0.85,
+      "hips": 0.72,
       "bust": 0,
       "butt": 1,
-      "back": 1
+      "back": 0.9
     },
     "thickness": {
       "upperArm": 0.71,
       "forearm": 0.71,
       "thigh": 0.61,
-      "thighTop": 0.61,
+      "thighTop": 0.53,
       "calf": 0.6
     },
     "adult": {
@@ -89,9 +90,9 @@ export const DEFAULTS = {
     },
     "joints": {
       "hipY": 0.44,
-      "hipX": 0.11,
-      "footX": 0.116,
-      "kneeX": 0.108
+      "hipX": 0.1,
+      "footX": 0.09,
+      "kneeX": 0.08
     },
     "knees": {
       "blush": {
@@ -113,6 +114,7 @@ export const DEFAULTS = {
       "hand": {
         "slim": null,
         "fingers": null,
+        "length": 1,
         "rings": true
       },
       "waist": {
@@ -120,6 +122,13 @@ export const DEFAULTS = {
         "height": 0.07,
         "width": 0.09,
         "x": 0.225,
+        "blend": 0.04
+      },
+      "buttCrease": 0.016,
+      "lumbar": {
+        "depth": 0.03,
+        "y": 0.565,
+        "height": 0.075,
         "blend": 0.04
       },
       "skull": {
@@ -130,14 +139,15 @@ export const DEFAULTS = {
       },
       "neck": {
         "width": 0.85,
+        "depth": 1,
         "length": 0,
         "follow": 1,
         "nape": {
           "on": true,
           "y0": 0.82,
           "y1": 0.96,
-          "z0": -0.025,
-          "z1": -0.035,
+          "z0": -0.008,
+          "z1": -0.018,
           "r": 0.04,
           "k": 0.04
         }
@@ -428,7 +438,7 @@ export const DEFAULTS = {
           "depth": 0.058
         }
       },
-      "legShape": 0,
+      "legShape": 1,
       "crotch": {
         "y": 0.29,
         "width": 0.025,
@@ -478,6 +488,7 @@ export const DEFAULTS = {
         "opacity": 1,
         "blend": "over"
       },
+      "picture": { "src": null, "opacity": 1, "blend": "over" },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -486,6 +497,7 @@ export const DEFAULTS = {
       },
       "sleeve": "short",
       "bell": 0.08,
+      "sleeveWidth": null,
       "length": "tuck",
       "crop": 0.6,
       "underarm": "fit",
@@ -532,6 +544,7 @@ export const DEFAULTS = {
       "hem": 0.16,
       "flare": 0.3,
       "wrap": 0.05,
+      "shape": [],
       "collar": 0.78,
       "thick": 0.018,
       "sway": 1,
@@ -539,12 +552,16 @@ export const DEFAULTS = {
       "front": "open",
       "over": "arms",
       "close": 0.7,
+      "closeX": 0,
       "open": 0.6,
       "sideEdge": 0.02,
       "tilt": 0,
       "hood": false,
       "hoodRim": true,
       "hoodSize": 1,
+      "cowl": 0,
+      "cowlRoll": 0,
+      "cowlRoll2": 0,
       "neckOpen": null,
       "line": null,
       "lineIn": 0.012,
@@ -575,6 +592,7 @@ export const DEFAULTS = {
       "flare": 0.45,
       "pleats": 12,
       "pleatDepth": 0.006,
+      "thick": null,
       "follow": 0.3,
       "hemShape": "plain",
       "hemCount": 10,
@@ -586,6 +604,10 @@ export const DEFAULTS = {
       "sideDrop": 0,
       "sideAt": 0.4,
       "sideOut": 0.005,
+      "slit": 0,
+      "slitWidth": 0.012,
+      "slitX": null,
+      "slitLean": 0,
       "middleBack": true,
       "cinch": 0,
       "cinchAt": 0.55,
@@ -604,6 +626,7 @@ export const DEFAULTS = {
         "opacity": 1,
         "blend": "over"
       },
+      "picture": { "src": null, "opacity": 1, "blend": "over" },
       "gradient": {
         "on": false,
         "color": "#ffffff",
@@ -633,6 +656,10 @@ export const DEFAULTS = {
         "sideDrop": 0,
         "sideAt": 0.4,
         "sideOut": 0.005,
+        "slit": 0,
+        "slitWidth": 0.012,
+        "slitX": null,
+        "slitLean": 0,
         "middleBack": true,
         "cinch": 0,
         "cinchAt": 0.55,
@@ -643,6 +670,14 @@ export const DEFAULTS = {
       "hem": 0.3,
       "offset": 0.011,
       "puff": 0,
+      "puffTop": null,
+      "puffAt": 0.55,
+      "puffStart": 0,
+      "puffFront": 1,
+      "puffBack": 1,
+      "cuff": 0,
+      "cuffOut": 0.004,
+      "cuffColor": null,
       "bell": 0,
       "top": 0.505,
       "tilt": 0.12
@@ -665,6 +700,7 @@ export const DEFAULTS = {
       "ears": "none",
       "earColor": null,
       "earInColor": "#f2b9c2",
+      "earSize": 1,
       "tail": "none",
       "tailColor": null,
       "tailSize": 1,
@@ -692,6 +728,15 @@ export const DEFAULTS = {
       "cuff": 0,
       "cuffOut": 0.006,
       "cuffColor": null,
+      "cuffTube": false,
+      "toeCap": 0,
+      "width": 1,
+      "shaft": 0,
+      "toeLow": 0,
+      "archCut": 0,
+      "archLen": 0,
+      "archSlant": 1,
+      "heelBlock": 0,
       "straps": 0,
       "strapColor": "#f4f1ea",
       "strapAt": 0.03,
@@ -699,6 +744,9 @@ export const DEFAULTS = {
       "strapGap": 0.014,
       "notch": 0,
       "notchWidth": 0.024,
+      "leaf": 0,
+      "leafAt": 90,
+      "leafDip": 0.015,
       "on": true,
       "color": "#c8564b",
       "soleColor": "#f4f1ea",
@@ -712,6 +760,9 @@ export const DEFAULTS = {
       "on": true,
       "color": "#f7f3ea",
       "top": 0.15,
+      "edge": "plain",
+      "edgeCount": 8,
+      "edgeDepth": 0.012,
       "stripes": {
         "on": false,
         "color": "#d8403a",
@@ -757,6 +808,8 @@ export const DEFAULTS = {
     "whorl": {
       "x": 0,
       "z": 0,
+      "lineFrom": 0,
+      "taper": 0,
       "stiff": 4
     },
     "gradient": {
@@ -773,6 +826,9 @@ export const DEFAULTS = {
       "angle": null,
       "y": null,
       "length": 0.34,
+      "curlSize": 0.05,
+      "line": 0,
+      "reach": 0.14,
       "volume": 0.04,
       "count": 14,
       "width": 0.055,
@@ -928,7 +984,19 @@ export const DEFAULTS = {
       },
       "shortBack": 0.86,
       "shell": 0.036,
+      "dome": { "on": false, "front": 45, "back": 115, "soft": 40 },
+      "cap": {
+        "thick": 0,
+        "r": 50
+      },
       "lockShell": 0.016,
+      "whorl": {
+        "on": true,
+        "th": 180,
+        "ph": 80,
+        "r": 0.06,
+        "rootW": 0.6
+      },
       "ahogeSize": 1.15,
       "ahogeWidth": 1,
       "ahogeDir": 90,
@@ -944,6 +1012,9 @@ export const DEFAULTS = {
         "width": 0.075,
         "thick": 0.3,
         "flick": 0,
+        "fan": 0,
+        "wave": 0,
+        "waves": 1.5,
         "edits": [],
         "stiff": 1,
         "damping": 0.9,
@@ -1052,6 +1123,7 @@ export const DEFAULTS = {
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,
+    "browsPull": 0.045,
     "parts": {
       "eyes": "round",
       "brows": "normal",
@@ -1315,22 +1387,25 @@ export function diff(base, opt) {
 //     version 4 (2026-10-10, Saori: "4.5くらいにしたい", the 6-head adult body being made) the head 0.64: 4.48 heads (was 0.7: 4.19);
 //     version 5 (the same day, Saori: 島風 as a chibi lost her long hair) hair.sculpt.long.bottom in base space (the body before
 //     body.proportion stretches it, as the clothes' heights): it was the tips' height on the character as built, so a shorter body left the
-//     hair no length. Older files are carried over (longBottom): read into base space, written back as they were.
+//     hair no length. Older files are carried over (longBottom): read into base space, written back as they were;
+//     version 6: the hair's locks from the whorl with no block under them (hair.sculpt.whorl.on, where the style has a way: hairKit.whorlOn).
 //   - Recipes stored without a version are version 1 (the chibi defaults): bare recipe files (character.json as the sync helper and
 //     agents wrote them before), { "hinagata": 1, … } files, the editor's characters saved in a browser before, ?o= links made before.
 //   - A bare options object in code (createAvatar({ … })) is today's: the current defaults.
-export const RECIPE_VERSION = 5;
+export const RECIPE_VERSION = 6;
 /** For each version: the defaults it changed, as they were before it (OLD_DEFAULTS[2] = version 1's chibi body, OLD_DEFAULTS[3] = version 2's tall body,
  *  OLD_DEFAULTS[4] = version 3's head). */
 export const OLD_DEFAULTS = {
   2: { body: {   // the chibi (about 3 heads; the values BODY_TYPES.toddler has): the default body until 2026-10-06
     proportion: { legs: 1, torso: 1 }, head: { scale: 0.9 },
     torso: { chest: 1, belly: 1, waist: 0, hips: 1, bust: 0, butt: 1, back: 1 },
-    thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 } } },
+    thickness: { upperArm: 1, forearm: 1, thigh: 1, thighTop: 0.9, calf: 1 },
+    sculpt: { legShape: 0.6, hand: { slim: 0 } } } },   // (the chibi's legs: at the tall default's 1 they bowed; its round hand)
   3: { body: {   // the first tall default (about 4 heads: 3.9 measured, chin to crown against the height): 2026-10-06, until the same evening
     proportion: { legs: 1.65, arms: null, hands: 1, shoulders: 1 }, head: { scale: 0.82 } } },   // (arms null: they stretched with the torso)
   4: { body: { head: { scale: 0.7 } } },   // the tall default at 4.19 heads (measureCharacter: chin to crown against the height): 2026-10-06 to 10-10
   5: { hair: { sculpt: { long: { bottom: 0.55 } } } },   // the long hair's tips at 0.55 as built (version 4 and before; longBottom carries it over)
+  6: { hair: { sculpt: { whorl: { on: false, r: 0.12, rootW: 0.35 } } } },   // the block under the locks (version 5 and before); a whorl set on kept these
 };
 // version 4 and before: hair.sculpt.long.bottom was the tips' height on the character as built. To base space (reading an old file) or back
 // (writing one), on that recipe's own body

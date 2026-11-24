@@ -1,19 +1,19 @@
 // Accessories (options.accessories, 2026-10-05, Saori: Nahida's leaf hair ornament and golden anklets): small pieces stuck on the character,
 // each riding on one bone. Not shapes in the body's distance field: plain little meshes (fast to add and move in an editor).
-// An item: { kind, bone, at: [x, y, z], n: [x, y, z], spin (degrees), size (m), color, mirror }
+// An item: { kind, bone, at: [x, y, z], n: [x, y, z], spin (degrees), size (m), color, mirror, lift (m), outline (m), metal }
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), button, anchor, cross (an X),
-// tassel and tab (hanging down from where they are put), buckle (a frame), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), peaPod (a pod lying across), button, anchor, cross (an X),
+// tassel, tab and strap (hanging down from where they are put; a strap: a narrow belt end, 1 long), buckle (a frame), pinBuckle (a thin frame with a prong), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "tab", "cord"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "strap", "cord", "dome", "ribbonEnd", "peaPod"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
-function flat(shape, depth) {   // a flat shape with rounded edges, its back on z = 0
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: 0.04, bevelSegments: 2, curveSegments: 10 });
+function flat(shape, depth, bevel = 0.04) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: depth * 0.6, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 });
   g.translate(0, 0, depth * 0.6); return g;
 }
 function merge(list) {   // geometries (position + normal, indexed or not) → one
@@ -35,14 +35,28 @@ const SHAPES = {
     const c = new THREE.SphereGeometry(0.13, 10, 8); c.scale(1, 1, 0.7); c.translate(0, 0, 0.14); parts.push(c); return merge(parts); },
   star: () => { const s = new THREE.Shape(); for (let i = 0; i <= 10; i++) { const a = Math.PI / 2 + i / 10 * Math.PI * 2, r = i % 2 ? 0.21 : 0.5; s[i ? "lineTo" : "moveTo"](Math.cos(a) * r, Math.sin(a) * r); }
     const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
-  // a four-pointed star cut in facets (for アステル's clasp): a ridge from the raised middle to each point, the lower point a little longer.
-  // Its facets keep their own normals (flat): each point reads as a light half and a dark one
-  star4: () => { const T = [[0, 0.5], [0.46, 0], [0, -0.56], [-0.46, 0]], V = 0.14, R = 0.045, TOP = 0.21, ring = [];
-    T.forEach(([x, y], i) => { const [nx, ny] = T[(i + 1) % 4]; ring.push([x, y], [Math.sign(x + nx) * V, Math.sign(y + ny) * V]); });   // point, valley, point, …
-    const P = [], tri = (a, b, c) => P.push(...a, ...b, ...c);
-    for (let i = 0; i < 8; i++) { const a = ring[i], b = ring[(i + 1) % 8];
-      tri([0, 0, TOP], [...b, R], [...a, R]); tri([...a, R], [...b, R], [...b, 0]); tri([...a, R], [...b, 0], [...a, 0]); tri([0, 0, 0], [...a, 0], [...b, 0]); }   // a facet, its rim, the back
-    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals(); return g; },
+  // a four-pointed star cut in facets (for アステル's clasp), as on his sheet: about as wide as tall, the lower point longer, fat points with
+  // straight sides into round valleys (sharp valleys read hard; sides curved all along, a sparkle). A ridge from the raised middle to each
+  // point; each facet keeps one normal (flat). Painted as drawn (userData.bands, index.js makeAccessories): the facets facing away from the
+  // upper right darker (the scene's sun lit every facet alike), a thin light line along each ridge (a metal glint lit a whole facet white).
+  // bandT: how far from its facet's ridge (units), + 2 on a dark facet. The back's rim normals lean out: seen face-on the outline had nothing to push out
+  star4: () => { const T = [[0, 0.45], [0.5, 0], [0, -0.55], [-0.5, 0]], V = 0.17, RV = 0.3, R = 0.045, TOP = 0.21, K = 8, W = 0.006, P = [], N = [], B = [];
+    const put = (p, n, b) => { P.push(...p); N.push(...n); B.push(b); }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], unit = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
+    for (let i = 0; i < 4; i++) { const a = T[i], b = T[(i + 1) % 4], v = [Math.sign(a[0] + b[0]) * V, Math.sign(a[1] + b[1]) * V];
+      // the side from point a to point b (clockwise): straight to RV of the way from the valley's corner, round through it (a quadratic), straight on
+      const f1 = [0, 1].map((m) => v[m] + (a[m] - v[m]) * RV), f2 = [0, 1].map((m) => v[m] + (b[m] - v[m]) * RV), lerp = (p, q, t) => [0, 1].map((m) => p[m] + (q[m] - p[m]) * t);
+      const at = (t) => t < 0.25 ? lerp(a, f1, t * 4) : t > 0.75 ? lerp(f2, b, t * 4 - 3) : ((s) => [0, 1].map((m) => (1 - s) ** 2 * f1[m] + 2 * (1 - s) * s * v[m] + s * s * f2[m]))(t * 2 - 0.5);
+      const dir = (t) => t < 0.25 ? [f1[0] - a[0], f1[1] - a[1]] : t > 0.75 ? [b[0] - f2[0], b[1] - f2[1]] : ((s) => [0, 1].map((m) => (1 - s) * (v[m] - f1[m]) + s * (f2[m] - v[m])))(t * 2 - 0.5);
+      const out = (s) => s === 0 ? unit(a) : s === 2 * K ? unit(b) : ((d) => unit([-d[1], d[0]]))(dir(s / (2 * K)));   // outward: the side's direction turned left (at a point straight out, so the outline closes there)
+      const C = Array.from({ length: 2 * K + 1 }, (_, s) => at(s / (2 * K))), mid = C[K];
+      for (const [tip, s0] of [[a, 0], [b, K]]) {   // point a's facet (to the valley's middle), then point b's
+        const n = unit(cross([tip[0], tip[1], R - TOP], [mid[0], mid[1], R - TOP]).map((x, _, l) => x * Math.sign(l[2]))), L = Math.hypot(...tip), o = n[0] + n[1] < 0 ? 2 : 0, d = (p) => o + Math.abs(tip[0] * p[1] - tip[1] * p[0]) / L;
+        for (let s = s0; s < s0 + K; s++) { put([0, 0, TOP], n, o); put([...C[s + 1], R], n, d(C[s + 1])); put([...C[s], R], n, d(C[s])); } }
+      for (let s = 0; s < 2 * K; s++) { const p = C[s], q = C[s + 1], op = out(s), oq = out(s + 1), np = [...op, 0], nq = [...oq, 0], bp = unit([...op, -0.6]), bq = unit([...oq, -0.6]);
+        put([...p, R], np, -9); put([...q, R], nq, -9); put([...q, 0], nq, -9); put([...p, R], np, -9); put([...q, 0], nq, -9); put([...p, 0], np, -9);   // the rim
+        put([0, 0, 0], [0, 0, -1], -9); put([...p, 0], bp, -9); put([...q, 0], bq, -9); } }   // the back
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3)); g.setAttribute("bandT", new THREE.Float32BufferAttribute(B, 1));
+    g.userData.bands = [[1.5, 9, "dark"], [-1, W, "light"], [1.5, 2 + W, "light"]]; return g; },
   ball: () => { const g = new THREE.SphereGeometry(0.5, 16, 12); g.translate(0, 0, 0.42); return g; },
   // a bow (2026-10-07, for a 超絶美少女's hair): two loops puffed out and swept back a little, a knot, two tails with V-cut ends.
   // Cloth, so its normals are smoothed (the leaf's facets would show on its soft curves)
@@ -71,9 +85,31 @@ const SHAPES = {
     const g = merge(parts); g.translate(0, 0, 0.15); return g; },
   buckle: () => { const box = (p, w, h, r) => { p.moveTo(-w + r, -h); p.lineTo(w - r, -h); p.quadraticCurveTo(w, -h, w, -h + r); p.lineTo(w, h - r); p.quadraticCurveTo(w, h, w - r, h); p.lineTo(-w + r, h); p.quadraticCurveTo(-w, h, -w, h - r); p.lineTo(-w, -h + r); p.quadraticCurveTo(-w, -h, -w + r, -h); return p; };
     const s = box(new THREE.Shape(), 0.5, 0.35, 0.1); s.holes.push(box(new THREE.Path(), 0.3, 0.16, 0.05)); const g = flat(s, 0.08); g.computeVertexNormals(); return g; },
+  // a belt buckle with its prong (for アステル's): a thin frame 0.84 high, the prong's tip coming in from its left side at the middle, 1 wide.
+  // Its bevel small: the buckle's 0.04 rounds every edge out, and a thin frame came out as thick as the buckle's
+  pinBuckle: () => { const W = 0.49, H = 0.41, F = 0.06, iw = W - F, ih = H - F, r = 0.07, ri = 0.03, PL = 0.2, PH = 0.06, s = new THREE.Shape(), h = new THREE.Path();
+    s.moveTo(-W + r, -H); s.lineTo(W - r, -H); s.quadraticCurveTo(W, -H, W, -H + r); s.lineTo(W, H - r); s.quadraticCurveTo(W, H, W - r, H); s.lineTo(-W + r, H); s.quadraticCurveTo(-W, H, -W, H - r); s.lineTo(-W, -H + r); s.quadraticCurveTo(-W, -H, -W + r, -H);
+    h.moveTo(-iw, -ih + ri); h.lineTo(-iw, -PH); h.lineTo(-iw + PL, -PH); h.lineTo(-iw + PL, PH); h.lineTo(-iw, PH); h.lineTo(-iw, ih - ri); h.quadraticCurveTo(-iw, ih, -iw + ri, ih); h.lineTo(iw - ri, ih);
+    h.quadraticCurveTo(iw, ih, iw, ih - ri); h.lineTo(iw, -ih + ri); h.quadraticCurveTo(iw, -ih, iw - ri, -ih); h.lineTo(-iw + ri, -ih); h.quadraticCurveTo(-iw, -ih, -iw, -ih + ri);
+    s.holes.push(h); const g = flat(s, 0.05, 0.012); g.computeVertexNormals(); return g; },
   cord: () => { const g = new THREE.CapsuleGeometry(0.06, 0.88, 4, 10); g.rotateZ(Math.PI / 2); g.translate(0, 0, 0.06); return g; },
   tab: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.05); s.lineTo(w, 0.05); s.lineTo(w, -1); s.lineTo(0, -0.88); s.lineTo(-w, -1); s.lineTo(-w, 0.05);
     const g = flat(s, 0.05); g.computeVertexNormals(); return g; },
+  // a strap (for スバル's belt end): a narrow strip hanging down, 1 long and 0.13 wide, cut square (the tab is short and wide: at a strap's length it was a board)
+  strap: () => { const s = new THREE.Shape(), w = 0.065; s.moveTo(-w, 0.03); s.lineTo(w, 0.03); s.lineTo(w, -1); s.lineTo(-w, -1); s.lineTo(-w, 0.03);
+    const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
+  // a dome (for ずんだもん's brooch: a round stone on a button's rim): smooth and low, 1 across
+  dome: () => { const pts = []; for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI / 2; pts.push(new THREE.Vector2(0.5 * Math.cos(a), 0.3 * Math.sin(a))); } const g = new THREE.LatheGeometry(pts, 24); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
+  // a ribbon's end (ずんだもん's): a strip hanging down, 1 long and 0.36 wide, its end cut aslant (lower on its +x side; mirrored for the other one)
+  ribbonEnd: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.04); s.lineTo(w, 0.04); s.lineTo(w, -1); s.lineTo(-w, -0.8); s.lineTo(-w, 0.04);
+    const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
+  // a pea pod lying across (ずんだもん's brooch): 1 long, three peas swelling its upper side, its pointed ends turned up
+  peaPod: () => { const NX = 28, NR = 14, P = [], I = [];
+    for (let i = 0; i <= NX; i++) { const x = -0.5 + i / NX, e = Math.sqrt(Math.max(0, 1 - 4 * x * x)), pea = 0.5 + 0.5 * Math.cos(Math.PI * 2 * x / 0.29), cy = 0.32 * x * x * 4 * 0.5 - 0.04;
+      for (let j = 0; j < NR; j++) { const a = j / NR * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a), r = 0.15 * e * (1 + (sn > 0 ? 0.6 * pea * sn : 0) + 0.12 * pea * Math.abs(c));
+        P.push(x, cy + r * sn, 0.11 * Math.pow(e, 0.7) * (1 + 0.25 * pea) * (1 + c) * 0.5 + 0.0); } }
+    for (let i = 0; i < NX; i++) for (let j = 0; j < NR; j++) { const a = i * NR + j, b = i * NR + (j + 1) % NR, c = a + NR, d = b + NR; I.push(a, c, b, b, c, d); }
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
   button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
   // an anchor (2026-10-10, for 島風): the shank with a ring on top and the stock across under it, the arms curving up to the flukes; 1 tall,

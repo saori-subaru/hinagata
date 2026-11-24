@@ -107,6 +107,7 @@ function applyInstant(av, p, v) {
     case "setBangs": av.setBangs({ [last]: structuredClone(v) }, k[2]); return true;   // hair.sculpt.<nendo | hime | side>.<key>
     case "setPaint": av.setPaint(k[1], v); return true;
     case "setTexture": av.setTexture(k[1], { [last]: v }); return true;
+    case "setPicture": av.setPicture(k[1], { [last]: v }); return true;   // a part's drawn picture (outfit.jacket.picture)
     case "setGradient": av.setGradient(k[0] === "hair" ? "hair" : k[1], { [last]: v }); return true;
     case "setTails": av.setTails(k[2] === "tie" ? { tie: { [last]: v } } : { [last]: v }); vp.apply(); ties.refresh(); return true;
     case "setDrawn": av.setDrawnHair(structuredClone(v)); return true;
@@ -288,6 +289,7 @@ const QUICK = ["idle", "walk", "run", "wave", "cheer", "guard", "aPose", "tPose"
 const MOTION_GROUPS = [
   ["demo", null],
   ["basic", ["idle", "walk", "run", "sneak", "wave", "cheer", "dance", "banzai", "aPose", "tPose"]],
+  ["stand", ["standSylvie", "standAstel", "standSubaru", "standZundamon"]],
   ["sit", ["sitChair", "sitChairGirl", "sitFloor", "hugKnees", "sleep"]],
   ["jump", ["jumpCrouch", "jumpRise", "jumpLeap", "jumpAir", "jumpLand", "fall", "hardLand", "stumble", "roll", "knockdown"]],
   ["climb", ["climb", "mantleReach", "mantlePull", "mantleKnee", "climbOver", "vault", "hang", "shimmy", "glide", "balance", "balanceWalk", "slide"]],
@@ -344,7 +346,7 @@ function renderLibrary() {
   // プリセット（src/presets.js）：押すと、そのキャラの写しが一覧に増える
   const L = (x) => x[getLang()] ?? x.ja;
   $("libPresets").replaceChildren(h("div", { class: "lib-presets-h" }, t("fromPreset")), ...Object.values(CHARACTERS).map((p) => h("button", { class: "chip", type: "button", title: L(p.about),
-    onclick: () => { store.commit(); persist(); const s = recipeIn(p.file); switchTo(addChar(lib, L(p.name), s.recipe)); } }, `${L(p.name)}（${L(p.about)}）`)));
+    onclick: () => { store.commit(); persist(); if (p.stand) pickMotion(p.stand); const s = recipeIn(p.file); switchTo(addChar(lib, L(p.name), s.recipe)); } }, `${L(p.name)}（${L(p.about)}）`)));
 }
 const drawer = (on) => { $("drawer").hidden = $("scrim").hidden = !on; if (on) { renderLibrary(); $("libClose").focus(); } else $("libBtn").focus(); };
 $("libBtn").addEventListener("click", () => drawer(true));

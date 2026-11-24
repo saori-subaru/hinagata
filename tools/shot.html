@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Hinagata — shots of a preset</title>
+<style>body { margin: 0; padding: 12px; background: #f0ece4; font: 13px sans-serif; } img { max-width: 100%; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<p id="state">building…</p>
+<img id="sheet">
+<script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
+<script type="module">
+// Shots of a preset from given sides, in a row (for fitting a character to its design sheet: shoot, compare, change, shoot again).
+// Run: node tools/shot.mjs subaru [--views 0,90,180] [--y 0,0.5] [--w 0.3] [--x 0] [--px 900] [--pose idle|aPose|walk…] [--quality fine] [--patch '{"outfit":{…}}'] [--name boots] [--lean 1]
+//   lean: lines at the head's middle (red) and the ankles' (blue); the table gives the lean in mm (+ = forward; a stance stands upright near 0)
+//   views: degrees round the figure (0 front, 90 her left side, 180 back, -90 her right), y: the heights shown (m), w: half the width shown (m),
+//   x: the middle of the picture sideways in the view (m), patch: options merged over the preset's (to try a value without editing presets.js)
+import * as THREE from "three";
+import { createAvatar, CHARACTERS, figureStage } from "../src/index.js";
+
+const Q = new URLSearchParams(location.search), name = Q.get("only") || "subaru", nums = (k, d) => (Q.get(k) ?? d).split(",").map(Number);
+const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && typeof v === "object" && !Array.isArray(v) && a[k] && typeof a[k] === "object" ? merge(a[k], v) : v; return a; };
+try {
+  const file = structuredClone(CHARACTERS[name].file); if (Q.get("patch")) merge(file.options, JSON.parse(Q.get("patch")));
+  const av = await createAvatar(file, { quality: Q.get("quality") || "fine", cache: false });
+  av.play(Q.get("pose") || "idle", { blend: 0 }); av.update(0, { instant: true, t: 0 });
+  await new Promise((r) => setTimeout(r, 600));   // a face's pictures (data URLs) are decoded after the avatar is made
+  const box = new THREE.Box3().setFromObject(av.object), [y0, y1] = Q.get("y") ? nums("y") : [box.min.y - 0.03, box.max.y + 0.03], H = +(Q.get("px") || 900);
+  const half = (y1 - y0) / 2, cy = (y0 + y1) / 2, hw = +(Q.get("w") || half / 1.6), W = Math.round(H * hw / half), cx = +(Q.get("x") || 0);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(W, H); renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+  const FIG = av.options.shading.style === "figure"; let draw = (cam) => renderer.render(scene, cam);
+  if (FIG) { renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.VSMShadowMap; await figureStage(renderer, scene);   // the figure look: the studio's light, shade in the creases (GTAO)
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(3, 48), new THREE.ShadowMaterial({ opacity: 0.28 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+    const [{ EffectComposer }, { RenderPass }, { GTAOPass }, { OutputPass }] = await Promise.all(["EffectComposer", "RenderPass", "GTAOPass", "OutputPass"].map((n) => import(`three/addons/postprocessing/${n}.js`)));
+    draw = (cam) => { const c = new EffectComposer(renderer), ao = new GTAOPass(scene, cam, W, H); ao.updateGtaoMaterial({ radius: 0.05, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 16 }); ao.blendIntensity = +(Q.get("ao") ?? 1);
+      c.addPass(new RenderPass(scene, cam)); c.addPass(ao); c.addPass(new OutputPass()); c.render(); }; }
+  scene.add(av.object);
+  const views = nums("views", "0,90,180"), sheet = document.createElement("canvas"); sheet.width = W * views.length; sheet.height = H; const g = sheet.getContext("2d");
+  views.forEach((deg, i) => { const a = deg * Math.PI / 180, PD = +(Q.get("persp") || 0), fv = 2 * Math.atan(half / (PD || 1)) * 180 / Math.PI, cam = PD ? new THREE.PerspectiveCamera(fv, W / H, 0.05, 40) : new THREE.OrthographicCamera(-hw, hw, half, -half, 0.01, 20), r = [Math.cos(a), 0, -Math.sin(a)], D = PD || 4, up = PD ? +(Q.get("up") || 0) : 0;   // persp=<distance, m>: a camera with perspective from there, up=<m> higher than what it looks at   // r: the picture's right
+    cam.position.set(Math.sin(a) * D + r[0] * cx, cy + up, Math.cos(a) * D + r[2] * cx); cam.lookAt(r[0] * cx, cy, r[2] * cx); av.update(0, { camera: cam }); draw(cam); g.drawImage(renderer.domElement, i * W, 0); });
+  // lean (mm, + = forward): the head's middle against the ankles' middle, front to back (she faces +z). Upright reads about 0
+  const P = (k, v = new THREE.Vector3()) => av.bones[k].getWorldPosition(v), hq = av.bones.head.getWorldQuaternion(new THREE.Quaternion());
+  const headMid = P("head").add(new THREE.Vector3(0, (box.max.y - P("head").y) * 0.45, 0).applyQuaternion(hq)), ankles = P("foot.L").add(P("foot.R")).multiplyScalar(0.5);
+  const lean = Math.round((headMid.z - ankles.z) * 1000);
+  if (Q.get("lean")) views.forEach((deg, i) => { const a = deg * Math.PI / 180, r = [Math.cos(a), 0, -Math.sin(a)], X = (p) => i * W + W / 2 + (p.x * r[0] + p.z * r[2] - cx) / hw * W / 2, Y = (p) => H / 2 - (p.y - cy) / half * H / 2;
+    g.lineWidth = 2; for (const [p, c] of [[headMid, "#e0306a"], [ankles, "#2a7de0"]]) { g.strokeStyle = c; g.beginPath(); g.moveTo(X(p), 0); g.lineTo(X(p), H); g.stroke(); g.fillStyle = c; g.beginPath(); g.arc(X(p), Y(p), 5, 0, 7); g.fill(); } });
+  const png = sheet.toDataURL("image/png"); document.getElementById("sheet").src = png; document.getElementById("state").textContent = "done";
+  window.RESULT = { ok: true, png, sheetName: Q.get("name") || name, table: `${name}: views ${views.join(", ")}  y ${y0.toFixed(3)}–${y1.toFixed(3)}  ${W}×${H} each  lean ${lean} mm`, box: { min: box.min.toArray(), max: box.max.toArray() } };
+} catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; }
+</script>
+</body>
+</html>

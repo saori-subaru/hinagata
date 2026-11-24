@@ -1,9 +1,11 @@
 // Extras (outfit.extras; 2026-10-07, Saori: "追加したい汎用性の高そうなアイテム: 獣耳、獣尻尾、天使の輪、天使の羽、悪魔の羽、悪魔尻尾"):
 //   ears ("cat" | "fox" | "bunny" | "bear"): on top of the head, coming out of the hair, a lighter inner side (its own mesh). Head space,
-//     so they follow the head's size and shape (as the hair).
+//     so they follow the head's size and shape (as the hair). "pod" (ずんだもん's): a bean pod lying out from each side of the top, its end a point,
+//     the inner mesh its three peas' pale tops.
 //   wings ("angel" | "devil"): on the upper back, flat. Angel: a row of feathers hanging from the wing's arm, longer toward the tip.
 //     Devil: a bat's wing, the membrane between finger bones, scalloped between their tips.
-//   The tails (cat, fox, devil) swing: they are locks (hair/locks.js, made in index.js: tailSpecs); the halo is a ring over the head (index.js).
+//   The tails (cat, fox, devil, pod) swing: they are locks (hair/locks.js, made in index.js: tailSpecs); the halo is a ring over the head (index.js).
+//     "pod": a thin stalk from the middle of the back swelling into a big pod (TAIL_BONE: the bone a kind hangs from).
 import { smin, sstep } from "../sdf/prim.js";
 
 const nrm = (v) => { const l = Math.hypot(...v) || 1; return v.map((c) => c / l); };
@@ -33,11 +35,25 @@ export function buildExtras(OPT) {
         const q = [x - base[0] - f[0] * off, y - base[1] - f[1] * off, z - base[2] - f[2] * off], h = dt(q, u), t = Math.min(1, Math.max(0, h / (L * k)));
         const R = Math.max(0.002, EK.R * k * EK.prof(t)), qs = dt(q, s), qf = dt(q, f);
         return smax((Math.hypot(qs / R, qf / (R * EK.flat)) - 1) * R * EK.flat, h - L * k, 0.006); };
-      const outer = shape(1, 0), inner = shape(0.66, EK.R * EK.flat * 0.55);
+      const K = X.earSize ?? 1, outer = shape(K, 0), inner = shape(0.66 * K, EK.R * EK.flat * 0.55 * K);
       return { outer, inner: (x, y, z) => smax(inner(x, y, z), -(dt([x - base[0], y - base[1], z - base[2]], u) - 0.03), 0.004) };   // the inner side from above the hair
     });
     earSdf = (x, y, z) => ears[x > 0 ? 0 : 1].outer(x, y, z);
     earInSdf = (x, y, z) => ears[x > 0 ? 0 : 1].inner(x, y, z);
+  }
+  // ── pods: a flat egg lying out from the head's top corner, a little up (its middle c, its long axis u; head space), a short cone on its
+  // far end bent up into a point; three peas swell its front in a row (the middle one the biggest), their tops the pale color (inner)
+  if (X.ears === "pod") { const K = X.earSize ?? 1;
+    const pods = [1, -1].map((m) => { const c = [m * 0.26, 1.315, -0.07], u = nrm([m * 0.88, 0.34, -0.1]), f = nrm([0, 0, 1].map((v, i) => v - u[i] * u[2])), s0 = crs(u, f), s = s0[1] > 0 ? s0 : s0.map((v) => -v);   // f: its front (forward, square to u); s: across it, upward
+      const RA = 0.1 * K, RB = 0.062 * K, RC = 0.052 * K, tip0 = c.map((v, i) => v + u[i] * RA * 0.72), tip1 = c.map((v, i) => v + (u[i] * 1.3 + s[i] * 0.5 - f[i] * 0.08) * RA), tl = Math.hypot(...tip1.map((v, i) => v - tip0[i])), tu = tip1.map((v, i) => (v - tip0[i]) / tl);
+      const body = (x, y, z) => { const q = [x - c[0], y - c[1], z - c[2]]; return (Math.hypot(dt(q, u) / RA, dt(q, s) / RB, dt(q, f) / RC) - 1) * RC; };
+      const tip = (x, y, z) => { const q = [x - tip0[0], y - tip0[1], z - tip0[2]], h = Math.min(tl, Math.max(0, dt(q, tu))), k = h / tl, r = RB * 0.62 * (1 - k) * (1 - 0.35 * k) + 0.004; return Math.hypot(q[0] - tu[0] * h, q[1] - tu[1] * h, q[2] - tu[2] * h) - r; };
+      const at = (a, b, d) => { const l = Math.hypot(a / RA, b / RB, d / RC) || 1; return c.map((v, i) => v + (u[i] * a + s[i] * b + f[i] * d) / l); };   // on the egg, toward (along, up across, front)
+      const peas = [[-0.52, 0.03], [0, 0.042], [0.5, 0.028]].map(([a, r]) => [at(a * RA, 0, RC).map((v, i) => v - f[i] * r * K * 0.35), r * K]), spots = peas.map(([p, r]) => [p.map((v, i) => v + f[i] * r * 0.4), r * 0.8]);
+      const outer = (x, y, z) => { let d = smin(body(x, y, z), tip(x, y, z), 0.03 * K); for (const [p, r] of peas) d = smin(d, Math.hypot(x - p[0], y - p[1], z - p[2]) - r, 0.008); return d; };
+      return { outer, inner: (x, y, z) => { let d = 1e9; for (const [p, r] of spots) d = Math.min(d, Math.hypot(x - p[0], y - p[1], z - p[2]) - r); return smax(outer(x, y, z) - 0.0015, d, 0.003); } }; });
+    earSdf = (x, y, z) => pods[x > 0 ? 0 : 1].outer(x, y, z);
+    earInSdf = (x, y, z) => pods[x > 0 ? 0 : 1].inner(x, y, z);
   }
   // ── wings: a 2D shape in a plane out from the upper back (out, a little up and back), with thickness ──
   let wingSdf = null;
@@ -78,11 +94,15 @@ export function buildExtras(OPT) {
   return { earSdf, earInSdf, wingSdf };
 }
 
+/** the bone a tail hangs from (index.js passes that joint as hips): the pod's from the middle of the back */
+export const TAIL_BONE = { pod: "chest" };
 /** The tail as one lock (hair/locks.js createLocks), root space (rest): from the back of the hips. kind "cat" (up, curling) / "fox" (full,
- *  hanging out behind) / "devil" (a thin whip ending in a pointed spade). hips: the hips joint, back: how far back the bottom is there (m). */
+ *  hanging out behind) / "devil" (a thin whip ending in a pointed spade) / "pod" (a stalk down the back swelling into a big pod, swung
+ *  toward the character's left). hips: the joint it hangs from (TAIL_BONE; the hips), back: how far back the body is there (m). */
 export function tailSpec(kind, { hips, back, size = 1 }) {
   const root = [hips[0], hips[1] - 0.02, hips[2] - back + 0.012], N = 14, S = size;
-  const B = { cat: [[0, -0.04, -0.1], [0, 0.12, -0.26], [0, 0.32, -0.2]], fox: [[0, -0.08, -0.14], [0, -0.18, -0.3], [0, -0.22, -0.42]], devil: [[0, -0.12, -0.1], [0, -0.26, -0.3], [0, -0.12, -0.42]] }[kind];
+  const B = { cat: [[0, -0.04, -0.1], [0, 0.12, -0.26], [0, 0.32, -0.2]], fox: [[0, -0.08, -0.14], [0, -0.18, -0.3], [0, -0.22, -0.42]], devil: [[0, -0.12, -0.1], [0, -0.26, -0.3], [0, -0.12, -0.42]],
+    pod: [[0.02, -0.12, -0.07], [0.14, -0.25, -0.14], [0.28, -0.35, -0.22]] }[kind];
   if (!B) return null;
   const P = [root, ...B.map((o) => root.map((c, i) => c + o[i] * S))], pts = [];
   for (let q = 0; q < N; q++) { const t = q / (N - 1), m = 1 - t; pts.push([0, 1, 2].map((k) => m * m * m * P[0][k] + 3 * m * m * t * P[1][k] + 3 * m * t * t * P[2][k] + t * t * t * P[3][k])); }
@@ -90,7 +110,8 @@ export function tailSpec(kind, { hips, back, size = 1 }) {
   // prof: its width along it (0 root → 1 tip, × w); the devil's: thin, then a spade (an arrowhead: wide at its base, pointed)
   const prof = { cat: (t) => 0.75 + 0.25 * Math.sin(Math.PI * Math.min(1, t * 1.6)) * (t < 0.6 ? 1 : 1) - (t > 0.88 ? (t - 0.88) / 0.12 * 0.7 : 0),
     fox: (t) => (0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, 0.15 + t * 0.85))) * (t > 0.8 ? 1 - Math.pow((t - 0.8) / 0.2, 2) * 0.95 : 1),
-    devil: (t) => t < 0.8 ? 0.28 - 0.08 * t : t < 0.87 ? 0.22 + (t - 0.8) / 0.07 * 1.0 : Math.max(0.02, 1.22 * (1 - (t - 0.87) / 0.13)) }[kind];
-  const w = { cat: 0.05, fox: 0.13, devil: 0.06 }[kind] * S, thick = { cat: 0.95, fox: 0.85, devil: 0.45 }[kind];
-  return { root, pts, len, w, thick, layer: 0, curl: 0, rise: false, stiff: kind === "cat" ? 1.6 : 1, prof };
+    devil: (t) => t < 0.8 ? 0.28 - 0.08 * t : t < 0.87 ? 0.22 + (t - 0.8) / 0.07 * 1.0 : Math.max(0.02, 1.22 * (1 - (t - 0.87) / 0.13)),
+    pod: (t) => { const s = Math.min(1, Math.max(0, (t - 0.46) / 0.54)); return Math.max(0.03, s < 0.62 ? 0.12 + 0.88 * Math.pow(Math.sin(Math.PI / 2 * s / 0.62), 1.2) : Math.sqrt(Math.max(0, 1 - ((s - 0.62) / 0.38) ** 2))); } }[kind];   // a thin stalk, then the pod: fuller toward its end, the end round (widening from nearer the root it was a long leaf)
+  const w = { cat: 0.05, fox: 0.13, devil: 0.06, pod: 0.23 }[kind] * S, thick = { cat: 0.95, fox: 0.85, devil: 0.45, pod: 0.95 }[kind];
+  return { root, pts, len, w, thick, layer: 0, curl: 0, rise: false, stiff: kind === "cat" ? 1.6 : 1, prof, ...(kind === "pod" ? { round: true, keep: 0.7 } : {}) };   // the pod: round, and it keeps its shape (as a rope its bulb folded at every link)
 }

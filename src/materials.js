@@ -20,11 +20,13 @@ export const toon = (c, bands = 2) => { const m = new THREE.MeshToonMaterial({ c
 const SOFT_RAMP = "uniform sampler2D gradientMap;\nvec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) { float d = dot( normal, lightDirection ); vec3 sh = texture2D( gradientMap, vec2( 0.0, 0.0 ) ).rgb;\n  return mix( sh, vec3( 1.0 ), smoothstep( -0.19, 0.36, d ) ) * mix( 0.78, 1.0, smoothstep( 0.0, 1.0, d ) ); }";
 export const softToon = (c) => { const m = new THREE.MeshToonMaterial({ color: c, gradientMap: RAMPS[2] });
   m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <gradientmap_pars_fragment>", SOFT_RAMP); }; return m; };
-// shading styles (options.shading.style): "toon" = flat bands (anime) / "soft" = the toon's colors, blended / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors
-export const SHADINGS = ["toon", "soft", "smooth", "flat"];
+// shading styles (options.shading.style): "toon" = flat bands (anime) / "soft" = the toon's colors, blended / "smooth" = soft light falloff / "flat" = no lighting at all, plain colors /
+// "figure" = a painted figure (physically based, a thin gloss coat; no outlines). It wants the page's light as figureStage sets it
+export const SHADINGS = ["toon", "soft", "smooth", "flat", "figure"];
 export function shaded(style, c, bands = 2) {
   if (style === "smooth") return new THREE.MeshLambertMaterial({ color: c });
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
+  if (style === "figure") return new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.85 })   // (index.js figureLook: its finish by what the part is);
   if (style === "soft") return softToon(c);
   return toon(c, bands);
 }
@@ -118,6 +120,40 @@ vec4 tSample() {
   m.customProgramCacheKey = () => "tex|" + key;
   return m;
 }
+/** A drawn picture on a garment part (a part with `picture` in its definePart: the jacket's gloss and shadows). One image of views in the
+ *  part's frame (U.frame: half the width, the lowest and the highest height shown, half the side views' depth; base space, so 1 px is the
+ *  same cloth whatever the body's proportions): the left column the part from the front (above) and from the back (below), the right column
+ *  (when the side width isn't 0) its +x side (above) and its -x side (below), each seen square on along U.axes (per side [ox, oy, dx, dy]: the
+ *  view's top and the way down it, in the xy plane; across it is z). Projected from picP / picN, each vertex's base place and normal when
+ *  made (it moves with the pose). Front and back blend where the surface turns sideways (U.soft: the normal's z over which they do); a side
+ *  view takes over where the surface faces it and picS (per vertex, 0..1: the sleeves) says so, and only where it is drawn (left clear: front and back stay).
+ *  The map is premultiplied (no dark fringe round strokes).
+ *  U.fade (> 0): the picture fades out where the normal's z is under it, to the plain color (the sides, where front and back views stretch).
+ *  U: { on, map, frame (vec4), opacity, blend (0 = over, 1 = multiply), soft, fade } as shared uniforms. */
+export function withPicture(m, U) {
+  const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    Object.assign(sh.uniforms, { dOn: U.on, dMap: U.map, dFrame: U.frame, dAxes: U.axes, dOpacity: U.opacity, dBlend: U.blend, dSoft: U.soft, dFade: U.fade });
+    sh.vertexShader = "attribute vec3 picP;\nattribute vec3 picN;\nattribute float picS;\nvarying vec3 vPicP;\nvarying vec3 vPicN;\nvarying float vPicS;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vPicP = picP; vPicN = picN; vPicS = picS;");
+    sh.fragmentShader = `uniform float dOn, dOpacity, dBlend, dSoft, dFade;
+uniform vec4 dFrame;
+uniform vec4 dAxes[2];
+uniform sampler2D dMap;
+varying vec3 vPicP;
+varying vec3 vPicN;
+varying float vPicS;
+vec4 dLin(vec4 c) { return vec4(pow(c.rgb / max(c.a, 1e-4), vec3(2.2)) * c.a, c.a); }
+` + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+  if (dOn > 0.5) { vec2 q = vec2(clamp(vPicP.x / (2.0 * dFrame.x) + 0.5, 0.003, 0.997), clamp((vPicP.y - dFrame.y) / (dFrame.z - dFrame.y), 0.004, 0.996));
+    float dfx = dFrame.x / (dFrame.x + dFrame.w), dsd = vPicP.x > 0.0 ? 1.0 : 0.0, dsg = 2.0 * dsd - 1.0; vec3 dn = normalize(vPicN);   // dfx: the left column's share of the width
+    vec4 dax = vPicP.x > 0.0 ? dAxes[0] : dAxes[1];
+    vec4 dc = mix(dLin(texture2D(dMap, vec2((1.0 - q.x) * dfx, 0.5 * q.y))), dLin(texture2D(dMap, vec2(q.x * dfx, 0.5 + 0.5 * q.y))), smoothstep(-dSoft, dSoft, dn.z));
+    vec4 ds = dLin(texture2D(dMap, vec2(dfx + clamp(0.5 - dsg * vPicP.z / (2.0 * max(dFrame.w, 1e-4)), 0.006, 0.994) * (1.0 - dfx), (dsd + clamp(1.0 - dot(vPicP.xy - dax.xy, dax.zw) / (dFrame.z - dFrame.y), 0.004, 0.996)) * 0.5)));
+    dc = mix(dc, ds, dFrame.w > 0.0 ? vPicS * ds.a * smoothstep(0.35, 0.65, dsg * dot(dn.xy, vec2(-dax.w, dax.z))) : 0.0) * dOpacity * (dFade > 0.0 ? smoothstep(0.4 * dFade, dFade, abs(dn.z)) : 1.0);
+    diffuseColor.rgb = dBlend > 0.5 ? diffuseColor.rgb * (1.0 - dc.a) + diffuseColor.rgb * dc.rgb : diffuseColor.rgb * (1.0 - dc.a) + dc.rgb; }`); };
+  m.customProgramCacheKey = () => "pic|" + key;
+  return m;
+}
 /** Paint over everything (src/paint.js): the part's atlas, looked up from paintP / paintN (each vertex's place, base proportions, and normal
  *  when the mesh was made). Drawn after the color, the picture and the gradient (it hooks in at the alpha map, after them all).
  *  U: { on, map } as uniforms / glsl: paintGLSL(layout) */
@@ -136,6 +172,7 @@ export function withPaint(m, U, glsl) {
 const metalRamp = (() => { const d = new Uint8Array([78, 78, 86, 255, 180, 180, 186, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RGBAFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 export function metal(style, c) {
   if (style === "flat") return new THREE.MeshBasicMaterial({ color: c });
+  if (style === "figure") return new THREE.MeshStandardMaterial({ color: c, metalness: 1, roughness: 0.28 });
   const m = style === "smooth" ? new THREE.MeshPhongMaterial({ color: c, shininess: 60, specular: 0x666666 }) : new THREE.MeshToonMaterial({ color: c, gradientMap: metalRamp });
   if (style !== "smooth") m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <opaque_fragment>", `{ vec3 n = normalize(normal); float f = n.z, g = dot(n, normalize(vec3(-0.35, 0.55, 0.76)));
       outgoingLight *= mix(0.5, 1.0, smoothstep(0.18, 0.32, f));   // darker rim where the plate turns away
@@ -149,8 +186,26 @@ export function metal(style, c) {
 export function outlineMat(w, color = 0x3a2a3a) {
   const m = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide }), width = { value: w };
   m.userData.width = width;
-  m.onBeforeCompile = (sh) => { sh.uniforms.outlineW = width; sh.vertexShader = "uniform float outlineW;\n" + sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n  transformed += normalize(objectNormal) * outlineW;"); };
+  m.onBeforeCompile = (sh) => { sh.uniforms.outlineW = width; sh.vertexShader = "uniform float outlineW;\n" + sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n  transformed += normalize(objectNormal) * outlineW * min(1.0, length(objectNormal));   // (a normal shorter than 1: a thinner line there; the tufts' roots)"); };
   return m;
 }
 export const CLAY = "#d6d6d4";
 export const clayMat = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.62, metalness: 0 });
+
+/** The page's light for shading.style "figure" (on) or as it was (off): a photo studio's. A room to mirror (scene.environment), a warm key
+ *  light with a soft shadow, a cool light from behind for the edges; the scene's own lights are put out meanwhile. Nothing in the engine
+ *  calls it: the renderer and the scene are the page's (its renderer.shadowMap.enabled gives the shadows). */
+let roomEnv = null;
+export async function figureStage(renderer, scene, on = true) {
+  if (on && !roomEnv) { const { RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js"); const p = new THREE.PMREMGenerator(renderer); roomEnv = p.fromScene(new RoomEnvironment(), 0.04).texture; p.dispose(); }
+  let G = scene.userData.figureLights;
+  if (on && !G) { G = scene.userData.figureLights = new THREE.Group(); G.userData.figure = true;
+    const key = new THREE.DirectionalLight(0xfff1e2, 2.1); key.position.set(-1.6, 3.2, 2.6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.blurSamples = 16;
+    Object.assign(key.shadow.camera, { left: -1.3, right: 1.3, top: 1.9, bottom: -0.5, near: 0.5, far: 9 }); key.shadow.bias = -0.0006; key.shadow.normalBias = 0.012;
+    const back = new THREE.DirectionalLight(0xdfe8ff, 2.4); back.position.set(1.8, 2.2, -2.6);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(2.4, 0.8, 1.6);
+    G.add(key, back, fill); }
+  if (G) { if (on) scene.add(G); else scene.remove(G); }
+  scene.environment = on ? roomEnv : null;
+  scene.traverse((x) => { if (!x.isLight || x.parent?.userData.figure) return; x.userData.stageI ??= x.intensity; x.intensity = on ? 0 : x.userData.stageI; });
+}

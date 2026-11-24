@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Hinagata — a garment part's drawn picture</title>
+<style>body { margin: 0; padding: 12px; background: #f0ece4; font: 13px sans-serif; } img { max-width: 100%; background: #fff; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<p id="state">building…</p>
+<img id="sheet">
+<script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
+<script type="module">
+// A part's drawn picture (src/picture.js, materials.js withPicture): the upper half the part from the front, the lower half from the back.
+// Run: node tools/picture.mjs subaru [--part jacket] [--paper 1] [--name x]
+//   Draw on a layer over it and save that layer alone, or have a painting made of it (--paper 1: on white, for an image generator) and fit
+//   the painting back with tools/picture-fit.py.
+import { createAvatar, CHARACTERS, pictureTemplate } from "../src/index.js";
+const Q = new URLSearchParams(location.search), name = Q.get("only") || "subaru", part = Q.get("part") || "jacket";
+
+try {
+  const av = await createAvatar(structuredClone(CHARACTERS[name].file), { quality: "fine", cache: false });
+  let c = pictureTemplate(av, part);
+  if (Q.get("paper")) { const p = Object.assign(document.createElement("canvas"), { width: c.width, height: c.height }), g = p.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, p.width, p.height); g.drawImage(c, 0, 0); c = p; }
+  const png = c.toDataURL("image/png"); document.getElementById("sheet").src = png; document.getElementById("state").textContent = "done";
+  window.RESULT = { ok: true, png, sheetName: Q.get("name") || `${name}_${part}_template`, table: `${name} ${part} template: ${c.width}×${c.height} (front above, back below)` };
+} catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; }
+</script>
+</body>
+</html>

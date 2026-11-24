@@ -13,28 +13,29 @@ import { hashKey, sourceHash, cacheGet, cachePut } from "./cache.js";
 import { encodeBake, decodeBake, openBake } from "./bake.js";
 import { partSpec, partClothCell, skinOf, hairPartName, CLOTHES, ARMOR, WEAPONS } from "./parts.js";
 import { buildPartInWorkers } from "./build.js";
-import { shaded, metal, SHADINGS, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands } from "./materials.js";
+import { shaded, metal, SHADINGS, figureStage, outlineMat, withShadeN, withGrad, withTex, withPaint, withBands, withPicture } from "./materials.js";
 import { PAINT_TARGETS, paintLayout, paintGLSL } from "./paint.js";
 import { DEFAULTS, resolveOptions, diff, skirtOf, bangsId, openRecipe, hairForms } from "./options.js";
 import { SCHEMA, checkOptions } from "./schema.js";
 import { buildBody, makeStretch, isArmBone, adultFit, earBlades, earShells, fingerTubes } from "./body/index.js";
 import { buildClothes, capeTop, heelPose, strapRanges } from "./clothes/index.js";
 import { buildHair } from "./hair/index.js";
-import { longLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
-import { tailSpec } from "./clothes/extras.js";
+import { longLocks, whorlLongLocks, ringLocks, surfaceLocks, bangLocks, sideLocks, bangTipAt, drawnLocks, tuftLocks, tailLocks, curlTail, colliders as lockColliders, createLocks, surfaceAlong, TAIL_HOLD, TAIL_VDAMP, INNER_HOLD, INNER_RIGID } from "./hair/locks.js";
+import { tailSpec, TAIL_BONE } from "./clothes/extras.js";
 import { makeSkeleton, makeWeights } from "./rig.js";
 import { createFace, EXPRESSIONS, PART_LABELS, partIds, expressionId } from "./face/index.js";
 import { POSES, createPosePlayer } from "./motion/index.js";
 import { createCloth } from "./cloth.js";
 import { accessoryGeometries } from "./accessories.js";
 import { createFollower } from "./follow.js";
-import { PARTS, partNamed, partOptions, builtKey } from "./garments/index.js";
+import { PARTS, partNamed, partOptions, builtKey, pictureParts } from "./garments/index.js";
 
-export { DEFAULTS, POSES, SHADINGS, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
+export { DEFAULTS, POSES, SHADINGS, figureStage, resolveOptions, diff, EXPRESSIONS, PART_LABELS, SCHEMA, checkOptions };
 export { RECIPE_VERSION, OLD_DEFAULTS, defaultsAt, openRecipe, recipeAt, characterFile, isCharacterFile } from "./options.js";   // recipe versions (options.js)
 export { EXPRESSION_SET } from "./face/names.js";
 export { BODY_TYPES } from "./body/types.js";
 export { encodeBake, decodeBake };   // a baked character's file (bake.js)
+export { pictureTemplate, pictureView } from "./picture.js";   // the template a garment part's drawn picture is drawn on (picture.js)
 export { CHARACTERS } from "./presets.js";   // ready-made characters (presets.js): createAvatar(CHARACTERS.sylvie.file)
 export { faceSheet, faceSheetLayers, readFaceSheet, sheetChanges, sheetLayout, sheetTiles } from "./face/sheet.js";   // face templates to draw parts on, and reading them back (face/sheet.js)
 export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto points after the pose (motion/ik.js)
@@ -78,7 +79,7 @@ import "./motion/combat.js";   // fighting: two-handed guards, an attack per wea
  */
 // options without the parts that only change colors, the outline, the shading, the blush, the face parts, what is worn or the hair paint (the geometry is the same, so the cache can reuse it)
 function shapeOnly(OPT) {
-  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture)$/.test(k)) r[k] = strip(v); return r; };
+  const strip = (o) => { if (!o || typeof o !== "object") return o; const r = Array.isArray(o) ? [] : {}; for (const [k, v] of Object.entries(o)) if (!/^(color|soleColor|laceColor|mailColor|visorColor|decoColor|gripColor|shieldColor|on|gradient|texture|picture)$/.test(k)) r[k] = strip(v); return r; };
   const { colors, outline, shading, paint: _paint, ...rest } = OPT, { blush, parts, ...face } = OPT.face, { paint, gradient, tail, ...hair } = OPT.hair, { knees, ...body } = OPT.body;   // (the gradient and the tails: no mesh of the cache)
   return { ...rest, body, face, hair, outfit: { ...strip(OPT.outfit), dressOn: !!OPT.outfit.dress?.on, capeOn: !!OPT.outfit.cape?.on,
     garmentsBuilt: builtKey(OPT) } };   // a dress is a shape (its skirt), and a cape and the garment parts (src/garments) are only built when worn
@@ -144,7 +145,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cache");
   // shapes
   const { J, PARENT, BONES, BI, HANDS, P, CUT, EARS, headBare, faceWarp, PLANES, BODY, HEAD, CROTCH, ARMPIT, EAR, FACE_DY, bodySdf, bodySdfSlow, bodySdfRaw, HT } = buildBody(OPT, { slow: !!debug.slow, oldSock: !!debug.oldSock });
-  const { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, cuffOf, petticoat, skirtHem, shoeSdf, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
+  const { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, cuffOf, petticoat, skirtHem, shoeSdf, shoeCover, shoeTop, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, WRISTS, armor, weapons, extras, garments } = buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT });
   const hairKit = buildHair(OPT, { P, J, CUT, PLANES, faceWarp, bodySdf: bodySdfRaw });   // hair is shaped on the untransformed head, then scaled with it
   const weightsAt = makeWeights({ BODY, BONES, BI, J });
   // proportions (body.proportion, makeStretch in body/index.js): everything above is built at the base proportions; the meshes' points are
@@ -230,6 +231,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // line round the waist (2026-10-09, Saori: "ギザギザ消せる？"; only at "fine", the thinned build)
     { const SK = name === "shirt" ? skirtOf(OPT) : null; if (SK?.top != null) { lock = new Uint8Array(pos.length / 3);
       for (let v = 0; v < lock.length; v++) if (Math.abs(pos[v * 3 + 1] - SK.top) < 0.035) lock[v] = 1; } }
+    // a boot's cuff as a tube (shoes.cuffTube): its top 8 mm kept as built (its rounded rim); thinned, long triangles from the rounded rim
+    // down its side spread the rim's normals in light flames
+    { const S = OPT.outfit.shoes; if (name === "shoes" && S.cuffTube && S.kind === "boots" && (S.cuff ?? 0) > 0) { lock = new Uint8Array(pos.length / 3);
+      for (let v = 0; v < lock.length; v++) if (pos[v * 3 + 1] > S.bootHeight - 0.12 * pos[v * 3 + 2] - 0.008) lock[v] = 1; } }
     let kept = 0; if (lock) for (let i = 0; i < idx.length; i += 3) if (lock[idx[i]] && lock[idx[i + 1]] && lock[idx[i + 2]]) kept += 3;
     const target = Math.min(idx.length, Math.max(3, kept + Math.floor((idx.length - kept) * share / 3) * 3));
     const [out] = MS.simplifyWithAttributes(idx, pos, 3, nor instanceof Float32Array ? nor : Float32Array.from(nor), 3, [0.4, 0.4, 0.4], lock, target, THIN_ERROR, []);
@@ -275,10 +280,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const I = new Uint32Array(kept.length + EB.idx.length); for (let i = 0; i < kept.length; i++) I[i] = map[kept[i]]; for (let i = 0; i < EB.idx.length; i++) I[kept.length + i] = EB.idx[i] + m;
     return { pos: P2, nor: N2, idx: I, si: SI, sw: SW };
   }
+  const linesOn = () => OPT.outline.on && OPT.shading.style !== "figure";   // (a figure has no drawn lines)
   function skinned(geo, color, ow = 0.005, soft = null) {   // toon mesh + outline mesh, bound to the skeleton (ow: this part's outline width at outline.width 1; soft: the part's name to shade it by softened normals, see addSoftNormals)
     if (soft) addSoftNormals(soft, geo);
-    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.frustumCulled = false; root.add(m); bindTo(m);
-    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = OPT.outline.on;   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
+    const m = new THREE.SkinnedMesh(geo, shadedFor(geo, color)); m.castShadow = true; m.receiveShadow = OPT.shading.style === "figure"; m.frustumCulled = false; root.add(m); bindTo(m);
+    const om = outlineMat(ow * OPT.outline.width, OPT.outline.color); om.userData.baseWidth = ow; om.visible = linesOn();   // material.visible: the outline's on/off, apart from the mesh's own visibility (which pages use for "show this garment")
     const o = new THREE.SkinnedMesh(geo, om); o.frustumCulled = false; o.userData.outline = true; root.add(o); bindTo(o);
     return { m, o, on: true };
   }
@@ -341,8 +347,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // whorl.nape { y, z, soft } (head space): cropped hair down the nape, the skin painted from the hair's hem down to y behind z (under short
   // hair that ends at the head's widest part the bare nape read as a hollow cut into the back of the head)
   function scalpOf(Pa) {
-    const A = new Float32Array(Pa.length / 3); if (!OPT.hair.sculpt.whorl?.on) return A;
-    const f = hairKit.hairSdfOf(hairForms(OPT.hair)), NP = OPT.hair.sculpt.whorl.nape, ns = NP?.soft ?? 0.015;
+    const pick = hairForms(OPT.hair), A = new Float32Array(Pa.length / 3); if (!hairKit.whorlOn(pick)) return A;   // (setHair paints it again)
+    const f = hairKit.hairSdfOf(pick), NP = OPT.hair.sculpt.whorl.nape, ns = NP?.soft ?? 0.015;
     for (let v = 0; v < A.length; v++) { const h = HT.toHead(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]); A[v] = sstep(0.003, 0, f(h[0], h[1], h[2]));
       if (NP && h[1] < 1.1) A[v] = Math.max(A[v], sstep(NP.y - ns, NP.y + ns, h[1]) * sstep(NP.z + ns, NP.z - ns, h[2])); }
     return A;
@@ -380,7 +386,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // Whatever a worker can't do (no workers, an error) is simply built here below.
   const hairPick = hairForms(OPT.hair);   // the style built: { bangs, back ("hang": short hair hanging in locks), ahoge } (options.js)
   const pre = {};
-  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, skirtSheets, shirtSdf, bellOf, bellSheets, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, garments } };
+  const kit = { bodySdf, HT, hairKit, clothes: { pantsSdf, skirtSheets, shirtSdf, shirtMesh, bellOf, bellSheets, shoeSdf, sockSdf, soleSdf, lacesSdf, capeSdf, suitSdf, armor, weapons, extras, garments } };
   if (workers) {
     const need = (n) => !hit?.[n], job = { key: hashKey(shapeOnly(OPT), !!debug.slow, !!debug.oldSock), opt: OPT, debug: { slow: !!debug.slow, oldSock: !!debug.oldSock }, H, clothH };
     const run = (part, grid = null, split) => { const spec = partSpec(part, { OPT, H, clothH, kit }); if (spec.make) return null; return buildPartInWorkers(part, job, spec, grid, split).then((r) => { pre[part] = r; }, () => {}); };   // (a part made directly is made here)
@@ -498,7 +504,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
 
   // build every mesh
-  const fast = { shirt: (x, y, z) => shirtSdf(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
+  const fast = { shirt: (x, y, z) => shirtMesh(x, y, z, bodyAt), pants: (x, y, z) => pantsSdf(x, y, z, bodyAt), sock: (x, y, z) => sockSdf(x, y, z, bodyAt) };
   const parts = {};
   const NONE = { sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], bone1: "hips" };   // an empty part (a piece built later): nothing in its tiny box
   const meshPart = (name, h = H) => { const later = LATER.has(name), s = later ? { ...NONE, h } : partSpec(name, { OPT, H: h, clothH, sheetK, one: ONE, kit, bodyAt }), g = mesh(name, s.sdf, s.lo, s.hi, s.h, s.bone1, s.only, s.fast, s.soft, s.make, s.bells);
@@ -536,6 +542,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // shoulders. It sways: points keep their motion in the world (cape.sway), so it trails behind when the character walks or runs
   const CA = OPT.outfit.cape;
   parts.cape = skinned(meshPart("cape"), CA.color, 0.005, null);
+  // its own normals smoothed (twice SOFT_R: a long cloth): it moves as cloth, so it can't take a shadeN, and the mesh's bumps stained its shading in blotches
+  if (CA.on) { const g = parts.cape.m.geometry, it = Math.round((2 * SOFT_R * OPT.shading.soften / H) ** 2); if (it > 0) g.attributes.normal.array.set(smoothNormals(g.attributes.normal.array, g.index.array, it)); }
   if (ONE) for (const k of [CA.on && "cape", skirtSheets && "pants", bellSheets && "shirt"]) if (k) parts[k].m.material.side = THREE.DoubleSide;
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)
@@ -577,10 +585,30 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // the garment parts (src/garments; 2026-10-10, for 島風: a sailor collar and its scarf, gloves, hip strings, a headband, and any part added
   // there). Built only when worn (their on rebuilds the clothes, as the cape's); an empty mesh otherwise
   for (const p of PARTS) parts[p.name] = skinned(meshPart(p.name), partOptions(OPT, p).color ?? p.defaults?.color ?? "#888888", p.outline, p.soft ? p.name : null);
+  // a drawn picture on a garment part (materials.js withPicture; a part with `picture`): its material is dressed only once a picture is set
+  // (a part without one keeps its plain shader)
+  const PIC = Object.fromEntries(pictureParts().map((p) => { const T = partOptions(OPT, p).picture, t = texObj(); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.premultiplyAlpha = true;
+    return [p.name, { p, on: { value: 0 }, map: { value: t }, frame: { value: new THREE.Vector4(p.picture.frame[0], p.picture.frame[1], p.picture.frame[2], p.picture.frame[3] ?? 0) }, axes: { value: [new THREE.Vector4(0, 1, 0, -1), new THREE.Vector4(0, 1, 0, -1)] }, opacity: { value: T?.opacity ?? 1 }, blend: { value: TEX_BLEND[T?.blend] ?? 0 }, soft: { value: 0.35 }, fade: { value: p.picture.fade ?? 0 }, src: null, dressed: false, load: Promise.resolve() }]; }));
+  const picOf = (k) => partOptions(OPT, PIC[k].p).picture;
+  // the side views (the part's picture.side): { weight (per vertex, on the base positions), axes }; also for the template (picture.js)
+  const picSide = (k) => { const g = parts[k].m.geometry, Pb = basePos(g), S = new Float32Array(Pb.length / 3), sd = PIC[k].p.picture.side && garments[k] ? PIC[k].p.picture.side(garments[k]) : null;
+    if (sd) for (let v = 0; v < S.length; v++) S[v] = sd.weight(Pb[v * 3], Pb[v * 3 + 1], Pb[v * 3 + 2]); return { weight: S, axes: sd?.axes ?? [[0, 1, 0, -1], [0, 1, 0, -1]] }; };
+  function loadPic(k) {
+    const U = PIC[k], src = picOf(k)?.src ?? null; if (src === U.src) return U.load; U.src = src;
+    if (!src) { U.on.value = 0; return (U.load = Promise.resolve()); }
+    if (!U.dressed) { const x = parts[k], g = x.m.geometry, w = x.wrap; U.dressed = true;
+      g.setAttribute("picP", new THREE.BufferAttribute(Float32Array.from(basePos(g)), 3)); g.setAttribute("picN", new THREE.BufferAttribute(Float32Array.from(g.attributes.normal.array), 3)); { const sd = picSide(k); g.setAttribute("picS", new THREE.BufferAttribute(sd.weight, 1)); sd.axes.forEach((a, i) => U.axes.value[i].set(...a)); }
+      x.wrap = (m) => withPicture(w ? w(m) : m, U); x.m.material = withPicture(x.m.material, U); }
+    return (U.load = new Promise((ok) => { const im = new Image(); im.crossOrigin = "anonymous";
+      im.onload = () => { if (U.src === src) { const t = U.map.value; t.dispose(); t.image = im; t.needsUpdate = true; U.on.value = 1; } ok(); };
+      im.onerror = () => { console.warn(`Hinagata: couldn't load the picture for ${k} (${PIC[k].p.path}.picture.src)`); if (U.src === src) U.on.value = 0; ok(); };
+      im.src = src; }));
+  }
+  await Promise.all(Object.keys(PIC).map(loadPic));
   // bands of color painted on a part (materials.js withBands): the collar's line, the gloves' cuff and its line, the boots' cuff, striped socks.
   // bandT per vertex: how far in from the collar's edge, how far down from the glove's top or the boot's, the height (m)
   const bandU = () => ({ n: { value: 0 }, lo: { value: new THREE.Vector3() }, hi: { value: new THREE.Vector3() }, c0: { value: new THREE.Color() }, c1: { value: new THREE.Color() }, c2: { value: new THREE.Color() }, period: { value: 0 }, duty: { value: 0.5 }, phase: { value: 0 } });
-  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU(), cape: bandU(), shirt: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
+  const BANDS = { shoes: bandU(), socks: bandU(), pants: bandU(), cape: bandU(), shirt: bandU(), hood: bandU() }; for (const p of PARTS) if (p.bands) BANDS[p.name] = bandU();
   const banded = (k, f, base = true) => { const x = parts[k], g = x.m.geometry, Pa = base ? basePos(g) : g.attributes.position.array, T = new Float32Array(Pa.length / 3);
     for (let v = 0; v < T.length; v++) T[v] = f(Pa[v * 3], Pa[v * 3 + 1], Pa[v * 3 + 2]);
     g.setAttribute("bandT", new THREE.BufferAttribute(T, 1)); const w = x.wrap; x.wrap = (m) => withBands(w ? w(m) : m, BANDS[k]); x.m.material = withBands(x.m.material, BANDS[k]); return T; };
@@ -591,7 +619,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const SKL = SKO ? ST.fwd(SKO.top) - ST.fwd(SKO.hem) : 1;
   if (petticoat) banded("pants", (x, y, z) => { const t = ST.fwd(SKO.top - (SKO.tilt ?? 0) * z); return (t - ST.fwd(y)) / Math.max(0.02, t - ST.fwd(skirtHem(x, z))); });
   else if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
+  const PCUFF = !SKO && OPT.outfit.pants.length === "shorts" && (OPT.outfit.pants.cuff ?? 0) > 0 && OPT.outfit.pants.cuffColor ? OPT.outfit.pants : null;
+  if (PCUFF) banded("pants", (x, y) => y - PCUFF.hem);   // shorts' hem bands (pants.cuffColor): how far over the hem (m, base)
   if (capeSdf) banded("cape", capeSdf.edge);   // the cape's trim line: how far in from its hem or front edges
+  if (capeSdf?.hoodLine) banded("hood", capeSdf.hoodLine);   // one roll's hood: the line along its lower edge
   if (cuffOf) banded("shirt", cuffOf);   // long and bell sleeves' cuffs: how far up from the sleeve's end
   let socksTopY = 0; { const P = parts.socks.m.geometry.attributes.position.array; for (let i = 1; i < P.length; i += 3) socksTopY = Math.max(socksTopY, P[i]); }   // (as built: the stripes are even on stretched legs)
   banded("socks", (x, y) => y, false);   // (always: the stripes can be put on at once)
@@ -600,7 +631,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
     for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
     put(BANDS.shoes, [...((SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []), ...strapRanges(SH).map(([a, b]) => [a, b, SH.strapColor ?? SH.color])]);
-    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = petticoat ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(petticoat && SU.underColor ? [[1.004, 100, SU.underColor]] : [])]); }
+    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = petticoat ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(petticoat && SU.underColor ? [[1.004, 100, SU.underColor]] : []), ...(PCUFF && O.pants.cuffColor ? [[-1, PCUFF.cuff, O.pants.cuffColor]] : [])]); }
+    put(BANDS.hood, capeSdf?.hoodLine ? [[-0.0045, 0.002, OPT.outline.color]] : []);
     { const C = O.cape; put(BANDS.cape, C.line ? [[C.lineIn ?? 0.012, (C.lineIn ?? 0.012) + (C.lineWidth ?? 0.008), C.line]] : []); }
     { const S = O.shirt, W = S.cuffWidth ?? 0.022; put(BANDS.shirt, [...(S.cuffColor ? [[-1, W, S.cuffColor]] : []), ...(S.cuffLine ? [[W * 0.4, W * 0.6, S.cuffLine]] : [])]); }
     const SW = SS.width ?? 0.022, P = SW + (SS.gap ?? 0.022); BANDS.socks.period.value = SS.on ? P : 0; BANDS.socks.duty.value = SW / P; BANDS.socks.phase.value = socksTopY - SW; BANDS.socks.c0.value.set(SS.color ?? "#d8403a"); }
@@ -632,17 +664,26 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const RO = OPT.shading.rim ?? {}, RIM = { rimOn: { value: RO.on ? 1 : 0 }, rimColor: { value: new THREE.Color(RO.color ?? "#fff4e0") }, rimWidth: { value: RO.width ?? 0.35 }, rimStrength: { value: RO.strength ?? 0.5 } };
   let rimUsed = !!RO.on;
   function withRim(m) {
-    if (!m || m.userData.rim || !(m.isMeshToonMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
+    if (!m || m.userData.rim || !(m.isMeshToonMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial || m.isMeshStandardMaterial)) return;
     const prev = m.onBeforeCompile, key = m.customProgramCacheKey(); m.userData.rim = true;
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); Object.assign(sh.uniforms, RIM);
       sh.fragmentShader = "uniform float rimOn, rimWidth, rimStrength;\nuniform vec3 rimColor;\n" + sh.fragmentShader.replace("#include <opaque_fragment>",
         "{ float rf = 1.0 - max(dot(normalize(normal), normalize(vViewPosition)), 0.0); outgoingLight += rimColor * rimOn * rimStrength * smoothstep(1.0 - rimWidth, 1.0, rf); }\n#include <opaque_fragment>"); };
     m.customProgramCacheKey = () => "rim|" + key; m.needsUpdate = true;
   }
+  // the figure's finish by what a part is (shading.style "figure"): skin matt with a warm bloom at its edges, hair and shoes a faint
+  // satin, cloth dry. Checked each update, as the rim is (materials are replaced by rebuilds)
+  const FIG = { skin: { roughness: 0.7, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.62, clearcoat: 0.12, clearcoatRoughness: 0.5 },
+    shoe: { roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.35 }, cloth: { roughness: 0.82, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
+  function figureLook() {
+    if (OPT.shading.style !== "figure") return;
+    for (const k in parts) { const m = parts[k].toonMat ?? parts[k].m.material; if (!m.isMeshPhysicalMaterial || m.userData.fig) continue; m.userData.fig = true;
+      const { sheenColor, ...f } = FIG[k === "body" ? "skin" : /hair|locks|bangs|drawn|tufts|dome|tails/.test(k) ? "hair" : /shoe|boot|sole/i.test(k) ? "shoe" : "cloth"]; Object.assign(m, f); if (sheenColor) m.sheenColor.set(sheenColor); }
+  }
   function rims() { if (!rimUsed) return; for (const x of Object.values(parts)) withRim(x.m.material); if (faceLayer) withRim(faceLayer.material); }
   // ⛔ mottled color (blotches of depth and tint on the materials, a paper grain) was tried and removed (2026-11-19, Saori): on the surface it read as
   // dirt or dappled sunlight at any strength. A paper feel belongs over the whole screen, on the page (commit 119beb1 has the code)
-  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tufts", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
+  const HAIR_FILL = ["hair", "locks", "bangs", "drawn", "tufts", "dome", "tails"], HAIR_BACK = ["hair", "locks", "tails"];
   // outline.trace: each part's line in its own color, darkened (0 = outline.color, 1 = all its own). Read off the part's material each
   // frame (materials are swapped and recolored from many places); o.userData.trace: what the line was last mixed from
   const TR = { c: new THREE.Color(), ink: new THREE.Color(), hsl: {} };
@@ -665,20 +706,21 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a lock cut straight across (the hime cut's): as wide to its end (spec.blunt thins it there into a straight edge: the mesh has no cap)
   const HIME_END = (t) => 1 + 0.06 * Math.sin(Math.PI * Math.min(1, t * 1.4));
   const HIME_HANG = 0.97;   // the hime cut's side locks hang from the side of the head below this (head space): their tips are by the chin, where no hair lies
-  const LOCK_PARTS = ["locks", "bangs", "drawn", "tufts", "tails", "tailTie", "tailLeaf"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
+  const LOCK_PARTS = ["locks", "bangs", "drawn", "tufts", "dome", "tails", "tailLine", "tailTie", "tailLeaf"];   // tails: pony / twin / side tails (options.hair.tail), tailTie: their hair ties   // drawn: locks drawn by hand (options.hair.drawn, see drawnLocks in hair/locks.js)
   // the surface the bang locks lie on (head space): the hair under them and the forehead
   let bangKitMemo = null, tailAnchors = [], tuftSpots = [];   // tailAnchors: where the tails are tied now (avatar.tailTies) / tuftSpots: where the tufts and their spikes end (avatar.tuftSpots)   // the same until the hair under the bangs changes (setHair)
   // the skull's ball is in it too: the head's base is cut off level behind the ears (chin.napeY), and under it there is only the neck, so a
   // side tuft ending low (below the base) lay on the neck as a thin stick behind the ear. The ball keeps the tufts out where the head was round
   const bangKit = () => bangKitMemo ??= (() => { const capRaw = hairKit.hairSdfOf(hairPick), SK = OPT.body.sculpt.skull; const BK = CUT.back?.f, sk = BK ? (x, y, z) => Math.max(dPrim(P.skull, x, y, z), -BK(x, y, z)) : (x, y, z) => dPrim(P.skull, x, y, z);   // (the skull's ball cut as the head's back is, body.sculpt.backPlane: on the whole ball the hair kept the back the head had lost)
-    return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), sk(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
+    return { surf: (x, y, z) => Math.min(capRaw(x, y, z), bodySdfRaw(x, y, z), sk(x, y, z)), head: (x, y, z) => Math.min(capRaw(x, y, z), sk(x, y, z)), center: [0, SK.y, -0.005], toRoot: (x, y, z) => HTr.fromHead(x, y, z), sx: HT.sx }; })();
   // hair.sculpt.whorl { on, th, ph: where the whorl is (degrees around and up from the skull's middle), r: the roots' ring around it (radians),
   // rootW: the roots' width, part: the parting's angle (0 = front), shingle: the locks' tilt }: every lock (bangs and back) grows from the whorl
   // over the head, laid like roof tiles away from the part; no block is meshed under them (the scalp is painted the hair's color: scalpOf)
-  const WHORL = OPT.hair.sculpt.whorl?.on ? { rootW: 0.35, ...OPT.hair.sculpt.whorl } : null;
+  let WHORL = null;   // set by makeLocks for the style it makes (hairKit.whorlOn: with another style the block is back)
   const whorlOf = () => { const D = Math.PI / 180, th = (WHORL.th ?? 180) * D, ph = (WHORL.ph ?? 80) * D;
     return { whorl: { d: [Math.sin(th) * Math.cos(ph), Math.sin(ph), Math.cos(th) * Math.cos(ph)], r: WHORL.r ?? 0.12 }, shingle: WHORL.shingle ?? 0.3, part: WHORL.part ?? 0 }; };
   function makeLocks(which = LOCK_PARTS) {   // which: the lock parts to make (e.g. ["bangs"] when only the bangs changed)
+    WHORL = hairKit.whorlOn(hairPick) ? { rootW: 0.35, ...OPT.hair.sculpt.whorl } : null;
     const L = OPT.hair.sculpt.long, SL = OPT.hair.sculpt.shortLocks, out = {}, longOn = which.includes("locks") && hairPick.back === "long" && L.locks, shortOn = which.includes("locks") && ["short", "hang", "bob", "flip"].includes(hairPick.back) && SL?.on, bangsOn = which.includes("bangs") && hairKit.bangsAsLocks(hairPick);
     const drawnOn = which.includes("drawn") && (OPT.hair.drawn ?? []).some((d) => d?.pts?.length >= 2);
     const TL = OPT.hair.tail, tailsOn = which.includes("tails") && TL?.kind && TL.kind !== "none", tuftsOn = which.includes("tufts") && hairKit.tuftsOn();
@@ -693,8 +735,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] };   // the hair under the locks, as an ellipsoid (for the locks to slide over)
       const coll = lockColliders(Jr, BI, bodySdfR);
       const hugOf = (L) => L.hug ? HTr.fromHead(0, L.hug, 0)[1] : null;   // short locks lie on the hair down to this height (head space), then hang: from its widest part they stood off the nape
-      if (longOn) out.locks = part(longLocks({ ...L, bottom: ST.fwd(L.bottom) }, {   // (bottom: base space, recipe version 5: tips at the same place on a chibi or a tall body)
-        cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null }), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 });
+      if (longOn) { const LB = { ...L, bottom: ST.fwd(L.bottom) }, kit = { cap, center: c, coll, ellipsoid: ell, hugY: L.hug ? HTr.fromHead(0, L.yc, 0)[1] : null };   // (bottom: base space, recipe version 5: tips at the same place on a chibi or a tall body)
+        out.locks = part(WHORL ? whorlLongLocks(LB, { lockRootW: WHORL.rootW, ...whorlOf() }, { ...bangKit(), surf: bangKit().head }, { ...kit, toHeadY: (y) => HTr.toHead(0, y, 0)[1] }) : longLocks(LB, kit), { coll, ell, stiff: L.stiff ?? 1, damping: L.damping ?? 0.9 }); }   // head: the skull without the body (laid over the ear, a lock stood out from its tip as a fin)
       else if (hairPick.back === "bob" || hairPick.back === "flip") {   // a bob or a flip in locks: hanging from the back of the head as the short hair's do, further round to the front, down to that style's hem; the bob's tips curl in a little, the flip's out and up
         const BL = { ...SL, ...OPT.hair.sculpt[hairPick.back + "Locks"] }, B = hairKit.BACKS[hairPick.back], bottom = (th) => HTr.fromHead(0, B.side - (B.side - B.back) * Math.sqrt(Math.max(0, -Math.cos(th))) - (BL.below ?? 0), 0)[1];
         out.locks = part(ringLocks(BL, { cap, center: c, coll, ellipsoid: ell, bottom, N: 10, hugY: hugOf(BL) }), { coll, ell, stiff: BL.stiff ?? 3, damping: 0.85 }); }
@@ -703,7 +745,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         for (let i = 0; i < n; i++) { const E = (SL.edits ?? []).find((e) => e?.i === i) ?? {}, a = -span + 2 * span * (i + 0.5) / n + (E.da ?? 0);
           tips.push([a, hem(a) + (E.dy ?? 0), null, null, null, 0, 0, (SL.flick ?? 0) + (E.fl ?? 0), E.w ?? 1, 0, 0]); }
         const kit = { span, lockSpan: 360, overlap: SL.overlap ?? 1.3, lockBand: SL.band ?? 0.3, lockHangY: SL.shape ? 0.3 : SL.hangY ?? 0.86, aOff: 180, noFront: true, N: 14 };   // (with a shape nothing hangs: the shape says where the hem goes)
-        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, ...whorlOf() }, bangKit());
+        // without a shape, on the skull alone and never tucked under it (noTuck): on the body too, a tip at the nape's height ran down the neck
+        // to the shoulder, a string
+        const specs = bangLocks({ ...kit, tips, lockThick: SL.thick ?? 0.22, puff: SL.puff ?? 0.004, lockRootW: WHORL.rootW, shape: SL.shape, noTuck: !SL.shape, ...whorlOf() }, SL.shape ? bangKit() : { ...bangKit(), surf: bangKit().head });
         // as stiff as the hanging short hair's, the left, the back and the right each swinging as one (bangLocks softens a tuft hanging long: they streamed out level when running)
         specs.forEach((sp, i) => Object.assign(sp, { stiff: 1, group: `ring${Math.min(2, Math.floor(i / n * 3))}`, cohere: SL.cohere ?? 0.45 }));
         // fork (shortLocks.fork { n, short }; an edit's fk: 0 leaves a lock whole): each tip split in two points, the shorter one by turns left and right
@@ -732,14 +776,17 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     }
     if (tailsOn) {   // the ties: on the hair at an angle around the head (degrees, 0 = front; twin tails mirrored) and a height (head space)
       const K = bangKit(), D2R = Math.PI / 180, sd = TL.side === "R" ? -1 : 1;
-      const def = { pony: [[180, 1.13]], twin: [[105, 1.1], [-105, 1.1]], side: [[sd * 100, 1.07]] }[TL.kind] ?? [];
+      const def = { pony: [[180, 1.13]], twin: [[105, 1.1], [-105, 1.1]], side: [[sd * 100, 1.07]], curl: [[180, 0.86]] }[TL.kind] ?? [];
       const anchors = def.map(([a0, y0]) => { const a = (TL.angle ?? Math.abs(a0)) * (a0 < 0 ? -1 : 1) * (TL.kind === "side" ? sd * Math.sign(a0) : 1), y = TL.y ?? y0;
         const d = [Math.sin(a * D2R), 0, Math.cos(a * D2R)], c0 = [0, y, -0.005], t = surfaceAlong(K.surf, c0, d) + 0.004;
-        const up = TL.kind === "pony" ? 0.35 : 0.12, ol = Math.hypot(d[0], up, d[2]);   // outward: away from the head, a little up (a ponytail more)
+        const up = TL.kind === "pony" ? 0.35 : TL.kind === "curl" ? -0.3 : 0.12, ol = Math.hypot(d[0], up, d[2]);   // outward: away from the head, a little up (a ponytail more)
         return { p: HTr.fromHead(c0[0] + d[0] * t, c0[1], c0[2] + d[2] * t), o: [d[0] / ol, up / ol, d[2] / ol] }; });
       tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
-      out.tails = part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
+      const CT = TL.kind === "curl" ? curlTail(TL, anchors[0]) : null, copt = { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, round: true, ownShade: true, rigid: 0.97 };   // (a rope uncoils its roll)
+      if (CT?.line.length) { out.tailLine = part(CT.line, copt); out.tailLine.m.material.color.set(OPT.outline.color); }   // the roll's turn as a line: the same path and physics as the roll, so it stays on it
+      out.tails = CT ? part(CT.tail, copt)
+        : part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
         const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
           g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...o))); g.translate(p[0] + o[0] * 0.026, p[1] + o[1] * 0.026, p[2] + o[2] * 0.026);
@@ -767,8 +814,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
-    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
-      out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 }); }
+    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, taper: W.taper ?? 0, dome: OPT.hair.sculpt.dome?.on ? OPT.hair.sculpt.dome : null, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
+      out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 });
+      if (TF.dome) { const D = TF.dome, g = new THREE.BufferGeometry(), nv = D.pos.length / 3, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4), uv = new Float32Array(nv * 2);   // the sheet over their roots (hair.sculpt.dome): the head's
+        for (let v = 0; v < nv; v++) { si[v * 4] = BI.head; sw[v * 4] = 1; uv.set(ringUV(D.pos[v * 3], D.pos[v * 3 + 1], D.pos[v * 3 + 2]), v * 2); }
+        for (const [k, a, n] of [["position", D.pos, 3], ["normal", D.nor, 3], ["shadeN", D.shn, 3], ["gradT", new Float32Array(nv), 1], ["hairUV", uv, 2], ["skinIndex", si, 4], ["skinWeight", sw, 4]]) g.setAttribute(k, new THREE.BufferAttribute(a, n)); g.setIndex(D.idx);
+        const x = skinned(g, OPT.colors.hair, 0.003); x.wrap = (m) => withGrad(withRing(m), GRAD.hair); x.m.material = x.wrap(x.m.material); x.sim = { update() {}, rest() {} }; out.dome = x; } }
     return out;
   }
   Object.assign(parts, makeLocks()); hairGrad();
@@ -778,9 +829,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   parts.extraEars = skinned(meshPart("extraEars"), XC.ears(), 0.004);
   parts.extraEarsIn = skinned(meshPart("extraEarsIn"), XC.earsIn(), 0.0015);
   parts.extraWings = skinned(meshPart("extraWings"), XC.wings(), 0.004);
-  { const spec = tailSpec(XO.tail, { hips: Jr.hips, back: surfaceAlong(bodySdfR, Jr.hips, [0, 0, -1]), size: XO.tailSize ?? 1 }), c = Jr.hips;
+  { const TB = TAIL_BONE[XO.tail] ?? "hips", spec = tailSpec(XO.tail, { hips: Jr[TB], back: surfaceAlong(bodySdfR, Jr[TB], [0, 0, -1]), size: XO.tailSize ?? 1 }), c = Jr[TB];
     if (spec) { const outward = (x, y, z, M) => { const e = M.elements; return [x - (e[0] * c[0] + e[4] * c[1] + e[8] * c[2] + e[12]), y - (e[1] * c[0] + e[5] * c[1] + e[9] * c[2] + e[13]), z - (e[2] * c[0] + e[6] * c[1] + e[10] * c[2] + e[14])]; };
-      const sim = createLocks({ specs: [spec], head: BI.hips, skeleton, root, outward, lite: LITE, coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.88 });
+      const sim = createLocks({ specs: [spec], head: BI[TB], skeleton, root, outward, lite: LITE, coll: lockColliders(Jr, BI, bodySdfR), ell: null, stiff: 1, damping: 0.88, round: !!spec.round, rigid: spec.keep ?? 0 });   // (round, keep: the pod's, clothes/extras.js)
       parts.extraTail = skinned(sim.geometry, XC.tail(), 0.003); parts.extraTail.sim = sim; } }
   lap("hair");
   // what is worn (options.outfit.*.on): the meshes are built either way, so putting a garment on later is instant
@@ -818,7 +869,13 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap }).forEach(({ geo, bone }, k) => {
         const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
-        const key = k ? `acc${i}.${k}` : `acc${i}`; parts[key] = skinned(geo, it.color ?? "#e8c25a", 0.0025); accKeys.push(key); }); });
+        // outline (m): its line's width; metal: the armor's shine (stronger bands, a glint: a gold clasp buried in the cloak's folds read flat)
+        const key = k ? `acc${i}.${k}` : `acc${i}`, col = it.color ?? "#e8c25a", x = parts[key] = skinned(geo, col, it.outline ?? 0.0025); accKeys.push(key);
+        if (it.metal) { x.m.material.dispose(); x.m.material = metal(OPT.shading.style, col); x.metal = true; }
+        // a shape's own painted tones (accessories.js star4): its bandT's ranges [lo, hi, "dark" | "light"], darker or lighter than its color
+        const SB = geo.userData.bands; if (SB) { const U = bandU(), WHITE = new THREE.Color(1, 1, 1); U.n.value = SB.length;
+          SB.forEach(([lo, hi, tone], j) => { U.lo.value.setComponent(j, lo); U.hi.value.setComponent(j, hi); const c = U[`c${j}`].value.set(col); if (tone === "dark") c.multiplyScalar(0.65); else c.lerp(WHITE, 0.3); });   // (linear: about 0.82 and a light tint on screen)
+          x.wrap = (m) => withBands(m, U); x.m.material = x.wrap(x.m.material); } }); });
   }
   makeAccessories();
   // ear line: a thin drawn line inside each ear (anime style), as a small tube lying on the ear's front, attached to the head bone
@@ -902,7 +959,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // body under the clothes: triangles whose three corners all sit deep inside a garment that is showing are left out of the body's index
   // (the outline shares the geometry). They never show, and skipping them makes drawing lighter. Follows each garment's .m.visible,
   // so taking a garment off (or a clay view) brings the body back. Socks are left alone: the leg sits only ~2 mm inside them.
-  const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeSdf]], COVER_DEPTH = 0.006;   // m inside the garment
+  const COVER = [["shirt", fast.shirt], ["pants", fast.pants], ["shoes", shoeCover ?? shoeSdf]], COVER_DEPTH = 0.006;   // (shoeCover: down to the floor and 12 mm wider at the notch's height where the sole is notched: the bare foot sits inside the sole, and its sides, nearer the upper's surface than COVER_DEPTH, showed in the notch as a shard)   // m inside the garment
   const bodyGeo = parts.body.m.geometry, fullIdx = bodyGeo.index, coverIdx = new Map();
   let coverBits = null, coverSig = -1;
   if (cull) { const Pa = basePos(bodyGeo), kept = building && hit?.cover;   // remembered with the meshes (same shape, same answer; recomputing reads the whole body ~0.25 s)
@@ -967,7 +1024,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const avatar = {
     object: root, bones: bone, skeleton, options: OPT, parts, PROF, TIMES, earLine, get halo() { return halo; }, cloth, capeCloth,
     /** internals for tools and checking (shapes, face texture, joints) */
-    internals: { TEX, GRAD, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
+    internals: { TEX, GRAD, picSide, J: Jr, BONES, HIPS0, P, CUT, HEAD, EAR, HT: HTr, bodySdf: bodySdfR, bodySdfSlow, bodySdfRaw, ST, Jbase: J, HTbase: HT, face, hairKit, hairPick, get faceLayer() { return faceLayer; } },
     get faceLayer() { return faceLayer; },
     get pose() { return poseName; },
     get lastPose() { return lastPose; },
@@ -983,7 +1040,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     update(dt, { t, instant = false, pose, camera, detail, wind: breeze, blink } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
-      syncCover(); hairLines(); traceLines(); rims();
+      syncCover(); hairLines(); traceLines(); rims(); figureLook();
       time = t ?? time + dt;
       lastPose = playPose(pose ?? poseName, time, dt, instant, seatAdj, blendT);
       if (lastPose.stars) { stars.visible = true; const R = stars.userData.r; stars.children.forEach((m, i) => { const a = time * 3.2 + i * 2 * Math.PI / 5; m.position.set(Math.cos(a) * R, 0.12 * R * Math.sin(a * 2), Math.sin(a) * R * 0.55); m.rotation.set(0, -a, 0.3 * Math.sin(a * 3)); }); } else if (stars.visible) stars.visible = false;   // (stun: the stars circle the head)
@@ -1099,7 +1156,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       for (const [k, v, key] of [["extraEars", ears, "earColor"], ["extraEarsIn", earsIn, "earInColor"], ["extraTail", tail, "tailColor"], ["extraWings", wings, "wingColor"]]) {
         if (v !== undefined) XO[key] = v; if (v !== undefined || hair) parts[k]?.m.material.color.set(XC[{ extraEars: "ears", extraEarsIn: "earsIn", extraTail: "tail", extraWings: "wings" }[k]]()); }
       if (haloC) { XO.haloColor = haloC; halo?.material.color.set(haloC); }
-      if (hair) { OPT.colors.hair = hair; KNEE.scalp.value.set(hair); ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie" && k !== "tailLeaf") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
+      if (hair) { OPT.colors.hair = hair; KNEE.scalp.value.set(hair); ringColor(hair); for (const k of LOCK_PARTS) if (k !== "tailTie" && k !== "tailLeaf" && k !== "tailLine") parts[k]?.m.material.color.set(hair); const old = parts.hair.m.material; parts.hair.m.material = hairMat(hair); parts.hair.m.material.wireframe = old.wireframe; old.dispose(); }   // a new material: the angel ring's color follows the hair color
       if (eyes) { OPT.colors.eyes = eyes; face.setEyeColor(eyes); avatar.drawFace(); }
       else if (hair && OPT.face.lashTrace) avatar.drawFace();   // the lashes follow the hair's color
       const DR = OPT.outfit.dress?.on;   // a dress: its top (the shirt) and its skirt (the pants) are the dress's color
@@ -1121,7 +1178,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Outline (instant, no rebuild): { on, width (1 = default), color, trace (0–1: each part's line in its own color, darkened) }. Some art styles want none: { on: false }. */
     setOutline({ on, width, color, hairInner, trace } = {}) {
       Object.assign(OPT.outline, Object.fromEntries(Object.entries({ on, width, color, hairInner, trace }).filter(([, v]) => v !== undefined))); hairLines();
-      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = OPT.outline.on; m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
+      root.traverse((x) => { if (!x.userData.outline) return; const m = x.material; m.visible = linesOn(); m.color.set(OPT.outline.color); delete x.userData.trace; m.userData.width.value = m.userData.baseWidth * OPT.outline.width; });
       traceLines();
     },
     /** Shading (instant, no rebuild): a style "toon" | "smooth" | "flat" (see SHADINGS), or { style, bands, soften }:
@@ -1142,10 +1199,11 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (resoften) { for (const [k, x] of Object.entries(parts)) if (x.m.geometry.attributes.shadeN && !x.sim) addSoftNormals(k, x.m.geometry); buildFaceLayer(); }   // the face layer copies the head's shading normals
       for (const [k, x] of Object.entries(parts)) {
         if (k === "body") { const old = x.toonMat, nm = x.wrap(shadeToon(old.color.getHex())); if (x.m.material === old) x.m.material = nm; x.toonMat = nm; old.dispose(); continue; }   // the body's normal material (a page may be showing another one, e.g. clay)
-        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : isMetal(k) ? metal(style, old.color.getHex()) : (x.wrap ?? ((m) => m))(shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
+        const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : (x.wrap ?? ((m) => m))(isMetal(k) || x.metal ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
+      root.traverse((x) => { if (x.userData.outline) x.material.visible = linesOn(); else if (x.isSkinnedMesh) x.receiveShadow = style === "figure"; });
     },
     /** Soft blush on the cheeks and the nose tip (instant): { cheeks: { on, color, strength, size, x, y }, nose: { on, color, strength, size } }. */
     /** The knees' blush and line (instant): { blush: { on, color, strength, size }, line: { on, color, strength, width, radius } }. */
@@ -1156,6 +1214,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       const HR = OPT.hair; for (const k of ["bangs", "back", "ahoge", "bangsForm", "backForm", "nape"]) if (k in pick) HR[k] = k === "bangs" ? bangsId(pick[k]) : pick[k];
       if (HR.bangs === "block") { HR.bangs = "nendo"; HR.bangsForm = "block"; } if (HR.back === "hang") { HR.back = "short"; HR.nape = "hang"; HR.backForm = "locks"; }   // the old names (options.js readHair)
       Object.assign(hairPick, hairForms(HR)); bangKitMemo = null;
+      { const g = parts.body.m.geometry; g.setAttribute("scalp", new THREE.BufferAttribute(scalpOf(basePos(g)), 1)); }   // the whorl comes and goes with the style (hairKit.whorlOn)
       const on = parts.hair.on; for (const m of [parts.hair.m, parts.hair.o]) { root.remove(m); m.geometry.dispose(); }
       parts.hair = makeHair(H); parts.hair.on = on;
       for (const k of LOCK_PARTS) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
@@ -1195,6 +1254,14 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       Object.assign(T, values); U.mode.value = TEX_MODE[T.mode] ?? 0; U.scale.value = T.scale; U.rot.value = (T.rotate ?? 0) * Math.PI / 180; U.off.value.set(T.x ?? 0, T.y ?? 0); U.opacity.value = T.opacity ?? 1; U.blend.value = TEX_BLEND[T.blend] ?? 0;
       return loadTex(target);
     },
+    /** A drawn picture on a garment part (instant; materials.js withPicture). part: "jacket" | "shirt" | "pants". values { src (path or data URL, null = none:
+     *  the part's views laid out as pictureTemplate draws them), opacity, blend: "over" | "multiply" }.
+     *  Kept in the part's options (outfit.jacket.picture). Resolves when it shows. */
+    setPicture(part, values = {}) {
+      const U = PIC[part]; if (!U) throw new Error(`Unknown part "${part}" for a drawn picture. Available: ${Object.keys(PIC).join(", ")}`);
+      const O = partOptions(OPT, U.p), T = (O.picture ??= {}); Object.assign(T, values); U.opacity.value = T.opacity ?? 1; U.blend.value = TEX_BLEND[T.blend] ?? 0;
+      return loadPic(part);
+    },
     /** Paint (instant): the picture of a part's atlas (src/paint.js), as a path or data URL, null = none. target: "body" | "shirt" | "pants" | "dress" | "cape".
      *  Kept in options (paint.<target>.src). Resolves when it shows. */
     setPaint(target, src) {
@@ -1218,7 +1285,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     setTails(values) {
       const TL = OPT.hair.tail; for (const [k, v] of Object.entries(structuredClone(values))) { if (k === "tie" && v && typeof v === "object") Object.assign(TL.tie, v); else TL[k] = v; }
       const on = parts.hair.on, vis = parts.hair.m.visible;
-      for (const k of ["tails", "tailTie", "tailLeaf"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
+      for (const k of ["tails", "tailLine", "tailTie", "tailLeaf"]) if (parts[k]) { for (const m of [parts[k].m, parts[k].o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; }
       for (const [k, x] of Object.entries(makeLocks(["tails"]))) { parts[k] = x; x.on = on; x.m.visible = x.o.visible = vis; }
     },
     /** Where the tails are tied (avatar space, rest pose): [{ p, o }] (o: the way the bundle leaves the head), [] without tails. For an editor's handles. */
@@ -1284,7 +1351,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Fingerprint of mesh positions and skin weights (for checking refactors). */
     checksum() { return ["body", "shirt", "pants", "socks", "shoes", "soles", "hair"].map((k) => parts[k]).map((x) => { const a = x.m.geometry.attributes; let h = 0; for (const k of ["position", "skinIndex", "skinWeight"]) { const v = a[k].array; for (let i = 0; i < v.length; i++) h = (h * 31 + Math.round(v[i] * 1e5)) % 1000000007; } return h; }); },
 
-    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); face.BROWS?.tex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT)]) U.map.value.dispose(); root.removeFromParent(); },
+    dispose() { root.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose?.()); } }); face.faceTex.dispose(); face.BROWS?.tex.dispose(); for (const U of [...Object.values(TEX), ...Object.values(PAINT), ...Object.values(PIC)]) U.map.value.dispose(); root.removeFromParent(); },
   };
   avatar.drawFace(); lap("drawFace");
   syncCover(); lap("syncCover"); TIMES.total = Math.round(performance.now() - T00);
