@@ -201,7 +201,7 @@ export const CHARACTERS = {
       face: {   // his own pictures (the code's eyes have no lash this thick); the brows show over the bangs, as on the sheet
         parts: { eyes: "image", brows: "thinRoot", mouth: "image" },
         images: { eye: { src: ASTEL_EYE, dx: 0, dy: 0 }, eyeClosed: { src: ASTEL_EYE_CLOSED, dx: 0, dy: 0 }, mouth: { src: ASTEL_MOUTH } },
-        layout: { eyeX: 0.098, browX: 0.133, browY: 1.104, mouthY: 0.91 },   // the eyes apart as シルヴィ's are for the head's width (0.088 left wide cheeks outside them beside her); their height hers (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
+        layout: { eyeX: 0.088, browX: 0.125, browY: 1.104, mouthY: 0.91 },   // the eyes where シルヴィ's are (Saori: this height is the sheet's; measured off the sheet's flat front view, eyeY 0.965, they sat far under it in the editor's view); the mouth a little higher, as on the sheet; the brows as far over the eyes as on the sheet
         browsOverHair: true,
         blush: { cheeks: { on: true, color: "#f0a898", strength: 0.3, size: 0.045, x: 0.14, y: 0.945 } },
         // the sheet's four faces: setFace("happy") / ("surprised") / ("angry": the half-lidded sulk); sad is made from them
