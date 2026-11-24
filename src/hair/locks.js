@@ -456,8 +456,8 @@ export function curlTail(T, { p, o }) {
   const T0 = 8 / (pts.length - 1), prof = (t) => t < T0 ? 0.3 + 0.7 * sstep(0, T0, t)   /* narrow at the tie, full where it rolls */ : t < 0.93 ? 1 : Math.max(0.35, Math.sqrt(Math.max(0, 1 - ((t - 0.93) / 0.07) ** 2)));
   const tail = { root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof };
   // T.line (m, the line's width): the roll's turn drawn on both its sides, a thin strand along the same path at the bundle's edge (index.js paints it the outline's color)
-  const LW = T.line ?? 0, lprof = (t) => sstep(T0 * 1.05, T0 * 1.5, t) * (1 - sstep(0.86, 0.97, t));
-  return { tail: [tail], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, w: LW, thick: 1, prof: lprof, shift: (t) => m * 0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.9, T0 * 1.05, t)) })) : [] };
+  const LW = T.line ?? 0, lprof = (t) => sstep(T0, T0 * 1.15, t) * (1 - sstep(0.86, 0.97, t));
+  return { tail: [tail], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, w: LW, thick: 1, prof: lprof, noLine: true, shift: (t) => m * 0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.9, T0 * 1.05, t)) })) : [] };
 }
 
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
@@ -688,7 +688,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
           toRest(pos, v, x, y, z, false);
           let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w;
           if (fn) { nx = ax * fn + ox * w0 * 0.6; ny = ay * fn + oy * w0 * 0.6; nz = az * fn + oz * w0 * 0.6; } const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
-          toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
+          toRest(nor, v, nx / nl, ny / nl, nz / nl, true); if (s.noLine) { nor[v] *= 0.02; nor[v + 1] *= 0.02; nor[v + 2] *= 0.02; }   // (a drawn line: no outline of its own; a short normal, materials.js outlineMat)
           const io = ownShade ? 0 : s.layer ? 0.1 + 0.5 * oneShade : 0.6, own = ownShade ? 1 : OWN * (1 - 0.75 * oneShade),   // ownShade (a rolled tail): its own round alone (by its run's out, the roll shaded in stripes: light and dark by turns round it)
           qx = ox + (rx - ox) * oneShade, qy = oy + (ry - oy) * oneShade, qz = oz + (rz - oz) * oneShade;
           const sx = qx * io + nx / nl * own, sy = qy * io + ny / nl * own, sz = qz * io + nz / nl * own, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks.
