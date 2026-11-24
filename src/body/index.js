@@ -363,8 +363,8 @@ export function buildBody(OPT, { slow = false, oldSock = false } = {}) {
     // adult hands (2026-10-08, Saori: "手がちびキャラ用に作ったやつだからデカくて指も太いよね"; beside the VRoid hand): a narrower, thinner palm and
     // slender fingers half again as long (FR: the fingers' radius, FL: their length, FS: their spread across the palm)
     // body.sculpt.hand: slim = how far toward that hand (null: all the way: シルヴィ's hand; the chibi body types set 0, their round one);
-    // fingers = their thickness (null: by slim, to 0.55 on the adult body, 0.7 on the others: a child's. Open hands get their fingers as rings, smooth at any cells)
-    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? 1, hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, AD ? 0.55 : 0.7), FL = hs(1, 1.45), FS = hs(1, 0.7);
+    // fingers = their thickness, length = their length (×, 1 = by slim) (fingers null: by slim, to 0.55 on the adult body, 0.7 on the others: a child's. Open hands get their fingers as rings, smooth at any cells)
+    const HO = OPT.body.sculpt.hand ?? {}, HS = HO.slim ?? 1, hs = (a, b) => HS === 0 ? a : HS === 1 ? b : a + (b - a) * HS, FR = HO.fingers ?? hs(1, AD ? 0.55 : 0.7), FL = hs(1, 1.45) * (HO.length ?? 1), FS = hs(1, 0.7);
     P[`palm.${s}`] = E(palm, [0.034 * HK, hs(0.05, 0.036) * HK, hs(0.019, 0.012) * HK], `hand.${s}`, 0.02 * HK, [D, S, N]);   // 見本の手は大きめ(横から見ると扇に開く)
     // 握りこぶし: 指は付け根から手のひら側へ曲がって、もう一度内へ折れる(握った柄を包む)。親指は指の前にかぶさる
     [[0.039, 0.4, 0.04], [0.013, 0.13, 0.046], [-0.013, -0.13, 0.044], [-0.039, -0.4, 0.036]].forEach(([o, sp, len], i) => {

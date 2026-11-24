@@ -419,7 +419,8 @@ export const CHARACTERS = {
         thickness: { thigh: 0.64 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
         torso: { chest: 0.7, belly: 0.6, hips: 0.62, waist: 0.068, back: 0.7 },
-        sculpt: { neck: { length: -0.024, width: 0.6, depth: 0.75 }, skull: { height: 0.21, y: 1.078 } },   // a short neck: the chin just over the collar; a lower crown (its bottom kept: the ears stay under the hair)
+        sculpt: { neck: { length: -0.012, width: 0.6, depth: 0.75 }, hand: { length: 0.85 }, skull: { height: 0.21, y: 1.078 } },   // a short neck: the chin just over the collar; short fingers; a lower crown (its bottom kept: the ears stay under the hair)
+        knees: { blush: { on: true }, line: { on: true } },   // as シルヴィ's
       },
       hair: {
         // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's): no block under them (sculpt.whorl.on)
@@ -437,16 +438,17 @@ export const CHARACTERS = {
           { to: [72, 0.875], thickFrom: 0.04, width: 0.25, thick: 0.039, tips: [1, 0.85], notch: 0.12, endWidth: 0.7, hook: -8, hug: 0.3, mirror: true },   // over the ears, to the jaw, its end turned in toward the cheek (wide: the ear's lobe showed before it)
           // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
           { to: [45, 0.915], thickFrom: 0.04, width: 0.22, thick: 0.03, hook: 8, mirror: true },
-          { to: [-2, 0.975], thickFrom: 0.04, width: 0.24, thick: 0.024, tips: [0.86, 1], notch: 0.1, endWidth: 0.8 },
+          { to: [0, 0.968], thickFrom: 0.04, width: 0.28, thick: 0.024, tips: [0.96, 1], notch: 0.035, endWidth: 0.55 },
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
         sculpt: { whorl: { on: true }, shell: 0.008 },
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
-        tail: { kind: "curl", side: "L", length: 0.2, curlSize: 0.062, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
+        tail: { kind: "curl", side: "L", length: 0.26, curlSize: 0.062, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
-        parts: { eyes: "image", brows: "image", mouth: "image" }, browsOverHair: true, browsPull: 0.18,   // (over the thick bangs)
+        parts: { eyes: "image", brows: "image", mouth: "image", nose: "dot" }, browsOverHair: true,
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 9 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
         layout: { eyeX: 0.092, eyeY: 0.998, browX: 0.06, browY: 1.115, mouthY: 0.896 },   // (the sheet's eyes and mouth are about where the default's are; the brows short, over the eyes' inner halves)
         drawn: [
