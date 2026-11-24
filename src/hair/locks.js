@@ -382,14 +382,15 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
     const blur = (src, n = 4) => { let s = src; for (let it = 0; it < n; it++) { const o = new Float32Array(NP * NT); for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const u = s[ix(Math.max(0, i - 1), j)], d = s[ix(Math.min(NP - 1, i + 1), j)]; o[ix(i, j)] = 0.25 * (u + d) + 0.125 * (s[ix(i, j - 1)] + s[ix(i, j + 1)]) + 0.25 * s[ix(i, j)]; }
         let m = 0; for (let j = 0; j < NT; j++) m += o[j] / NT; o.fill(m, 0, NT); s = o; } return s; };
     const hi = blur(spread(env, Math.max, 5, 3)), lo = blur(env, 1), gap = blur(spread(bare, Math.max, 2, 2), 2);   // gap: by a place with no tuft (the forehead between the bangs): the sheet stays under
-    const pos = new Float32Array(NP * NT * 3), nor = new Float32Array(NP * NT * 3), idx = [], c0 = toRoot(...center);
+    const pos = new Float32Array(NP * NT * 3), nor = new Float32Array(NP * NT * 3), line = new Float32Array(NP * NT), idx = [], c0 = toRoot(...center);
     for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const th = -Math.PI + 2 * Math.PI * j / NT, lim = fr + (bk - fr) * (0.5 - 0.5 * Math.cos(th)), w = sstep(lim - soft, lim, PM * i / (NP - 1)), R = hi[ix(i, j)] + 0.002 + (lo[ix(i, j)] - 0.003 - hi[ix(i, j)]) * w - 0.014 * sstep(lim - 0.2 * soft, lim, PM * i / (NP - 1)) - 0.04 * sstep(0.05, 0.6, gap[ix(i, j)]), u = dirOf(i, j);
-      pos.set(toRoot(center[0] + u[0] * R, center[1] + u[1] * R, center[2] + u[2] * R), ix(i, j) * 3); }
+      pos.set(toRoot(center[0] + u[0] * R, center[1] + u[1] * R, center[2] + u[2] * R), ix(i, j) * 3); line[ix(i, j)] = Math.max(0.02, 1 - sstep(0, 0.5, w)); }
     const P = (i, j) => { const q = ix(Math.min(NP - 1, Math.max(0, i)), j) * 3; return [pos[q], pos[q + 1], pos[q + 2]]; };
     for (let i = 0; i < NP; i++) for (let j = 0; j < NT; j++) { const a = P(i + 1, j), b = P(i - 1, j), c = P(i, j + 1), d = P(i, j - 1), p = P(i, j); let n = i ? norm(cross(c.map((v, k) => v - d[k]), a.map((v, k) => v - b[k]))) : null;
       const o = norm(p.map((v, k) => v - c0[k])); if (!n || !isFinite(n[0])) n = o; else if (dot(n, o) < 0) n = n.map((v) => -v); nor.set(n, ix(i, j) * 3); }
     for (let i = 0; i + 1 < NP; i++) for (let j = 0; j < NT; j++) { const a = ix(i, j), b = ix(i + 1, j), c = ix(i + 1, j + 1), d = ix(i, j + 1); idx.push(a, b, c, a, c, d); }
     const shn = nor.slice(); for (let q = 0; q < NP * NT; q++) { const o = norm([pos[q * 3] - c0[0], pos[q * 3 + 1] - c0[1], pos[q * 3 + 2] - c0[2]]); shn.set(norm([0, 1, 2].map((k) => 0.3 * nor[q * 3 + k] + 0.7 * o[k])), q * 3); }   // shaded mostly as a ball: the toon band's edge wandered over its small waves
+    for (let q = 0; q < NP * NT; q++) for (let k = 0; k < 3; k++) nor[q * 3 + k] *= line[q];   // its outline only over the crown: where it goes under the tufts its shell showed past them in dashes (a short normal: a thinner line, materials.js)
     out.dome = { pos, nor, shn, idx }; }
   // spikes: bent three-sided points growing out of a tuft. A spike's base lies on the tuft's top, `length` up it from where it leaves
   // (y: its point's height, or at: 0..1 along the tuft), as wide as `width`; its ridge goes from the base's upper end to the point, `out`
