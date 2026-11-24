@@ -415,7 +415,7 @@ export const CHARACTERS = {
       body: {
         head: { scale: 0.83, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
         proportion: { legs: 1.23, torso: 0.92, shoulders: 0.6, arms: 0.95 },   // (fitProportions: heads 3.14, chin 0.683, knee 0.222)
-        thickness: { thigh: 0.64 },
+        thickness: { thigh: 0.64, upperArm: 0.6, forearm: 0.6 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
         torso: { chest: 0.55, belly: 0.6, hips: 0.62, waist: 0.068, back: 0.7 },
         sculpt: { neck: { length: -0.012, width: 0.5, depth: 0.75 }, hand: { length: 0.85 }, skull: { height: 0.218, y: 1.086 } },   // a short neck: the chin just over the collar; short fingers; a lower crown (its bottom kept: the ears stay under the hair)
@@ -441,7 +441,7 @@ export const CHARACTERS = {
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.008, dome: { on: true } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
+        sculpt: { whorl: { on: true }, shell: 0.008, dome: { on: true, front: 75, soft: 30 } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },
