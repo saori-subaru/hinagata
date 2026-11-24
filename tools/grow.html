@@ -20,7 +20,9 @@ const W = +(Q.get("w") || STAGE?.SIZE[0] || 540), H = +(Q.get("h") || STAGE?.SIZ
 // ?to=astel: 別の人へ変わる。両方を今の版の言葉に開いて既定値で埋める(版の違うファイルを混ぜないため。片方にしか無い数値も補間できる)。
 // 数値と色は育ちに合わせて補間し、形の違う所(髪型・服・顔の絵・飾り)は育ち SW(?switch=0.5)のコマで丸ごと入れ替わる
 const file = CHARACTERS[who].file, TO = Q.get("to"), SW = TO ? +(Q.get("switch") || 0.5) : null, open = (f) => structuredClone(mergeOpt(DEFAULTS, openRecipe(f).options));   // (clone: merge が DEFAULTS の枝を共有し、?set が既定値ごと書き換えた)
-const end = TO ? open(CHARACTERS[TO].file) : structuredClone(file.options), from = TO ? open(file) : null;
+// ?like=sylvie2: ちびで始め、終わりは体の比率・太さ・頭の大きさだけその人に(ずんだもんがシルヴィの頭身まで育つ)
+const LIKE = Q.get("like"), BODY = (o) => ({ body: { proportion: o.body.proportion, thickness: o.body.thickness, head: { scale: o.body.head.scale } } });
+const end = TO ? open(CHARACTERS[TO].file) : LIKE ? mergeOpt(open(file), BODY(open(CHARACTERS[LIKE].file))) : structuredClone(file.options), from = TO || LIKE ? open(file) : null;
 const setPath = (k, v) => { for (const root of from ? [end, from] : [end]) { const ks = k.split("."); let o = root; for (const p of ks.slice(0, -1)) o = o[p] ??= {}; o[ks.at(-1)] = structuredClone(v); } };
 for (const [k, v] of Object.entries(STAGE?.SET ?? {})) setPath(k, v);
 // ?set=outfit.cape.open=1.2;outfit.cape.hem=0.6 : 値を差し替えて試す(始点・終点とも)
@@ -28,7 +30,7 @@ for (const kv of (Q.get("set") || "").split(";").filter(Boolean)) { const [k, v]
 // 始点: 本人の体を、同じ体型のちび(girl)の比率・太さ・頭の大きさに。arms はちびの null(胴と伸びる)を補間できないので 1
 const chibi = structuredClone(BODY_TYPES[Q.get("from") || "girl"].body); chibi.proportion.arms = 1;
 const merge = (a, b) => { const o = structuredClone(a); for (const [k, v] of Object.entries(b)) o[k] = v && typeof v === "object" && !Array.isArray(v) && o[k] && typeof o[k] === "object" ? merge(o[k], v) : v; return o; };
-const start = from ?? merge(end, { body: { proportion: chibi.proportion, thickness: chibi.thickness, head: { scale: chibi.head.scale } } });
+const start = LIKE ? merge(from, { body: { proportion: chibi.proportion, thickness: chibi.thickness, head: { scale: chibi.head.scale } } }) : from ?? merge(end, { body: { proportion: chibi.proportion, thickness: chibi.thickness, head: { scale: chibi.head.scale } } });
 const hex = (v) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v), mixHex = (a, b, t) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, "0")).join("");
 const lerp = (a, b, t) => { if (typeof a === "number" && typeof b === "number") return a + (b - a) * t; if (hex(a) && hex(b)) return mixHex(a, b, t);
   if (a && b && typeof a === "object" && typeof b === "object" && !Array.isArray(a) && !Array.isArray(b)) { const o = {};
@@ -51,7 +53,7 @@ const span = (L) => { let lo = Infinity, hi = -Infinity; for (const A of L) for 
 const MOTION = Q.get("motion"), WARM = 0.6, blinkAt = S ? S.blink : (t) => t % 3.3 > 3.18;   // WARM: 作り直したコマでは髪と布が動きに追いつくよう、その前の 0.6 秒を回してから撮る
 async function build(g) {
   if (built === g) return; if (av) { scene.remove(av.object); av.dispose?.(); }
-  av = await createAvatar(TO ? lerp(start, end, g) : { ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
+  av = await createAvatar(from ? lerp(start, end, g) : { ...file, options: lerp(start, end, g) }, { quality: Q.get("q") || "game", cache: false, workers: false });
   while (loading.size) await new Promise((r) => setTimeout(r, 5));
   const L = texParts(av), [lo, hi] = span(L), ref = refs[SW != null && g < SW ? 0 : 1] ??= [lo, hi];   // (入れ替わりの前後で別の服: それぞれ最初に作った形に合わせる)
   if (hi > lo) for (const A of L) { for (let i = 1; i < A.array.length; i += 3) A.array[i] = ref[0] + (A.array[i] - lo) * (ref[1] - ref[0]) / (hi - lo); A.needsUpdate = true; }
