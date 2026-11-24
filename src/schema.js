@@ -82,6 +82,7 @@ const MAIN = [
   ["body.head.width", L("頭の幅", "Head width"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.head.depth", L("頭の奥行き", "Head depth"), { min: 0.85, max: 1.15, step: 0.01, section: L("頭", "Head") }],
   ["body.sculpt.neck.width", L("首の太さ", "Neck width"), { min: 0.35, max: 1.2, step: 0.01, section: L("頭", "Head") }],
+  ["body.sculpt.neck.depth", L("首の奥行き", "Neck depth"), { min: 0.6, max: 1.2, step: 0.01, section: L("頭", "Head"), help: L("首の前後の厚み(幅に対する倍)。1 = 丸い柱。横から見て首が太い時に下げる", "front to back, as a share of its width; 1 = round. Lower it when the neck looks thick from aside") }],
   ["body.sculpt.neck.length", L("首の長さ", "Neck length"), { min: -0.04, max: 0.06, step: 0.002, section: L("頭", "Head"), help: L("頭ごと上へ(m)", "lifts the head (m)") }],
   ["body.sculpt.neck.follow", L("首を頭の大きさに合わせる", "Neck follows head size"), { min: 0, max: 1.5, step: 0.05, section: L("頭", "Head"), help: L("頭を小さくすると首も細くなる量。0 = 頭の大きさに関係なく同じ太さ", "how much the neck thins with a smaller head. 0 = the same whatever the head") }],
   ["body.sculpt.temple.depth", L("こめかみの張り", "Temple fullness"), { min: 0, max: 0.015, step: 0.001, section: L("輪郭", "Face shape"), help: L("目じりの横を外へ張り出す(m)", "pushes the side of the face beside the eyes out (m)") }],

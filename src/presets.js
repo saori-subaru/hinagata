@@ -414,12 +414,12 @@ export const CHARACTERS = {
       colors: { skin: "#f7e6d6", hair: "#bfe396", eyes: "#efb85b" },
       outline: { color: "#46433c" },   // the sheet's lines: a dark warm gray
       body: {
-        head: { scale: 0.83 },
+        head: { scale: 0.83, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
         proportion: { legs: 1.23, torso: 0.92, shoulders: 0.75, arms: 0.95 },   // (fitProportions: heads 3.14, chin 0.683, knee 0.222)
         thickness: { thigh: 0.64 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
-        torso: { chest: 0.7, belly: 0.6, hips: 0.62, waist: 0.068, back: 1.15 },   // a narrow, round trunk (the sheet's waistband is 19 cm wide, as deep as wide)
-        sculpt: { neck: { length: -0.024, width: 0.6 }, skull: { height: 0.21, y: 1.078 } },   // a short neck: the chin just over the collar; a lower crown (its bottom kept: the ears stay under the hair)
+        torso: { chest: 0.7, belly: 0.6, hips: 0.62, waist: 0.068, back: 0.7 },
+        sculpt: { neck: { length: -0.024, width: 0.6, depth: 0.75 }, skull: { height: 0.21, y: 1.078 } },   // a short neck: the chin just over the collar; a lower crown (its bottom kept: the ears stay under the hair)
       },
       hair: {
         // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's): no block under them (sculpt.whorl.on)
@@ -476,14 +476,14 @@ export const CHARACTERS = {
       },
       accessories: [   // (offsets from the bone's joint, as built, measured on the clothes: tools/surface.mjs)
         // the bow where the collar's lobes meet: a pale green bow over two pink ends
-        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.068, 0.086], n: [0.05, 0.5, 0.86], spin: 28, size: 0.062, color: "#cf7aa3", mirror: true, lift: 0.003 },
-        { kind: "ribbon", bone: "upperChest", at: [0, 0.0701, 0.085], n: [0, 0.57, 0.82], size: 0.066, color: "#b6da8c", lift: 0.007 },
+        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.068, 0.0894], n: [0.05, 0.52, 0.85], spin: 28, size: 0.062, color: "#cf7aa3", mirror: true, lift: 0.003 },
+        { kind: "ribbon", bone: "upperChest", at: [0, 0.0701, 0.0884], n: [0, 0.59, 0.81], size: 0.066, color: "#b6da8c", lift: 0.007 },
         { kind: "button", bone: "foot.L", at: [0.062, -0.045, 0.03], n: [1, 0, 0.15], size: 0.02, color: "#e6a8b6", mirror: true, lift: 0.002 },   // on each shoe's outer side
         // the waistband's buttons, a pair under each strap, in front and behind
-        { kind: "button", bone: "spine", at: [0.064, 0.0844, 0.074], n: [0.54, 0.11, 0.84], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
-        { kind: "button", bone: "spine", at: [0.064, 0.0483, 0.0761], n: [0.61, 0.21, 0.76], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
-        { kind: "button", bone: "spine", at: [0.06, 0.0844, -0.1062], n: [0.44, 0.25, -0.86], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
-        { kind: "button", bone: "spine", at: [0.06, 0.0483, -0.0902], n: [0.69, 0, -0.73], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
+        { kind: "button", bone: "spine", at: [0.064, 0.0844, 0.0795], n: [0.49, 0.11, 0.86], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
+        { kind: "button", bone: "spine", at: [0.064, 0.0483, 0.0812], n: [0.56, 0.19, 0.81], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
+        { kind: "button", bone: "spine", at: [0.06, 0.0844, -0.0851], n: [0.4, 0.26, -0.88], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
+        { kind: "button", bone: "spine", at: [0.06, 0.0483, -0.0679], n: [0.19, 0.51, -0.84], size: 0.027, color: "#e6a8b6", mirror: true, lift: 0.011 },
       ],
     } },
   },

@@ -138,6 +138,7 @@ export const DEFAULTS = {
       },
       "neck": {
         "width": 0.85,
+        "depth": 1,
         "length": 0,
         "follow": 1,
         "nape": {
