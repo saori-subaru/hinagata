@@ -139,7 +139,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     const f = (x, y, z) => { const t = Math.min(1, Math.max(0, (y0 - y) / (y0 - y1))), s = t < PUFF_AT ? Math.sin(Math.PI / 2 * t / PUFF_AT) : Math.cos(Math.PI / 2 * (t - PUFF_AT) / (1 - PUFF_AT)), e = t < PUFF_AT ? PS * (1 - s) : 0;   // e: puffStart, gone at the fullest
       const c = c1 * Math.pow(t, 1.5), rx = w0 + (c1 + r1 - w0) * t + A * s + e - c, zc = zc0 + (zc1 - zc0) * t, dz = z - zc, rz = (dz > 0 ? d0 + (rf - d0) * t + AF * s : d0 + (rb - d0) * t + AB * s) + e;
       const q = Math.hypot((Math.abs(x) - c) / rx, dz / rz);
-      return Math.max((q - 1) * Math.min(rx, rz), y - (y0 + 0.006), y1 - PCUFF * 0.5 - y); };
+      return Math.max((q - 1) * Math.min(rx, rz), y - (y0 + 0.006), y1 - PCUFF * 0.1 - y); };   // (its end just into the band: halfway down it, the cloth buried the band)
     // the waist over the balloon stays within its top's outline (a high waist reaches the elbows' height: the mask's margin left a scrap of pants on each forearm)
     return { f, waist: (x, y, z) => y > y0 - 0.01 ? (Math.hypot(x / (w0 + 0.015 + PS), (z - zc0) / (d0 + 0.015 + PS)) - 1) * (w0 + 0.015 + PS) : -1 }; })() : null;
   const pantsShape = (x, y, z, B = bodySdf) => { if (!balloon) return pantsPlain(x, y, z, B);

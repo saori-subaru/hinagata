@@ -677,6 +677,7 @@ export const DEFAULTS = {
       "puffBack": 1,
       "cuff": 0,
       "cuffOut": 0.004,
+      "cuffColor": null,
       "bell": 0,
       "top": 0.505,
       "tilt": 0.12

@@ -614,6 +614,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const SKL = SKO ? ST.fwd(SKO.top) - ST.fwd(SKO.hem) : 1;
   if (petticoat) banded("pants", (x, y, z) => { const t = ST.fwd(SKO.top - (SKO.tilt ?? 0) * z); return (t - ST.fwd(y)) / Math.max(0.02, t - ST.fwd(skirtHem(x, z))); });
   else if (SKO && !SKO.dress) banded("pants", (x, y, z) => ST.fwd(SKO.top - (SKO.tilt ?? 0) * z) - y, false);   // a skirt's waistband: how far under its top (m, as built)
+  const PCUFF = !SKO && OPT.outfit.pants.length === "shorts" && (OPT.outfit.pants.cuff ?? 0) > 0 && OPT.outfit.pants.cuffColor ? OPT.outfit.pants : null;
+  if (PCUFF) banded("pants", (x, y) => y - PCUFF.hem);   // shorts' hem bands (pants.cuffColor): how far over the hem (m, base)
   if (capeSdf) banded("cape", capeSdf.edge);   // the cape's trim line: how far in from its hem or front edges
   if (capeSdf?.hoodLine) banded("hood", capeSdf.hoodLine);   // one roll's hood: the line along its lower edge
   if (cuffOf) banded("shirt", cuffOf);   // long and bell sleeves' cuffs: how far up from the sleeve's end
@@ -624,7 +626,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     const put = (U, list) => { U.n.value = list.length; list.forEach(([lo, hi, c], i) => { U.lo.value.setComponent(i, lo); U.hi.value.setComponent(i, hi); U[`c${i}`].value.set(c); }); };
     for (const p of PARTS) if (p.bands) put(BANDS[p.name], p.bands.ranges(partOptions(OPT, p)));   // the garment parts' (the collar's line, the gloves' cuff)
     put(BANDS.shoes, [...((SH.cuff ?? 0) > 0 ? [[-1, SH.cuff, SH.cuffColor ?? SH.color]] : []), ...strapRanges(SH).map(([a, b]) => [a, b, SH.strapColor ?? SH.color])]);
-    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = petticoat ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(petticoat && SU.underColor ? [[1.004, 100, SU.underColor]] : [])]); }
+    { const SB = O.pants.skirt ?? {}, SU = O.dress?.on ? O.dress : SB, k = petticoat ? 1 / SKL : 1; put(BANDS.pants, [...(SB.bandColor && !O.dress?.on ? [[-k, (SB.bandWidth ?? 0.02) * k, SB.bandColor]] : []), ...(petticoat && SU.underColor ? [[1.004, 100, SU.underColor]] : []), ...(PCUFF && O.pants.cuffColor ? [[-1, PCUFF.cuff, O.pants.cuffColor]] : [])]); }
     put(BANDS.hood, capeSdf?.hoodLine ? [[-0.0045, 0.002, OPT.outline.color]] : []);
     { const C = O.cape; put(BANDS.cape, C.line ? [[C.lineIn ?? 0.012, (C.lineIn ?? 0.012) + (C.lineWidth ?? 0.008), C.line]] : []); }
     { const S = O.shirt, W = S.cuffWidth ?? 0.022; put(BANDS.shirt, [...(S.cuffColor ? [[-1, W, S.cuffColor]] : []), ...(S.cuffLine ? [[W * 0.4, W * 0.6, S.cuffLine]] : [])]); }
