@@ -15,12 +15,12 @@ import * as THREE from "three";
 import { createAvatar, CHARACTERS, BODY_TYPES } from "../src/index.js";
 import { openRecipe, merge as mergeOpt, DEFAULTS } from "../src/options.js";
 
-const Q = new URLSearchParams(location.search), who = Q.get("who") || "sylvie2", STAGE = Q.get("stage") ? await import(`./stage-${Q.get("stage")}.js`) : null;
+const Q = new URLSearchParams(location.search), who = Q.get("who") || "sylvie", STAGE = Q.get("stage") ? await import(`./stage-${Q.get("stage")}.js`) : null;
 const W = +(Q.get("w") || STAGE?.SIZE[0] || 540), H = +(Q.get("h") || STAGE?.SIZE[1] || 720);
 // ?to=astel: 別の人へ変わる。両方を今の版の言葉に開いて既定値で埋める(版の違うファイルを混ぜないため。片方にしか無い数値も補間できる)。
 // 数値と色は育ちに合わせて補間し、形の違う所(髪型・服・顔の絵・飾り)は育ち SW(?switch=0.5)のコマで丸ごと入れ替わる
 const file = CHARACTERS[who].file, TO = Q.get("to"), SW = TO ? +(Q.get("switch") || 0.5) : null, open = (f) => structuredClone(mergeOpt(DEFAULTS, openRecipe(f).options));   // (clone: merge が DEFAULTS の枝を共有し、?set が既定値ごと書き換えた)
-// ?like=sylvie2: ちびで始め、終わりは体の比率・太さ・頭の大きさだけその人に(ずんだもんがシルヴィの頭身まで育つ)
+// ?like=sylvie: ちびで始め、終わりは体の比率・太さ・頭の大きさだけその人に(ずんだもんがシルヴィの頭身まで育つ)
 const LIKE = Q.get("like"), BODY = (o) => ({ body: { proportion: o.body.proportion, thickness: o.body.thickness, head: { scale: o.body.head.scale } } });
 const end = TO ? open(CHARACTERS[TO].file) : LIKE ? mergeOpt(open(file), BODY(open(CHARACTERS[LIKE].file))) : structuredClone(file.options), from = TO || LIKE ? open(file) : null;
 const setPath = (k, v) => { for (const root of from ? [end, from] : [end]) { const ks = k.split("."); let o = root; for (const p of ks.slice(0, -1)) o = o[p] ??= {}; o[ks.at(-1)] = structuredClone(v); } };
