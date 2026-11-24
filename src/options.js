@@ -808,6 +808,7 @@ export const DEFAULTS = {
     "whorl": {
       "x": 0,
       "z": 0,
+      "lineFrom": 0,
       "stiff": 4
     },
     "gradient": {

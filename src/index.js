@@ -769,7 +769,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         return { p: HTr.fromHead(c0[0] + d[0] * t, c0[1], c0[2] + d[2] * t), o: [d[0] / ol, up / ol, d[2] / ol] }; });
       tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
-      out.tails = TL.kind === "curl" ? part(curlTail(TL, anchors[0]), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, round: true, rigid: 0.97 })   // (a rope uncoils its roll)
+      out.tails = TL.kind === "curl" ? part(curlTail(TL, anchors[0]), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, round: true, ownShade: true, rigid: 0.97 })   // (a rope uncoils its roll)
         : part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
         const geos = anchors.map(({ p, o }) => { const ts = TL.tie.size ?? 1, g = new THREE.TorusGeometry(TL.volume * (TL.size ?? 1) * 0.5 + 0.008, 0.01 * ts, 8, 24);   // around the bundle where it has left the head
@@ -798,7 +798,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     // tufts (options.hair.tufts, hair/locks.js tuftLocks): big leaves from the whorl lying on the hair as the bangs' locks do (the same surface,
     // the same floor). Each keeps its shape and is held to its place along all its length (rigid 1, hold): as ropes a run's wind laid
     // them out behind and curled their tips, short hair streaming like long
-    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
+    if (tuftsOn) { const W = OPT.hair.whorl ?? {}, TF = tuftLocks(OPT.hair.tufts, { ...bangKit(), whorl: [W.x ?? 0, W.z ?? 0], lineFrom: W.lineFrom ?? 0, N: LITE ? 7 : 9 }); tuftSpots = TF.map((s) => ({ ...s.src, p: s.pts[s.pts.length - 1] }));
       out.tufts = part(TF, { coll: [], ell: null, floor: true, stiff: W.stiff ?? 4, damping: 0.8, rigid: 1, hold: 0.08 }); }
     return out;
   }

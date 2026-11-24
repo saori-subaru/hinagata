@@ -183,7 +183,7 @@ export function metal(style, c) {
 export function outlineMat(w, color = 0x3a2a3a) {
   const m = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide }), width = { value: w };
   m.userData.width = width;
-  m.onBeforeCompile = (sh) => { sh.uniforms.outlineW = width; sh.vertexShader = "uniform float outlineW;\n" + sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n  transformed += normalize(objectNormal) * outlineW;"); };
+  m.onBeforeCompile = (sh) => { sh.uniforms.outlineW = width; sh.vertexShader = "uniform float outlineW;\n" + sh.vertexShader.replace("#include <skinning_vertex>", "#include <skinning_vertex>\n  transformed += normalize(objectNormal) * outlineW * min(1.0, length(objectNormal));   // (a normal shorter than 1: a thinner line there; the tufts' roots)"); };
   return m;
 }
 export const CLAY = "#d6d6d4";

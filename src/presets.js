@@ -424,7 +424,7 @@ export const CHARACTERS = {
       hair: {
         // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's): no block under them (sculpt.whorl.on)
         bangs: "none", back: "short", backForm: "block", ahoge: false,
-        whorl: { x: 0, z: -0.03 },
+        whorl: { x: 0, z: -0.03, lineFrom: 0.6 },   // (no short lines scattered over the crown)
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
           // under the others, in shadow: the bob's inner layer round the nape and behind the jaw
           { to: [180, 0.82], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },

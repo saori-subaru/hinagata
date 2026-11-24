@@ -293,7 +293,7 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
  * spike (-1: the tuft itself), the mirrored copy (m -1)
  */
-export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], N = 9, cols = 7 }) {
+export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], lineFrom = 0, N = 9, cols = 7 }) {
   const deg = Math.PI / 180, out = [], L = (list ?? []).filter((d) => Array.isArray(d?.to)), M = Math.max(cols, ...L.map((d) => 2 * (d.tips?.length ?? 1) + 1));
   const norm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }, cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
@@ -306,7 +306,7 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
   // NR (a spike): which way its thickness goes at each point (head space; a tuft's is the head's out)
   const put = (H, K, { w, TH, prof, TK, CV, point, thickFrom, ridge, shade, stiff, NR = null, src }) => { const pts = H.map((P) => toRoot(...P)); let len = 0; for (let q = 1; q < N; q++) len += Math.hypot(pts[q][0] - pts[q - 1][0], pts[q][1] - pts[q - 1][1], pts[q][2] - pts[q - 1][2]);
     const nr = NR?.map((n, q) => { const b = toRoot(H[q][0] + n[0] * 0.01, H[q][1] + n[1] * 0.01, H[q][2] + n[2] * 0.01); return b.map((v, k) => (v - pts[q][k]) / 0.01); });   // (root space; its length: the head's scale that way)
-    out.push({ root: pts[0], pts, len, w: w * sx, thick: TH / w, layer: 0, curl: 0, rise: true, stiff, prof, curv: CV.map((v) => v / sx), tk: TK.map((v, q) => v * (nr ? Math.hypot(...nr[q]) : sx)), nrm: nr?.map(norm), point, thickFrom, under: Math.min(UNDER, 0.006 / TH), shade, src,   // (under: a thick block's underside hardly bulges: it lies on the hair)
+    out.push({ root: pts[0], pts, len, w: w * sx, thick: TH / w, layer: 0, curl: 0, rise: true, stiff, prof, lineFrom, curv: CV.map((v) => v / sx), tk: TK.map((v, q) => v * (nr ? Math.hypot(...nr[q]) : sx)), nrm: nr?.map(norm), point, thickFrom, under: Math.min(UNDER, 0.006 / TH), shade, src,   // (under: a thick block's underside hardly bulges: it lies on the hair)
       cols: { u: K.map((c) => c[0]), e: K.map((c) => c[1]), d: shape(K, ridge), t0: Math.max(0.1, Math.min(0.45, Math.min(...K.map((c) => c[1])) - 0.1)) } }); };
   const TS = [];   // the tufts as built (the spikes grow out of them, and stay over them all)
   const even = (e) => { const K = []; for (let j = 0; j < M; j++) K.push([-1 + 2 * j / (M - 1), e]); return K; };
@@ -536,7 +536,7 @@ export function colliders(J, BI, sdf) {
 // rigid (0..1): each lock keeps its own shape and only tilts about its second point (shape matching: the rest shape turned to where the lock
 //   leans, the points pulled toward it). 0 = a rope bending anywhere (it went limp like konjac on a run). points: the lock remade with this many
 //   points along it (0 = as built); a rigid lock needs few, so the mesh gets lighter
-export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP, round = false }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
+export function createLocks({ specs, head, coll, ell, skeleton, root, outward, stiff = 1, damping = 0.9, lite = false, floor = false, slack = 0.001, uvAt = null, rigid = 0, points = 0, bendPts = 0, oneShade = 0, hold = RIGID_HOLD, vdamp = rigid > 0 ? RIGID_VDAMP : VDAMP, round = false, ownShade = false }) {   // uvAt(x, y, z) → [u, v]: a "hairUV" per vertex from where its lock's middle line rests (the angel ring, index.js)
   if (points >= 3 && points < (specs[0]?.pts.length ?? 0)) specs = specs.map((s) => { if (!s.curv) return { ...s, pts: resample(s.pts, points, bendPts) }; const Q = resample(s.pts.map((p, i) => [...p, s.curv[i], s.tk[i], ...(s.nrm?.[i] ?? [])]), points, bendPts); return { ...s, pts: Q.map((p) => p.slice(0, 3)), curv: Q.map((p) => p[3]), tk: Q.map((p) => p[4]), nrm: s.nrm && Q.map((p) => p.slice(5, 8)) }; });
   const RG = round ? (lite ? RING_ROUND_LITE : RING_ROUND) : lite ? RING_LITE : RING, SB = lite ? 2 : SUB;   // lite: fewer vertices
   // tufts (tuftLocks: every spec of the part has cols): a ring is M points across the top and M - 2 back along the underside; column c of
@@ -686,7 +686,8 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
           let nx = ax * u / Math.max(hw, 1e-4) * ht + ox * w, ny = ay * u / Math.max(hw, 1e-4) * ht + oy * w, nz = az * u / Math.max(hw, 1e-4) * ht + oz * w;
           if (fn) { nx = ax * fn + ox * w0 * 0.6; ny = ay * fn + oy * w0 * 0.6; nz = az * fn + oz * w0 * 0.6; } const nl = Math.hypot(nx, ny, nz) || 1;   // the lens's normal (an ellipse's)
           toRest(nor, v, nx / nl, ny / nl, nz / nl, true);
-          const io = s.layer ? 0.1 + 0.5 * oneShade : 0.6, own = OWN * (1 - 0.75 * oneShade), qx = ox + (rx - ox) * oneShade, qy = oy + (ry - oy) * oneShade, qz = oz + (rz - oz) * oneShade;
+          const io = ownShade ? 0 : s.layer ? 0.1 + 0.5 * oneShade : 0.6, own = ownShade ? 1 : OWN * (1 - 0.75 * oneShade),   // ownShade (a rolled tail): its own round alone (by its run's out, the roll shaded in stripes: light and dark by turns round it)
+          qx = ox + (rx - ox) * oneShade, qy = oy + (ry - oy) * oneShade, qz = oz + (rz - oz) * oneShade;
           const sx = qx * io + nx / nl * own, sy = qy * io + ny / nl * own, sz = qz * io + nz / nl * own, sl = Math.hypot(sx, sy, sz) || 1;   // shading: mostly the hair's "out" (the whole hair shades as one volume); the inner layer turned away, so it shows in shadow between the outer locks.
           // oneShade 1: the "out" of the head, not the one squared to each lock's run, and little of the lock's own round: one shadow with a smooth edge (each lock split light and dark at its own height: a stepped, patchy shadow)
           toRest(shn, v, sx / sl, sy / sl, sz / sl, true); } }
@@ -707,6 +708,7 @@ export function createLocks({ specs, head, coll, ell, skeleton, root, outward, s
         // it that way too put the shell in the tuft's own faces there: dark streaks fanning out of every point
         const vl = r === R1 && !s.nrm ? Math.hypot(vx, vy, vz) : 0;   // (not a spike's: it may point at the eye, and the shell's end beyond its point was a black dot on it)
         toRest(pos, v, WP[w], WP[w + 1], WP[w + 2], false); if (vl > 1e-9) toRest(nor, v, vx / vl, vy / vl, vz / vl, true); else toRest(nor, v, nx, ny, nz, true);
+        if (s.lineFrom > 0) { const ln = 1 - (1 - Math.max(0.02, sstep(0.5 * s.lineFrom, s.lineFrom, r / R1))) * sstep(0.35, 0.8, Math.abs(cu[colOf(k)])); nor[v] *= ln; nor[v + 1] *= ln; nor[v + 2] *= ln; }   // lineFrom (hair.whorl.lineFrom): no outline along the edges at the roots (a short normal: materials.js outlineMat); the middle keeps it (the crown's outline)
         // shading: the top as the other locks' (the hair's out and a share of its own round); the underside by its own normal (it faces away from the light)
         let sx = nx, sy = ny, sz = nz; if (top) { const o = s.nrm ? 1 : oneShade, w = s.nrm ? own * 0.4 : own; sx = (FR[F + 3] + (FR[F + 9] - FR[F + 3]) * o) * 0.6 + nx * w; sy = (FR[F + 4] + (FR[F + 10] - FR[F + 4]) * o) * 0.6 + ny * w; sz = (FR[F + 5] + (FR[F + 11] - FR[F + 5]) * o) * 0.6 + nz * w; }   // (a spike: the head's out, as the tuft it grows out of: it is that tuft's hair, not a thing set on it)
         let sl = Math.hypot(sx, sy, sz) || 1; sx /= sl; sy /= sl; sz /= sl;
