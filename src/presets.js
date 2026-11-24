@@ -89,7 +89,6 @@ export const CHARACTERS = {
       accessories: [   // the collar: two buttons with an X at the hood's rim's ends, a cord between them, a tab hanging under each with a tassel (offsets from upperChest, as built)
         { kind: "tab", bone: "upperChest", at: [0.041, 0.02, 0.153], n: [-0.15, 0.2, 0.97], size: 0.075, color: "#a3bbac", mirror: true },   // along the cape (it comes forward under the button)
         { kind: "tassel", bone: "upperChest", at: [0.039, -0.0518, 0.1676], n: [0, 0, 1], size: 0.045, color: "#efe8dc", mirror: true },   // from the tab's end
-        { kind: "cord", bone: "upperChest", at: [0, 0.0264, 0.149], n: [0, 0, 1], size: 0.08, color: "#efe8dc", lift: 0.003 },
         { kind: "button", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.054, color: "#efe8dc", mirror: true, lift: 0.002 },
         { kind: "cross", bone: "upperChest", at: [0.041, 0.0264, 0.149], n: [-0.12, 0.32, 0.94], size: 0.034, color: "#66907d", mirror: true, lift: 0.0138 },
       ],
@@ -406,7 +405,7 @@ export const CHARACTERS = {
     name: { ja: "ずんだもん", en: "Zundamon" },
     about: { ja: "枝豆の妖精(設定画どおり)", en: "An edamame fairy, as on her design sheet" },
     // As on her design sheet: about 3.1 heads, a puffy bob with a pod on each side of its top, big amber
-    // eyes, a blouse with a gray round collar and puff sleeves, a green bow with pink ends, pumpkin shorts on suspenders with gray hem bands,
+    // eyes, a blouse with a gray round collar and puff sleeves, a pea pod brooch with pink ribbon ends, pumpkin shorts on suspenders with gray hem bands,
     // socks with a pointed top, round shoes, a low tail rolled up at its end. Heights were measured off the sheet as shares of her height (tools/sheet.py) and turned into the options'
     // (tools/measure.mjs --to); the accessories' places on the clothes with tools/surface.mjs
     stand: "standZundamon",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
@@ -423,7 +422,7 @@ export const CHARACTERS = {
         knees: { blush: { on: true }, line: { on: true } },   // as シルヴィ's
       },
       hair: {
-        // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's), their roots under a smooth round crown (sculpt.cap)
+        // a puffy bob in few big blocks from a whorl at the top (hair.tufts, as アステル's): no block under them (sculpt.whorl.on)
         bangs: "none", back: "short", backForm: "block", ahoge: false,
         whorl: { x: 0, z: -0.03 },
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
@@ -436,13 +435,13 @@ export const CHARACTERS = {
           { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
           { to: [108, 0.87], thickFrom: 0.04, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
           { to: [72, 0.875], thickFrom: 0.04, width: 0.25, thick: 0.039, tips: [1, 0.85], notch: 0.12, endWidth: 0.7, hook: -8, hug: 0.3, mirror: true },   // over the ears, to the jaw, its end turned in toward the cheek (wide: the ear's lobe showed before it)
-          // the bangs, their outlines curved (round): a block over each temple turning in to the cheek, and the middle one a rounded diamond to between the eyes
-          { to: [45, 0.9], thickFrom: 0.04, width: 0.26, thick: 0.03, bow: 8, hook: -10, round: 1, band: 0.2, mirror: true },
-          { to: [0, 0.99], thickFrom: 0.04, width: 0.3, thick: 0.024, round: 1, band: 0.1, rootWidth: 0.2, wide: 0.5 }
+          // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
+          { to: [45, 0.915], thickFrom: 0.04, width: 0.22, thick: 0.03, hook: 8, mirror: true },
+          { to: [0, 0.99], thickFrom: 0.04, width: 0.2, thick: 0.024, tips: [0.96, 1], notch: 0.035, rootWidth: 0.2, wide: 0.5, endWidth: 0.25 }   // the middle one a rounded diamond, short of the eyes,
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.008, cap: { thick: 0.032, r: 62 } },
+        sculpt: { whorl: { on: true }, shell: 0.008 },
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },
@@ -477,9 +476,10 @@ export const CHARACTERS = {
         shoes: { kind: "boots", color: "#799d55", soleColor: "#e5abb7", bootHeight: 0.176, cuff: 0.055, cuffOut: 0.003, cuffColor: "#bedb88", leaf: 0.047, leafAt: 100, shaft: 0.35, width: 0.9, toeCap: 0.6, heelBlock: 0.008, sole: 0.022, rim: 0.003 },
       },
       accessories: [   // (offsets from the bone's joint, as built, measured on the clothes: tools/surface.mjs)
-        // the bow where the collar's lobes meet: a pale green bow over two pink ends
-        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.068, 0.081], n: [0.05, 0.37, 0.93], spin: 28, size: 0.062, color: "#cf7aa3", mirror: true, lift: 0.003 },
-        { kind: "ribbon", bone: "upperChest", at: [0, 0.0701, 0.0796], n: [0, 0.37, 0.93], size: 0.066, color: "#b6da8c", lift: 0.007 },
+        // the brooch where the collar's lobes meet: a pea pod lying across, over two pink ribbon ends
+        { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.0792, 0.0766], n: [0.05, 0.37, 0.93], spin: 22, size: 0.05, color: "#cf7aa3", mirror: true, lift: 0.003 },
+        { kind: "ribbonEnd", bone: "upperChest", at: [0.004, 0.0813, 0.0752], n: [0.05, 0.37, 0.93], spin: 145, size: 0.036, color: "#cf7aa3", mirror: true, lift: 0.002 },   // a loop tie: the same ribbon up to under the collar
+        { kind: "peaPod", bone: "upperChest", at: [0, 0.0813, 0.0752], n: [0, 0.37, 0.93], size: 0.075, color: "#b6da8c", lift: 0.004 },
         { kind: "button", bone: "foot.L", at: [0, 0.048, 0.0317], n: [0.01, -0.19, 0.98], size: 0.022, color: "#e6a8b6", mirror: true, lift: 0.019 },   // at the tip of each boot cuff's front notch
         // the waistband's buttons, a pair under each strap, in front and behind (lift: the band flares out toward its bottom)
         { kind: "button", bone: "spine", at: [0.05, 0.0766, 0.0822], n: [0.41, 0.24, 0.88], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.016 },

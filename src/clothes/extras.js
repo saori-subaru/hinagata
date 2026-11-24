@@ -1,7 +1,7 @@
 // Extras (outfit.extras; 2026-10-07, Saori: "追加したい汎用性の高そうなアイテム: 獣耳、獣尻尾、天使の輪、天使の羽、悪魔の羽、悪魔尻尾"):
 //   ears ("cat" | "fox" | "bunny" | "bear"): on top of the head, coming out of the hair, a lighter inner side (its own mesh). Head space,
-//     so they follow the head's size and shape (as the hair). "pod" (ずんだもん's): a fat bean pod on each side of the top, its end a point,
-//     the inner mesh its pale spots (the beans showing).
+//     so they follow the head's size and shape (as the hair). "pod" (ずんだもん's): a bean pod lying out from each side of the top, its end a point,
+//     the inner mesh its three peas' pale tops.
 //   wings ("angel" | "devil"): on the upper back, flat. Angel: a row of feathers hanging from the wing's arm, longer toward the tip.
 //     Devil: a bat's wing, the membrane between finger bones, scalloped between their tips.
 //   The tails (cat, fox, devil, pod) swing: they are locks (hair/locks.js, made in index.js: tailSpecs); the halo is a ring over the head (index.js).
@@ -41,16 +41,16 @@ export function buildExtras(OPT) {
     earSdf = (x, y, z) => ears[x > 0 ? 0 : 1].outer(x, y, z);
     earInSdf = (x, y, z) => ears[x > 0 ? 0 : 1].inner(x, y, z);
   }
-  // ── pods: an egg lying out and up from the head's top corner (its middle c, its long axis u; head space), a short cone on its far end
-  // bent up into a point; the spots are the pod's surface pushed out 1.5 mm inside small balls (on the front and the outer side)
+  // ── pods: a flat egg lying out from the head's top corner, a little up (its middle c, its long axis u; head space), a short cone on its
+  // far end bent up into a point; three peas swell its front in a row (the middle one the biggest), their tops the pale color (inner)
   if (X.ears === "pod") { const K = X.earSize ?? 1;
-    const pods = [1, -1].map((m) => { const c = [m * 0.235, 1.325, -0.075], u = nrm([m * 0.8, 0.58, -0.14]), f = nrm([0, 0, 1].map((v, i) => v - u[i] * u[2])), s0 = crs(u, f), s = s0[1] > 0 ? s0 : s0.map((v) => -v);   // f: its front (forward, square to u); s: across it, upward
-      const RA = 0.105 * K, RB = 0.088 * K, RC = 0.086 * K, tip0 = c.map((v, i) => v + u[i] * RA * 0.72), tip1 = c.map((v, i) => v + (u[i] * 1.36 + s[i] * 0.3 - f[i] * 0.12) * RA), tl = Math.hypot(...tip1.map((v, i) => v - tip0[i])), tu = tip1.map((v, i) => (v - tip0[i]) / tl);
+    const pods = [1, -1].map((m) => { const c = [m * 0.26, 1.315, -0.07], u = nrm([m * 0.88, 0.34, -0.1]), f = nrm([0, 0, 1].map((v, i) => v - u[i] * u[2])), s0 = crs(u, f), s = s0[1] > 0 ? s0 : s0.map((v) => -v);   // f: its front (forward, square to u); s: across it, upward
+      const RA = 0.1 * K, RB = 0.062 * K, RC = 0.052 * K, tip0 = c.map((v, i) => v + u[i] * RA * 0.72), tip1 = c.map((v, i) => v + (u[i] * 1.3 + s[i] * 0.5 - f[i] * 0.08) * RA), tl = Math.hypot(...tip1.map((v, i) => v - tip0[i])), tu = tip1.map((v, i) => (v - tip0[i]) / tl);
       const body = (x, y, z) => { const q = [x - c[0], y - c[1], z - c[2]]; return (Math.hypot(dt(q, u) / RA, dt(q, s) / RB, dt(q, f) / RC) - 1) * RC; };
       const tip = (x, y, z) => { const q = [x - tip0[0], y - tip0[1], z - tip0[2]], h = Math.min(tl, Math.max(0, dt(q, tu))), k = h / tl, r = RB * 0.62 * (1 - k) * (1 - 0.35 * k) + 0.004; return Math.hypot(q[0] - tu[0] * h, q[1] - tu[1] * h, q[2] - tu[2] * h) - r; };
-      const outer = (x, y, z) => smin(body(x, y, z), tip(x, y, z), 0.03 * K);
       const at = (a, b, d) => { const l = Math.hypot(a / RA, b / RB, d / RC) || 1; return c.map((v, i) => v + (u[i] * a + s[i] * b + f[i] * d) / l); };   // on the egg, toward (along, up across, front)
-      const spots = [[at(0.25 * RA, 0.22 * RB, 0.8 * RC), 0.027 * K], [at(-0.3 * RA, -0.2 * RB, 0.85 * RC), 0.021 * K], [at(0.5 * RA, -0.75 * RB, 0.3 * RC), 0.02 * K]];
+      const peas = [[-0.52, 0.03], [0, 0.042], [0.5, 0.028]].map(([a, r]) => [at(a * RA, 0, RC).map((v, i) => v - f[i] * r * K * 0.35), r * K]), spots = peas.map(([p, r]) => [p.map((v, i) => v + f[i] * r * 0.4), r * 0.8]);
+      const outer = (x, y, z) => { let d = smin(body(x, y, z), tip(x, y, z), 0.03 * K); for (const [p, r] of peas) d = smin(d, Math.hypot(x - p[0], y - p[1], z - p[2]) - r, 0.008); return d; };
       return { outer, inner: (x, y, z) => { let d = 1e9; for (const [p, r] of spots) d = Math.min(d, Math.hypot(x - p[0], y - p[1], z - p[2]) - r); return smax(outer(x, y, z) - 0.0015, d, 0.003); } }; });
     earSdf = (x, y, z) => pods[x > 0 ? 0 : 1].outer(x, y, z);
     earInSdf = (x, y, z) => pods[x > 0 ? 0 : 1].inner(x, y, z);

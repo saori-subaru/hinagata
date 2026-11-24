@@ -4,12 +4,12 @@
 //   at: where it sits: for the head bone in head space (it follows the head's size and shape), for any other bone the offset from the
 //       bone's joint (rest pose). n: the way it faces (the surface's normal there, rest pose). spin: turned around n. mirror: also on the
 //       other side (x mirrored, .L and .R bones swapped).
-// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), button, anchor, cross (an X),
+// Kinds: leaf (a pointed leaf with a midrib), gem (a cut stone), flower (five petals), star, star4 (four points, cut in facets), ball, ribbon (a bow with tails), peaPod (a pod lying across), button, anchor, cross (an X),
 // tassel, tab and strap (hanging down from where they are put; a strap: a narrow belt end, 1 long), buckle (a frame), pinBuckle (a thin frame with a prong), cord (a rod across, 1 long: one button to the other), band (a ring around the limb at that
 // point: a bracelet, an anklet, a choker; its radius reaches the surface where it was put, size is how thick the ring is).
 import * as THREE from "three";
 
-export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "strap", "cord", "dome", "ribbonEnd"];
+export const ACCESSORY_KINDS = ["leaf", "gem", "flower", "star", "star4", "ball", "ribbon", "band", "button", "anchor", "cross", "tassel", "buckle", "pinBuckle", "tab", "strap", "cord", "dome", "ribbonEnd", "peaPod"];
 
 // the shapes, 1 unit across, facing +z (the surface's normal), their "up" +y
 function flat(shape, depth, bevel = 0.04) {   // a flat shape with rounded edges, its back on z = 0 (bevel: how far its edges round out past the shape)
@@ -103,6 +103,13 @@ const SHAPES = {
   // a ribbon's end (ずんだもん's): a strip hanging down, 1 long and 0.36 wide, its end cut aslant (lower on its +x side; mirrored for the other one)
   ribbonEnd: () => { const s = new THREE.Shape(), w = 0.18; s.moveTo(-w, 0.04); s.lineTo(w, 0.04); s.lineTo(w, -1); s.lineTo(-w, -0.8); s.lineTo(-w, 0.04);
     const g = flat(s, 0.03, 0.01); g.computeVertexNormals(); return g; },
+  // a pea pod lying across (ずんだもん's brooch): 1 long, three peas swelling its upper side, its pointed ends turned up
+  peaPod: () => { const NX = 28, NR = 14, P = [], I = [];
+    for (let i = 0; i <= NX; i++) { const x = -0.5 + i / NX, e = Math.sqrt(Math.max(0, 1 - 4 * x * x)), pea = 0.5 + 0.5 * Math.cos(Math.PI * 2 * x / 0.29), cy = 0.32 * x * x * 4 * 0.5 - 0.04;
+      for (let j = 0; j < NR; j++) { const a = j / NR * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a), r = 0.15 * e * (1 + (sn > 0 ? 0.6 * pea * sn : 0) + 0.12 * pea * Math.abs(c));
+        P.push(x, cy + r * sn, 0.11 * Math.pow(e, 0.7) * (1 + 0.25 * pea) * (1 + c) * 0.5 + 0.0); } }
+    for (let i = 0; i < NX; i++) for (let j = 0; j < NR; j++) { const a = i * NR + j, b = i * NR + (j + 1) % NR, c = a + NR, d = b + NR; I.push(a, c, b, b, c, d); }
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); return g; },
   // a button (2026-10-10, for 島風's gold buttons): a low dome with a rim, 1 across
   button: () => { const g = new THREE.LatheGeometry([[0, 0], [0.5, 0], [0.5, 0.1], [0.44, 0.17], [0.34, 0.16], [0.2, 0.2], [0, 0.22]].map(([x, y]) => new THREE.Vector2(x, y)), 20); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g; },
   // an anchor (2026-10-10, for 島風): the shank with a ring on top and the stock across under it, the arms curving up to the flukes; 1 tall,
