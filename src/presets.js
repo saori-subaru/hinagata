@@ -441,7 +441,7 @@ export const CHARACTERS = {
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.008 },
+        sculpt: { whorl: { on: true }, shell: 0.008, cap: { thick: 0.036, r: 62 } },   // the tufts' roots under one smooth crown
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: true, color: "#8b7f91", size: 1 } },
       },
@@ -468,7 +468,7 @@ export const CHARACTERS = {
         // pumpkin shorts: a high waist under the waistband (the belt, in their color), the balloon from its bottom edge to the hem bands
         pants: { color: "#7fa56a", top: 0.58, tilt: 0, hem: 0.33, cuff: 0.02, puff: 1.58, puffTop: 0.556, puffAt: 0.548, puffStart: 0.02, puffFront: 0.7, puffBack: 0.63, picture: { src: ZUNDA_PANTS } },
         belt: { on: true, color: "#7fa56a", y: 0.581, width: 0.054, thick: 0.004, follow: true },
-        suspenders: { on: true, color: "#7fa56a", x: 0.056, xTop: 0.052, xBack: 0.048, width: 0.038, thick: 0.002, back: "straight" },   // thin: the collar lies over them
+        suspenders: { on: true, color: "#7fa56a", x: 0.056, xTop: 0.066, xBack: 0.048, width: 0.038, thick: 0.002, back: "straight" },   // thin: the collar lies over them
         socks: { color: "#f2efea", top: 0.13, edge: "scallop", edgeCount: 8, edgeDepth: 0.012 },
         // the pods on her head (their pale spots: earInColor)
         extras: { ears: "pod", earSize: 1.3, earColor: "#b5da93", earInColor: "#def3ad", },
