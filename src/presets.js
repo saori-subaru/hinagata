@@ -145,8 +145,8 @@ export const CHARACTERS = {
     file: { hinagata: 5, name: "アステル", options: {
       colors: { skin: "#f6e0d6", hair: "#a67c68", eyes: "#6f80ad" },
       body: {
-        head: { scale: 0.84, width: 0.88, depth: 0.95, jawLength: 0.82 },   // width: narrower than his first head's 0.94 (beside シルヴィ the cheeks outside the eyes read wide; the eyes move in with it). a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
-        proportion: { legs: 1.35, torso: 1.4, feet: 1.22, feetFrom: -0.11 },   // (fitProportions: heads 3.6, hip 0.365); big feet for the round boots
+        head: { scale: 0.74, width: 0.88, depth: 0.95, jawLength: 0.82 },   // width: narrower than his first head's 0.94 (beside シルヴィ the cheeks outside the eyes read wide; the eyes move in with it). a short jaw: the chin up off the collar, the neck showing under it from the front, as on the sheet
+        proportion: { legs: 1.56, torso: 1.39, feet: 1.22, feetFrom: -0.11 },   // (fitProportions: heads 4.18 as シルヴィ's, hip 0.4); big feet for the round boots
         thickness: { thigh: 0.55, thighTop: 0.6, calf: 0.52 },   // thin legs in tights, the shorts standing off them
         joints: { hipX: 0.11, footX: 0.13, kneeX: 0.118 },   // (his hip joints as before the default came in: the legs stand apart in his boots)
         // the head's and face's outline is the アステル's before the sheet (Saori: "輪郭はアステルに戻して"): the neck, and profile, a dip under
