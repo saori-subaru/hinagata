@@ -19,6 +19,7 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
 - **キャラを設定画に寄せる時は `node tools/shot.mjs <プリセット名> --views 0,90,180 --y 0,0.4 --name 名前`** で撮る(向き・高さの範囲を選べ、`--patch` でプリセットに値を重ねて試せる。`--persp 3.2 --up 0.5` で遠近のある斜め上からの絵。絵は thin-check-out/)。
 - 設定画と同じ縮尺で並べて輪郭の幅を数値で比べるのは `python tools/sheet.py`(`args <身長>` が撮る範囲を出す。目で合わせると幅が数cmずれる)。高さは設定画の割合を `node tools/measure.mjs --to` でオプションの値に直す。
 - アクセサリーの置き場(at・n)は `node tools/surface.mjs <プリセット名> <骨> <x> <高さ>` で服の表面を測る(アクセサリーは表面に乗らない)。
+- 2人並べた夕景のムービー風の1枚は `node tools/thin-check.mjs --page scene --only x --query "shot=two|wide|ots&a=astel&b=sylvie"`(tools/scene.html。絵は thin-check-out/scene-*.png)。
 - 服に貼る絵(今はジャケットだけ)の下絵は `node tools/picture.mjs <プリセット名> [--paper 1]`(thin-check-out/ に出る)、塗った絵を戻すのは `python tools/picture-fit.py`。ジャケットの形を変えたら絵を作り直す。
 
 ## 断捨離と棚卸し(リモートでは全体の CLAUDE.md が読まれないので、ここにも置く)
