@@ -233,6 +233,19 @@ their turns are measured from the rest pose they had when follow was called (arm
 fine). `fit`: `{ height }` in the figure's units, or true (default) to match the leg length. `grip: { L, R }` closes the hands (0–1).
 A figure with one spine joint has its turn shared over the avatar's spine, chest and upper chest; collarbones rise with raised arms.
 
+## Motions from files (.vrma, Mixamo)
+
+```js
+import { loadMotion } from "https://hinagata.pages.dev/src/index.js";   // three/addons/ must be in the import map (the loaders)
+const m = await loadMotion("walk.vrma");       // or a Mixamo .fbx (downloaded "with skin"), or a .glb with Mixamo's bone names
+const c = m.attach(avatar, { move: true });   // move: walk the avatar along by the clip's travel (c.velocity, its own axes, units / s)
+// each frame: c.update(dt); avatar.update(dt, { camera });   c.stop() ends it
+```
+The avatar keeps its size: the hips' moves are scaled by its leg length over the file's, so planted feet stay planted. Forearms and hands
+that would go into a thicker body are turned out of it at the shoulder (`clear: false` to leave them). Hair, cloth and the face run as usual.
+A big head still meets hands brought to the face. Mixamo's files may not be redistributed: ship none, load the ones you downloaded.
+Check by eye: `node tools/thin-check.mjs --page motion --query "files=a.vrma,b.fbx"` (files in tools/_motions/).
+
 ## Missing a part? Add one
 
 First look for it: `find_options` (or docs/options.schema.json) by words, Japanese or English; `accessories` (small pieces on a bone:

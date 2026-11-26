@@ -48,6 +48,7 @@ import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting
 export { holdPole } from "./motion/glide.js";   // gliding under something held overhead; both hands on a pole (motion/glide.js)
 export { SWIM_W, swimHead } from "./motion/swim.js";   // swimming, treading water, wading (motion/swim.js)
 export { ONE_SHOT } from "./motion/survival.js";
+export { loadMotion, BONE_NAMES } from "./motion/import.js";   // .vrma / Mixamo motions played on an avatar (motion/import.js)
 import "./motion/combat.js";   // fighting: two-handed guards, an attack per weapon, hit / stun / down (motion/combat.js)   // the body's states and the hands' work for living in the wild: pant, shiver, limp, drink, chop, sleep... (motion/survival.js)
 
 /**
