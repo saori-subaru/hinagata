@@ -1120,6 +1120,12 @@ export const DEFAULTS = {
       "depth": 1,
       "teeth": false
     },
+    "eye3d": {
+      "on": false,
+      "depth": 0.008,
+      "lift": 0.005,
+      "flare": 0.002
+    },
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,
@@ -1148,6 +1154,12 @@ export const DEFAULTS = {
         "dy": 0.004
       },
       "eyeL": {
+        "src": null
+      },
+      "eyeLash": {
+        "src": null
+      },
+      "eyeLashL": {
         "src": null
       },
       "eyeClosed": {

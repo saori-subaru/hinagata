@@ -493,7 +493,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // lies thin under the locks. The locks carry it too, by where each of their points was when they were made (hairUV, as the block's)
   const RING = { color: { value: new THREE.Color() } }, ringColor = (c) => RING.color.value.copy(OPT.hair.paint.ring.color ? new THREE.Color(OPT.hair.paint.ring.color) : ringOf(c));
   ringColor(OPT.colors.hair);
-  const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on) return m; const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on || OPT.shading.style === "figure") return m;   /* (a figure's shine is its light's) */ const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.ringColor = RING.color;
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
@@ -670,8 +670,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   }
   // the figure's finish by what a part is (shading.style "figure"): skin matt with a warm bloom at its edges, hair and shoes a faint
   // satin, cloth dry. Checked each update, as the rim is (materials are replaced by rebuilds)
-  const FIG = { skin: { roughness: 0.7, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.62, clearcoat: 0.12, clearcoatRoughness: 0.5 },
-    shoe: { roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.35 }, cloth: { roughness: 0.82, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
+  const FIG = { skin: { roughness: 0.82, sheen: 1, sheenRoughness: 0.45, sheenColor: 0xff8c6e }, hair: { roughness: 0.8 },
+    shoe: { roughness: 0.55, clearcoat: 0.15, clearcoatRoughness: 0.4 }, cloth: { roughness: 0.92, sheen: 0.5, sheenRoughness: 0.8, sheenColor: 0xffffff } };
   function figureLook() {
     if (OPT.shading.style !== "figure") return;
     for (const k in parts) { const m = parts[k].toonMat ?? parts[k].m.material; if (!m.isMeshPhysicalMaterial || m.userData.fig) continue; m.userData.fig = true;
@@ -854,16 +854,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // place is an offset from the bone's joint, made for the chibi torso: on the adult chest Lumina's chest ribbon stood 2 cm off the dress
   // (2026-10-09, Saori: "横から見たときの胸のリボンがういてる"). Read on the meshes as built (rest pose); an item put there in the editor stays
   function snapper() {
-    if (!OPT.body.adult?.on) return null;
+    const all = !!OPT.body.adult?.on; if (!all && !(OPT.accessories ?? []).some((it) => it?.snap)) return null;   // (or an item's own snap: true, on any body: it stays on the clothes as the body under them changes)
     const ms = Object.entries(parts).filter(([k, x]) => x?.m?.isMesh && x.m.visible && !/^(acc|hair|locks|bangs|tails|extra|weapon)/.test(k)).map(([, x]) => new THREE.Mesh(x.m.geometry));
     const rc = new THREE.Raycaster(), o = new THREE.Vector3(), d = new THREE.Vector3();
-    return (p, n) => { o.set(...p).addScaledVector(n, 0.08); d.copy(n).negate(); rc.set(o, d); rc.far = 0.16; const h = rc.intersectObjects(ms, false)[0]; return h ? [h.point.x, h.point.y, h.point.z] : null; };
+    return Object.assign((p, n) => { o.set(...p).addScaledVector(n, 0.08); d.copy(n).negate(); rc.set(o, d); rc.far = 0.16; const h = rc.intersectObjects(ms, false)[0]; return h ? [h.point.x, h.point.y, h.point.z] : null; }, { all });
   }
   function makeAccessories() {
     const snap = snapper();
     for (const k of accKeys) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; } accKeys = [];
     (OPT.accessories ?? []).forEach((it, i) => { if (!it?.kind || !it.bone) return;
-      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap }).forEach(({ geo, bone }, k) => {
+      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap, height: (y) => ST.fwd(y) }).forEach(({ geo, bone }, k) => {
         const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         // outline (m): its line's width; metal: the armor's shine (stronger bands, a glint: a gold clasp buried in the cloak's folds read flat)
@@ -908,7 +908,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null, holeLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null, lashLayers = [];
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
@@ -916,6 +916,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); bindTo(faceLayer);
     if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); bindTo(holeLayer); }
+    if (face.LASH) { const E = OPT.face.eye3d, lm = lashLayers[0]?.material ?? face.lashMatFor(OPT.shading.style), at = face.eyeMaskAt(faceWrap), N = 16; for (const x of lashLayers) { root.remove(x); x.geometry.dispose(); }
+      // the lash: from the socket's rim (the skin as it was before it sank) forward by lift, by flare more toward the outer corner (the wing off the temple), N layers through it
+      lashLayers = Array.from({ length: N }, (_, k) => { const fwd = (x, y, z) => { const t = Math.min(1, Math.max(0, (Math.abs(x) - face.EYE.x) / 0.06)); return E.depth * at(x, y, z) + 0.002 + (E.lift + E.flare * t * t * (3 - 2 * t)) * k / (N - 1); };
+        const x = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.FACE, fwd), lm); x.name = "lash"; x.frustumCulled = false; x.renderOrder = 2; root.add(x); bindTo(x); return x; }); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
@@ -925,6 +929,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
   // opens under the upper lip (a notch: フ), not only a hole drawn on an unmoved face. The body's points move (the face's layers rebuilt over
   // them), as a shape key would; back to where they were when it closes. Normals kept (the dent is shallow)
+  // ⏳ the eyes' sockets (face.eye3d): the head's skin pushed back where the eyes' picture is (face.EYEMASK), by its depth. The normals stay
+  // (the socket isn't shaded as a dent, the picture in it reads as before). Not with face.mouth3d yet (both move the skin from their own copy of it)
+  let eyeBase = null, eyeKey = null;
+  function eyeShape() { const M = face.EYEMASK; if (!M || face.HOLE || !M.key) return; const geo = parts.body.m.geometry, P = geo.attributes.position; if (M.key === eyeKey && eyeBase?.geo === geo) return;
+    if (eyeBase?.geo !== geo) eyeBase = { geo, p: P.array.slice() }; eyeKey = M.key; P.array.set(eyeBase.p);
+    const at = face.eyeMaskAt(faceWrap), D = OPT.face.eye3d.depth, toH = HTr.identity ? (x, y, z) => [x, y, z] : HTr.toHead, fromH = HTr.identity ? (x, y, z) => [x, y, z] : HTr.fromHead;
+    for (let i = 0; i < P.count; i++) { const q = toH(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); if (q[2] < 0.05) continue; const w = at(q[0], q[1], q[2]); if (!(w > 0)) continue;
+      const r = fromH(q[0], q[1], q[2] - D * w); P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; }
+    P.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); }
   const OPEN_MOUTHS = new Set(["open", "openSoft"]); let mouthOpen = false, mouthBase = null;
   function mouthShape(open) {
     const geo = parts.body.m.geometry, P = geo.attributes.position; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice() }; mouthOpen = false; }
@@ -1128,7 +1141,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
       avatar.drawFace();
     },
-    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
+    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); eyeShape(); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
@@ -1196,6 +1209,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : (x.wrap ?? ((m) => m))(isMetal(k) || x.metal ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
+      if (lashLayers.length) { const old = lashLayers[0].material, m = face.lashMatFor(style, bands); for (const x of lashLayers) x.material = m; old.dispose(); }
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
       root.traverse((x) => { if (x.userData.outline) x.material.visible = linesOn(); else if (x.isSkinnedMesh) x.receiveShadow = style === "figure"; });
     },
