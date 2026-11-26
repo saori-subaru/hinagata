@@ -493,14 +493,18 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // lies thin under the locks. The locks carry it too, by where each of their points was when they were made (hairUV, as the block's)
   const RING = { color: { value: new THREE.Color() } }, ringColor = (c) => RING.color.value.copy(OPT.hair.paint.ring.color ? new THREE.Color(OPT.hair.paint.ring.color) : ringOf(c));
   ringColor(OPT.colors.hair);
-  const withRing = (m) => { const R = OPT.hair.paint.ring; if (!R.on || OPT.shading.style === "figure") return m;   /* (a figure's shine is its light's) */ const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
+  // hair.paint.lines: a few lines down the hair from the top, painted (list: [{ at: degrees round the head (0 front, + her left), from, to: angles down from the top (rad) }])
+  const strandLines = (SL) => { const c = new THREE.Color(SL.color ?? "#5fae9f"), W = glf(SL.width ?? 0.012);
+    return `\n    { float sl = 0.0, sth = sin(min(th, 1.5708));` + SL.list.map((l) => `\n      { float a = ph - ${glf((l.at ?? 0) * Math.PI / 180)} - ${glf((l.bend ?? 0) * Math.PI / 180)} * th, e = smoothstep(${glf(l.from ?? 0.15)}, ${glf((l.from ?? 0.15) + 0.12)}, th) * (1.0 - smoothstep(${glf((l.to ?? 1) - 0.25)}, ${glf(l.to ?? 1)}, th)), w = ${W} * e;\n        sl = max(sl, (1.0 - smoothstep(w * 0.55, w, abs(atan(sin(a), cos(a))) * sth)) * step(0.02, e)); }`).join("") +
+      `\n      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${glf(c.r)}, ${glf(c.g)}, ${glf(c.b)}), ${glf(SL.strength ?? 0.8)} * sl); }`; };
+  const withRing = (m) => { const R = OPT.hair.paint.ring, SL = OPT.hair.paint.lines, sOn = !!(SL?.on && SL.list?.length); if ((!R.on && !sOn) || OPT.shading.style === "figure") return m;   /* (a figure's shine is its light's) */ const prev = m.onBeforeCompile, key = m.customProgramCacheKey();
     m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.ringColor = RING.color;
       sh.vertexShader = "attribute vec2 hairUV;\nvarying vec2 vHair;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHair = hairUV;");
       sh.fragmentShader = "uniform vec3 ringColor;\nvarying vec2 vHair;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   { float ph = vHair.x, th = vHair.y, z = abs(fract(ph * ${glf(R.teeth)} / 6.2832) - 0.5) * 2.0, lo = ${glf(R.center)} - ${glf(R.width)}, hi = ${glf(R.center)} + ${glf(R.width)} + ${glf(R.zig)} * z;
     float ring = smoothstep(lo - 0.02, lo + 0.02, th) * (1.0 - smoothstep(hi - 0.02, hi + 0.02, th)) * smoothstep(-0.3, 0.3, cos(ph) + 0.4); ${ringShade(R)}
-    diffuseColor.rgb = mix(diffuseColor.rgb, ringColor, ${glf(R.strength)} * ring); }`); };
-    m.customProgramCacheKey = () => "ring|" + JSON.stringify(R) + key; return m; };   // (the ring's numbers are written into the shader: without them in the key, two avatars on a page shared the first one's)
+    diffuseColor.rgb = mix(diffuseColor.rgb, ringColor, ${glf(R.on ? R.strength : 0)} * ring);${sOn ? strandLines(SL) : ""} }`); };
+    m.customProgramCacheKey = () => "ring|" + JSON.stringify(R) + JSON.stringify(SL ?? 0) + key; return m; };   // (the ring's numbers are written into the shader: without them in the key, two avatars on a page shared the first one's)
   const ringUV = (px, py, pz) => { const [x, y, z] = HTr.toHead(px, py, pz), dz = z + 0.005; return [Math.atan2(x, dz), Math.atan2(Math.hypot(x, dz), y - OPT.body.sculpt.skull.y)]; };   // as addHairUV, for createLocks (uvAt)
 
   // build every mesh
