@@ -55,10 +55,10 @@ definePart({ src: import.meta.url,
 // not as a shape seen from above (the chest falls away steeply under the neck: an oval from above ended 2 cm under the neckline in front).
 // Over the shirt it is the shirt pushed out a little; at the neck it is the neck pushed out less and goes a little over the shirt's
 // neckline, so it stands close round the neck (the shirt alone ends 1.4 cm off the neck: a collar on it began outside the neck, a thin ring)
-const TH = 0.005, NECK = 0.006, UP = 0.008;   // how far it stands off the shirt and off the neck; how far over the shirt's neckline it goes
+const TH = 0.005, NECK = 0.006;   // how far it stands off the shirt and off the neck
 definePart({ src: import.meta.url,
   name: "roundCollar", path: "outfit.shirt.roundCollar", group: "shirt", section: L("丸襟", "Round collar"), outline: 0.003, thin: "cloth",
-  defaults: { on: false, color: "#f4f1ea", front: 0.045, side: 0.024, back: 0.03, lobe: 30, waves: 0, wave: 0.003, line: null, lineWidth: 0.004 },
+  defaults: { on: false, color: "#f4f1ea", front: 0.045, side: 0.024, back: 0.03, lobe: 30, waves: 0, wave: 0.003, line: null, lineWidth: 0.004, up: 0.008, band: 0 },
   schema: [
     ["on", L("丸襟", "Round collar"), { help: L("シャツのえりぐりに沿った平たい丸い襟(前で左右に分かれる)。着たときだけ作る", "a flat round collar along the shirt's neckline, in two lobes parting in front; built only when worn") }],
     ["color", L("襟の色", "Collar color"), { when: { ".on": true } }],
@@ -68,11 +68,13 @@ definePart({ src: import.meta.url,
     ["lobe", L("前の丸みの広さ", "Lobes' rounding"), { when: { ".on": true }, min: 10, max: 60, step: 1, help: L("前のまん中から、襟がいちばん広くなる所までの角度(度、首のまわり)", "the angle round the neck from the front's middle to where the collar is widest (degrees)") }],
     ["waves", L("ふちの波の数", "Edge waves"), { when: { ".on": true }, min: 0, max: 30, step: 1, help: L("前のまん中から後ろのまん中までの波の数(フリルのような襟)。0 = なめらか", "how many waves along its edge from the front to the back (a frilled collar); 0 = smooth") }],
     ["wave", L("ふちの波の深さ", "Edge wave depth"), { when: { ".on": true }, min: 0, max: 0.01, step: 0.0005, help: L("m", "m") }],
+    ["up", L("首への立ち上がり", "Rise up the neck"), { when: { ".on": true }, min: 0, max: 0.03, step: 0.001, help: L("シャツのえりぐりより上へ、首に沿って上がる高さ(m)。上げると、襟の内側に見えるシャツのふちが隠れる", "how far over the shirt's neckline it goes up the neck (m); higher hides the shirt's rim inside the collar") }],
+    ["band", L("前のつながりの幅", "Band across the front"), { when: { ".on": true }, min: 0, max: 0.02, step: 0.001, help: L("前のまん中でも残す幅(m)。0 = まん中で左右に分かれる(その間にシャツが見える)", "the width it keeps at the front's middle (m); 0 = the lobes part there, the shirt showing between them") }],
     ["line", L("ふちの線の色", "Edge line color"), { when: { ".on": true }, type: "color", nullable: true, help: L("null = 線なし。白い服の上の白い襟は、ふちに線を描くと見える", "null = none. A white collar on a white shirt shows by a line along its edge") }],
     ["lineWidth", L("ふちの線の太さ", "Edge line width"), { when: { ".on": true }, min: 0.001, max: 0.01, step: 0.0005, help: L("m", "m") }],
   ],
   build({ O, J, shirtSdf, bodySdf, slope, necklineY }) {
-    const WF = O.front ?? 0.045, WS = O.side ?? 0.024, WB = O.back ?? 0.03, T0 = (O.lobe ?? 30) * Math.PI / 180, NW = Math.round(O.waves ?? 0), WV = NW ? O.wave ?? 0.003 : 0, ZN = J.neck[2] - 0.005, SL = slope(J.neck[1] + 0.06);
+    const WF = O.front ?? 0.045, WS = O.side ?? 0.024, WB = O.back ?? 0.03, T0 = (O.lobe ?? 30) * Math.PI / 180, UP = O.up ?? 0.008, BAND = O.band ?? 0, NW = Math.round(O.waves ?? 0), WV = NW ? O.wave ?? 0.003 : 0, ZN = J.neck[2] - 0.005, SL = slope(J.neck[1] + 0.06);
     // the neckline's ring: round the neck's line at each angle (0 = front), where the shirt's top edge is: going out from the neck's
     // middle just under the cut, where the shirt's outside is
     const NA = 48, ring = [];
@@ -81,7 +83,7 @@ definePart({ src: import.meta.url,
       ring.push([r, y]); }
     for (let pass = 0; pass < 2; pass++) { const R = ring.map((q) => [...q]); for (let i = 1; i < NA; i++) for (let k = 0; k < 2; k++) ring[i][k] = (R[i - 1][k] + 2 * R[i][k] + R[i + 1][k]) / 4; }
     // its width by the angle: nothing at the front's middle, out to the lobe's full width in a quarter round, then narrowing to the shoulders' and the back's
-    const width = (a) => a < T0 ? WF * Math.sqrt(Math.max(0, 1 - (1 - a / T0) ** 2)) : a < Math.PI / 2 ? WS + (WF - WS) * (0.5 + 0.5 * Math.cos(Math.PI * (a - T0) / (Math.PI / 2 - T0))) : WB + (WS - WB) * (0.5 + 0.5 * Math.cos(Math.PI * (a - Math.PI / 2) / (Math.PI / 2)));
+    const width = (a) => Math.max(BAND, width0(a)), width0 = (a) => a < T0 ? WF * Math.sqrt(Math.max(0, 1 - (1 - a / T0) ** 2)) : a < Math.PI / 2 ? WS + (WF - WS) * (0.5 + 0.5 * Math.cos(Math.PI * (a - T0) / (Math.PI / 2 - T0))) : WB + (WS - WB) * (0.5 + 0.5 * Math.cos(Math.PI * (a - Math.PI / 2) / (Math.PI / 2)));
     const edge = (x, y, z) => { const dz = z - ZN, rho = Math.hypot(x, dz), a = Math.atan2(Math.abs(x), dz), f = a / Math.PI * NA, i = Math.min(NA - 1, Math.floor(f)), t = f - i;
       const rn = ring[i][0] + (ring[i + 1][0] - ring[i][0]) * t, yn = ring[i][1] + (ring[i + 1][1] - ring[i][1]) * t;
       return Math.hypot(rho - rn, (y - yn) * SL) - width(a) - WV * (Math.abs(Math.sin(NW * a)) - 0.5) * Math.min(1, a * 6); };   // waves: round bumps along the edge, none at the front's middle   // < 0 inside its outline (m, as built)
