@@ -413,8 +413,8 @@ export const CHARACTERS = {
       colors: { skin: "#f7e6d6", hair: "#bfe396", eyes: "#efb85b" },
       outline: { color: "#46433c", trace: 1 }, shading: { style: "flat", rim: { on: true } },   // the sheet's lines: a dark warm gray
       body: {
-        head: { scale: 0.72, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
-        proportion: { legs: 1.23, torso: 1.15, shoulders: 0.6, arms: 0.95 },   // taller than the sheet (the sheet's: head.scale 0.83, torso 0.92, belly 0.6, eyeY 0.998)
+        head: { scale: 0.72, width: 0.97, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
+        proportion: { legs: 1.23, torso: 1.15, shoulders: 0.69, arms: 0.95 },   // taller than the sheet (the sheet's: head.scale 0.83, torso 0.92, belly 0.6, eyeY 0.998)
         thickness: { thigh: 0.64, upperArm: 0.6, forearm: 0.6 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
         torso: { chest: 0.55, belly: 0.69, hips: 0.62, waist: 0.068, back: 0.7 },
