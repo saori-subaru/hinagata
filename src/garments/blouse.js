@@ -49,7 +49,7 @@ definePart({ src: import.meta.url,
   bands: { keys: ["line", "lineWidth", "joinLine"], value: (st) => st.lineAt, ranges: (O) => O.line ? [[-1, (O.lineWidth ?? 0.004) / 2, O.line]] : [] },
   spec: (st, { H }) => { const lo = [9, 9, 9], hi = [-9, -9, -9];
     for (const A of st.arms) for (const t of [-0.06, st.len]) for (let k = 0; k < 3; k++) { const c = A.a[k] + A.u[k] * t; lo[k] = Math.min(lo[k], c - st.reach); hi[k] = Math.max(hi[k], c + st.reach); }
-    return { sdf: st.sdf, lo, hi, h: Math.min(H * 0.7, 0.006), only: /^(upperArm|shoulder|upperChest)/ }; },
+    return { sdf: st.sdf, lo, hi, h: Math.min(H * 0.7, 0.006), only: /^(upperArm|shoulder)/ }; },   // (not the chest: held by it, the puff stayed low when the arm rose, sunk in the shoulder)
 });
 
 // ── a flat round collar (a Peter Pan collar): a band along the shirt's neckline, wide in front in two round lobes that meet at the
