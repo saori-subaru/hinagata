@@ -907,7 +907,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null, holeLayer = null, lashLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null, lashLayers = [];
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
@@ -915,10 +915,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); bindTo(faceLayer);
     if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); bindTo(holeLayer); }
-    if (face.LASH) { const L = OPT.face.lashLift, lm = lashLayer ? lashLayer.material : face.lashMatFor(OPT.shading.style); if (lashLayer) { root.remove(lashLayer); lashLayer.geometry.dispose(); }
-      // forward of the skin by lift, and by flare more toward the outer corner (the wing off the temple)
-      const fwd = (x) => { const t = Math.min(1, Math.max(0, (Math.abs(x) - face.EYE.x) / 0.06)); return L.lift + L.flare * t * t * (3 - 2 * t); };
-      lashLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.FACE, fwd), lm); lashLayer.name = "lash"; lashLayer.frustumCulled = false; lashLayer.renderOrder = 2; root.add(lashLayer); bindTo(lashLayer); }
+    if (face.LASH) { const E = OPT.face.eye3d, lm = lashLayers[0]?.material ?? face.lashMatFor(OPT.shading.style), at = face.eyeMaskAt(faceWrap), N = 16; for (const x of lashLayers) { root.remove(x); x.geometry.dispose(); }
+      // the lash: from the socket's rim (the skin as it was before it sank) forward by lift, by flare more toward the outer corner (the wing off the temple), N layers through it
+      lashLayers = Array.from({ length: N }, (_, k) => { const fwd = (x, y, z) => { const t = Math.min(1, Math.max(0, (Math.abs(x) - face.EYE.x) / 0.06)); return E.depth * at(x, y, z) + 0.002 + (E.lift + E.flare * t * t * (3 - 2 * t)) * k / (N - 1); };
+        const x = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.FACE, fwd), lm); x.name = "lash"; x.frustumCulled = false; x.renderOrder = 2; root.add(x); bindTo(x); return x; }); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
@@ -928,6 +928,15 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // ⏳ the open mouth's shape (face.mouth3d): the lower lip and the chin under it pushed back and a little down, so from aside the face's outline
   // opens under the upper lip (a notch: フ), not only a hole drawn on an unmoved face. The body's points move (the face's layers rebuilt over
   // them), as a shape key would; back to where they were when it closes. Normals kept (the dent is shallow)
+  // ⏳ the eyes' sockets (face.eye3d): the head's skin pushed back where the eyes' picture is (face.EYEMASK), by its depth. The normals stay
+  // (the socket isn't shaded as a dent, the picture in it reads as before). Not with face.mouth3d yet (both move the skin from their own copy of it)
+  let eyeBase = null, eyeKey = null;
+  function eyeShape() { const M = face.EYEMASK; if (!M || face.HOLE || !M.key) return; const geo = parts.body.m.geometry, P = geo.attributes.position; if (M.key === eyeKey && eyeBase?.geo === geo) return;
+    if (eyeBase?.geo !== geo) eyeBase = { geo, p: P.array.slice() }; eyeKey = M.key; P.array.set(eyeBase.p);
+    const at = face.eyeMaskAt(faceWrap), D = OPT.face.eye3d.depth, toH = HTr.identity ? (x, y, z) => [x, y, z] : HTr.toHead, fromH = HTr.identity ? (x, y, z) => [x, y, z] : HTr.fromHead;
+    for (let i = 0; i < P.count; i++) { const q = toH(P.array[i * 3], P.array[i * 3 + 1], P.array[i * 3 + 2]); if (q[2] < 0.05) continue; const w = at(q[0], q[1], q[2]); if (!(w > 0)) continue;
+      const r = fromH(q[0], q[1], q[2] - D * w); P.array[i * 3] = r[0]; P.array[i * 3 + 1] = r[1]; P.array[i * 3 + 2] = r[2]; }
+    P.needsUpdate = true; geo.computeBoundingSphere(); buildFaceLayer(); }
   const OPEN_MOUTHS = new Set(["open", "openSoft"]); let mouthOpen = false, mouthBase = null;
   function mouthShape(open) {
     const geo = parts.body.m.geometry, P = geo.attributes.position; if (mouthBase?.geo !== geo) { mouthBase = { geo, p: P.array.slice() }; mouthOpen = false; }
@@ -1131,7 +1140,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       if (l.eyeSize != null) OPT.face.eyeSize = l.eyeSize;
       avatar.drawFace();
     },
-    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
+    drawFace() { if (faceDrawHook && faceDrawHook(face)) return; face.drawParts(faceSel, blinking); eyeShape(); mouthShape(face.HOLE && OPEN_MOUTHS.has(faceSel.mouth)); },
     /** Replace face drawing (return true when drawn), e.g. to show a whole-face picture. null restores the parts. */
     setFaceDrawHook(fn) { faceDrawHook = fn; avatar.drawFace(); },
     setFaceWrap(wrap) { faceWrap = wrap; buildFaceLayer(); },
@@ -1199,7 +1208,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : (x.wrap ?? ((m) => m))(isMetal(k) || x.metal ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
-      if (lashLayer) { const old = lashLayer.material; lashLayer.material = face.lashMatFor(style, bands); old.dispose(); }
+      if (lashLayers.length) { const old = lashLayers[0].material, m = face.lashMatFor(style, bands); for (const x of lashLayers) x.material = m; old.dispose(); }
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
       root.traverse((x) => { if (x.userData.outline) x.material.visible = linesOn(); else if (x.isSkinnedMesh) x.receiveShadow = style === "figure"; });
     },

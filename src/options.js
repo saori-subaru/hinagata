@@ -1120,10 +1120,11 @@ export const DEFAULTS = {
       "depth": 1,
       "teeth": false
     },
-    "lashLift": {
+    "eye3d": {
       "on": false,
-      "lift": 0.006,
-      "flare": 0.01
+      "depth": 0.008,
+      "lift": 0.005,
+      "flare": 0.002
     },
     "lashHatch": false,
     "lashTrace": 0,

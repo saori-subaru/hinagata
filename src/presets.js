@@ -452,7 +452,7 @@ export const CHARACTERS = {
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "dot" }, browsOverHair: true,
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.17, size: 0.055, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
-        lashLift: { on: true },
+        eye3d: { on: true },
         images: { eye: { src: ZUNDA_EYE_REST, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L_REST }, eyeLash: { src: ZUNDA_EYE_LASH }, eyeLashL: { src: ZUNDA_EYE_L_LASH }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
         layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.896 },   // (the brows short, well over the eyes' middles)
         drawn: [
