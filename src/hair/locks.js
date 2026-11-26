@@ -492,14 +492,22 @@ export function curlTail(T, { p, o }) {
   // nrm: its rings' "out" is the roll's axis all along (the head's out runs along the path at the roll's bottom and top: the rings twisted there, a notch in its rim)
   const e3 = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
   const tail = { root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof, nrm: pts.map(() => e3) };
-  // T.line (m, the line's width): the roll's turn drawn on both its sides, a thin strand along the same path at the bundle's edge (index.js paints it the outline's color)
-  // (the line's rings: "out" in the roll's plane, square to the path, so its shift goes to the roll's faces)
-  const rad = pts.map((_, q) => { const a = pts[Math.max(0, q - 1)], b = pts[Math.min(pts.length - 1, q + 1)], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [e3[1] * d[2] - e3[2] * d[1], e3[2] * d[0] - e3[0] * d[2], e3[0] * d[1] - e3[1] * d[0]], l = Math.hypot(...v) || 1; return v.map((c) => c / l); });
-  const LW = T.line ?? 0, lprof = (t) => sstep(T0 * 0.72, T0 * 0.9, t) * (1 - sstep(0.74, 0.82, t));   // from where the stem meets the roll, round about three quarters of the turn
   // the roll's core: a flat ball at its middle, inside the bundle (the turn alone left slits between its windings and a hole at its middle, seen a little off the side)
-  const HC = 0.34 * T.width * S, cpts = pts.map((_, q) => C.map((c, i) => c + e3[i] * HC * (2 * q / (pts.length - 1) - 1)));   // (as many points as the tail: one createLocks)
-  const core = { ...tail, pts: cpts, len: 2 * HC, w: 2 * (R0 + 0.12 * T.width * S), thick: 1, prof: (t) => Math.sqrt(Math.max(1e-4, 1 - (2 * t - 1) ** 2)),   /* (out to just inside the roll's rim; closed at its ends) */ noLine: true, nrm: pts.map(() => e1) };
-  return { tail: [tail, core], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, nrm: rad, w: LW, thick: 1, prof: lprof, noLine: true, shift: (t) => m * (0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.6, T0 * 0.85, t)) + 0.0012) })) : [] };
+  const HC = 0.34 * T.width * S, RC = R0 + 0.12 * T.width * S, cpts = pts.map((_, q) => C.map((c, i) => c + e3[i] * HC * (2 * q / (pts.length - 1) - 1)));   // (as many points as the tail: one createLocks)
+  const core = { ...tail, pts: cpts, len: 2 * HC, w: 2 * RC, thick: 1, prof: (t) => Math.sqrt(Math.max(1e-4, 1 - (2 * t - 1) ** 2)),   /* (closed at its ends) */ noLine: true, nrm: pts.map(() => e1) };
+  // T.line (m, the line's width): the roll's turn drawn on both its faces (index.js paints it the hair outline's color). From the notch where the
+  // stem's top meets the roll, down round the roll's side to its bottom, then along the bundle's own turn inward. A curve in the roll's plane,
+  // each point stood on the tail's surface there (faceH: the highest of the bundle along its path and the core)
+  const LW = T.line ?? 0, NP = pts.length, M = 4 * (NP - 1), HW = 0.5 * tail.w;
+  const faceH = (X) => { let h = 0; const rc = Math.hypot(...X.map((c, i) => c - C[i])); if (rc < RC) h = HC * Math.sqrt(1 - (rc / RC) ** 2);
+    for (let q = 0; q <= M; q++) { const f = q / 4, i = Math.min(NP - 2, Math.floor(f)), u = f - i, hw = HW * prof(q / M), d = Math.hypot(...[0, 1, 2].map((k) => X[k] - (pts[i][k] + (pts[i + 1][k] - pts[i][k]) * u)));
+      if (d < hw) h = Math.max(h, hw * tail.thick * Math.sqrt(1 - (d / hw) ** 2)); }
+    return h; };
+  const A0 = -119 * Math.PI / 180, A1 = TURN * 0.76, R1 = R0 + 0.36 * tail.w, NA = Math.round(NP * 0.3);   // the notch (about there on the rim), the turn's end; NA points on the way down to the bottom
+  const flat = Array.from({ length: NP }, (_, q) => { const a = q < NA ? A0 * (1 - q / NA) : A1 * (q - NA) / (NP - 1 - NA), r = q < NA ? R0 + (R1 - R0) * (1 - sstep(0, 1, q / NA)) : R0 * (1 - 0.78 * a / TURN); return at(C, r * Math.sin(a), -r * Math.cos(a)); });
+  let llen = 0; for (let q = 1; q < NP; q++) llen += Math.hypot(...[0, 1, 2].map((k) => flat[q][k] - flat[q - 1][k]));
+  const lprof = (t) => sstep(0, 0.03, t) * (1 - sstep(0.9, 1, t));
+  return { tail: [tail, core], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, pts: flat.map((X) => { const h = faceH(X) + 0.0012; return X.map((c, i) => c + e3[i] * m * h); }), len: llen, w: LW, thick: 1, prof: lprof, noLine: true })) : [] };
 }
 
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
