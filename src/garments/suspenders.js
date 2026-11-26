@@ -59,5 +59,5 @@ definePart({ src: import.meta.url,
       return { pos: new Float32Array(pos), nor: new Float32Array(nor), idx: new Uint32Array(idx) }; };
     return { make };
   },
-  spec: (st, { H }) => ({ make: st.make, sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, only: /^(spine|chest|upperChest|shoulder|neck)/ }),
+  spec: (st, { H }) => ({ make: st.make, sdf: () => 1, lo: [0, 0, 0], hi: [0.01, 0.01, 0.01], h: H, only: /^(spine|chest|upperChest|shoulder|neck|upperArm)/ }),   // (the upper arms too, as the shirt under them: without, the shirt rose over the straps with the arms raised)
 });

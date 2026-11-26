@@ -12,7 +12,7 @@ const L = (ja, en) => ({ ja, en }), smax = (a, b, k) => -smin(-a, -b, k);
 // shoulder's cap, up to the shirt's cut
 definePart({ src: import.meta.url,
   name: "puff", path: "outfit.shirt.puff", group: "shirt", section: L("パフスリーブ", "Puff sleeves"), outline: 0.003, thin: "cloth",
-  defaults: { on: false, color: "#f4f1ea", length: 0.09, radius: 0.06, cap: 0.05, gather: 0.038, rise: 0.006, frill: 0.02, frillOut: 0.016, waves: 8, wave: 0.004, line: null, lineWidth: 0.004 },
+  defaults: { on: false, color: "#f4f1ea", length: 0.09, radius: 0.06, cap: 0.05, gather: 0.038, rise: 0.006, frill: 0.02, frillOut: 0.016, waves: 8, wave: 0.004, line: null, lineWidth: 0.004, joinLine: true },
   schema: [
     ["on", L("パフスリーブ", "Puff sleeves"), { help: L("肩から二の腕の、ふくらんだ短い袖(先を絞ってフリル)。そでなしのシャツ(shirt.sleeve \"none\")の上に着る。着たときだけ作る", "short puffed sleeves from the shoulder, gathered with a frill; over a sleeveless shirt (shirt.sleeve \"none\"); built only when worn") }],
     ["color", L("パフスリーブの色", "Puff sleeves color"), { when: { ".on": true } }],
@@ -27,6 +27,7 @@ definePart({ src: import.meta.url,
     ["wave", L("フリルの波の深さ", "Frill wave depth"), { when: { ".on": true }, min: 0, max: 0.01, step: 0.0005, help: L("m", "m") }],
     ["line", L("線の色", "Line color"), { when: { ".on": true }, type: "color", nullable: true, help: L("null = 線なし。絞った所と、袖が身ごろに付く所に描く線", "null = none. A line at the gather and where the sleeve joins the shirt") }],
     ["lineWidth", L("線の太さ", "Line width"), { when: { ".on": true }, min: 0.001, max: 0.01, step: 0.0005, help: L("m", "m") }],
+    ["joinLine", L("付け根の線", "Line at the join"), { when: { ".on": true }, help: L("袖が身ごろに付く所の線。腕を上げると袖の上に出てくるので、よく動かす子は切る", "the line where the sleeve joins the shirt; it comes out onto the sleeve when the arm rises, so off for one who moves a lot") }],
   ],
   build({ O, J, shirtSdf }) {
     const LEN = O.length ?? 0.09, R = O.radius ?? 0.06, R0 = O.cap ?? 0.05, RG = O.gather ?? 0.038, RISE = O.rise ?? 0.006, FR = O.frill ?? 0.02, FO = O.frillOut ?? 0.016, NW = Math.round(O.waves ?? 8), WV = O.wave ?? 0.004, SP = 0.45;   // SP: fullest that share of the way
@@ -41,10 +42,11 @@ definePart({ src: import.meta.url,
         d = smin(d, Math.max(Math.hypot(p1, p2) - rr, t - (LEN + FR), LEN - 0.008 - t), 0.004); }   // the frill: a wavy flared ring past the gather
       return d; };
     // the lines: how far (m) a point is from the gather's ring or from where the sleeve goes into the shirt
-    const lineAt = (x, y, z) => { const A = arms[x > 0 ? 0 : 1], t = (x - A.a[0]) * A.u[0] + (y - A.a[1]) * A.u[1] + (z - A.a[2]) * A.u[2]; return Math.min(Math.abs(t - LEN), Math.abs(shirtSdf(x, y, z))); };   // (abs: the part sunk in the shirt keeps the sleeve's color; painted as line, it showed black when the arm rose and drew it out)
+    const JOIN = O.joinLine ?? true;
+    const lineAt = (x, y, z) => { const A = arms[x > 0 ? 0 : 1], t = (x - A.a[0]) * A.u[0] + (y - A.a[1]) * A.u[1] + (z - A.a[2]) * A.u[2]; return JOIN ? Math.min(Math.abs(t - LEN), Math.abs(shirtSdf(x, y, z))) : Math.abs(t - LEN); };   // (abs: the part sunk in the shirt keeps the sleeve's color; painted as line, it showed black when the arm rose and drew it out)
     return { arms, lineAt, sdf: (x, y, z) => one(arms[x > 0 ? 0 : 1], x, y, z), reach: Math.max(R + RISE, RG + FO + WV) + 0.02, len: LEN + FR + 0.02 };
   },
-  bands: { keys: ["line", "lineWidth"], value: (st) => st.lineAt, ranges: (O) => O.line ? [[-1, (O.lineWidth ?? 0.004) / 2, O.line]] : [] },
+  bands: { keys: ["line", "lineWidth", "joinLine"], value: (st) => st.lineAt, ranges: (O) => O.line ? [[-1, (O.lineWidth ?? 0.004) / 2, O.line]] : [] },
   spec: (st, { H }) => { const lo = [9, 9, 9], hi = [-9, -9, -9];
     for (const A of st.arms) for (const t of [-0.06, st.len]) for (let k = 0; k < 3; k++) { const c = A.a[k] + A.u[k] * t; lo[k] = Math.min(lo[k], c - st.reach); hi[k] = Math.max(hi[k], c + st.reach); }
     return { sdf: st.sdf, lo, hi, h: Math.min(H * 0.7, 0.006), only: /^(upperArm|shoulder|upperChest)/ }; },

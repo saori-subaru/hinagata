@@ -464,7 +464,7 @@ export const CHARACTERS = {
       outfit: {
         // the blouse: cut at the shoulder joints under the puff sleeves (armhole 0), its neckline round the neck's base and lower in front (tilt)
         shirt: { color: "#f1eee9", sleeve: "none", armhole: 0, length: "crop", crop: 0.56, collar: { y: 0.83, tilt: 0.95 },
-          puff: { on: true, color: "#f1eee9", cap: 0.054, frillOut: 0.018, wave: 0.006, line: "#46433c", lineWidth: 0.003 }, roundCollar: { on: true, color: "#d9dcdd", up: 0.016, band: 0.013, front: 0.021, side: 0.015, back: 0.015, waves: 7, wave: 0.006 } },   // its hem behind the waistband (tucked, it showed under the band where the balloon starts)
+          puff: { on: true, color: "#f1eee9", cap: 0.054, frillOut: 0.018, wave: 0.006, line: "#46433c", lineWidth: 0.003, joinLine: false }, roundCollar: { on: true, color: "#d9dcdd", up: 0.016, band: 0.013, front: 0.021, side: 0.015, back: 0.015, waves: 7, wave: 0.006 } },   // its hem behind the waistband (tucked, it showed under the band where the balloon starts)
         // pumpkin shorts: a high waist under the waistband (the belt, in their color), the balloon from its bottom edge to the hem bands
         pants: { color: "#7fa56a", top: 0.58, tilt: 0, hem: 0.33, cuff: 0.02, cuffOut: 0.008, cuffColor: "#e6a8b6", puff: 1.58, puffTop: 0.556, puffAt: 0.548, puffStart: 0.02, puffFront: 0.7, puffBack: 0.63, picture: { src: ZUNDA_PANTS } },
         belt: { on: true, color: "#7fa56a", y: 0.581, width: 0.054, thick: 0.004, follow: true },
