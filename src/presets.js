@@ -427,13 +427,13 @@ export const CHARACTERS = {
         whorl: { x: 0, z: -0.03, lineFrom: 0.6, taper: 1 },   // (no short lines scattered over the crown)
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
           // under the others, in shadow: the bob's inner layer round the nape and behind the jaw
-          { to: [180, 0.795], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
-          { to: [135, 0.78], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.015, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
-          { to: [100, 0.75], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.015, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.5, shade: 0.6, mirror: true },
+          { to: [180, 0.82], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
+          { to: [135, 0.83], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.015, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
+          { to: [100, 0.84], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.015, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.7, shade: 0.6, mirror: true },
           // the back and the sides: thick blocks to the jaw, their ends cut into points and tucked in under the head's widest part (hug)
-          { to: [180, 0.835], thickFrom: 0.04, width: 0.3, thick: 0.03, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
-          { to: [142, 0.815], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
-          { to: [108, 0.775], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.3, mirror: true },
+          { to: [180, 0.86], thickFrom: 0.04, width: 0.3, thick: 0.03, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
+          { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
+          { to: [108, 0.87], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
           { to: [72, 0.875], lineFrom: 1, thickFrom: 0.35, rootWidth: 0.5, width: 0.25, thick: 0.039, tips: [1, 0.85], notch: 0.12, endWidth: 0.7, hook: -8, hug: 0.3, mirror: true },   // over the ears, to the jaw, its end turned in toward the cheek (wide: the ear's lobe showed before it)
           // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
           { to: [45, 0.915], thickFrom: 0.35, rootWidth: 0.7, wide: 0.3, width: 0.22, thick: 0.042, hook: 8, mirror: true },   // wide roots: narrow ones sank between their neighbours, two cuts in the crown
@@ -447,7 +447,8 @@ export const CHARACTERS = {
       },
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, jawShadow: { on: true, color: "#e9c9bf", jawNy: [2, 3], neckY: [0.5, 0.52, 0.81, 0.835], neckX: [0.09, 0.12] },   // the neck in the skin's shade color (jawNy out of reach: none under the jaw)
+        noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
         layout: { eyeX: 0.095, eyeY: 0.988, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
         drawn: [
