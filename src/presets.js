@@ -447,8 +447,7 @@ export const CHARACTERS = {
       },
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,
-        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, jawShadow: { on: true, color: "#e9c9bf", jawNy: [2, 3], neckY: [0.5, 0.52, 0.81, 0.835], neckX: [0.09, 0.12] },   // the neck in the skin's shade color (jawNy out of reach: none under the jaw)
-        noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
+        blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
         layout: { eyeX: 0.095, eyeY: 0.988, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
         drawn: [
