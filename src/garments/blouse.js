@@ -41,7 +41,7 @@ definePart({ src: import.meta.url,
         d = smin(d, Math.max(Math.hypot(p1, p2) - rr, t - (LEN + FR), LEN - 0.008 - t), 0.004); }   // the frill: a wavy flared ring past the gather
       return d; };
     // the lines: how far (m) a point is from the gather's ring or from where the sleeve goes into the shirt
-    const lineAt = (x, y, z) => { const A = arms[x > 0 ? 0 : 1], t = (x - A.a[0]) * A.u[0] + (y - A.a[1]) * A.u[1] + (z - A.a[2]) * A.u[2]; return Math.min(Math.abs(t - LEN), Math.max(0, shirtSdf(x, y, z))); };
+    const lineAt = (x, y, z) => { const A = arms[x > 0 ? 0 : 1], t = (x - A.a[0]) * A.u[0] + (y - A.a[1]) * A.u[1] + (z - A.a[2]) * A.u[2]; return Math.min(Math.abs(t - LEN), Math.abs(shirtSdf(x, y, z))); };   // (abs: the part sunk in the shirt keeps the sleeve's color; painted as line, it showed black when the arm rose and drew it out)
     return { arms, lineAt, sdf: (x, y, z) => one(arms[x > 0 ? 0 : 1], x, y, z), reach: Math.max(R + RISE, RG + FO + WV) + 0.02, len: LEN + FR + 0.02 };
   },
   bands: { keys: ["line", "lineWidth"], value: (st) => st.lineAt, ranges: (O) => O.line ? [[-1, (O.lineWidth ?? 0.004) / 2, O.line]] : [] },
