@@ -446,10 +446,10 @@ export const CHARACTERS = {
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: false } },
       },
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
-        parts: { eyes: "image", brows: "image", mouth: "image", nose: "dot" }, browsOverHair: true,
+        parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
-        layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.896 },   // (the brows short, well over the eyes' middles)
+        layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
         drawn: [
           { id: "happy", name: "にっこり", eye: ZUNDA_EYE_HAPPY, brow: null, mouth: ZUNDA_MOUTH_OPEN, cheeks: "none", blink: false },
           { id: "surprised", name: "びっくり", eye: null, eyeL: ZUNDA_EYE_L, brow: null, mouth: ZUNDA_MOUTH_O, cheeks: "none", blink: true },
