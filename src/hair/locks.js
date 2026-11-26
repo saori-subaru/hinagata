@@ -503,7 +503,11 @@ export function curlTail(T, { p, o }) {
     for (let q = 0; q <= M; q++) { const f = q / 4, i = Math.min(NP - 2, Math.floor(f)), u = f - i, hw = HW * prof(q / M), d = Math.hypot(...[0, 1, 2].map((k) => X[k] - (pts[i][k] + (pts[i + 1][k] - pts[i][k]) * u)));
       if (d < hw) h = Math.max(h, hw * tail.thick * Math.sqrt(1 - (d / hw) ** 2)); }
     return h; };
-  const A0 = -119 * Math.PI / 180, A1 = TURN * 0.76, R1 = R0 + 0.36 * tail.w, NA = Math.round(NP * 0.3);   // the notch (about there on the rim), the turn's end; NA points on the way down to the bottom
+  // the notch: going round the roll's rim from its top toward the stem, where the rim's edge jumps out along the stem
+  let A0 = -119 * Math.PI / 180, R1 = R0 + 0.36 * tail.w; { let prev = null;
+    for (let d = -178; d <= -60; d += 0.5) { const an = d * Math.PI / 180; let r = R0 * 0.3; while (r < 0.3 && faceH(at(C, r * Math.sin(an), -r * Math.cos(an))) > 0) r += 0.0005;
+      if (prev != null && r > prev[1] + 0.008) { A0 = prev[0]; R1 = prev[1] - 0.001; break; } prev = [an, r]; } }
+  const A1 = TURN * 0.76, NA = Math.round(NP * 0.3);   // the turn's end; NA points on the way down from the notch to the bottom
   const flat = Array.from({ length: NP }, (_, q) => { const a = q < NA ? A0 * (1 - q / NA) : A1 * (q - NA) / (NP - 1 - NA), r = q < NA ? R0 + (R1 - R0) * (1 - sstep(0, 1, q / NA)) : R0 * (1 - 0.78 * a / TURN); return at(C, r * Math.sin(a), -r * Math.cos(a)); });
   let llen = 0; for (let q = 1; q < NP; q++) llen += Math.hypot(...[0, 1, 2].map((k) => flat[q][k] - flat[q - 1][k]));
   const lprof = (t) => sstep(0, 0.03, t) * (1 - sstep(0.9, 1, t));
