@@ -414,7 +414,7 @@ export const CHARACTERS = {
       outline: { color: "#46433c", trace: 1 }, shading: { style: "flat", rim: { on: true } },   // the sheet's lines: a dark warm gray
       body: {
         head: { scale: 0.72, width: 0.97, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
-        proportion: { legs: 1.23, torso: 1.15, shoulders: 0.69, arms: 0.95 },   // taller than the sheet (the sheet's: head.scale 0.83, torso 0.92, belly 0.6, eyeY 0.998)
+        proportion: { legs: 1.23, torso: 1.15, shoulders: 0.69, arms: 0.95 },   // taller than the sheet (the sheet's: head.scale 0.83, torso 0.92, belly 0.6)
         thickness: { thigh: 0.64, upperArm: 0.6, forearm: 0.6 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
         torso: { chest: 0.55, belly: 0.69, hips: 0.62, waist: 0.068, back: 0.7 },
@@ -449,7 +449,7 @@ export const CHARACTERS = {
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
-        layout: { eyeX: 0.095, eyeY: 0.988, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
+        layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
         drawn: [
           { id: "happy", name: "にっこり", eye: ZUNDA_EYE_HAPPY, brow: null, mouth: ZUNDA_MOUTH_OPEN, cheeks: "none", blink: false },
           { id: "surprised", name: "びっくり", eye: null, eyeL: ZUNDA_EYE_L, brow: null, mouth: ZUNDA_MOUTH_O, cheeks: "none", blink: true },
