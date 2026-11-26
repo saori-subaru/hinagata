@@ -40,6 +40,11 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   const BROWS = OPT.face.browsOverHair ? { up: 0.14, pull: OPT.face.browsPull ?? 0.045 } : null;
   if (BROWS) { const c = BROWS.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; BROWS.ctx = c.getContext("2d");
     BROWS.tex = new THREE.CanvasTexture(c); BROWS.tex.colorSpace = THREE.SRGBColorSpace; BROWS.tex.anisotropy = 4; BROWS.frame = { y0: FACE.y0 + BROWS.up, y1: FACE.y1 + BROWS.up }; }
+  // ⏳ face.lashLift (a try): the upper lash on its own picture (face.images.eyeLash, eyeLashL: in the eye picture's frame, the eye's without it),
+  // on a layer held off the face (index.js lashLayer): from aside it stands clear of the cheek. Off: the lash is drawn on the face's picture
+  const LASH = OPT.face.lashLift?.on ? {} : null;
+  if (LASH) { const c = LASH.canvas = document.createElement("canvas"); c.width = faceCanvas.width; c.height = faceCanvas.height; LASH.ctx = c.getContext("2d"); LASH.tex = new THREE.CanvasTexture(c); LASH.tex.colorSpace = THREE.SRGBColorSpace; LASH.tex.anisotropy = 4; }
+  const lashMatFor = (style, bands = OPT.shading.bands) => Object.assign(flatCoat(shaded(style, 0xffffff, bands)), { map: LASH.tex, vertexColors: true, transparent: true, depthWrite: false });
   const browMatFor = (style, bands = OPT.shading.bands) => pulled(Object.assign(flatCoat(shaded(style, 0xffffff, bands)), { map: BROWS.tex, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), BROWS.pull);
   // ⏳ face.mouth3d (a try): an open mouth is a hole into a mouth made in 3D (index.js mouthInside), not a picture of its inside: from aside
   // the tongue lies behind the lips, not on the cheek like a sticker. The mouth's shape goes on HOLE's own picture; a layer drawn from it marks
@@ -83,6 +88,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   // eyeL: the other eye's own picture (drawn in the template's frame on that side; placed as the eye is, mirrored across the face, the picture
   // itself not flipped). Without one the eye is mirrored (2026-10-07, Saori: odd eyes, a highlight on one side)
   PART_IMG.eyeL = { ...PART_IMG.eye, src: OPT.face.images.eyeL?.src ?? null };
+  PART_IMG.eyeLash = { ...PART_IMG.eye, src: OPT.face.images.eyeLash?.src ?? null }; PART_IMG.eyeLashL = { ...PART_IMG.eye, src: OPT.face.images.eyeLashL?.src ?? null };
   const NOSEP = { x: 0, y: 0.929 + OPT.body.sculpt.nose.lift - FACE.dy };   // the nose tip on the face picture (head space, same as the tip in body/index.js)
   // the character's drawn expressions (face.drawn): their own eye / brow / mouth, placed like the ふつう ones ("eye@<id>" …)
   const DRAWN = (OPT.face.drawn ?? []).filter((d) => d && d.id != null), BLINKS = new Set([...BLINKS0, ...DRAWN.filter((d) => d.blink !== false).map((d) => DRAWN_PREFIX + d.id)]);
@@ -366,7 +372,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   function drawParts(sel, blinking = false) {
     fctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
     if (HOLE) { HOLE.ctx.setTransform(1, 0, 0, 1, 0, 0); HOLE.ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height); HOLE.tex.needsUpdate = true; }
-    drawBlush();
+    drawBlush(); if (LASH) { LASH.ctx.setTransform(1, 0, 0, 1, 0, 0); LASH.ctx.clearRect(0, 0, faceCanvas.width, faceCanvas.height); LASH.tex.needsUpdate = true; }
     // blinking: the closed eye drawn as its own entry (face.images.eyeClosed) whatever the open eye is, else the code's line
     for (const slot of SLOTS) { const shut = slot === "eyes" && blinking && BLINKS.has(sel.eyes), name = shut ? (PART_IMG.eyeClosed.img ? "imageClosed" : SHUT[sel.eyes] ?? "closed") : sel[slot], draw = PARTS[slot][name] ?? (() => {});
       const other = slot === "eyes" && !shut ? otherEye(name) : null;   // the other eye's own picture, if this eye has one
@@ -374,10 +380,16 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
       if (SIDED[slot]) for (const m of [1, -1]) { if (m < 0 && other) { imgPart(other, -(EYE.x + 2 * PART_IMG[other].dx), EYE.y); continue; }   // (placed at the mirrored point: imgPart adds dx)
         fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(m, 1); fctx.translate(-cx, 0); draw(m * m); fctx.restore(); }   // the right side is the left side mirrored
       else draw(1);
+      if (slot === "eyes" && !shut && PART_IMG.eyeLash.img) {   // the lash of images.eye, where that is the eye shown (a drawn eye without its own picture falls back to it)
+        const base = name === "image" || (name.startsWith(DRAWN_PREFIX) && !PART_IMG[`eye@${name.slice(DRAWN_PREFIX.length)}`]?.img), c = fctx; if (LASH) fctx = LASH.ctx;
+        if (base) imgPart("eyeLash", EYE.x, EYE.y);
+        if (other === "eyeL" && PART_IMG.eyeLashL.img) imgPart("eyeLashL", -(EYE.x + 2 * PART_IMG.eyeLashL.dx), EYE.y);
+        else if (!other && base) { fctx.save(); const cx = px(0); fctx.translate(cx, 0); fctx.scale(-1, 1); fctx.translate(-cx, 0); imgPart("eyeLash", EYE.x, EYE.y); fctx.restore(); }
+        fctx = c; }
       if (own) { fctx = mainCtx; BROWS.tex.needsUpdate = true; } }
     faceTex.needsUpdate = true;
   }
-  function faceLayerGeometry(src, FACE_WRAP, toHead = null, F = FACE) {   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled). F: the picture's heights (the brows' own: BROWS.frame)
+  function faceLayerGeometry(src, FACE_WRAP, toHead = null, F = FACE, fwd = null) {   /* fwd(x): the layer held this far forward of the skin (m; the lash's) */   // the front of the head mesh, lifted slightly, with UVs that project the face picture onto it. toHead: world → head space (when the head is scaled). F: the picture's heights (the brows' own: BROWS.frame)
     const P0 = src.attributes.position.array, N0 = src.attributes.normal.array, NS = src.attributes.shadeN?.array ?? N0, SI = src.attributes.skinIndex.array, SW = src.attributes.skinWeight.array, I0 = src.index.array;
     const H = (v) => toHead ? toHead(P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]) : [P0[v * 3], P0[v * 3 + 1], P0[v * 3 + 2]];   // the face picture lives in head space
     // (the head's front down to where it faces 80° aside: from 72° (normal z 0.3) and z 0.05 the blush ended square on the cheek and the brows'
@@ -385,7 +397,7 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
     const ok = (v) => { const [x, y, z] = H(v); return y > F.y0 + 0.004 && y < F.y1 - 0.004 && Math.abs(x) < FACE.x1 - 0.004 && z > 0.0 && N0[v * 3 + 2] > 0.17; };
     const map = new Map(), pos = [], nor = [], uv = [], col = [], si = [], sw = [], idx = [];
     const add = (v) => { if (map.has(v)) return map.get(v); const n = pos.length / 3, [x, y, z] = H(v);
-      pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で
+      pos.push(P0[v * 3] + N0[v * 3] * 0.0012, P0[v * 3 + 1] + N0[v * 3 + 1] * 0.0012, P0[v * 3 + 2] + N0[v * 3 + 2] * 0.0012 + (fwd ? fwd(x) : 0)); nor.push(NS[v * 3], NS[v * 3 + 1], NS[v * 3 + 2]);   // 陰影は体の肌と同じ向き(shadeN)で
       const ux = FACE_WRAP ? Math.atan2(x, z - FACE_WRAP.zc) * FACE_WRAP.r : x;   // 巻きつけ: 頭のまわりの角度で横の位置を決める(横顔で絵が引きのばされない)
       uv.push((ux - FACE.x0) / (FACE.x1 - FACE.x0), (y - F.y0) / (F.y1 - F.y0));
       { const nz = N0[v * 3 + 2], t = (a, b, q) => Math.min(1, Math.max(0, (q - a) / (b - a))), a = t(0.17, 0.3, nz) * t(0.0, 0.03, z) * t(FACE.x1 - 0.004, FACE.x1 - 0.012, Math.abs(x)); col.push(1, 1, 1, a * a * (3 - 2 * a)); }   // the picture fades out toward the layer's edge (no square end on a cheek seen from aside)
@@ -403,5 +415,5 @@ export function createFace(OPT, { FACE_DY, onImage } = {}) {
   }
   const setEyeColor = (c) => { EYE_COL.splice(0, 4, ...irisColors(c)); };
   const getLayout = () => ({ eyeX: EYE.x, eyeY: EYE.y, eyeSize: LAY.eyeSize, browX: BROW.x, browY: BROW.y, mouthY: MOUTHP.y });
-  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, faceMatFor, BROWS, browMatFor, HOLE, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, presetName, DRAWN, drawParts, faceLayerGeometry };
+  return { setLayout, getLayout, setEyeColor, FACE, faceCanvas, fctx, faceTex, faceMat, faceMatFor, BROWS, browMatFor, LASH, lashMatFor, HOLE, px, py, pu, EYE, BROW, MOUTHP, NOSEP, PART_IMG, PARTS, PRESETS, presetName, DRAWN, drawParts, faceLayerGeometry };
 }

@@ -907,7 +907,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   const face = createFace(OPT, { FACE_DY, onImage: () => avatar.drawFace() });
   const FP = OPT.face.parts, faceSel = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks, nose: FP.nose ?? (OPT.face.noseShadow.on ? "shadow" : "none") };   // nose null: follow noseShadow.on
   const FACE0 = { eyes: FP.eyes, brows: FP.brows, mouth: FP.mouth, cheeks: FP.cheeks };   // the face it was built with: setFace("normal") comes back to it unless face.expressions.normal says otherwise
-  let faceLayer = null, browLayer = null, holeLayer = null;
+  let faceLayer = null, browLayer = null, holeLayer = null, lashLayer = null;
   if (face.BROWS) face.BROWS.pull *= Math.hypot(...HTr.fromHead(0, 1, 0.1).map((v, i) => v - HTr.fromHead(0, 1, 0)[i])) / 0.1;   // head space → the mesh's own size (a scaled head)
   function buildFaceLayer() {
     const g = face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead);
@@ -915,6 +915,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     if (faceLayer) { root.remove(faceLayer); faceLayer.geometry.dispose(); }
     faceLayer = new THREE.SkinnedMesh(g, mat); faceLayer.name = "face"; faceLayer.frustumCulled = false; faceLayer.renderOrder = 1; root.add(faceLayer); bindTo(faceLayer);
     if (face.HOLE) { if (holeLayer) root.remove(holeLayer); holeLayer = new THREE.SkinnedMesh(g, face.HOLE.mat); holeLayer.name = "mouthHole"; holeLayer.frustumCulled = false; holeLayer.renderOrder = 3; root.add(holeLayer); bindTo(holeLayer); }
+    if (face.LASH) { const L = OPT.face.lashLift, lm = lashLayer ? lashLayer.material : face.lashMatFor(OPT.shading.style); if (lashLayer) { root.remove(lashLayer); lashLayer.geometry.dispose(); }
+      // forward of the skin by lift, and by flare more toward the outer corner (the wing off the temple)
+      const fwd = (x) => { const t = Math.min(1, Math.max(0, (Math.abs(x) - face.EYE.x) / 0.06)); return L.lift + L.flare * t * t * (3 - 2 * t); };
+      lashLayer = new THREE.SkinnedMesh(face.faceLayerGeometry(parts.body.m.geometry, faceWrap, HTr.identity ? null : HTr.toHead, face.FACE, fwd), lm); lashLayer.name = "lash"; lashLayer.frustumCulled = false; lashLayer.renderOrder = 2; root.add(lashLayer); bindTo(lashLayer); }
     if (!face.BROWS) return;   // face.browsOverHair: the brows' own layer, after the face's
     const bm = browLayer ? browLayer.material : face.browMatFor(OPT.shading.style);
     if (browLayer) { root.remove(browLayer); browLayer.geometry.dispose(); }
@@ -1195,6 +1199,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         const old = x.m.material; x.m.material = k === "hair" ? hairMat(old.color.getHex()) : (x.wrap ?? ((m) => m))(isMetal(k) || x.metal ? metal(style, old.color.getHex()) : shadedFor(x.m.geometry, old.color.getHex(), style)); x.m.material.wireframe = old.wireframe; old.dispose();
       }
       { const old = faceLayer.material; faceLayer.material = face.faceMatFor(style, bands); old.dispose(); }   // 顔の絵も同じ陰影に
+      if (lashLayer) { const old = lashLayer.material; lashLayer.material = face.lashMatFor(style, bands); old.dispose(); }
       if (browLayer) { const old = browLayer.material; browLayer.material = face.browMatFor(style, bands); old.dispose(); }
       root.traverse((x) => { if (x.userData.outline) x.material.visible = linesOn(); else if (x.isSkinnedMesh) x.receiveShadow = style === "figure"; });
     },
