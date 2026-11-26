@@ -286,7 +286,7 @@ export function drawnLocks(list, { toRoot, N = 16, W = null }) {
 /**
  * Tufts (options.hair.tufts): few big blocks of hair from the whorl, each lying on the hair to where its tip ends (the other locks are
  * ribbons, flat on the head). Wide (the mesh bends round the head: createLocks' cols and curv), solid from the hair out (thick), its end a
- * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, flick, flickFrom, hug, from, round,
+ * point or cut into points, and spikes growing out of it. list: [{ to: [angle, y], width, thick, tips, notch, edge, out, lift, bow, hook, hookFrom (where along it the hook begins, default 0.6: lower, a soft curve all down it), flick, flickFrom, hug, from, round,
  * band, ridge, rootWidth, wide, endWidth, shade, stiff, lineFrom (its own: hair.whorl.lineFrom), over, top (its thickness on top of the head, of thick), mirror, spikes: [{ y | at, length, out, up, width, side, ridge }] }]
  * (head space; schema.js hair.tufts). whorl: [x, z], where they grow from, from the top's middle. surf / center / toRoot / sx: as bangLocks.
  * cols: the points across a tuft (more when one has more points than fit). Each spec's src: { i, k, m }: the tuft in the list it is of, its
@@ -367,11 +367,11 @@ export function tuftLocks(list, { surf, center, toRoot, sx = 1, whorl = [0, 0], 
     const rootW = d.rootWidth ?? 0.25, wide = d.wide ?? 0.45, band = clamp(d.band ?? 0.5, 0, 1), endW = d.endWidth ?? 0.6, point = n === 1 ? 0.75 - 0.5 * band : clamp(notch + 0.12, 0.15, 0.4);
     const RN = clamp(d.round ?? 0, 0, 1), bulge = (x) => x * (1 + RN * (1 - x));
     const prof = (s) => (rootW + (1 - rootW) * sstep(0, wide, s)) * (n === 1 ? (s < 1 - point ? 1 : Math.pow(bulge(Math.max(0, (1 - s) / point)), 0.9)) : 1 - (1 - endW) * Math.pow(s, 3 + 4 * RN));   // round: its sides bulge on their way to the point (a leaf's outline, not straight lines)
-    const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg, hook = (d.hook ?? 0) * m * deg, flick = d.flick ?? 0, flickFrom = clamp(d.flickFrom ?? 0.6, 0.2, 0.9);
+    const w = d.width ?? 0.1, TH = d.thick ?? 0.014, base = Math.min(UNDER, 0.006 / TH) * TH + 0.002, lift = d.lift ?? 0, outT = d.out ?? 0, hug = clamp(d.hug ?? 0, 0, 1), bow = (d.bow ?? 0) * m * deg, hook = (d.hook ?? 0) * m * deg, hookFrom = clamp(d.hookFrom ?? 0.6, 0, 0.9), flick = d.flick ?? 0, flickFrom = clamp(d.flickFrom ?? 0.6, 0.2, 0.9);
     const a = d.to[0] * m * deg, R0 = d.from ? over(d.from[0] * m, d.from[1]) : over(whorl[0], whorl[1]), rd = norm(R0.map((v, q) => v - center[q]));
     let H, U, F, FO;   // the points (head space), their directions from the head's middle, the hair under each, how far each has left the hair (0..1)
     const path = (yt) => { const td = norm(horiz(yt, a).map((v, q) => v - center[q])), om = Math.acos(clamp(rd[0] * td[0] + rd[1] * td[1] + rd[2] * td[2], -1, 1)), so = Math.sin(om) || 1; let reach = 0; H = []; U = []; F = []; FO = [];
-      for (let q = 0; q < N; q++) { const t = q / (N - 1), k0 = Math.sin((1 - t) * om) / so, k1 = Math.sin(t * om) / so, b = bow * Math.sin(Math.PI * t) + (t > 0.6 ? hook * ((t - 0.6) / 0.4) ** 2 : 0), cb = Math.cos(b), sb = Math.sin(b);
+      for (let q = 0; q < N; q++) { const t = q / (N - 1), k0 = Math.sin((1 - t) * om) / so, k1 = Math.sin(t * om) / so, b = bow * Math.sin(Math.PI * t) + (t > hookFrom ? hook * ((t - hookFrom) / (1 - hookFrom)) ** 2 : 0), cb = Math.cos(b), sb = Math.sin(b);
         let u = norm(rd.map((v, i) => v * k0 + td[i] * k1)); if (b) u = [u[0] * cb + u[2] * sb, u[1], -u[0] * sb + u[2] * cb];   // bow: its middle swung round the head; hook: only its end, curving round to the tip
         const sAt = surfaceAlong(surfNow, center, u), fo = t > 0.5 ? ((t - 0.5) / 0.5) ** 2 : 0, at = sAt + rise(t, base + lift * girth(u[1])) + outT * fo, P = center.map((v, i) => v + u[i] * at);
         // under the head's widest part it hangs straight down, not in under the head (hug 1: it follows the head in to the nape)
