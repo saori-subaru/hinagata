@@ -853,16 +853,16 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // place is an offset from the bone's joint, made for the chibi torso: on the adult chest Lumina's chest ribbon stood 2 cm off the dress
   // (2026-10-09, Saori: "横から見たときの胸のリボンがういてる"). Read on the meshes as built (rest pose); an item put there in the editor stays
   function snapper() {
-    if (!OPT.body.adult?.on) return null;
+    const all = !!OPT.body.adult?.on; if (!all && !(OPT.accessories ?? []).some((it) => it?.snap)) return null;   // (or an item's own snap: true, on any body: it stays on the clothes as the body under them changes)
     const ms = Object.entries(parts).filter(([k, x]) => x?.m?.isMesh && x.m.visible && !/^(acc|hair|locks|bangs|tails|extra|weapon)/.test(k)).map(([, x]) => new THREE.Mesh(x.m.geometry));
     const rc = new THREE.Raycaster(), o = new THREE.Vector3(), d = new THREE.Vector3();
-    return (p, n) => { o.set(...p).addScaledVector(n, 0.08); d.copy(n).negate(); rc.set(o, d); rc.far = 0.16; const h = rc.intersectObjects(ms, false)[0]; return h ? [h.point.x, h.point.y, h.point.z] : null; };
+    return Object.assign((p, n) => { o.set(...p).addScaledVector(n, 0.08); d.copy(n).negate(); rc.set(o, d); rc.far = 0.16; const h = rc.intersectObjects(ms, false)[0]; return h ? [h.point.x, h.point.y, h.point.z] : null; }, { all });
   }
   function makeAccessories() {
     const snap = snapper();
     for (const k of accKeys) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } delete parts[k]; } accKeys = [];
     (OPT.accessories ?? []).forEach((it, i) => { if (!it?.kind || !it.bone) return;
-      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap }).forEach(({ geo, bone }, k) => {
+      accessoryGeometries(it, { J: Jr, PARENT, fromHead: (x, y, z) => HTr.fromHead(x, y, z), snap, height: (y) => ST.fwd(y) }).forEach(({ geo, bone }, k) => {
         const nv = geo.attributes.position.count, si = new Uint16Array(nv * 4), sw = new Float32Array(nv * 4); for (let v = 0; v < nv; v++) { si[v * 4] = BI[bone]; sw[v * 4] = 1; }
         geo.setAttribute("skinIndex", new THREE.BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
         // outline (m): its line's width; metal: the armor's shine (stronger bands, a glint: a gold clasp buried in the cloak's folds read flat)

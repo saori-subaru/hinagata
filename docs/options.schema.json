@@ -30,8 +30,8 @@
     "en": "Accessories"
    },
    "help": {
-    "ja": "[{ kind, bone, at, n, spin, size, color, mirror, lift, outline, metal }] 体に付ける小物。kind: leaf(葉っぱ) / gem(宝石) / flower(花) / star(星) / star4(4つ角の星) / ball(玉) / ribbon(リボン) / peaPod(横にしたさや) / button(ボタン) / anchor(いかり) / cross(ばつ印) / tassel(タッセル: 置いた所から下がる) / buckle(バックル) / pinBuckle(ピン付きバックル: 細い枠と留め具) / tab(垂れ布: 置いた所から下がる) / strap(細い帯: 置いた所から下がるベルトの先、長さ = size) / cord(紐: 横に渡す棒、長さ = size) / dome(丸い石: ブローチ) / ribbonEnd(リボンの垂れ: 置いた所から下がる、長さ = size、先は斜め) / band(輪: 腕輪・足首・首)。bone の上に乗る。at: 頭なら頭の座標、ほかは骨の関節からのずれ。n: 向き(表面の向き)。spin: 向きのまわりの回転(度)。size: 大きさ(m、band は輪の太さ)。mirror: 反対側にも。lift: 表面から浮かせる(m)。outline: 輪郭線の太さ(m、既定 0.0025)。metal: 鎧と同じ金属の艶(濃い陰と光の点)",
-    "en": "[{ kind, bone, at, n, spin, size, color, mirror, lift, outline, metal }] small pieces on the body (outline: its line's width, m, 0.0025; metal: the armor's shine; lift: m off the surface). kind: leaf / gem / flower / star / star4 (four points, in facets) / ball / ribbon (a bow) / button / anchor / cross (an X) / tassel (hangs from where it is put) / buckle / pinBuckle (a thin frame with a prong) / tab (a short flap hanging from where it is put) / strap (a narrow belt end hanging from where it is put, size long) / cord (a rod across, size long) / dome (a round stone: a brooch) / ribbonEnd (a ribbon's end hanging from where it is put, size long, cut aslant) / band (a ring around the limb: bracelet, anklet, choker), riding on bone. at: head space for the head, else the offset from the bone's joint. n: the way it faces (the surface's normal). spin: turned around n (degrees). size: m (a band: how thick the ring is). mirror: on the other side too"
+    "ja": "[{ kind, bone, at, n, spin, size, color, mirror, lift, outline, metal, snap, y }] 体に付ける小物。kind: leaf(葉っぱ) / gem(宝石) / flower(花) / star(星) / star4(4つ角の星) / ball(玉) / ribbon(リボン) / peaPod(横にしたさや) / button(ボタン) / anchor(いかり) / cross(ばつ印) / tassel(タッセル: 置いた所から下がる) / buckle(バックル) / pinBuckle(ピン付きバックル: 細い枠と留め具) / tab(垂れ布: 置いた所から下がる) / strap(細い帯: 置いた所から下がるベルトの先、長さ = size) / cord(紐: 横に渡す棒、長さ = size) / dome(丸い石: ブローチ) / ribbonEnd(リボンの垂れ: 置いた所から下がる、長さ = size、先は斜め) / band(輪: 腕輪・足首・首)。bone の上に乗る。at: 頭なら頭の座標、ほかは骨の関節からのずれ。n: 向き(表面の向き)。spin: 向きのまわりの回転(度)。size: 大きさ(m、band は輪の太さ)。mirror: 反対側にも。lift: 表面から浮かせる(m)。outline: 輪郭線の太さ(m、既定 0.0025)。metal: 鎧と同じ金属の艶(濃い陰と光の点)",
+    "en": "[{ kind, bone, at, n, spin, size, color, mirror, lift, outline, metal, snap, y }] small pieces on the body (outline: its line's width, m, 0.0025; metal: the armor's shine; lift: m off the surface). kind: leaf / gem / flower / star / star4 (four points, in facets) / ball / ribbon (a bow) / button / anchor / cross (an X) / tassel (hangs from where it is put) / buckle / pinBuckle (a thin frame with a prong) / tab (a short flap hanging from where it is put) / strap (a narrow belt end hanging from where it is put, size long) / cord (a rod across, size long) / dome (a round stone: a brooch) / ribbonEnd (a ribbon's end hanging from where it is put, size long, cut aslant) / band (a ring around the limb: bracelet, anklet, choker), riding on bone. at: head space for the head, else the offset from the bone's joint. n: the way it faces (the surface's normal). spin: turned around n (degrees). size: m (a band: how thick the ring is). mirror: on the other side too"
    }
   },
   "colors.skin": {
@@ -23056,6 +23056,78 @@
     "en": "mouth 3d"
    }
   },
+  "face.eye3d.on": {
+   "path": "face.eye3d.on",
+   "type": "boolean",
+   "default": false,
+   "label": {
+    "en": "eye 3d › on"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "section": {
+    "en": "eye 3d"
+   }
+  },
+  "face.eye3d.depth": {
+   "path": "face.eye3d.depth",
+   "type": "number",
+   "default": 0.008,
+   "label": {
+    "en": "eye 3d › depth"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "min": 0.004,
+   "max": 0.012,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "eye 3d"
+   }
+  },
+  "face.eye3d.lift": {
+   "path": "face.eye3d.lift",
+   "type": "number",
+   "default": 0.005,
+   "label": {
+    "en": "eye 3d › lift"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "min": 0.0025,
+   "max": 0.0075,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "eye 3d"
+   }
+  },
+  "face.eye3d.flare": {
+   "path": "face.eye3d.flare",
+   "type": "number",
+   "default": 0.002,
+   "label": {
+    "en": "eye 3d › flare"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "paint",
+   "apply": null,
+   "min": 0.001,
+   "max": 0.003,
+   "step": 0.0001,
+   "soft": true,
+   "section": {
+    "en": "eye 3d"
+   }
+  },
   "face.lashHatch": {
    "path": "face.lashHatch",
    "type": "boolean",
@@ -23772,6 +23844,38 @@
    "help": {
     "ja": "null = 目の絵を左右反転",
     "en": "null = the eye's picture mirrored"
+   }
+  },
+  "face.images.eyeLash.src": {
+   "path": "face.images.eyeLash.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "images › eye lash › src"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": null,
+   "nullable": true,
+   "section": {
+    "en": "images › eye lash"
+   }
+  },
+  "face.images.eyeLashL.src": {
+   "path": "face.images.eyeLashL.src",
+   "type": "image",
+   "default": null,
+   "label": {
+    "en": "images › eye lash l › src"
+   },
+   "group": "face",
+   "tier": "advanced",
+   "cost": "instant",
+   "apply": null,
+   "nullable": true,
+   "section": {
+    "en": "images › eye lash l"
    }
   },
   "face.images.eyeClosed.src": {

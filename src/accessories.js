@@ -138,7 +138,7 @@ function smooth(g) {   // vertex normals averaged over the triangles that share 
  * One item → its geometries (rest pose, avatar space), each { geo, bone }. ctx: { J (joints, rest), PARENT, fromHead (head → avatar space) }.
  * A mirrored item gives two.
  */
-export function accessoryGeometries(item, { J, PARENT, fromHead, snap = null }) {
+export function accessoryGeometries(item, { J, PARENT, fromHead, snap = null, height = null }) {
   const out = [];
   for (const m of item.mirror ? [1, -1] : [1]) {
     let bone = item.bone; if (m < 0) bone = bone.endsWith(".L") ? bone.replace(/\.L$/, ".R") : bone.endsWith(".R") ? bone.replace(/\.R$/, ".L") : bone;
@@ -146,7 +146,8 @@ export function accessoryGeometries(item, { J, PARENT, fromHead, snap = null }) 
     const at = [item.at[0] * m, item.at[1], item.at[2]], j = J[bone];
     const n = new THREE.Vector3(item.n?.[0] * m || 0, item.n?.[1] ?? 0, item.n?.[2] ?? 1).normalize(), S = item.size ?? 0.04;
     let p = bone === "head" ? fromHead(...at) : [j[0] + at[0], j[1] + at[1], j[2] + at[2]];
-    if (snap && bone !== "head" && item.kind !== "band") p = snap(p, n) ?? p;   // (snap: onto the surface along n, see index.js makeAccessories)
+    if (item.y != null && height && bone !== "head") p[1] = height(item.y);   // y: its height as a garment's is given (body space, stretched with the body), in place of at's: it stays by a belt at that height
+    if (snap && (snap.all || item.snap) && bone !== "head" && item.kind !== "band") p = snap(p, n) ?? p;   // (snap: onto the surface along n, see index.js makeAccessories)
     if (item.lift && item.kind !== "band") p = [p[0] + n.x * item.lift, p[1] + n.y * item.lift, p[2] + n.z * item.lift];   // lift (m): off the surface along n (a skirt's cloth swung over a button sitting on it, 2026-10-10)
     let g;
     if (item.kind === "band") {   // around the bone's axis (toward its child, or from its parent), through the point it was put on
