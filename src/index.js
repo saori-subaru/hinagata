@@ -781,7 +781,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
       tailAnchors = anchors;
       const ell = { c, r: [surfaceAlong(cap, c, [1, 0, 0]), surfaceAlong(cap, c, [0, 1, 0]), surfaceAlong(cap, c, [0, 0, -1])] }, coll = lockColliders(Jr, BI, bodySdfR);
       const CT = TL.kind === "curl" ? curlTail(TL, anchors[0]) : null, copt = { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, round: true, ownShade: true, rigid: 0.97 };   // (a rope uncoils its roll)
-      if (CT?.line.length) { out.tailLine = part(CT.line, copt); out.tailLine.m.material.color.set(OPT.outline.color); }   // the roll's turn as a line: the same path and physics as the roll, so it stays on it
+      if (CT?.line.length) { out.tailLine = part(CT.line, copt); { const c = out.tailLine.m.material.color.set(OPT.outline.color), t = OPT.outline.trace ?? 0, h = {};   // (as the hair's outline is drawn: toward a dark of the hair's color by outline.trace)
+          if (t) { new THREE.Color(OPT.colors.hair).getHSL(h, THREE.SRGBColorSpace); c.lerp(new THREE.Color().setHSL(h.h, Math.min(h.s, 0.42), h.l * 0.4, THREE.SRGBColorSpace), t); } } }   // the roll's turn as a line: the same path and physics as the roll, so it stays on it
       out.tails = CT ? part(CT.tail, copt)
         : part(tailLocks(TL, { anchors, coll, ell }), { coll, ell, stiff: TL.stiff ?? 1, damping: 0.9, hold: TAIL_HOLD, vdamp: OPT.hair.rigid ? TAIL_VDAMP : undefined });
       if (TL.tie?.on) {   // a hair tie: a ring around each bundle at its tie, on the head bone
