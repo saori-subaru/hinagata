@@ -443,7 +443,7 @@ export const CHARACTERS = {
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
         sculpt: { whorl: { on: true }, shell: 0.008, dome: { on: true, front: 75, soft: 30 } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
-        tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, tie: { on: false } },
+        tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, line: 0.004, tie: { on: false } },
       },
       face: {   // her own pictures: big amber eyes under a thick lash, the brows faint on the skin (under the bangs), a small smile
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,

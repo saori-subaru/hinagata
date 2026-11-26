@@ -493,11 +493,13 @@ export function curlTail(T, { p, o }) {
   const e3 = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
   const tail = { root: p, pts, len, w: T.width * S, thick: T.thick ?? 0.95, layer: 0, curl: 0, rise: false, stiff: T.stiff ?? 1, prof, nrm: pts.map(() => e3) };
   // T.line (m, the line's width): the roll's turn drawn on both its sides, a thin strand along the same path at the bundle's edge (index.js paints it the outline's color)
-  const LW = T.line ?? 0, lprof = (t) => sstep(T0, T0 * 1.15, t) * (1 - sstep(0.86, 0.97, t));
+  // (the line's rings: "out" in the roll's plane, square to the path, so its shift goes to the roll's faces)
+  const rad = pts.map((_, q) => { const a = pts[Math.max(0, q - 1)], b = pts[Math.min(pts.length - 1, q + 1)], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [e3[1] * d[2] - e3[2] * d[1], e3[2] * d[0] - e3[0] * d[2], e3[0] * d[1] - e3[1] * d[0]], l = Math.hypot(...v) || 1; return v.map((c) => c / l); });
+  const LW = T.line ?? 0, lprof = (t) => sstep(T0 * 0.72, T0 * 0.9, t) * (1 - sstep(0.74, 0.82, t));   // from where the stem meets the roll, round about three quarters of the turn
   // the roll's core: a flat ball at its middle, inside the bundle (the turn alone left slits between its windings and a hole at its middle, seen a little off the side)
   const HC = 0.34 * T.width * S, cpts = pts.map((_, q) => C.map((c, i) => c + e3[i] * HC * (2 * q / (pts.length - 1) - 1)));   // (as many points as the tail: one createLocks)
   const core = { ...tail, pts: cpts, len: 2 * HC, w: 2 * (R0 + 0.12 * T.width * S), thick: 1, prof: (t) => Math.sqrt(Math.max(1e-4, 1 - (2 * t - 1) ** 2)),   /* (out to just inside the roll's rim; closed at its ends) */ noLine: true, nrm: pts.map(() => e1) };
-  return { tail: [tail, core], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, w: LW, thick: 1, prof: lprof, noLine: true, shift: (t) => m * 0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.9, T0 * 1.05, t)) })) : [] };
+  return { tail: [tail, core], line: LW > 0 ? [1, -1].map((m) => ({ ...tail, nrm: rad, w: LW, thick: 1, prof: lprof, noLine: true, shift: (t) => m * (0.5 * tail.w * prof(t) * (0.5 + 0.5 * sstep(T0 * 0.6, T0 * 0.85, t)) + 0.0012) })) : [] };
 }
 
 /** Where a tip of the nendo bangs is (root space, rest): at this angle around the head (degrees, 0 = front) and this height (head space),
