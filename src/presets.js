@@ -411,13 +411,13 @@ export const CHARACTERS = {
     stand: "standZundamon",   // その子の立ちポーズ: avatar.play(CHARACTERS.<id>.stand)
     file: { hinagata: 6, name: "ずんだもん", options: {
       colors: { skin: "#f7e6d6", hair: "#bfe396", eyes: "#efb85b" },
-      outline: { color: "#46433c" },   // the sheet's lines: a dark warm gray
+      outline: { color: "#46433c", trace: 1 }, shading: { style: "flat", rim: { on: true } },   // the sheet's lines: a dark warm gray
       body: {
-        head: { scale: 0.83, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
-        proportion: { legs: 1.23, torso: 0.92, shoulders: 0.6, arms: 0.95 },   // (fitProportions: heads 3.14, chin 0.683, knee 0.222)
+        head: { scale: 0.72, depth: 0.85 },   // a shallower head (face and hair with it) and back: from aside she read thick
+        proportion: { legs: 1.23, torso: 1.15, shoulders: 0.6, arms: 0.95 },   // taller than the sheet (a smaller head, a longer torso): tag backup/zundamon-chibi has the sheet's
         thickness: { thigh: 0.64, upperArm: 0.6, forearm: 0.6 },
         joints: { kneeX: 0.088, footX: 0.097 },   // straight legs, a little apart at the feet (the sheet's)
-        torso: { chest: 0.55, belly: 0.6, hips: 0.62, waist: 0.068, back: 0.7 },
+        torso: { chest: 0.55, belly: 0.69, hips: 0.62, waist: 0.068, back: 0.7 },
         sculpt: { neck: { length: -0.012, width: 0.5, depth: 0.75 }, hand: { length: 0.72 }, skull: { height: 0.218, y: 1.086 } },   // a short neck: the chin just over the collar; short fingers; a lower crown (its bottom kept: the ears stay under the hair)
         knees: { blush: { on: true }, line: { on: true } },   // as シルヴィ's
       },
@@ -427,13 +427,13 @@ export const CHARACTERS = {
         whorl: { x: 0, z: -0.03, lineFrom: 0.6, taper: 1 },   // (no short lines scattered over the crown)
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
           // under the others, in shadow: the bob's inner layer round the nape and behind the jaw
-          { to: [180, 0.82], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
-          { to: [135, 0.83], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.015, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
-          { to: [100, 0.84], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.015, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.7, shade: 0.6, mirror: true },
+          { to: [180, 0.795], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
+          { to: [135, 0.805], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.015, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
+          { to: [100, 0.815], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.015, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.7, shade: 0.6, mirror: true },
           // the back and the sides: thick blocks to the jaw, their ends cut into points and tucked in under the head's widest part (hug)
-          { to: [180, 0.86], thickFrom: 0.04, width: 0.3, thick: 0.03, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
-          { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
-          { to: [108, 0.87], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
+          { to: [180, 0.835], thickFrom: 0.04, width: 0.3, thick: 0.03, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
+          { to: [142, 0.84], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
+          { to: [108, 0.845], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
           { to: [72, 0.875], lineFrom: 1, thickFrom: 0.35, rootWidth: 0.5, width: 0.25, thick: 0.039, tips: [1, 0.85], notch: 0.12, endWidth: 0.7, hook: -8, hug: 0.3, mirror: true },   // over the ears, to the jaw, its end turned in toward the cheek (wide: the ear's lobe showed before it)
           // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
           { to: [45, 0.915], thickFrom: 0.35, rootWidth: 0.7, wide: 0.3, width: 0.22, thick: 0.042, hook: 8, mirror: true },   // wide roots: narrow ones sank between their neighbours, two cuts in the crown
@@ -449,7 +449,7 @@ export const CHARACTERS = {
         parts: { eyes: "image", brows: "image", mouth: "image", nose: "none" }, browsOverHair: true,
         blush: { cheeks: { on: true, color: "#ff9a8a", strength: 0.3, size: 0.07, x: 0.135, y: 0.945, hatch: 0 }, nose: { on: false } }, noseColor: "#c98a8090", noseSize: 0.65,   // the cheeks (without her hatching) and the nose's dot as シルヴィ's browsPull: 0.18,   // (over the thick bangs)
         images: { eye: { src: ZUNDA_EYE, dx: 0, dy: 0 }, eyeL: { src: ZUNDA_EYE_L }, eyeClosed: { src: ZUNDA_EYE_CLOSED, dx: 0, dy: 0 }, brow: { src: ZUNDA_BROW, dx: 0, dy: 0 }, mouth: { src: ZUNDA_MOUTH } },
-        layout: { eyeX: 0.095, eyeY: 0.998, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
+        layout: { eyeX: 0.095, eyeY: 0.988, browX: 0.088, browY: 1.128, mouthY: 0.908 },   // (the brows short, well over the eyes' middles)
         drawn: [
           { id: "happy", name: "にっこり", eye: ZUNDA_EYE_HAPPY, brow: null, mouth: ZUNDA_MOUTH_OPEN, cheeks: "none", blink: false },
           { id: "surprised", name: "びっくり", eye: null, eyeL: ZUNDA_EYE_L, brow: null, mouth: ZUNDA_MOUTH_O, cheeks: "none", blink: true },
