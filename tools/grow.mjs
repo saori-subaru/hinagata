@@ -8,6 +8,7 @@
 //   本人から始めて頭身だけ別の人へ: --like sylvie   決めで表情を変える: --face happy [--faceAt 8.6](id か {"mouth":…} の JSON。頭のさや(pod)は自動で跳ねる)
 //   ずんだもん: --who zundamon --like sylvie --motion danceHi --stage flowers --face <JSON>
 //   舞台の中で撮る: --stage flowers --motion dance (tools/stage-flowers.js が長さ・育ち・カメラを決める。上下に黒帯、白へ溶けて終わる。--w --h で大きさ)
+// --gpu: PC の GPU で描く(既定は CPU の swiftshader: GPU の無いクラウド用)
 // クラウドでは CDN に出られないので --npm に three@0.160.0 と meshoptimizer@1 を入れた node_modules を渡す。
 import http from "node:http"; import fs from "node:fs"; import path from "node:path"; import { execFileSync } from "node:child_process"; import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -22,7 +23,7 @@ const server = http.createServer((req, res) => { const u = decodeURIComponent(ne
   if (NPM && !own && p.endsWith(".html")) res.end(fs.readFileSync(p, "utf8").replace(/https:\/\/cdn\.jsdelivr\.net\/npm\/(@?[^@\/"]+)@[^\/"]+\//g, "/__npm/$1/")); else fs.createReadStream(p).pipe(res); });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const require = createRequire(path.join(process.cwd(), "x.js")); let pw; try { pw = require("playwright"); } catch { pw = createRequire("/usr/lib/node_modules/")("playwright"); }
-const browser = await pw.chromium.launch({ ...(opt("--chrome") ? { executablePath: opt("--chrome") } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const browser = await pw.chromium.launch({ ...(opt("--chrome") ? { executablePath: opt("--chrome") } : {}), args: a.includes("--gpu") ? ["--use-angle=default", "--enable-gpu"] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage(); page.on("pageerror", (e) => console.error("page:", e.message)); page.on("console", (m) => m.type() === "error" && console.error("console:", m.text().slice(0, 2000)));
 await page.goto(`http://127.0.0.1:${server.address().port}/tools/grow.html?who=${WHO}&from=${FROM}${MOTION ? `&motion=${MOTION}` : ""}${SET ? `&set=${encodeURIComponent(SET)}` : ""}${STAGE ? `&stage=${STAGE}` : ""}${opt("--face") ? `&face=${encodeURIComponent(opt("--face"))}&faceAt=${opt("--faceAt", 8.6)}` : ""}${opt("--like") ? `&like=${opt("--like")}` : ""}${opt("--to") ? `&to=${opt("--to")}&switch=${opt("--switch", 0.5)}` : ""}${opt("--w") ? `&w=${opt("--w")}&h=${opt("--h")}` : ""}`); await page.waitForFunction("window.READY", null, { timeout: 120e3 });
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
