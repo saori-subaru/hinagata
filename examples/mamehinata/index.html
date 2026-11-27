@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>まめひなた(三面図から起こした形)</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fbe9a8; font: 13px/1.4 system-ui, sans-serif; color: #4a2c14; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #ui { position: fixed; left: 8px; top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff8; padding: 6px 8px; border-radius: 8px; }
+  #ui button { font: inherit; padding: 3px 10px; border: 1px solid #a77; border-radius: 6px; background: #fff; cursor: pointer; }
+  #ui button.on { background: #ffd36b; }
+  #ui input { width: 110px; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <button data-v="front">正面</button><button data-v="side">横</button><button data-v="back">背面</button><button data-v="free" class="on">3D</button>
+  <label>三面図 <input id="ov" type="range" min="0" max="1" step="0.05" value="0.5"></label>
+  <label><input id="ol" type="checkbox" checked> 輪郭</label>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { buildMamehinata } from "./model.js";
+
+const q = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("c"), antialias: true, preserveDrawingBuffer: true });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color("#fbe9a8");
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8a8, 1.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(200, 500, 400); scene.add(sun);
+
+const { root, outlines } = buildMamehinata();
+scene.add(root);
+
+// 三面図(絵のピクセルと座標の対応は model.js の先頭): 各面の後ろに絵を立てる
+const sheet = new THREE.TextureLoader().load("./sheet.jpg"); sheet.colorSpace = THREE.SRGBColorSpace;
+const planeOf = (rotY, at) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1024, 765), new THREE.MeshBasicMaterial({ map: sheet, transparent: true, opacity: 0.5, depthWrite: false }));
+  m.rotation.y = rotY; m.position.set(...at); m.visible = false; scene.add(m); return m;
+};
+const planes = {
+  front: planeOf(0, [512 - 205, 705 - 382.5, -500]),          // X = u-205
+  side: planeOf(Math.PI / 2, [-500, 705 - 382.5, 515 - 512]),    // 横: Z = 515-u
+  back: planeOf(Math.PI, [833 - 512, 705 - 382.5, 500]),      // 背面: X = 833-u
+};
+
+const persp = new THREE.PerspectiveCamera(30, 1, 10, 6000); persp.position.set(650, 480, 1300); persp.lookAt(0, 320, 0);
+const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -2000, 2000);
+let view = q.get("view") || "free", camera = persp;
+const controls = new OrbitControls(persp, renderer.domElement); controls.target.set(0, 320, 0); controls.update();
+const setOv = (v) => { for (const m of Object.values(planes)) m.material.opacity = v; };
+function setView(v) {
+  view = v; document.querySelectorAll("#ui [data-v]").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  for (const [k, m] of Object.entries(planes)) m.visible = k === v;
+  camera = v === "free" ? persp : ortho; controls.enabled = v === "free";
+  if (v !== "free") {
+    const cx = +(q.get("cx") || 0), cy = +(q.get("cy") || 330);   // 注目点(正面・背面は X、横は Z)
+    const [pos, tgt] = { front: [[cx, cy, 1000], [cx, cy, 0]], side: [[1000, cy, cx], [0, cy, cx]], back: [[cx, cy, -1000], [cx, cy, 0]] }[v];
+    ortho.position.set(...pos); ortho.lookAt(...tgt);
+  }
+  resize();
+}
+const resize = () => {
+  const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); persp.aspect = w / h; persp.updateProjectionMatrix();
+  const H = +(q.get("h") || 700); ortho.top = H / 2; ortho.bottom = -H / 2; ortho.left = -H / 2 * (w / h); ortho.right = H / 2 * (w / h);
+  ortho.updateProjectionMatrix();
+};
+addEventListener("resize", resize);
+document.querySelectorAll("#ui [data-v]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.v)));
+document.getElementById("ov").addEventListener("input", (e) => setOv(+e.target.value));
+document.getElementById("ol").addEventListener("change", (e) => outlines.forEach((o) => { o.visible = e.target.checked; }));
+if (q.has("ov")) { setOv(+q.get("ov")); document.getElementById("ov").value = q.get("ov"); }
+if (q.get("ol") === "0") { outlines.forEach((o) => { o.visible = false; }); document.getElementById("ol").checked = false; }
+if (q.get("ui") === "0") document.getElementById("ui").style.display = "none";
+setView(view);
+renderer.setAnimationLoop(() => { if (view === "free") controls.update(); renderer.render(scene, camera); window.__ready = true; });
+</script>
+</body>
+</html>
