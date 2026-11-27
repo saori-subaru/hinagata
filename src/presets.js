@@ -479,7 +479,7 @@ export const CHARACTERS = {
         // the brooch where the collar's lobes meet: a loop tie, its pod right under the collar (the ribbon round the neck hidden), over two pink ribbon ends
         { kind: "ribbonEnd", bone: "upperChest", at: [0.002, 0.0866, 0.0736], n: [0.05, 0.37, 0.93], spin: 22, size: 0.05, color: "#cf7aa3", mirror: true, lift: 0.003 },
         { kind: "peaPod", bone: "upperChest", at: [0, 0.0887, 0.0722], n: [0, 0.37, 0.93], size: 0.075, color: "#b6da8c", lift: 0.004 },
-        { kind: "button", bone: "foot.L", at: [0, 0.048, 0.0317], n: [0.01, -0.19, 0.98], size: 0.022, color: "#e6a8b6", mirror: true, lift: 0.019 },   // at the tip of each boot cuff's front notch
+        { kind: "button", bone: "foot.L", at: [0, 0.048, 0.0317], n: [0.01, -0.19, 0.98], size: 0.022, color: "#e6a8b6", mirror: true, lift: 0.028 },   // at the tip of each boot cuff's front notch
         // the waistband's buttons, a pair under each strap, in front and behind (lift: the band flares out toward its bottom)
         // the belt's buttons: at the belt's heights (y) and put onto it (snap), so they stay on it on a longer torso or a rounder belly
         { kind: "button", bone: "spine", at: [0.05, 0, 0.0822], y: 0.592, snap: true, n: [0.42, 0, 0.91], size: 0.024, color: "#e6a8b6", mirror: true, lift: 0.002 },
