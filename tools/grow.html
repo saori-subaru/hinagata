@@ -50,6 +50,21 @@ let av = null, frameH = null, curH = null, built = null, clock = null; const ref
 const texParts = (a) => ["shirt", "pants"].map((k) => a.parts[k]).filter((x) => x?.m?.visible && x.m.geometry?.attributes?.texP).map((x) => x.m.geometry.attributes.texP);
 const span = (L) => { let lo = Infinity, hi = -Infinity; for (const A of L) for (let i = 1; i < A.array.length; i += 3) { lo = Math.min(lo, A.array[i]); hi = Math.max(hi, A.array[i]); } return [lo, hi]; };
 // 瞬きは時刻で決める(作り直した体は自前の瞬きまで届かない)
+// ?face=happy&faceAt=8.6: その時刻から表情を変える(id か {"eyes":…} の JSON)。作り直すと顔が戻るので毎コマかける
+const FACE = Q.get("face") && (Q.get("face").startsWith("{") ? JSON.parse(Q.get("face")) : Q.get("face")), FACE_AT = +(Q.get("faceAt") ?? 8.6);
+// 頭のさや(extras.ears "pod")を跳ねさせる: さやは頭の骨に付いた別の部品なので、付け根を軸に頂点を回す(体の座標、毎コマ元の形から)
+let pods = null;
+function podSetup() { const E = av.parts.extraEars, I = av.parts.extraEarsIn; pods = null; if (!E?.m.visible || av.options.outfit.extras?.ears !== "pod") return;
+  const A = E.m.geometry.attributes.position.array, root = [1, -1].map((sd) => { const v = []; for (let i = 0; i < A.length; i += 3) if (A[i] * sd > 0) v.push(i);
+    v.sort((a, b) => Math.abs(A[a]) - Math.abs(A[b])); const n = Math.max(1, v.length * 0.08 | 0); return [0, 1].map((k) => v.slice(0, n).reduce((s, i) => s + A[i + k], 0) / n); });
+  pods = { root, geos: [E, I].filter((p) => p?.m.geometry).map((p) => { const g = p.m.geometry; return { g, P: g.attributes.position.array.slice(), N: g.attributes.normal.array.slice() }; }) }; }
+function podWiggle(ang) { if (!pods) return; for (const { g, P, N } of pods.geos) { const p = g.attributes.position.array, n = g.attributes.normal.array;
+  for (let i = 0; i < P.length; i += 3) { const sd = P[i] > 0 ? 1 : -1, [rx, ry] = pods.root[sd > 0 ? 0 : 1], a = ang * sd, c = Math.cos(a), si = Math.sin(a), dx = P[i] - rx, dy = P[i + 1] - ry;
+    p[i] = rx + dx * c - dy * si; p[i + 1] = ry + dx * si + dy * c; n[i] = N[i] * c - N[i + 1] * si; n[i + 1] = N[i] * si + N[i + 1] * c; }
+  g.attributes.position.needsUpdate = g.attributes.normal.needsUpdate = true; } }
+// 角度(rad、正で先が上): 踊りの拍で小さく、決めのポーズからは速く大きく
+const podAngle = (t) => t < FACE_AT ? 0.1 * Math.sin(2 * Math.PI * t / 0.6) + 0.04 * Math.sin(4 * Math.PI * t / 0.6) : 0.2 * Math.max(0, Math.sin(2 * Math.PI * 2.2 * (t - FACE_AT))) ** 0.7 - 0.03;
+// 舞台の時間止め(S.motion)は dance だけ。danceHi は自分で決めのポーズに留まって手を振り続ける(止めると手も止まる)
 const MOTION = Q.get("motion"), WARM = 0.6, blinkAt = S ? S.blink : (t) => t % 3.3 > 3.18;   // WARM: 作り直したコマでは髪と布が動きに追いつくよう、その前の 0.6 秒を回してから撮る
 async function build(g) {
   if (built === g) return; if (av) { scene.remove(av.object); av.dispose?.(); }
@@ -57,7 +72,7 @@ async function build(g) {
   while (loading.size) await new Promise((r) => setTimeout(r, 5));
   const L = texParts(av), [lo, hi] = span(L), ref = refs[SW != null && g < SW ? 0 : 1] ??= [lo, hi];   // (入れ替わりの前後で別の服: それぞれ最初に作った形に合わせる)
   if (hi > lo) for (const A of L) { for (let i = 1; i < A.array.length; i += 3) A.array[i] = ref[0] + (A.array[i] - lo) * (ref[1] - ref[0]) / (hi - lo); A.needsUpdate = true; }
-  av.update(0, { instant: true }); scene.add(av.object); built = g; clock = null; window.AV = av;   // (AV: 調べもの用)
+  av.update(0, { instant: true }); scene.add(av.object); podSetup(); built = g; clock = null; window.AV = av;   // (AV: 調べもの用)
   { const b = new THREE.Box3().setFromObject(av.object); curH = b.max.y - b.min.y; frameH = Math.max(frameH ?? 0, curH); }   // 枠は一番大きな形(最初に作る終点か、最初のコマ)で固定し、背が伸びて見えるように
   if (MOTION) av.play(MOTION, { blend: 0 });
 }
@@ -66,8 +81,10 @@ window.shot = async (g, time = 0, yaw = 0.35) => {
   if (g == null) g = S.grow(time);
   await build(g); av.object.rotation.y = S ? 0 : yaw;
   if (MOTION) { let tau = clock == null || time < clock ? time - WARM : clock; if (clock == null) av.update(0, { t: tau, instant: true, blink: blinkAt(tau) });
-    while (tau < time - 1e-6) { const dt = Math.min(1 / 60, time - tau); tau += dt; av.update(dt, { t: S ? S.motion(tau) : tau, wind: S?.wind(tau), blink: blinkAt(tau) }); } clock = time; }
+    while (tau < time - 1e-6) { const dt = Math.min(1 / 60, time - tau); tau += dt; av.update(dt, { t: S && MOTION === "dance" ? S.motion(tau) : tau, wind: S?.wind(tau), blink: blinkAt(tau) }); } clock = time; }
   else for (let i = 0; i < 3; i++) av.update(1 / 60, { instant: true });
+  if (FACE && time >= FACE_AT) { av.setFace(FACE); while (loading.size) await new Promise((r) => setTimeout(r, 5)); }
+  podWiggle(podAngle(time));
   if (S) S.render(time, { av, H: curH, H1: frameH }); else { const cy = frameH * 0.5, d = frameH * 0.62 / Math.tan(THREE.MathUtils.degToRad(15));
     cam.position.set(0, cy, d); cam.lookAt(0, cy, 0); renderer.render(scene, cam); }
   return renderer.domElement.toDataURL("image/png");

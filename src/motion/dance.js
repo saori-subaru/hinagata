@@ -5,6 +5,7 @@
 //   beats 8–10   two soft claps, the free heel up behind
 //   beats 10–12  pointing up and out, a fist on the other hip, looking up at it
 //   beats 12–16  a slow turn on the toes with the arms out, then a pose (fists under the chin, a heel up behind, head tilted)
+// danceHi: the same, closing on a wave (right hand up, left on the hip) and holding it
 // Not robotic: the hips lead and the rest follows late (spine, head, arms each a little later: at()), and every change is a slow curve.
 // Units: chibi metres for the hips and feet (scaled with the legs), arm lengths for the hands (see motion/index.js).
 import { POSES } from "./index.js";
@@ -57,29 +58,37 @@ function pose(b) {   // beats 14.5–16: the weight on the right, the left heel 
     hands: both((s) => [s * 0.13, 0.08 + br * 4, 0.6]), elbows: both((s) => [s, -1, 0.15]), grip: { L: 1, R: 1 }, sh: { L: 0.12, R: 0.12 } };
 }
 
+// danceHi's pose (ずんだもん's figure): the right hand up beside the head, waving (s: seconds, the wave goes on while the pose holds), the left hand on the hip
+function poseHi(b, s) {
+  const k = ss(14.3, 14.9, b), br = sin(s * 2.2) * 0.004, wv = sin(s * 2 * PI * 1.6);
+  return { hx: 0.015, y: -0.01 + br, hips: [0, 0.05, 0.05 * k], spine: [0.06, 0.06, -0.06], head: [0.1, 0.12, 0.2 + 0.04 * wv],
+    feet: both((s) => tap(s, 0, b)), toes: both(() => [0, 0, 0]),
+    hands: { R: [-0.8 + 0.1 * wv, 0.62, 0.22], L: [0.5, -0.82, -0.05] }, elbows: { R: [-1, -0.6, 0], L: [1, -0.2, -1] }, grip: { L: 0.35, R: 0 }, sh: { L: 0.05, R: 0.22 } };
+}
+
 // a weighted sum of sections (numbers and arrays of numbers, nested)
 function mix(list) {
   const zero = (v) => typeof v === "number" ? 0 : Array.isArray(v) ? v.map(() => 0) : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, zero(x)]));
   const add = (o, v, w) => { if (typeof v === "number") return o + v * w; if (Array.isArray(v)) return o.map((x, i) => x + (v[i] ?? 0) * w); for (const k in v) o[k] = add(o[k], v[k], w); return o; };
   let o = null; for (const [F, w] of list) { if (!w) continue; o ??= zero(F); o = add(o, F, w); } return o;
 }
-function at(beats) {
+function atOf(beats, end = pose, s = 0) {
   const b = (beats % LOOP + LOOP) % LOOP;
   const tAB = ss(7.5, 8, b), tBC = ss(9.4, 10, b), tCD = ss(11.4, 12, b), tDE = ss(14.1, 14.7, b), tEA = ss(15.2, 15.95, b);
   const W = [1 - tAB + tEA, tAB - tBC, tBC - tCD, tCD - tDE, tDE - tEA];
-  const F = mix([[sway1(b), W[0]], [claps(b), W[1]], [point(b), W[2]], [spin(b), W[3]], [pose(b), W[4]]]);
+  const F = mix([[sway1(b), W[0]], [claps(b), W[1]], [point(b), W[2]], [spin(b), W[3]], [end(b, s), W[4]]]);
   const tr = 1 - mx(...W);   // between two moves the hands go round, out and forward, not straight through
   for (const s of ["L", "R"]) { F.hands[s][0] += (s === "L" ? 1 : -1) * 0.35 * tr; F.hands[s][2] += 0.3 * tr; }
   F.turn = 2 * PI * ss(12, 14.5, b); return F;   // (not mixed: a full turn is the same as none, mixed it turned back)
 }
 const wrap = (a) => Math.atan2(sin(a), cos(a));
 
-Object.assign(POSES, {
-  dance: (t) => {
-    const bt = t / BEAT, F = at(bt), S = at(bt - LAG.spine), A = at(bt - LAG.arms), H = at(bt - LAG.head), side = (s) => s === "L" ? 1 : -1;
+// end: the closing pose; hold: stay in it from there on (the hand keeps waving) instead of looping back
+const play = (end, hold) => (t) => {
+    const bt = hold ? Math.min(t / BEAT, 15) : t / BEAT, at = (x) => atOf(x, end, t), F = at(bt), S = at(bt - LAG.spine), A = at(bt - LAG.arms), H = at(bt - LAG.head), side = (s) => s === "L" ? 1 : -1;
     const lagS = wrap(S.turn - F.turn), lagH = wrap(H.turn - S.turn);   // turning, the body comes round after the hips and the head last
     const b = { hips: F.hips, spine: [S.spine[0] * 0.6, S.spine[1] * 0.6 + lagS * 0.5, S.spine[2] * 0.6], chest: [S.spine[0] * 0.4, S.spine[1] * 0.4 + lagS * 0.5, S.spine[2] * 0.4],
       neck: [H.head[0] * 0.4, H.head[1] * 0.4 + lagH * 0.5, H.head[2] * 0.4], head: [H.head[0] * 0.6, H.head[1] * 0.6 + lagH * 0.5, H.head[2] * 0.6], "foot.L": F.toes.L, "foot.R": F.toes.R };
     for (const s of ["L", "R"]) b[`shoulder.${s}`] = [0, 0, side(s) * A.sh[s]];
-    return { b, y: F.y, hx: F.hx, turn: F.turn, feet: F.feet, hands: A.hands, elbows: A.elbows, grip: A.grip, sharp: true }; },
-});
+    return { b, y: F.y, hx: F.hx, turn: F.turn, feet: F.feet, hands: A.hands, elbows: A.elbows, grip: A.grip, sharp: true }; };
+Object.assign(POSES, { dance: play(pose, false), danceHi: play(poseHi, true) });
