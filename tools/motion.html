@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Hinagata — loaded motions</title>
+<style>body { margin: 0; padding: 12px; background: #f0ece4; font: 13px sans-serif; } img { max-width: 100%; }</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/", "meshoptimizer": "https://cdn.jsdelivr.net/npm/meshoptimizer@1/index.js" } }</script>
+</head>
+<body>
+<p id="state">building…</p>
+<img id="sheet">
+<script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
+<script type="module">
+// Frames of motions loaded from files (loadMotion) on a tall body and a chibi, both in a skirt with long hair, for checking by eye:
+// feet sliding, arms through the body, the skirt and hair. Per row: frames over the clip from one side (views: 0 front, 90 her left).
+// Run: node tools/thin-check.mjs --page motion --query "files=a.vrma,b.fbx&frames=6&view=30&bodies=tall,chibi" (the picture in thin-check-out/motion.png)
+//   slide (in the table, median / 90%): how fast the lower foot moves over the ground while it is down (mm/s; the body moved by the motion's velocity). A planted foot reads near 0.
+import * as THREE from "three";
+import { createAvatar, BODY_TYPES, loadMotion } from "../src/index.js";
+
+const Q = new URLSearchParams(location.search), dir = Q.get("dir") || "_motions/", files = (Q.get("files") || "walk_normal.vrma").split(","), N = +(Q.get("frames") || 6), view = +(Q.get("view") || 30) * Math.PI / 180;
+const skirt = { kind: "skirt", top: 0.5, skirt: { hem: 0.33, flare: 0.75, pleats: 24, pleatDepth: 0.015 } };
+const BODIES = {
+  tall: { hair: { back: "long" }, outfit: { pants: { on: true, ...skirt, color: "#5a6ab0" } } },   // the default (tall) body
+  chibi: "data:application/json," + encodeURIComponent(JSON.stringify({ hair: { back: "long" }, outfit: { pants: { on: true, ...skirt, color: "#8a8a44" } } })),   // a recipe without "hinagata": the old chibi defaults (as thin-check)
+};
+const PX = 260, renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); renderer.setSize(PX, PX * 1.3); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const W = PX, H = Math.round(PX * 1.3);
+try {
+  const bodies = (Q.get("bodies") || "tall,chibi").split(","), motions = [];
+  for (const f of files) motions.push([f, await loadMotion(dir + f)]);
+  const sheet = document.createElement("canvas"); sheet.width = W * N + 160; sheet.height = H * bodies.length * motions.length; const g = sheet.getContext("2d"); g.fillStyle = "#f0ece4"; g.fillRect(0, 0, sheet.width, sheet.height);
+  const lines = []; let row = 0;
+  for (const bn of bodies) {
+    const av = await createAvatar(structuredClone(BODIES[bn]), { quality: "fine", cache: false });
+    const scene = new THREE.Scene(); scene.background = new THREE.Color("#f0ece4");
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd8c8b8, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.5, 3, 2.2); scene.add(sun);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshLambertMaterial({ color: "#d8d0c2" })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+    const grid = new THREE.GridHelper(30, 300, 0xb0a898, 0xc4bcae); grid.position.y = 0.001; scene.add(grid);
+    scene.add(av.object); av.update(0, { instant: true, t: 0 });
+    const tall = new THREE.Box3().setFromObject(av.object).max.y;
+    for (const [f, m] of motions) {
+      av.object.position.set(0, 0, 0); const c = m.attach(av, { move: true }), dur = Math.min(m.duration, +(Q.get("max") || 8)), dt = 1 / 60;
+      for (let i = 0; i < 20; i++) { c.update(0); av.update(dt); }   // settle into the pose (blend, hair)
+      av.object.position.set(0, 0, 0);
+      let floorY = Infinity; const sl = [], pct = (q) => sl.length ? Math.round(sl.sort((a, b) => a - b)[Math.floor(q * (sl.length - 1))] * 1000) : 0; let n = 0, prev = null; const foot = new THREE.Vector3(), foot2 = new THREE.Vector3();
+      let shot = 0;
+      for (let t = 0, step = 0; t <= dur + 1e-6; t += dt, step++) {
+        c.update(step ? dt : 0); av.update(step ? dt : 0);
+        av.bones["foot.L"].getWorldPosition(foot); av.bones["foot.R"].getWorldPosition(foot2); const low = foot.y < foot2.y ? foot : foot2, side = foot.y < foot2.y ? "L" : "R";
+        if (step > 1) floorY = Math.min(floorY, low.y);
+        if (prev && prev.side === side && low.y < floorY + 0.01 * tall) { sl.push(Math.hypot(low.x - prev.x, low.z - prev.z) / dt); }
+        prev = { side, x: low.x, z: low.z };
+        if (t >= shot * dur / (N - 1) - 1e-6 && shot < N) {
+          const p = av.object.position, cy = tall * 0.55, half = tall * 0.65, hw = half / 1.3, cam = new THREE.OrthographicCamera(-hw, hw, half, -half, 0.01, 30);
+          cam.position.set(p.x + Math.sin(view) * 5, cy + 0.6, p.z + Math.cos(view) * 5); cam.lookAt(p.x, cy, p.z); av.update(0, { camera: cam });
+          renderer.render(scene, cam); g.drawImage(renderer.domElement, 160 + shot * W, row * H); shot++; }
+      }
+      c.stop();
+      g.fillStyle = "#333"; g.font = "13px sans-serif"; g.fillText(bn, 8, row * H + 20); g.fillText(f, 8, row * H + 38); g.fillText(`slide ${pct(0.5)} / ${pct(0.9)} mm/s`, 8, row * H + 56); g.fillText(`v ${m.travel.map((v) => v.toFixed(2))}`, 8, row * H + 74);
+      lines.push(`${bn} ${f}: ${dur.toFixed(1)} s, slide median ${pct(0.5)}, 90% ${pct(0.9)} mm/s (height ${tall.toFixed(2)} m), velocity ${c.velocity.map((v) => v.toFixed(3))}, headK ${c.headK.toFixed(2)}`);
+      row++;
+    }
+  }
+  const png = sheet.toDataURL("image/png"); document.getElementById("sheet").src = png; document.getElementById("state").textContent = "done";
+  window.RESULT = { ok: true, png, sheetName: Q.get("name") || "motion", table: lines.join("\n") };
+} catch (e) { document.getElementById("state").textContent = "error: " + e.message; window.RESULT = { ok: false, error: e.stack || e.message }; }
+</script>
+</body>
+</html>

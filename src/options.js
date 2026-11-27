@@ -799,6 +799,13 @@ export const DEFAULTS = {
         "zig": 0.07,
         "teeth": 30
       },
+      "lines": {
+        "on": false,
+        "color": "#5fae9f",
+        "strength": 0.8,
+        "width": 0.012,
+        "list": []
+      },
       "inner": 0,
       "oneShade": 0
     },
@@ -1120,6 +1127,12 @@ export const DEFAULTS = {
       "depth": 1,
       "teeth": false
     },
+    "eye3d": {
+      "on": false,
+      "depth": 0.008,
+      "lift": 0.005,
+      "flare": 0.002
+    },
     "lashHatch": false,
     "lashTrace": 0,
     "browsOverHair": false,
@@ -1148,6 +1161,12 @@ export const DEFAULTS = {
         "dy": 0.004
       },
       "eyeL": {
+        "src": null
+      },
+      "eyeLash": {
+        "src": null
+      },
+      "eyeLashL": {
         "src": null
       },
       "eyeClosed": {

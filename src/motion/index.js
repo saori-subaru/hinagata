@@ -1,4 +1,4 @@
-// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, chair?: true, seat?: height,
+// Motion: poses as functions of time. Each returns { b: { boneName: [x, y, z] Euler angles }, y: hips lift, x / z?: the hips moved sideways / forward, chair?: true, seat?: height,
 //   air?: the speed (m/s) the pose would go at, for the wind the hair meets while it is played in place }.
 // seat: the top of what the character sits on (seatFront: its front edge, z; what is beyond it hangs off the seat). The avatar then moves the hips so the lowest point of the bottom (body or pants, as worn)
 //   rests on it: body types and clothes differ by 1-3 cm there, so a fixed y alone left some floating above the chair.
@@ -158,7 +158,7 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ J = null, root = null, bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
+export function createPosePlayer({ J = null, root = null, bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null, armOut = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
@@ -189,6 +189,7 @@ export function createPosePlayer({ J = null, root = null, bone, BONES, HIPS0, HA
   return function apply(name, t, dt, instant = false, yAdd = 0, blend = null) {   // yAdd: extra hip height (the seat fit in index.js)
     if (name !== cur) { cur = name; heldT = 0; } else heldT += dt;
     let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK };
+    if (name === "idle" || name === "walk") { const o = armOut(); if (o) { const b = { ...P0.b }; for (const [k, m] of [["upperArm.L", 1], ["upperArm.R", -1]]) b[k] = [b[k][0], b[k][1], b[k][2] + o * m]; P0 = { ...P0, b }; } }   // armOut: the arms held off wide clothes (index.js)
     const k = instant || blend === 0 || (P0.sharp && heldT > (blend ?? 0.35)) ? 1 : 1 - Math.exp(-dt * (blend ? 3 / blend : 9));   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = ARMED_OF[weapon] === "low2" ? { ...P0, b: { ...P0.b, ...armed }, grip: { ...P0.grip, L: 1 } } : { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };   // (both hands: no arm swing, the left closed on the grip)
     if (name === "guard" && TWO_HANDS[weapon]) P0 = POSES[`guard_${weapon}`](t);   // two hands on it (the spear held low in one hand ran through the leg)
@@ -202,9 +203,10 @@ export function createPosePlayer({ J = null, root = null, bone, BONES, HIPS0, HA
     const ft = footTilt();
     for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); if (b === "hips" && P0.turn) qT.premultiply(qY.setFromAxisAngle(UP, P0.turn)); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;
-    { const hp = bone.hips.position, t = P0.turn ?? 0, x = (P0.hx ?? 0) * yK, z = (P0.hz ?? 0) * yK;   // (hx, hz in the figure's own frame: turned with it)
-      hp.x += (HIPS0.x + x * cos(t) + z * sin(t) - hp.x) * k; hp.z += (HIPS0.z - x * sin(t) + z * cos(t) - hp.z) * k; }
+    { const hp = bone.hips.position, t = P0.turn ?? 0, x = (P0.hx ?? 0) * yK, z = (P0.hz ?? 0) * yK;   // (hx, hz in the figure's own frame: turned with it; x / z: motions loaded from files, motion/import.js)
+      hp.x += (HIPS0.x + (P0.x || 0) + x * cos(t) + z * sin(t) - hp.x) * k; hp.z += (HIPS0.z + (P0.z || 0) - x * sin(t) + z * cos(t) - hp.z) * k; }
     if (REST && (P0.feet || P0.hands)) reach(P0, ft);
+    P0.fix?.();   // a last touch on the bones as posed (follow.js: arms pushed out of the body)
     // the skirt's front bones turn with the thighs (about a point at the front of the waist), less the skirt's own slant: the front already
     // stands that far out, and turned the whole way with a thigh raised (sitting) its flare pointed up, the hem lifted over the lap
     // (2026-10-05, Saori: "座った時前が捲れ上がる")
