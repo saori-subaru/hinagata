@@ -150,7 +150,7 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
+export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null, armOut = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
@@ -163,6 +163,7 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
   return function apply(name, t, dt, instant = false, yAdd = 0, blend = null) {   // yAdd: extra hip height (the seat fit in index.js)
     if (name !== cur) { cur = name; heldT = 0; } else heldT += dt;
     let P0 = POSES[name](t); if (yK !== 1 && P0.y) P0 = { ...P0, y: P0.y * yK };
+    if (name === "idle" || name === "walk") { const o = armOut(); if (o) { const b = { ...P0.b }; for (const [k, m] of [["upperArm.L", 1], ["upperArm.R", -1]]) b[k] = [b[k][0], b[k][1], b[k][2] + o * m]; P0 = { ...P0, b }; } }   // armOut: the arms held off wide clothes (index.js)
     const k = instant || blend === 0 || (P0.sharp && heldT > (blend ?? 0.35)) ? 1 : 1 - Math.exp(-dt * (blend ? 3 / blend : 9));   // sharp: 切りかえてしばらくしたら、寄せずにそのまま当てる(速い動きが鈍らない)
     if (armed && ARMED[name]) P0 = ARMED_OF[weapon] === "low2" ? { ...P0, b: { ...P0.b, ...armed }, grip: { ...P0.grip, L: 1 } } : { ...P0, b: { ...P0.b, ...armedArm(P0, armed) } };   // (both hands: no arm swing, the left closed on the grip)
     if (name === "guard" && TWO_HANDS[weapon]) P0 = POSES[`guard_${weapon}`](t);   // two hands on it (the spear held low in one hand ran through the leg)

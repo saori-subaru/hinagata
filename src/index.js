@@ -844,7 +844,8 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   // a dress is the shirt and the pants made one garment: while it is on, their own on / off doesn't take it off (taking off the pants
   // under a dress took its skirt away, 2026-10-05; dress.on puts the dress on and off)
   const isDress = (g) => !!OPT.outfit.dress?.on && (g === "shirt" || g === "pants"), worn = (g) => outfitOf(g).on !== false || isDress(g);
-  const wear = (g, on) => { outfitOf(g).on = on;
+  let armOutMemo = null;   // (armOut below: what is worn changes it)
+  const wear = (g, on) => { outfitOf(g).on = on; armOutMemo = null;
     const late = on ? (g === "armor" ? ARMOR : g === "suit" ? ["suit"] : []).filter((k) => LATER.has(k)) : [];   // built now (see LATER)
     for (const k of late) { const x = parts[k]; for (const m of [x.m, x.o]) { root.remove(m); m.geometry.dispose(); } x.m.material.dispose(); x.o.material.dispose(); LATER.delete(k); parts[k] = k === "suit" ? suitPart() : armorPart(k); }
     for (const k of GARMENTS[g]) show(k, on || isDress(g));
@@ -995,7 +996,19 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   lap("cover");
   // motion
   const HEEL = ["heels", "heelBoots"].includes(OPT.outfit.shoes.kind) ? heelPose(OPT, Jr) : null, heelOn = () => HEEL && OPT.outfit.shoes.on !== false && !(AO.on && AO.style === "full");   // high heels tilt the feet while worn
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip });
+  // idle and walk hang the arms at the sides; over wide clothes (puffed pants, a flared skirt) the hands went into them. How far out the
+  // upper arms stop (rad, about z): the first that keeps the forearm and hand off the clothes as built (not their arm-bound points: sleeves)
+  const armOut = () => armOutMemo ??= (() => { const P = [], ua = Jr["upperArm.L"], la = Jr["lowerArm.L"], h = Jr["hand.L"], sg = Math.sign(h[0]) || 1, R = 0.025;
+    for (const k of ["shirt", "pants", "suit"]) { const x = parts[k]; if (!x?.m.visible) continue; const g = x.m.geometry, A = g.attributes.position.array, si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array;
+      for (let v = 0; v < A.length / 3; v++) { let a = 0; for (let q = 0; q < 4; q++) if (ARM_BI.has(si[v * 4 + q])) a += sw[v * 4 + q]; if (a < 0.3 && A[v * 3] * sg > 0) P.push(A[v * 3] * sg, A[v * 3 + 1], A[v * 3 + 2]); } }
+    const id = POSES.idle(0).b, rot = (d, t) => [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t), d[2]];
+    const fa = [la[0] - ua[0], la[1] - ua[1], la[2] - ua[2]], hd = [h[0] - la[0], h[1] - la[1], h[2] - la[2]];
+    for (let out = 0; out < 0.6; out += 0.02) { const t1 = id["upperArm.L"][2] + out * sg, t2 = t1 + id["lowerArm.L"][2], e = rot(fa, t1), w = rot(hd, t2), L = [ua[0] + e[0], ua[1] + e[1], ua[2] + e[2]];
+      let hit = false; for (let q = 0; q <= 8 && !hit; q++) { const f = q / 5, p = [L[0] + w[0] * f, L[1] + w[1] * f, L[2] + w[2] * f], px = p[0] * sg;   // (to 1.6: the hand past the wrist)
+        for (let i = 0; i < P.length; i += 3) if (Math.abs(P[i + 1] - p[1]) < 0.02 && Math.abs(P[i + 2] - p[2]) < 0.05 && P[i] > px - R) { hit = true; break; } }
+      if (!hit) return out; }
+    return 0.6; })();
+  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip, armOut });
   let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null, blendT = null;   // follower: the rig this avatar dresses (follow); blendT: play's blend
   // The joints to pose by hand (avatar.joints, 2026-10-06, Saori: Hinagata is there to save a game's makers time, and an agent writing a
   // tennis swing straight onto the bones lost ~20 min to the A-pose rest (arms 44° down: "forward" with x swung them out sideways), the
