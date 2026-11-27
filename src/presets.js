@@ -427,21 +427,21 @@ export const CHARACTERS = {
         whorl: { x: 0, z: -0.03, lineFrom: 0.6, taper: 1 },   // (no short lines scattered over the crown)
         tufts: [   // thickFrom: full thickness right from the whorl (from 0 at the whorl the crown dipped between the side tufts); to: [round the head (degrees, 0 = front, + her left), the tip's height (head space)]; widths and thicknesses in m
           // under the others, in shadow: the bob's inner layer round the nape and behind the jaw
-          { to: [180, 0.82], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.01, top: 0, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
-          { to: [135, 0.83], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.01, top: 0, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
-          { to: [100, 0.84], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.01, top: 0, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.7, shade: 0.6, mirror: true },
+          { to: [180, 0.82], thickFrom: 0.04, from: [0, -0.2], width: 0.26, thick: 0.015, tips: [0.9, 1, 0.9], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6 },
+          { to: [135, 0.83], thickFrom: 0.04, from: [0.12, -0.16], width: 0.24, thick: 0.015, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 1, hug: 0.8, shade: 0.6, mirror: true },
+          { to: [100, 0.84], thickFrom: 0.04, from: [0.17, -0.04], width: 0.2, thick: 0.015, tips: [0.9, 1], notch: 0.12, endWidth: 1, hug: 0.7, shade: 0.6, mirror: true },
           // the back and the sides: thick blocks to the jaw, their ends cut into points and tucked in under the head's widest part (hug)
-          { to: [180, 0.86], thickFrom: 0.04, width: 0.3, thick: 0.021, top: 0, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
-          { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.025, top: 0, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
-          { to: [108, 0.87], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.027, top: 0, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
-          { to: [66, 0.875], over: true, lineFrom: 1, thickFrom: 0.35, rootWidth: 0.5, width: 0.25, thick: 0.027, top: 0, endWidth: 0.7, hook: -26, hookFrom: 0.1, clear: 0.015, mirror: true },   // over the ears to the jaw, over the temple bang and in onto the cheek, held off it (clear: its edge sank in)
+          { to: [180, 0.86], thickFrom: 0.04, width: 0.3, thick: 0.03, tips: [0.9, 1, 0.92], notch: 0.12, endWidth: 0.9, hug: 0.8 },
+          { to: [142, 0.865], thickFrom: 0.04, width: 0.3, thick: 0.036, tips: [1, 0.85, 0.95], notch: 0.12, endWidth: 0.9, hug: 0.8, mirror: true },
+          { to: [108, 0.87], lineFrom: 1, thickFrom: 0.35, width: 0.24, thick: 0.039, tips: [0.9, 1], notch: 0.12, endWidth: 0.85, hug: 0.4, mirror: true },
+          { to: [66, 0.875], over: true, lineFrom: 1, thickFrom: 0.35, rootWidth: 0.5, width: 0.25, thick: 0.039, endWidth: 0.7, hook: -18, hookFrom: 0.1, hug: 0.6, clear: 0.006, mirror: true },   // over the ears to the jaw, over the temple bang and in onto the cheek, held off it (clear: its edge sank in)
           // the bangs: a block over each temple down to the cheek, and the middle blade to between the eyes
-          { to: [45, 0.95], thickFrom: 0.35, rootWidth: 0.7, wide: 0.3, width: 0.22, thick: 0.029, top: 0, hook: 8, mirror: true },   // wide roots: narrow ones sank between their neighbours, two cuts in the crown
-          { to: [0, 0.99], round: 0.6, thickFrom: 0.04, width: 0.2, thick: 0.027, top: 0, tips: [0.97, 1], notch: 0.018, rootWidth: 0.6, wide: 0.3, endWidth: 0.13 }   // the middle one a rounded diamond, short of the eyes,
+          { to: [45, 0.95], thickFrom: 0.35, rootWidth: 0.7, wide: 0.3, width: 0.22, thick: 0.042, hook: 8, mirror: true },   // wide roots: narrow ones sank between their neighbours, two cuts in the crown
+          { to: [0, 0.99], round: 0.6, thickFrom: 0.04, width: 0.2, thick: 0.038, tips: [0.97, 1], notch: 0.018, rootWidth: 0.6, wide: 0.3, endWidth: 0.13 }   // the middle one a rounded diamond, short of the eyes,
         ],
         // the thin strands outside the face: out from the temple, round and in to the chin's height (head space)
         drawn: [{ pts: [[0.17, 1.15, 0.03], [0.235, 1.09, 0.03], [0.28, 1.01, 0.035], [0.277, 0.95, 0.04], [0.25, 0.912, 0.05]], width: 0.035, thick: 0.35, taper: 0.6, stiff: 3, mirror: true }],
-        sculpt: { whorl: { on: true }, shell: 0.002, dome: { on: true, front: 75, soft: 30 } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
+        sculpt: { whorl: { on: true }, shell: 0.008, dome: { on: true, front: 75, soft: 30 } },   // (dome: the crown and the back one smooth sheet; the tufts part lower down)
         // a low tail tied at the nape (a gray tie), falling back toward her left and rolled up at its end
         tail: { kind: "curl", side: "L", length: 0.2, reach: 0.2, curlSize: 0.052, width: 0.085, thick: 0.95, volume: 0.04, line: 0.004, tie: { on: false } },
       },
