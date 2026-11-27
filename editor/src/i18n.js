@@ -140,7 +140,7 @@ const T = {
 
 // Motion names (keys of POSES)
 const POSE = {
-  aPose: ["A-pose", "Aポーズ"], tPose: ["T-pose", "Tポーズ"], idle: ["Idle", "立つ"], walk: ["Walk", "歩く"], wave: ["Wave", "手をふる"], cheer: ["Cheer", "ばんざい"],
+  aPose: ["A-pose", "Aポーズ"], tPose: ["T-pose", "Tポーズ"], idle: ["Idle", "立つ"], walk: ["Walk", "歩く"], wave: ["Wave", "手をふる"], cheer: ["Cheer", "ばんざい"], dance: ["Dance", "おどる"],
   sitChair: ["Sit", "いすに座る"], sitChairGirl: ["Sit (knees together)", "いすに座る(ひざをそろえて)"], sitFloor: ["Sit on the floor", "床に座る"], hugKnees: ["Hug knees", "体育座り"], guard: ["Guard", "構え"],
   standSylvie: ["Stand: Sylvie", "立ち: シルヴィ"], standAstel: ["Stand: Astel", "立ち: アステル"], standSubaru: ["Stand: Subaru", "立ち: スバル"], standZundamon: ["Stand: Zundamon", "立ち: ずんだもん"],
   attack: ["Attack (by weapon)", "攻撃(武器ごと)"], attack_sword: ["Attack: sword", "攻撃: 剣"], attack_dagger: ["Attack: dagger", "攻撃: 短剣"], attack_axe: ["Attack: axe", "攻撃: 斧"], attack_spear: ["Attack: spear", "攻撃: 槍"], attack_staff: ["Attack: staff", "攻撃: 杖"], attack_greatsword: ["Attack: greatsword", "攻撃: 両手剣"], attack_punch: ["Punch", "パンチ"], hit: ["Hit", "ダメージ"], stun: ["Stunned", "気絶(ピヨピヨ)"], down: ["Down", "倒れる"], guard_spear: ["Guard: spear (two hands)", "構え: 槍(両手)"], guard_greatsword: ["Guard: greatsword", "構え: 両手剣"],

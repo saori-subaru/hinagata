@@ -5,6 +5,7 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
 
 - 宿題（次にやること）は **TODO.md**。「宿題を読んで続けて」と言われたらそこから。
 - 設計の記録は DESIGN.md、エージェント向けの使い方は llms.txt（サイトでも公開）。
+- 成長・動きの動画は `node tools/grow.mjs --who sylvie`(育ちは数値を補間して毎コマ作り直す。オン・オフの値は補間できない)。`--motion dance` で踊る、`--times 0,1` で止め絵、`--set "outfit.cape.hem=0.6"` で値を差し替えて試す。`--stage flowers` で花畑のイベントムービー(長さ・育ち・カメラ・光は tools/stage-flowers.js が時刻から決める)。`--to astel` で別の人へ変わる(数値と色は補間、髪型・服・顔の絵は `--switch` の1コマで入れ替わる)。ずんだもんの花畑の動画(ちび→シルヴィの頭身、決めは手を振るポーズ・口を開けた顔・頭のさやが跳ねる)は `--who zundamon --like sylvie --motion danceHi --stage flowers --face {"eyes":"image","brows":"image","mouth":"image@happy","cheeks":"none"}`。PC では `--gpu` で GPU 描画(クラウドは CPU で1本約25分)。
 - 作業はブランチで。main に入れるのはサオリが言ったときだけ（サイトは main から自動公開）。
 - **このエンジンは、モデリングが苦手な AI がキャラを作りやすくするための補助。今ある部品の組み合わせだけでキャラを作るもの（PSO のキャラメイクのような物）ではない。**
   見本（設定画）を渡されたら、それに忠実に作る。今ある部品で似た物に置き換えて済ませない（コスプレのようになる）。合う形が無ければ、顔のパーツ・髪・服・小物をエンジンに足して作る。
@@ -15,7 +16,7 @@ MD・コードの注釈・道具の扱いは末尾の「断捨離と棚卸し」
 - **エンジン（src/）を変えたら `node tools/thin-check.mjs` を回す**（間引きの崩れの見張り。高頭身・2頭身・版の無いレシピ・細い体を fine / lite / 0.15 で組み、
   前後の厚みを間引かない体と比べる。失敗なら終了コード1。正面と横の絵は thin-check-out/thin-check.png）。落ちたまま main に入れない。
   2026-10-06、原生林の2頭身が 0.15 で紙のように薄く潰れたのを、使う側が見つけるまで誰も気づかなかったため。
-  クラウドでは CDN に出られず止まるので、`npm install three@0.160.0 meshoptimizer@1` した場所を `--npm <node_modules>`、ブラウザを `--chrome /opt/pw-browsers/chromium` で渡す。
+  クラウドでは CDN に出られず止まるので(tools/grow.mjs も同じ)、`npm install three@0.160.0 meshoptimizer@1` した場所を `--npm <node_modules>`、ブラウザを `--chrome /opt/pw-browsers/chromium` で渡す。
 - **キャラを設定画に寄せる時は `node tools/shot.mjs <プリセット名> --views 0,90,180 --y 0,0.4 --name 名前`** で撮る(向き・高さの範囲を選べ、`--patch` でプリセットに値を重ねて試せる。`--persp 3.2 --up 0.5` で遠近のある斜め上からの絵。フィギュア塗りに `--pt 64` を足すと光線追跡の静止画(1枚に数分。`--npm` の場所に three-gpu-pathtracer@0.0.23 と three-mesh-bvh@0.7.8 も要る)。絵は thin-check-out/)。
 - 設定画と同じ縮尺で並べて輪郭の幅を数値で比べるのは `python tools/sheet.py`(`args <身長>` が撮る範囲を出す。目で合わせると幅が数cmずれる)。高さは設定画の割合を `node tools/measure.mjs --to` でオプションの値に直す。
 - アクセサリーの置き場(at・n)は `node tools/surface.mjs <プリセット名> <骨> <x> <高さ>` で服の表面を測る(アクセサリーは表面に乗らない)。

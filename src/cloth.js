@@ -24,8 +24,11 @@ const sstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)
  *  body: the skinned body mesh — the skirt also keeps off its surface around the hips and legs (what bulges out when a thigh turns up).
  *  bodyRegion: { yMax, bones } which of the body's points it keeps off (rest height, the bones they follow): the hips and legs by default (a cape: up to the shoulders).
  *  sway: 0..1, how much the free points keep their motion in the world when the whole character moves (0: none, the skirt; a cape trails behind).
- *  air: how much the moving air lifts it (a cape streams back and up when running, 2026-10-05 Saori: "もっと靡いて上に上がるように"). 0 = none. */
-export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0, air = 0 }) {
+ *  air: how much the moving air lifts it (a cape streams back and up when running, 2026-10-05 Saori: "もっと靡いて上に上がるように"). 0 = none.
+ *  firm: { bones: [names], pull } the share of a point's weight on each bone pulls it toward its target at least this firmly while the bone
+ *  points out or up (a cape over raised arms: loose like the hem, the part riding on an arm lagged behind it and the sleeve came out through
+ *  it; hanging arms keep it loose, or swinging back they lifted the cape's back). */
+export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = null, bodyRegion = null, sway = 0, air = 0, firm = null }) {
   const g0 = m.geometry, GP = g0.attributes.position.array, GN = g0.attributes.normal.array, R = Float32Array.from(GP), SI = g0.attributes.skinIndex.array, SW = g0.attributes.skinWeight.array, n = R.length / 3;   // GP / GN: what is drawn; R / NR: the built mesh (kept)
   // the skirt is a shell 1-2 cm thick: only its outer side is moved as cloth; each point of the inner side rides along with the nearest outer
   // point (keeping its offset from it, as skinned). Half the points and edges: the cost is about halved and the look is the same
@@ -54,6 +57,13 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
   const COL = colliders.map((c) => { const b = bones.find((x) => x.name === c.bone), bb = c.boneB ? bones.find((x) => x.name === c.boneB) : b, w = b.getWorldPosition(new THREE.Vector3()), wb = bb.getWorldPosition(new THREE.Vector3());
     return { ...c, b, bb, oa: new THREE.Vector3(...c.a).sub(w), ob: new THREE.Vector3(...c.b).sub(wb) }; }), wp = new THREE.Vector3();   // boneB: the far end rides on another bone (a bridge between the thighs)
   let first = true;
+  const FB = firm ? firm.bones.map((nm) => { const k = skeleton.bones.findIndex((b) => b.name === nm), b = skeleton.bones[k], c = b.children.find((x) => x.isBone), S = new Float32Array(n);
+    for (let v = 0; v < n; v++) { let s = 0; for (let q = 0; q < 4; q++) if (SI[v * 4 + q] === k) s += SW[v * 4 + q]; S[v] = Math.min(1, s * 1.5); } return { b, c, S }; }) : null;
+  const AF = FB ? new Float32Array(n) : null, wa = new THREE.Vector3(), wb = new THREE.Vector3();
+  function firmA() {   // A, firmer where a raised bone carries the point
+    AF.set(A); for (const F of FB) { F.b.getWorldPosition(wa); F.c.getWorldPosition(wb); root.worldToLocal(wa); root.worldToLocal(wb); const k = firm.pull * sstep(-0.6, -0.1, (wb.y - wa.y) / (wa.distanceTo(wb) || 1)); if (!k) continue;
+      for (let v = 0; v < n; v++) if (F.S[v]) AF[v] = Math.max(AF[v], k * F.S[v]); }
+  }
 
   function targets() {   // the usual skinning (the same as the GPU does), into root space
     inv.copy(root.matrixWorld).invert();
@@ -126,7 +136,8 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
         // a thigh turned up (sitting): the front of the skirt goes over it, not under (pushed the nearest way, the part under the thigh tucked
         // beneath it and the thigh showed through a hole). The back of the skirt stays under (you sit on it)
         const u = U[ci]; if (u && FR[v]) { const s = dx * u[0] + dy * u[1] + dz * u[2]; if (s < 0) { dx -= 2 * s * u[0]; dy -= 2 * s * u[1]; dz -= 2 * s * u[2]; } }
-        if (c[9] === 1 || (c[9] === 2 && !FR[v] && pz < -0.02)) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
+        // (an arm's only while it hangs: raised, the cloth riding on top of it went round under it)
+        if ((c[9] === 1 && by < -0.2 * Math.sqrt(L2)) || (c[9] === 2 && !FR[v] && pz < -0.02)) { const rl = Math.hypot(px, pz) || 1, rx = px / rl, rz = pz / rl, s = dx * rx + dz * rz; if (s < 0) { dx -= 2 * s * rx; dz -= 2 * s * rz; } }   // outward: to the side away from the body's middle
         const k = r / d; x = px + dx * k; y = py + dy * k; z = pz + dz * k; }
       if (y < 0.003) y = 0.003;   // the floor
       if (seat && z < seat.front && Math.abs(x) < 0.2 && y < seat.y && y > seat.y - 0.06) y = seat.y;   // the chair's seat (the part of it under the bottom)
@@ -228,7 +239,7 @@ export function createCloth({ m, o, skeleton, root, top, hem, colliders, body = 
       else { if (sway && hasM0 && carry(dt)) moved = 1; else if (sway) { M0.copy(root.matrixWorld); hasM0 = true; }
         if (air && blow(dt)) moved = 1;
         still = moved < 1e-5 ? still + 1 : 0; if (still > 40) return;   // resting (the skirt's bones haven't moved for a while, the sway has died down): nothing to do
-        const nf = Math.max(1, Math.round(dt * 60)); if (nf > 1 && nf !== an) { an = nf; AN = A.map((a) => 1 - (1 - a) ** nf); } AS = nf > 1 ? AN : A;   // one step for nf frames (a far character, see the avatar's update)
+        const nf = Math.max(1, Math.round(dt * 60)), A0 = FB ? (firmA(), AF) : A; if (nf > 1 && (nf !== an || FB)) { an = nf; AN = A0.map((a) => 1 - (1 - a) ** nf); } AS = nf > 1 ? AN : A0;   // one step for nf frames (a far character, see the avatar's update)
         step(Math.pow(0.55, Math.min(dt, 0.05) * 60), 2, C, seat); AS = A; }   // keep a little of the motion (55% per 1/60 s)
       t0 = now(); normals(); unskin(); PROF.normals = now() - t0;
     },

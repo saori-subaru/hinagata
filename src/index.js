@@ -42,6 +42,7 @@ export { LIMBS, ik2, aim } from "./motion/ik.js";   // IK: hands / feet onto poi
 export { measureBody, measureStride, climbLimbs } from "./motion/climb.js";   // climbing, jump, fall poses + the climbing gait (motion/climb.js)
 export { measureCharacter, fitProportions } from "./measure.js";   // proportions in real terms, and options found from proportions (measure.js; no three.js: Node too)
 export { measureGait, RUN_W } from "./motion/run.js";   // the run pose + a stride measure for any gait (motion/run.js)
+import "./motion/dance.js";   // a cute dance, 16 beats at 100 BPM (motion/dance.js)
 import "./motion/jump.js";   // jump / land / fall / crouch / banzai poses (motion/jump.js)
 export { crawlLimbs, SNEAK_W } from "./motion/crawl.js";   // crouched walk and crawling (motion/crawl.js)
 import "./motion/mantle.js";   // pulling up over an edge in steps, and vaulting (motion/mantle.js)
@@ -552,9 +553,12 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
   parts.hood = skinned(meshPart("hood"), CA.color, 0.004, null);   // the hood's fold and lining (cape.hood), in the cape's color
   // (WRIST: what a garment part puts round the wrist, a cuff's `wrist`: a long cape hanging over it went through it)
   const WRIST = Math.max(0, ...PARTS.map((p) => p.wrist && garments[p.name] ? p.wrist(partOptions(OPT, p), OPT) : 0));
-  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST]].map(([a, b, r, pa, pb]) => ({ bone: `${a}.${s}`, a: Jr[`${a}.${s}`], b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
+  // (the upper arm's from a third of the way down: round the shoulder the cape follows the arm by its weights, and the joint's sphere pushed
+  //  the cloth lying on the shoulder about, a raised arm's sleeve showing through it)
+  const lerp3 = (p, q, t) => p.map((v, i) => v + (q[i] - v) * t);
+  const armCols = (s) => [["upperArm", "lowerArm", 0.042, 0, 0, 0.3], ["lowerArm", "hand", 0.036, WRIST * 0.4, WRIST, 0]].map(([a, b, r, pa, pb, from]) => ({ bone: `${a}.${s}`, a: lerp3(Jr[`${a}.${s}`], Jr[`${b}.${s}`], from), b: Jr[`${b}.${s}`], ra: r + pa + CM + CA.thick, rb: r + pb + CM + CA.thick, thigh: false, outward: true }));   // + the cape's thickness: its inner side rides on the outer one (cloth.js) and went into the arm
   const capeCloth = CA.on ? createCloth({ m: parts.cape.m, o: parts.cape.o, skeleton, root, top: ST.fwd(CA.collar + 0.01), hem: ST.fwd(CA.hem), colliders: [...legCols("L"), ...legCols("R"), ...armCols("L"), ...armCols("R")], body: parts.body.m,
-    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0 }) : null;
+    bodyRegion: { yMax: capeTop(Jr) + 0.04, bones: ["hips", "spine", "chest", "upperChest", "shoulder.L", "shoulder.R", "upperLeg.L", "upperLeg.R", "lowerLeg.L", "lowerLeg.R"] }, sway: CA.sway ?? 1, air: CA.air ?? 0, firm: { bones: ["upperArm.L", "upperArm.R"], pull: 0.85 } }) : null;
   // a garment's gradient runs from its top (0) to its hem (1); a dress's from the collar down to the skirt's hem, over both parts.
   // texH (a picture along the hem): the height over the hem as built (a skirt's or a cape's own hem line, base positions; else its lowest point)
   { const hemH = (key) => key === "cape" ? capeSdf?.hemOf : (key === "dress" || key === "pants") ? skirtHem : null;
@@ -1008,7 +1012,7 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         for (let i = 0; i < P.length; i += 3) if (Math.abs(P[i + 1] - p[1]) < 0.02 && Math.abs(P[i + 2] - p[2]) < 0.05 && P[i] > px - R) { hit = true; break; } }
       if (!hit) return out; }
     return 0.6; })();
-  const playPose = createPosePlayer({ bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip, armOut });
+  const playPose = createPosePlayer({ J: Jr, root, bone, BONES, HIPS0, HANDS, yK: ST.legK, skirtFlare: (SKO?.flare ?? 0) * 0.8, footTilt: () => heelOn() ? HEEL.theta : 0, lift: () => heelOn() ? HEEL.lift : 0, weapon: OPT.outfit.weapon?.right ?? "none", left: OPT.outfit.weapon?.left ?? "none", shieldMount: OPT.outfit.weapon?.shieldMount ?? "diagonal", held: () => heldGrip, armOut });
   let poseName = "aPose", time = 0, lastPose = { b: {} }, follower = null, blendT = null;   // follower: the rig this avatar dresses (follow); blendT: play's blend
   // The joints to pose by hand (avatar.joints, 2026-10-06, Saori: Hinagata is there to save a game's makers time, and an agent writing a
   // tennis swing straight onto the bones lost ~20 min to the A-pose rest (arms 44° down: "forward" with x swung them out sideways), the
@@ -1063,8 +1067,9 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
     /** Advance motion and blinking. t: absolute time to use instead of advancing (for freezing a frame). instant: jump straight to the pose.
      *  camera: the camera the scene is drawn with: the hair and cloth are simulated less when the character is small on the screen
      *  ("half": every 2nd frame, "low": every 4th) and not at all off the screen. detail: "full" | "half" | "low" | "off" to set it yourself.
-     *  wind: [x, y, z] a breeze through the hair (m/s in the avatar's own size, world axes), on top of the stream from its own motion. */
-    update(dt, { t, instant = false, pose, camera, detail, wind: breeze } = {}) {
+     *  wind: [x, y, z] a breeze through the hair (m/s in the avatar's own size, world axes), on top of the stream from its own motion.
+     *  blink: true / false shuts or opens the eyes now (no blinks of its own while given; they come back 2.5 s after the last). */
+    update(dt, { t, instant = false, pose, camera, detail, wind: breeze, blink } = {}) {
       follower?.sync();   // dressing another rig (follow): its joints now
       if (rig && (pose ?? poseName) === rig.f.pose) rig.f.sync();   // posed by hand (avatar.joints)
       syncCover(); hairLines(); traceLines(); rims(); figureLook();
@@ -1092,8 +1097,10 @@ export async function createAvatar(options = {}, { quality: qualityAsked, cell =
         let wx = -rootV[0] - fx * extra + (breeze?.[0] ?? 0) * sc, wz = -rootV[1] - fz * extra + (breeze?.[2] ?? 0) * sc; const w = Math.hypot(wx, wz), CAP = 3 * sc, s = w > 1e-6 ? CAP * Math.tanh(w / CAP) / w : 0;   // (+ a breeze: update's wind, m/s in the avatar's own size)
         wind[0] = wx * s; wind[1] = (breeze?.[1] ?? 0) * sc; wind[2] = wz * s; }
       if (sim) for (const k of [...LOCK_PARTS, "extraTail"]) if (parts[k]?.m.visible) parts[k].sim.update(sdt, instant, wind, every > 1);   // (extraTail: outfit.extras.tail)
-      if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
-      if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; }
+      // blink given: the caller times the blinks (a film rebuilt every frame, or holding its time still, never reached one of its own)
+      if (blink != null) { if (!!blink !== blinking) { blinking = !!blink; avatar.drawFace(); } blinkAt = time + 2.5; }
+      else { if (!faceDrawHook && time > blinkAt && !blinking) { blinking = true; avatar.drawFace(); }
+        if (blinking && time > blinkAt + 0.12) { blinking = false; avatar.drawFace(); blinkAt = time + 2.5 + Math.random() * 3; } }
     },
     /** Play a pose (a motion): a name in POSES, or "joints" (the avatar follows avatar.joints). blend: seconds to ease into it (default ~0.35,
      *  0 = at once: a fast move switched to mid-game). */

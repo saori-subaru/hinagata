@@ -668,7 +668,7 @@ export function buildClothes(OPT, { P, J, HT, CROTCH, bodySdf, ARMPIT = [] }) {
     f.lo = [-w, Math.min(CA.hem, hemY(-d), hemY(d)) - SH_LOW - 0.02, -d]; f.hi = [w, CA.collar + 0.05, CLOSED ? d : CA.wrap + 0.1];   // (a hem falling toward the front, tilt < 0, is lowest there)
     f.edge = (x, y, z) => Math.min((y - hemY(pushAt(x, y, z).zb, x)) * ST.slope(y), CLOSED ? opening(x, y, z) : Infinity);
     f.hemOf = (x, z) => hemY(z, x);
-    f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY;
+    f.closed = CLOSED; f.overArms = CLOSED && !OVER_BODY; f.armY = P["upperArm.L"].ay;   // (armY: parts.js, the cape's weights)
     f.rim = hood?.rim ? { sdf: hood.rim, lo: hood.lo, hi: hood.hi } : roll;
     // one roll's hood: how far outside its bag's outline (m, < 0 inside), under the roll's 3 cm: the line drawn along its edge (it has no outline of its own: it is blended into the roll and lies on the cape)
     f.hoodLine = hood && roll && !(CA.cowlRoll2 > 0) ? (x, y, z) => y > hood.bagY(x) - 0.03 || outside(x, y, z) < 0.009 ? 1 : hood.bagOut(x, y, z) : null;   // (only along the rim's top: down its 14 mm wall the band read thick from the side)   // the hood's fold and lining, or the cowl's roll (parts.js "hood")

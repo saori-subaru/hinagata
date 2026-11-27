@@ -6,7 +6,15 @@
 //   over them (gripHand below). A hand that holds something (outfit.weapon) is already a fist in its shape and is left alone.
 // sharp: a fast pose (a jump) — after it has blended in, the bones follow it exactly each frame instead of easing toward it (easing slowed the drop just before landing).
 // Bones not listed rest in the A-pose (the bind pose).
+// Targets (motion/dance.js; solved after the bones are turned, so they win over the legs' / arms' angles):
+//   hx, hz: the hips moved sideways / forward (m at the base proportions, scaled with the legs like y). turn: the whole figure turned about
+//     the vertical through the hips (rad; the feet's targets and turns go round with it).
+//   feet: { L: [dx, dy, dz, knee] } the ankle from its rest place (m, scaled like y; knee: the knee's aim out, + = outward). A foot given here
+//     is planted: its "foot.L" angles are then from the floor (root), not from the shin.
+//   hands: { L: [x, y, z] } the wrist in the upper chest's frame, in arm lengths: x from the body's middle (+ = the character's left), y and z from
+//     the shoulder joint. elbows: { L: [x, y, z] } which way the elbow points (the chest's frame; default out and down).
 import * as THREE from "three";
+import { LIMBS, ik2 } from "./ik.js";
 
 const sin = Math.sin, cos = Math.cos, mx = Math.max;
 const ARMS_DOWN = { "upperArm.L": [0, 0, -0.45], "upperArm.R": [0, 0, 0.45], "lowerArm.L": [0, 0, -0.08], "lowerArm.R": [0, 0, 0.08] };
@@ -150,13 +158,31 @@ function gripHand(H) {
 
 /** Blend the bones toward a pose each frame (smoothly; instant = jump straight to it). weapon / left: what each hand holds ("none", "sword", ..., "fist"), shieldMount: "straight" | "diagonal"
  *  yK: the legs' length against the base proportions (body.proportion): a pose's hip lift (crouching, sitting) scales with it */
-export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null, armOut = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
+export function createPosePlayer({ J = null, root = null, bone, BONES, HIPS0, HANDS = null, weapon = "none", left = "none", shieldMount = "diagonal", yK = 1, footTilt = () => 0, lift = () => 0, skirtFlare = 0, held = () => null, armOut = () => 0 }) {   // footTilt / lift: high heels (feet tilted toes-down, the body raised). held: { L, R } fists for what avatar.hold put in a hand
   const armed = ARMED_R[ARMED_OF[weapon]], shield = left === "shield" || left === "round";
   const guardR = BARE[weapon] ? GUARD_R.bare : GUARD_R[weapon], guardL = BARE[left] ? GUARD_L.bare : shield && shieldMount === "diagonal" ? GUARD_L.diagonal : null, fighter = BARE[weapon] && BARE[left];
   const qT = new THREE.Quaternion(), eT = new THREE.Euler(), qI = new THREE.Quaternion(), vD = new THREE.Vector3();
   const FLARE = Math.atan(skirtFlare);   // the skirt's own slant out from the body at the front (an A-line: flare × 0.8 front to back, clothes): a thigh swinging less than that doesn't reach its front
   // a shield is strapped to the forearm (clothes/weapons.js): its hand is open, and grips only in the guard (2026-10-07, Saori)
   const HOLD = { L: left !== "none" && !shield, R: weapon !== "none" }, GRIPS = HANDS && bone["fingers.L"] ? { L: gripHand(HANDS.L), R: gripHand(HANDS.R) } : null;   // HOLD: 何か持っている手(形がもうグー)
+  // rest places of each limb's joints (root space, J) and its reach, for the targets
+  const V = (a) => new THREE.Vector3(...a), REST = J && root ? Object.fromEntries(Object.entries(LIMBS).map(([k, L]) => [k, { root: V(J[L.root]), mid: V(J[L.mid]), end: V(J[L.end]), reach: V(J[L.root]).distanceTo(V(J[L.mid])) + V(J[L.mid]).distanceTo(V(J[L.end])) }])) : null;
+  const vT = new THREE.Vector3(), vP = new THREE.Vector3(), qA = new THREE.Quaternion(), qR = new THREE.Quaternion(), qY = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0);
+  const reach = (P0, ft) => {
+    const turn = P0.turn ?? 0, c = J.upperChest, H = bone.hips; qY.setFromAxisAngle(UP, turn); root.updateMatrixWorld(true);
+    for (const s of ["L", "R"]) {
+      const f = P0.feet?.[s]; if (f) { const R = REST[`foot.${s}`], sg = s === "L" ? 1 : -1;
+        vT.set(R.end.x + f[0] * yK - HIPS0.x, 0, R.end.z + f[2] * yK - HIPS0.z).applyQuaternion(qY);   // round the hips' vertical with turn
+        root.localToWorld(vT.set(vT.x + HIPS0.x, R.end.y + f[1] * yK + lift(), vT.z + HIPS0.z));
+        H.localToWorld(vP.set(R.mid.x - J.hips[0] + (f[3] ?? 0) * sg, R.mid.y - J.hips[1], R.mid.z - J.hips[2] + 0.5));   // the knee aims forward of the hips
+        ik2(bone, LIMBS[`foot.${s}`], vT, vP);
+        const e = P0.b[`foot.${s}`] ?? [0, 0, 0]; eT.set(e[0] + ft, e[1], e[2]); bone[`lowerLeg.${s}`].getWorldQuaternion(qA); root.getWorldQuaternion(qR);
+        bone[`foot.${s}`].quaternion.copy(qA.invert().multiply(qR).multiply(qY).multiply(qT.setFromEuler(eT))); }
+      const h = P0.hands?.[s]; if (h) { const R = REST[`hand.${s}`], C = bone.upperChest, r = R.reach, p = P0.elbows?.[s] ?? [s === "L" ? 1 : -1, -1, -0.4];
+        C.localToWorld(vT.set(h[0] * r - c[0], R.root.y - c[1] + h[1] * r, R.root.z - c[2] + h[2] * r));
+        C.localToWorld(vP.set(R.mid.x - c[0] + p[0] * r, R.mid.y - c[1] + p[1] * r, R.mid.z - c[2] + p[2] * r));
+        ik2(bone, LIMBS[`hand.${s}`], vT, vP); } }
+  };
   let cur = null, heldT = 0;   // いまのポーズと、それに切りかえてからの時間
   // blend: seconds the switch to a pose eases over (about; the default ~0.35 s), 0 = the pose at once (2026-10-06: a tennis swing started
   //   0.35 s late, softened, when its pose was switched to)
@@ -175,10 +201,11 @@ export function createPosePlayer({ bone, BONES, HIPS0, HANDS = null, weapon = "n
     const hg = held(), grip = hg ? { L: Math.max(P0.grip?.L ?? 0, hg.L ?? 0), R: Math.max(P0.grip?.R ?? 0, hg.R ?? 0) } : P0.grip;
     if (grip && GRIPS) { const b = { ...P0.b }; for (const s of ["L", "R"]) { const g = grip[s] ?? 0; if (g > 0 && !HOLD[s]) for (const k of ["fingers", "fingerTips", "thumb"]) b[`${k}.${s}`] = GRIPS[s](k, g); } P0 = { ...P0, b }; }
     const ft = footTilt();
-    for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); bone[b].quaternion.slerp(qT, k); }
+    for (const b of BONES) { const r = P0.b[b] || [0, 0, 0]; eT.set(r[0] + (ft && (b === "foot.L" || b === "foot.R") ? ft : 0), r[1], r[2]); qT.setFromEuler(eT); if (b === "hips" && P0.turn) qT.premultiply(qY.setFromAxisAngle(UP, P0.turn)); bone[b].quaternion.slerp(qT, k); }
     bone.hips.position.y += (HIPS0.y + (P0.y || 0) + yAdd + lift() - bone.hips.position.y) * k;
-    if (P0.x != null || bone.hips.position.x !== HIPS0.x) bone.hips.position.x += (HIPS0.x + (P0.x || 0) - bone.hips.position.x) * k;   // x / z: the hips' sway sideways and front to back (motions loaded from files, motion/import.js)
-    if (P0.z != null || bone.hips.position.z !== HIPS0.z) bone.hips.position.z += (HIPS0.z + (P0.z || 0) - bone.hips.position.z) * k;
+    { const hp = bone.hips.position, t = P0.turn ?? 0, x = (P0.hx ?? 0) * yK, z = (P0.hz ?? 0) * yK;   // (hx, hz in the figure's own frame: turned with it; x / z: motions loaded from files, motion/import.js)
+      hp.x += (HIPS0.x + (P0.x || 0) + x * cos(t) + z * sin(t) - hp.x) * k; hp.z += (HIPS0.z + (P0.z || 0) - x * sin(t) + z * cos(t) - hp.z) * k; }
+    if (REST && (P0.feet || P0.hands)) reach(P0, ft);
     P0.fix?.();   // a last touch on the bones as posed (follow.js: arms pushed out of the body)
     // the skirt's front bones turn with the thighs (about a point at the front of the waist), less the skirt's own slant: the front already
     // stands that far out, and turned the whole way with a thigh raised (sitting) its flare pointed up, the hem lifted over the lap
