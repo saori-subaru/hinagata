@@ -12,7 +12,7 @@
 <script>addEventListener("error", (e) => { window.RESULT ??= { ok: false, error: String(e.error?.stack || e.message) }; });</script>
 <script type="module">
 // Shots of a preset from given sides, in a row (for fitting a character to its design sheet: shoot, compare, change, shoot again).
-// Run: node tools/shot.mjs subaru [--views 0,90,180] [--y 0,0.5] [--w 0.3] [--x 0] [--px 900] [--pose idle|aPose|walk…] [--quality fine] [--patch '{"outfit":{…}}'] [--name boots] [--lean 1]
+// Run: node tools/shot.mjs subaru [--views 0,90,180] [--y 0,0.5] [--w 0.3] [--x 0] [--px 900] [--pose idle|aPose|walk…] [--t 0.5] [--quality fine] [--patch '{"outfit":{…}}'] [--name boots] [--lean 1]
 //   lean: lines at the head's middle (red) and the ankles' (blue); the table gives the lean in mm (+ = forward; a stance stands upright near 0)
 //   views: degrees round the figure (0 front, 90 her left side, 180 back, -90 her right), y: the heights shown (m), w: half the width shown (m),
 //   x: the middle of the picture sideways in the view (m), patch: options merged over the preset's (to try a value without editing presets.js)
@@ -24,7 +24,7 @@ const merge = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = v && ty
 try {
   const file = structuredClone(CHARACTERS[name].file); if (Q.get("patch")) merge(file.options, JSON.parse(Q.get("patch")));
   const av = await createAvatar(file, { quality: Q.get("quality") || "fine", cache: false });
-  av.play(Q.get("pose") || "idle", { blend: 0 }); av.update(0, { instant: true, t: 0 });
+  av.play(Q.get("pose") || "idle", { blend: 0 }); av.update(0, { instant: true, t: +(Q.get("t") || 0) });
   await new Promise((r) => setTimeout(r, 600));   // a face's pictures (data URLs) are decoded after the avatar is made
   const box = new THREE.Box3().setFromObject(av.object), [y0, y1] = Q.get("y") ? nums("y") : [box.min.y - 0.03, box.max.y + 0.03], H = +(Q.get("px") || 900);
   const half = (y1 - y0) / 2, cy = (y0 + y1) / 2, hw = +(Q.get("w") || half / 1.6), W = Math.round(H * hw / half), cx = +(Q.get("x") || 0);

@@ -799,6 +799,13 @@ export const DEFAULTS = {
         "zig": 0.07,
         "teeth": 30
       },
+      "lines": {
+        "on": false,
+        "color": "#5fae9f",
+        "strength": 0.8,
+        "width": 0.012,
+        "list": []
+      },
       "inner": 0,
       "oneShade": 0
     },
